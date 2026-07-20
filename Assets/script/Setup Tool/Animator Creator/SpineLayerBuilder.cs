@@ -211,6 +211,13 @@ public class SpineLayerBuilder : LayerBuilder
         AddBoolTrans(reload, nullS, "IsGrouded", false, 0.25f);
         AddBoolTrans(reload, nullS, "IsSliding", true,  0.25f);
         AddMoveOutTrans(reload, nullS, 0.5f);
+
+        // → NULL : thoát reload ngay khi IsShooting được kích hoạt (Trigger)
+        {
+            var t = reload.AddTransition(nullS);
+            SetTrans(t, 0.25f, false);
+            t.AddCondition(AnimatorConditionMode.If, 0, "IsShooting");
+        }
         AddGrenadeTrans(reload, fragGet, flashGet);
         AddBoolTrans(reload, sw, "IsSwitching", true, 0.25f);
 

@@ -27,22 +27,28 @@ public class FreeCameraController : MonoBehaviour
 
     [Header("Test Settings")]
     [SerializeField] private float testRotationSpeed = 10000f;
+    private PlayerMotionController _anim;
 
     private TISInputBridge _input;
 
     private void Awake()
     {
         _input = TISInputBridge.Instance;
+        _anim = GetComponent<PlayerMotionController>();
     }
 
     private void Start()
     {
         _yaw = target.eulerAngles.y;
+
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     private void Update()
     {
         Vector2 mouseDelta = _input.LookDelta;
+
+        _anim.ActiveWeponCTRL().SetLookDelta(mouseDelta);
 
         _yaw += mouseDelta.x * testRotationSpeed  * Time.deltaTime;
         target.rotation = Quaternion.Euler(0f, _yaw, 0f);

@@ -29,6 +29,7 @@ public class WeaponManager : MonoBehaviour
     
     [Header("Animator")]
     [SerializeField] private Animator _anim;
+    [SerializeField] private CharacterHandler _character_CTRL;
 
     private void Start()
     {
@@ -60,6 +61,10 @@ public class WeaponManager : MonoBehaviour
             _weapon_One?.SetActive(true);
             _weapon_Two?.SetActive(false);
             _anim?.SetInteger("WeaponIndex", _weapon_One_CTRL.Data.Index);
+            if (_character_CTRL != null)
+            {
+                _character_CTRL.IsSwitch = false;
+            }
             Debug.Log("Switch to Weapon One");
             return true;
         }
@@ -70,6 +75,10 @@ public class WeaponManager : MonoBehaviour
         _weapon_One?.SetActive(false);
         _weapon_Two?.SetActive(true);
         _anim?.SetInteger("WeaponIndex", _weapon_Two_CTRL.Data.Index);
+        if (_character_CTRL != null)
+        {
+            _character_CTRL.IsSwitch = false;
+        }
         Debug.Log("Switch to Weapon Two");
         return true;
     }

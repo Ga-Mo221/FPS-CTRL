@@ -25,6 +25,7 @@
 //    Exit    → NULL            : exitTime=0.905, dur=0.2
 //    Interrupt→ NULL           : IsDead(true,0.25), IsGrouded(false,0.25), IsSliding(true,0.25)
 //    Interrupt→ NULL           : MoveX/Y > ±0.5 (dur=0.25) x4
+//    Interrupt→ NULL           : IsShooting (Trigger, dur=0.25)
 //    Interrupt→ SSM SWITCH OUT : IsSwitching (dur=0.25)
 //    Interrupt→ ADS            : IfNot IsCrouching && ADS (dur=0.25)
 //    Interrupt→ CROUCH ADS     : IsCrouching && ADS (dur=0.25)
@@ -268,6 +269,7 @@ public class WeaponClipsTab
     //   IsGrouded(false)→ NULL  : dur=0.25
     //   IsSliding(true)→ NULL   : dur=0.25
     //   MoveX/Y > ±0.5 → NULL  : dur=0.25  (x4)
+    //   IsShooting (Trigger) → NULL : dur=0.25
     //   IsSwitching   → SWITCH OUT SSM : dur=0.25
     //   ADS && !Crouch → ADS    : dur=0.25
     //   ADS &&  Crouch → CRADS  : dur=0.25
@@ -302,6 +304,13 @@ public class WeaponClipsTab
         AddBoolTrans(state, nullS, "IsGrouded", false, 0.25f);
         AddBoolTrans(state, nullS, "IsSliding", true,  0.25f);
         AddMoveOutTrans(state, nullS, 0.5f);
+
+        // → NULL : thoát reload ngay khi IsShooting được kích hoạt (Trigger)
+        {
+            var t = state.AddTransition(nullS);
+            SetTrans(t, 0.25f, false);
+            t.AddCondition(AnimatorConditionMode.If, 0, "IsShooting");
+        }
 
         // → SWITCH OUT SSM
         if (switchOutSM != null)
