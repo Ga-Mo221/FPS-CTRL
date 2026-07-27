@@ -8,7 +8,7 @@ public class CharComponentManager : MonoBehaviour
     public NCharMovementHandler NCharMovementHandler;
     public NPlayer NPlayer;
     public ConstraintManager ConstraintManager;
-    public NWeaponManager NWeaponManager;
+    public WeaponManager WeaponManager;
     public FreeCameraController FreeCameraController;
     public PlayerMotionController PlayerMotionController;
     public TurnInPlace TurnInPlace;
@@ -23,7 +23,7 @@ public class CharComponentManager : MonoBehaviour
         NCharMovementHandler = GetComponentInChildren<NCharMovementHandler>(true);
         NPlayer = GetComponentInChildren<NPlayer>(true);
         ConstraintManager = GetComponentInChildren<ConstraintManager>(true);
-        NWeaponManager = GetComponentInChildren<NWeaponManager>(true);
+        WeaponManager = GetComponentInChildren<WeaponManager>(true);
         FreeCameraController = GetComponentInChildren<FreeCameraController>(true);
         PlayerMotionController = GetComponentInChildren<PlayerMotionController>(true);
         TurnInPlace = GetComponentInChildren<TurnInPlace>(true);

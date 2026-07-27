@@ -66,11 +66,11 @@ public class GunRecoilController : MonoBehaviour
     private float _nextFireTime;
 
     // FIX: toàn bộ timing quyết định "có bắn hay không" (cooldown + burst continuation)
-    // giờ chạy theo _networkTime (do WeaponController cấp qua Tick()/OnFire(), lấy từ
+    // giờ chạy theo _time (do WeaponController cấp qua Tick()/OnFire(), lấy từ
     // Runner.SimulationTime) thay vì Time.time. Time.time không tua lại được khi Fusion
-    // resimulate, khiến client dự đoán và server tính cooldown lệch nhau. _networkTime
+    // resimulate, khiến client dự đoán và server tính cooldown lệch nhau. _time
     // đại diện cho thời điểm tick hiện tại, xác định (deterministic) theo simulation.
-    private float _networkTime;
+    private float _time;
 
     // Roll smooth
     private float _currentRollZ;
@@ -124,7 +124,7 @@ public class GunRecoilController : MonoBehaviour
     /// </summary>
     public void NetworkTick(float networkTime)
     {
-        _networkTime = networkTime;
+        _time = networkTime;
         HandleBurstTick();
     }
 
@@ -143,28 +143,28 @@ public class GunRecoilController : MonoBehaviour
     /// đúng tick mô phỏng — an toàn khi Fusion resimulate/rollback, và khớp với thời điểm
     /// server thực sự tính toán, tránh lệch giữa client dự đoán và server.
     /// </summary>
-    public bool OnFire(float networkTime)
+    public bool OnFire()
     {
-        _networkTime = networkTime;
+        _time = Time.time;
 
-        if (networkTime < _nextFireTime) return false;
+        if (Time.time < _nextFireTime) return false;
 
         switch (firingMode)
         {
             case FiringMode.Semi:
                 FireSemi();
-                _nextFireTime = networkTime + data.FireDelay;
+                _nextFireTime = Time.time + data.FireDelay;
                 break;
 
             case FiringMode.Auto:
                 FireAuto(data.FireDelay);
-                _nextFireTime = networkTime + data.FireDelay;
+                _nextFireTime = Time.time + data.FireDelay;
                 break;
 
             case FiringMode.Burst:
                 TriggerBurst(data.FireDelay);
                 // Cooldown = thời gian hoàn thành toàn bộ loạt
-                _nextFireTime = networkTime + burstCount * data.FireDelay;
+                _nextFireTime = Time.time + burstCount * data.FireDelay;
                 break;
         }
 
@@ -378,22 +378,22 @@ public class GunRecoilController : MonoBehaviour
         if (_burstRemaining > 0) return; // burst đang chạy, bỏ qua trigger mới
         _burstRemaining    = burstCount;
         _burstFireRate     = fireRateDelay;
-        _burstNextShotTime = _networkTime;
+        _burstNextShotTime = _time;
     }
 
     // FIX: giờ được gọi từ NetworkTick() (mỗi network tick, kể cả khi không bấm nút),
-    // dùng _networkTime thay vì Time.time — đảm bảo phát 2, 3 của burst cũng được kích
+    // dùng _time thay vì Time.time — đảm bảo phát 2, 3 của burst cũng được kích
     // hoạt đúng trong FixedUpdateNetwork, để WeaponController có thể nghe OnShotFired
     // và tăng FireTick/raycast một cách an toàn (network-safe) cho từng phát trong loạt.
     private void HandleBurstTick()
     {
         if (_burstRemaining <= 0) return;
-        if (_networkTime < _burstNextShotTime) return;
+        if (_time < _burstNextShotTime) return;
 
         // Burst dùng FireBurstShot riêng — không động vào _autoActive
         FireBurstShot();
         _burstRemaining--;
-        _burstNextShotTime = _networkTime + _burstFireRate;
+        _burstNextShotTime = _time + _burstFireRate;
     }
 
     /// <summary>

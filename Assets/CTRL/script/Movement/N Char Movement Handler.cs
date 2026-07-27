@@ -22,6 +22,8 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public float _currentSpeed { get; set; }
     [Networked] public float _acceleration { get; set; }
 
+    [Networked] public NetworkBool IsFiring { get; set; }
+
     private CharacterState _stateLogic;
     [Networked] private NetworkButtons _previousButtons { get; set; }
     
@@ -54,11 +56,6 @@ public class NCharMovementHandler : NetworkBehaviour
             _playerMotionController.ActiveWeponCTRL()?.SetLookDelta(inputdata.LookDelta);
             
             _newState = _state;
-
-            // FIX: gọi mỗi tick, bất kể có bắn hay không — để GunRecoilController có cơ hội
-            // tự tiếp diễn các phát Burst còn lại đúng theo network time (xem GunRecoilController
-            // .NetworkTick / WeaponController.NetworkTick).
-            _playerMotionController.ActiveWeponCTRL()?.NetworkTick((float)Runner.SimulationTime);
 
             ShootHandler(inputdata, ref _newState);
             ReloadHandler(inputdata, ref _newState);
@@ -171,6 +168,8 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Weapon Control
     private void ShootHandler(NInputData input, ref PlayerStateFlags state)
     {
+        IsFiring = false;
+
         if (state.IsSwitching || state.IsThrow)
             return;
 
@@ -180,24 +179,24 @@ public class NCharMovementHandler : NetworkBehaviour
              case GunRecoilController.FiringMode.Burst:
                  if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
                  {
-                     Debug.Log("Semi/Burst");
-                     FireOnce(input, ref state);
+                     IsFiring = true;
                  }
                  break;
              case GunRecoilController.FiringMode.Auto:
                  if (input.Buttons.IsSet(InputButtons.Attack))
                  {
-                     Debug.Log("Auto");
-                     FireOnce(input, ref state);
+                     IsFiring = true;
                  }
                  break;
          }
     }
     
-    private void FireOnce(NInputData input, ref PlayerStateFlags state)
+    public void FireOnce()
     {
+        var state = _state;
         _stateLogic.ToggleShoot(ref state, _constraintManager); 
-        _playerMotionController.ActiveWeponCTRL()?.OnFire(input.AimForward);
+        _playerMotionController.ActiveWeponCTRL()?.OnFire();
+        _state = state;
     }
     
     private void ADSHandler(NInputData input, ref PlayerStateFlags state)

@@ -4,14 +4,14 @@ public class PlayerMotionController : MonoBehaviour
 {
     private CharComponentManager _componentManager;
     private Animator _anim;
-    private NWeaponManager _w_manager;
+    private WeaponManager _w_manager;
 
     private void Awake()
     {
         _componentManager = GetComponent<CharComponentManager>();
         if (_componentManager == null)  return;
         _anim = _componentManager.Animator;
-        _w_manager = _componentManager.NWeaponManager;
+        _w_manager = _componentManager.WeaponManager;
     }
 
     public void IsDead(bool value)

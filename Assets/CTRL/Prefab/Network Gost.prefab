@@ -1068,6 +1068,7 @@ GameObject:
   - component: {fileID: 7280603218629631749}
   - component: {fileID: 4163734707332490592}
   - component: {fileID: 4882823662986902394}
+  - component: {fileID: 3722269023597651094}
   m_Layer: 0
   m_Name: Network Gost
   m_TagString: Untagged
@@ -1111,7 +1112,7 @@ MonoBehaviour:
   NCharMovementHandler: {fileID: 8632350673128388716}
   NPlayer: {fileID: 6994213610445770504}
   ConstraintManager: {fileID: 4273547791336342583}
-  NWeaponManager: {fileID: 2345521066591104249}
+  WeaponManager: {fileID: 2345521066591104249}
   FreeCameraController: {fileID: 7913774115521142160}
   PlayerMotionController: {fileID: 5453166249019164711}
   TurnInPlace: {fileID: 6435653523726979826}
@@ -1172,6 +1173,8 @@ MonoBehaviour:
   _LookDeltaY: 0
   __currentSpeed: 0
   __acceleration: 0
+  _IsFiring:
+    _value: 0
 --- !u!114 &6994213610445770504
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1206,10 +1209,10 @@ MonoBehaviour:
   - {fileID: 8849130840449828846}
   - {fileID: 8632350673128388716}
   - {fileID: 6994213610445770504}
-  - {fileID: 2345521066591104249}
   - {fileID: 6435653523726979826}
   - {fileID: 4163734707332490592}
   - {fileID: 4882823662986902394}
+  - {fileID: 3722269023597651094}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &4273547791336342583
 MonoBehaviour:
@@ -1289,8 +1292,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponManager
   _weapon_One_Prefab: {fileID: 32299828348215259, guid: d00f9f305245740479c99da3eddbe878, type: 3}
   _weapon_Two_Prefab: {fileID: 1140873525885738155, guid: 22e79a94fa9fee5459c06239f10e82c6, type: 3}
-  _weapon_Parent: {fileID: 5717073189272879991}
-  _parent_Name: Weapon Parrent
+  _weapon_Parrent: {fileID: 5717073189272879991}
+  _parent_name: Weapon Parrent
+  _weapon_One: {fileID: 0}
+  _weapon_One_CTRL: {fileID: 0}
+  _weapon_Two: {fileID: 0}
+  _weapon_Two_CTRL: {fileID: 0}
+  _weapon_One_Active: 0
   _componentManager: {fileID: 7267980694266510406}
   _camera: {fileID: 6031967234010882723}
   _camera_Recoil: {fileID: 6173290768993071090}
@@ -1430,6 +1438,24 @@ MonoBehaviour:
   GizmosColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   Hitboxes:
   - {fileID: 8126383105452363558}
+--- !u!114 &3722269023597651094
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7253983300743050296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c685340383c11a4c9097785b33b1217, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NShootHandler
+  _bulletTracerPrefab: {fileID: 0}
+  _bulletPoint: {fileID: 0}
+  _hitMask:
+    serializedVersion: 2
+    m_Bits: 0
+  _maxRange: 200
 --- !u!1 &7417674935246286073
 GameObject:
   m_ObjectHideFlags: 0

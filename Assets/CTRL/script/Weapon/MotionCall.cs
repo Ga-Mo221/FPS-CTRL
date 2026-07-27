@@ -5,7 +5,7 @@ public class MotionCall : StateMachineBehaviour
     public void Switch(Animator animator)
     {
     
-        var Manager = animator.GetComponentInParent<NWeaponManager>();
+        var Manager = animator.GetComponentInParent<WeaponManager>();
 
         if (Manager  == null)
         {

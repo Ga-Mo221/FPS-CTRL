@@ -2,12 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Fusion;
-using SimpleFPS;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class WeaponController : NetworkBehaviour
+public class WeaponController : MonoBehaviour
 {
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private WeaponData _data;
@@ -16,7 +14,7 @@ public class WeaponController : NetworkBehaviour
     [SerializeField] private Animator _anim;
     
     [TabGroup("Weapon Controller", "Runtime")]
-    [SerializeField] private NWeaponManager  _manager;
+    [SerializeField] private WeaponManager  _manager;
 
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private TransformConstraint _ads_Pivot;
@@ -68,19 +66,6 @@ public class WeaponController : NetworkBehaviour
     [HideLabel]
     [SerializeField] private string _Elbow_Right_Name = "RAW_Elbow_R";
     
-    // FIX: không dùng bool isFiring set qua Coroutine nữa (gây InvalidOperationException
-    // khi coroutine resume ngoài simulation context, và không chạy trên proxy/client khác).
-    // Thay bằng bộ đếm FireTick — tăng ngay trong tick lúc bắn, Render() trên MỌI peer sẽ
-    // tự phát hiện thay đổi qua ChangeDetector và phát hiệu ứng tương ứng.
-    [Networked] public int FireTick { get; set; }
-
-    // Kết quả raycast (chỉ server tính, dùng chung struct ShotInfo có sẵn trong N_Input_Data.cs)
-    // được đồng bộ cho mọi client để hiển thị đúng điểm trúng đạn / hiệu ứng.
-    [Networked] public ShotInfo LastShot { get; set; }
-
-    private Vector3 _aimForward;
-    private ChangeDetector _changeDetector;
-    
     private bool _ads;
     private bool _lastAdsState;
     private Coroutine _blendRoutine;
@@ -106,20 +91,17 @@ public class WeaponController : NetworkBehaviour
     [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
     [HideLabel]
     [SerializeField] private string _bullet_effect_name = "Shoot Effect";
-    [SerializeField] private LayerMask _hitMask; // set trong Inspector: layer Player + layer Environment
 
-    public Transform Weapon_Parrent;
     private Transform _ads_Pivot_transform;
     private bool _isCrouch;
     public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
-    //public Vector3 Bullet_point => _bullet_point.position;
     
     private AudioManager _audio;
     [SerializeField] private AudioSource _sound;
     
     // =============================== public Filed ============================================
 
-    public NWeaponManager Manager
+    public WeaponManager Manager
     {
         set => _manager = value;
     }
@@ -148,21 +130,9 @@ public class WeaponController : NetworkBehaviour
     }
     
     // ====================================== EVENT ONFIRE =========================
-    
-    //private event Action<GunRecoilController.FiringMode> OnShotFired;
-
-    public override void Spawned()
-    {
-        _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
-    }
 
     void Start()
     {
-        // FIX: subscribe lại OnShotFired, nhưng handler giờ KHÔNG dùng Coroutine nữa —
-        // chạy đồng bộ ngay trong lời gọi (an toàn vì OnShotFired chỉ được invoke từ bên
-        // trong OnFire()/NetworkTick(), cả hai đều được WeaponController gọi từ trong
-        // FixedUpdateNetwork). Điều này cũng xử lý đúng các phát 2, 3 của Burst — vốn được
-        // GunRecoilController tự kích hoạt qua NetworkTick() mỗi tick, không chỉ phát đầu.
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
         _audio = AudioManager.Instance;
     }
@@ -172,50 +142,11 @@ public class WeaponController : NetworkBehaviour
         _gun_Recoil_CTRL.OnShotFired -= HandleShot;
     }
 
-    // FIX: không Coroutine, không WaitForSeconds — chỉ tăng FireTick + raycast (nếu server)
-    // ngay lập tức, trong đúng simulation context của tick hiện tại.
     private void HandleShot(GunRecoilController.FiringMode mode)
     {
-        FireTick++;
-
-        if (Object.HasStateAuthority)
-        {
-            var (hitPos, hitNormal, show) = GetRaycastHitInfo(_aimForward);
-            LastShot = new ShotInfo
-            {
-                HitPosition = hitPos,
-                HitNormal = hitNormal,
-                ShowEffect = show
-            };
-        }
+        PlayFireEffect();
     }
 
-    /// <summary>
-    /// FIX: gọi hàm này mỗi network tick từ NCharMovementHandler.FixedUpdateNetwork,
-    /// bất kể có bắn hay không — để GunRecoilController.NetworkTick() có cơ hội tự
-    /// tiếp diễn các phát bắn còn lại của Burst đúng theo network time.
-    /// </summary>
-    public void NetworkTick(float networkTime)
-    {
-        _gun_Recoil_CTRL.NetworkTick(networkTime);
-    }
-
-    // FIX: Render() chạy trên mọi peer (host, client bắn, VÀ client khác đang xem proxy).
-    // Đây là nơi DUY NHẤT nên phát hiệu ứng thị giác/âm thanh của phát bắn.
-    public override void Render()
-    {
-        foreach (var change in _changeDetector.DetectChanges(this))
-        {
-            if (change == nameof(FireTick))
-            {
-                PlayFireEffect();
-            }
-        }
-    }
-
-    // FIX: tách hẳn phần hiệu ứng cosmetic ra khỏi logic networked.
-    // Hàm này an toàn để gọi từ Render() trên bất kỳ peer nào, không đụng vào
-    // [Networked] property nào cả (chỉ ĐỌC LastShot, không ghi).
     private void PlayFireEffect()
     {
         _anim.SetTrigger("IsShooting");
@@ -224,9 +155,6 @@ public class WeaponController : NetworkBehaviour
         // reset effect
         _shoot_Effect.SetActive(false);
         _shoot_Effect.SetActive(true);
-
-        var shot = LastShot;
-        SpawnProjectileVisual(shot.HitPosition, shot.HitNormal, shot.ShowEffect);
     }
 
     // ========================================== ADS ==================================
@@ -303,29 +231,12 @@ public class WeaponController : NetworkBehaviour
     
     // ======================= FIRE ====================================
 
-    // FIX: toàn bộ hàm này giờ chạy hoàn toàn đồng bộ bên trong FixedUpdateNetwork
-    // (được gọi từ NCharMovementHandler.FireOnce). Không còn Coroutine, không còn
-    // WaitForSeconds — mọi thao tác trên [Networked] property xảy ra đúng trong
-    // simulation context của tick hiện tại, an toàn cho cả resimulation/rollback.
-    public bool OnFire(Vector3 aimForward)
+    public bool OnFire()
     {
-        _aimForward = aimForward;
-
-        // FIX: networkTime lấy từ Runner.SimulationTime — deterministic theo tick,
-        // được truyền xuống GunRecoilController thay vì để nó tự đọc Time.time.
-        float networkTime = (float)Runner.SimulationTime;
-
-        // Camera recoil + gun recoil (procedural, cosmetic, không networked) tự quyết định
-        // súng có thực sự bắn được không (cooldown, curve...). Nếu bắn thành công,
-        // GunRecoilController sẽ tự invoke OnShotFired → HandleShot() ở trên lo phần
-        // FireTick/raycast, nên KHÔNG cần lặp lại ở đây nữa.
-        if (!_cam_Recoil.OnFire() || !_gun_Recoil_CTRL.OnFire(networkTime))
-            return false;
-
-        return true;
+        return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire();
     }
 
-    private void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
+    public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
     {
         if (_bullet_Prefab == null) return;
         
@@ -334,46 +245,46 @@ public class WeaponController : NetworkBehaviour
         projectileVisual.SetHit(hitPosition, hitNormal, showEffect);
     }
 
-    private (Vector3 hitPosition, Vector3 hitNormal, bool showEffect) GetRaycastHitInfo(Vector3 AimForward)
-    {
-        float maxDistance = _data.Range;
-        Vector3 origin = transform.position;
+    // private (Vector3 hitPosition, Vector3 hitNormal, bool showEffect) GetRaycastHitInfo(Vector3 AimForward)
+    // {
+    //     float maxDistance = _data.Range;
+    //     Vector3 origin = transform.position;
 
-        // LagCompensation chỉ available khi NetworkProjectConfig bật Lag Compensation
-        // và session được khởi tạo đúng. Nếu null thì fallback Physics.Raycast thông thường.
-        if (Runner.LagCompensation != null)
-        {
-            var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
-            if (Runner.LagCompensation.Raycast(
-                    origin, AimForward, maxDistance,
-                    Object.InputAuthority, out var hit,
-                    _hitMask, hitOptions))
-            {
-                bool showEffect = hit.Hitbox == null;
+    //     // LagCompensation chỉ available khi NetworkProjectConfig bật Lag Compensation
+    //     // và session được khởi tạo đúng. Nếu null thì fallback Physics.Raycast thông thường.
+    //     if (Runner.LagCompensation != null)
+    //     {
+    //         var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
+    //         if (Runner.LagCompensation.Raycast(
+    //                 origin, AimForward, maxDistance,
+    //                 Object.InputAuthority, out var hit,
+    //                 _hitMask, hitOptions))
+    //         {
+    //             bool showEffect = hit.Hitbox == null;
 
-                if (hit.Hitbox != null)
-                    Debug.Log($"{Time.time} {transform.name} hit hitbox {hit.Hitbox.transform.root.name}");
-                else if (hit.Collider != null)
-                    Debug.Log($"{Time.time} {transform.name} hit physic collider {hit.Collider.transform.root.name}");
+    //             if (hit.Hitbox != null)
+    //                 Debug.Log($"{Time.time} {transform.name} hit hitbox {hit.Hitbox.transform.root.name}");
+    //             else if (hit.Collider != null)
+    //                 Debug.Log($"{Time.time} {transform.name} hit physic collider {hit.Collider.transform.root.name}");
 
-                return (hit.Point, hit.Normal, showEffect);
-            }
-        }
-        else
-        {
-            // Fallback: Physics.Raycast thuần Unity khi LagCompensation chưa được cấu hình.
-            // Để dùng LagCompensation đúng: bật "Lag Compensation" trong NetworkProjectConfig
-            // và đảm bảo các collider cần hit có component HitboxRoot + Hitbox.
-            if (Physics.Raycast(origin, AimForward, out RaycastHit physHit, maxDistance, _hitMask))
-            {
-                Debug.Log($"{Time.time} {transform.name} [Physics fallback] hit {physHit.collider.transform.root.name}");
-                return (physHit.point, physHit.normal, true);
-            }
-        }
+    //             return (hit.Point, hit.Normal, showEffect);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         // Fallback: Physics.Raycast thuần Unity khi LagCompensation chưa được cấu hình.
+    //         // Để dùng LagCompensation đúng: bật "Lag Compensation" trong NetworkProjectConfig
+    //         // và đảm bảo các collider cần hit có component HitboxRoot + Hitbox.
+    //         if (Physics.Raycast(origin, AimForward, out RaycastHit physHit, maxDistance, _hitMask))
+    //         {
+    //             Debug.Log($"{Time.time} {transform.name} [Physics fallback] hit {physHit.collider.transform.root.name}");
+    //             return (physHit.point, physHit.normal, true);
+    //         }
+    //     }
 
-        Vector3 missPoint = origin + AimForward * maxDistance;
-        return (missPoint, -AimForward, false);
-    }
+    //     Vector3 missPoint = origin + AimForward * maxDistance;
+    //     return (missPoint, -AimForward, false);
+    // }
 
     public void SwitchMode()
     {
