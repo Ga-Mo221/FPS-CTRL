@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30e893d6fd6c72740b2a28813a2d20af, type: 3}
+  m_Name: Player Data
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerData
+  _gravity: -20
+  _jumpImpulse: 8
+  _acceleration: 300
+  _braking: 10
+  _yaw_model: 1000
+  _pitch_camera: 1000
+  _pitch_Min: -80
+  _pitch_Max: 80
+  _groundCheckRadius: 0.3
+  _groundCheckOffset: 0.25
+  _groundMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _aim_Speed: 1.2
+  _walk_Speed: 4.7
+  _crouch_Speed: 2.5
+  _run_Speed: 5.8
+  _sprint_Speed: 7.6
+  _slide_Speed: 10
+  _slide_acceleration: 1
+  _slide_Hold_Duration: 0.4
+  _moveSmoothSpeed: 0.08
+  _stand_Height: 2.71
+  _stand_Center_Y: 0.9
+  _crouch_Height: 1.2
+  _crouch_Center_Y: 0.1
+  _slide_Height: 1
+  _slide_Center_Y: 0.045
