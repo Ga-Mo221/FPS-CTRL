@@ -50,13 +50,18 @@ public class PlayerMotionController : MonoBehaviour
         controller.ADS(value);
     }
     
-    public void IsReloading(bool value)
+    public bool IsReloading(bool value)
     {
-        _anim.SetBool("IsReloading", value);
-        if (_w_manager == null) return;
+        if (_w_manager == null) return false;
         WeaponController controller = _w_manager.Weapon_Active();
-        if (controller == null) return;
-        controller.IsReloading(value);
+        if (controller == null) return false;
+        
+        if (controller.IsReloading(value))
+        {
+            _anim.SetBool("IsReloading", value);
+            return true;
+        }
+        return false;
     }
     
     public void IsThrow(bool value)

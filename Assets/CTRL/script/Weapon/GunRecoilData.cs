@@ -38,12 +38,6 @@ public class GunRecoilData : ScriptableObject
              "• Semi + Auto + Burst → AR full-featured\n\n" +
              "GunRecoilController sẽ từ chối SetFiringMode() nếu mode không được phép.")]
     public AllowedModes allowedModes = AllowedModes.Semi | AllowedModes.Auto | AllowedModes.Burst;
-
-    [Header("Fire Delay (seconds between shots)")]
-    [Tooltip("Thời gian chờ (giây) giữa hai phát bắn.\n" +
-             "Ví dụ: 0.5 → click nhanh cỡ nào cũng phải chờ 0.5s mới bắn được phát tiếp.")]
-    [Min(0.01f)]
-    public float FireDelay = 0.125f;
     
     [Header("Brust Count")]
     [Tooltip("Số phát bắn của mỗi lần bắn ở chế độ Burst")]
@@ -451,9 +445,6 @@ public class GunRecoilData : ScriptableObject
         if (allowedModes == 0)
         { errorMessage = "AllowedModes: phải có ít nhất một mode được tick."; return false; }
 
-        // Fire rates
-        if (FireDelay  <= 0f) { errorMessage = "FireDelay phải > 0.";  return false; }
-
         // Pitch range
         if (pitch.x > pitch.y)
         { errorMessage = "Pitch: min (X) phải ≤ max (Y)."; return false; }
@@ -584,7 +575,6 @@ public class GunRecoilDataEditor : Editor
         EditorGUILayout.Space(4);
         EditorGUILayout.HelpBox(
             $"Allowed modes: {data.allowedModes}\n" +
-            $"Fire delay: {data.FireDelay:F3}s  " +
             $"Semi curve duration: {data.SemiCurveDuration:F2}s\n" +
             $"Auto curve duration: {data.AutoCurveDuration:F2}s",
             MessageType.Info);

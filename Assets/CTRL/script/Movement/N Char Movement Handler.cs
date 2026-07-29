@@ -14,7 +14,7 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public int _grenadeID {get; set;}
     [Networked] public NetworkBool IsTurnInPlaceActive { get; set; }
     [Networked] public NetworkBool IsJump { get; set; }
-    [Networked] public float LookDeltaY {get; set;}
+    [Networked] public float NetworkedPitch { get; set; }
     
     [Networked] private TickTimer _switchTimer { get; set; }
     [Networked] private TickTimer _slideTimer { get; set; }
@@ -22,7 +22,30 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public float _currentSpeed { get; set; }
     [Networked] public float _acceleration { get; set; }
 
-    [Networked] public NetworkBool IsFiring { get; set; }
+    // ── Fire state — thay IsFiring(bool) bằng FireCount(int) để tiết kiệm băng thông
+    // IsFiring chỉ cần 1 tick để NShootHandler đọc trong cùng FixedUpdateNetwork,
+    // không cần sync ra ngoài. FireCount sync để remote clients spawn visual.
+    // AimForward sync để Host/remote dùng cùng hướng bắn chính xác từ InputData.
+    [Networked] public int   FireCount   { get; set; }  // tăng mỗi phát bắn
+    [Networked] public Vector3 AimForward { get; set; }  // hướng bắn từ NInputData
+    [Networked] public ShotInfo LastShotInfo { get; set; } // kết quả raycast từ Host
+
+    // IsFiring chỉ dùng nội bộ trong frame FixedUpdateNetwork, không cần Networked
+    public bool IsFiring { get; private set; }
+
+    private bool _isRespawnRequested;
+
+    // ── helpers cho NShootHandler ──────────────────────────────────────────
+    public void IncrementFireCount() => FireCount++;
+    public void SetLastShotInfo(Vector3 pos, Vector3 normal, bool showEffect)
+    {
+        LastShotInfo = new ShotInfo
+        {
+            HitPosition = pos,
+            HitNormal   = normal,
+            ShowEffect  = showEffect
+        };
+    }
 
     private CharacterState _stateLogic;
     [Networked] private NetworkButtons _previousButtons { get; set; }
@@ -30,8 +53,9 @@ public class NCharMovementHandler : NetworkBehaviour
     private CharComponentManager _componentManager;
     private NetworkCharacterControllerCustom _ncc;
     private ConstraintManager _constraintManager;
-    private FreeCameraController _freeCameraController;
     private PlayerMotionController _playerMotionController;
+    private NHPHandler  _hpHandler;
+    private WeaponManager _weaponManager;
 
     public override void Spawned()
     {
@@ -40,20 +64,45 @@ public class NCharMovementHandler : NetworkBehaviour
         {
             _ncc = _componentManager.NetworkCharacterController;
             _constraintManager = _componentManager.ConstraintManager;
-            _freeCameraController = _componentManager.FreeCameraController;
             _playerMotionController = _componentManager.PlayerMotionController;
+            _hpHandler = _componentManager.NHPHandler;
+            _weaponManager = _componentManager.WeaponManager;
         }
         _stateLogic = new CharacterState();
     }
 
     public override void FixedUpdateNetwork()
     {
+        if (Object.HasStateAuthority)
+        {
+            if (_isRespawnRequested)
+            {
+                Respawn();
+                return;
+            }
+            
+            if (_hpHandler.IsDead)
+            {
+                _ncc.Move(Vector3.zero, 0, 0);
+                return;
+            }
+        }
+        
         if (GetInput(out NInputData inputdata))
         {
             MoveDirection = inputdata.MoveDirection;
-            LookDeltaY = inputdata.LookDelta.y;
-            _freeCameraController.Pitch(_data, LookDeltaY, _data.PitchCamera, Runner.DeltaTime);
+            // Tính pitch trực tiếp trên Host, lưu vào networked property
+            float minPitch = _data.PitchMin;
+            float maxPitch = _data.PitchMax;
+            NetworkedPitch = Mathf.Clamp(
+                NetworkedPitch - inputdata.LookDelta.y * _data.PitchCamera * Runner.DeltaTime,
+                minPitch, maxPitch
+            );
+            
             _playerMotionController.ActiveWeponCTRL()?.SetLookDelta(inputdata.LookDelta);
+
+            // Lưu AimForward từ InputData — chính xác hơn camera local, đồng bộ cho mọi máy
+            AimForward = inputdata.AimForward;
             
             _newState = _state;
 
@@ -129,7 +178,7 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Crouching Or Slide
     private void CrouchOrSlideHandler(NInputData input, ref PlayerStateFlags state)
     {
-        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Crouch))
+        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Crouch) && !state.IsSlide)
         {
             _stateLogic.ToggleCrouch(ref state, _constraintManager);
             _slideTimer = TickTimer.CreateFromSeconds(Runner, _data.SlideHoldDuration);
@@ -147,7 +196,6 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Jump))
         {
-            // Nếu đang slide thì hủy slide ngay lập tức
             if (state.IsSlide)
             {
                 _stateLogic.StopSlide(ref state, _constraintManager);
@@ -160,7 +208,7 @@ public class NCharMovementHandler : NetworkBehaviour
             
             _stateLogic.Jump(ref state);
             IsJump = true;
-            _ncc.Jump(); // NCC đã tự check Grounded bên trong
+            _ncc.Jump();
         }
     }
 #endregion
@@ -168,35 +216,36 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Weapon Control
     private void ShootHandler(NInputData input, ref PlayerStateFlags state)
     {
+        // IsFiring là local bool, reset mỗi tick — không Networked, không tốn băng thông
         IsFiring = false;
 
         if (state.IsSwitching || state.IsThrow)
             return;
 
         switch (_playerMotionController.ActiveWeaponMode())
-         {
-             case GunRecoilController.FiringMode.Semi:
-             case GunRecoilController.FiringMode.Burst:
-                 if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
-                 {
-                     IsFiring = true;
-                 }
-                 break;
-             case GunRecoilController.FiringMode.Auto:
-                 if (input.Buttons.IsSet(InputButtons.Attack))
-                 {
-                     IsFiring = true;
-                 }
-                 break;
-         }
+        {
+            case GunRecoilController.FiringMode.Semi:
+            case GunRecoilController.FiringMode.Burst:
+                if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
+                    IsFiring = true;
+                break;
+            case GunRecoilController.FiringMode.Auto:
+                if (input.Buttons.IsSet(InputButtons.Attack))
+                    IsFiring = true;
+                break;
+        }
     }
     
-    public void FireOnce()
+    public bool FireOnce()
     {
         var state = _state;
-        _stateLogic.ToggleShoot(ref state, _constraintManager); 
-        _playerMotionController.ActiveWeponCTRL()?.OnFire();
+        _stateLogic.ToggleShoot(ref state, _constraintManager);
+        var ctrl = _playerMotionController.ActiveWeponCTRL();
+        var canShoot = false;
+        if (ctrl != null)
+            canShoot = ctrl.OnFire();
         _state = state;
+        return canShoot;
     }
     
     private void ADSHandler(NInputData input, ref PlayerStateFlags state)
@@ -207,7 +256,7 @@ public class NCharMovementHandler : NetworkBehaviour
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS))
             _stateLogic.EnterADS(ref state, _constraintManager);
         
-        if  (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
+        if (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
             _stateLogic.ExitADS(ref state);
     }
 
@@ -219,9 +268,10 @@ public class NCharMovementHandler : NetworkBehaviour
 
     public void StopReload()
     {
-        if (!Object.HasStateAuthority) return; // chỉ Host (hoặc chủ sở hữu state) mới được phép sửa
+        if (!Object.HasStateAuthority) return;
 
         var s = _state;
+        Debug.Log("Stop reload");
         _stateLogic.StopReload(ref s);
         _state = s;
     }
@@ -248,11 +298,9 @@ public class NCharMovementHandler : NetworkBehaviour
 
         bool fragPressed  = input.Buttons.WasPressed(_previousButtons, InputButtons.ThrowFrag);
         bool flashPressed = input.Buttons.WasPressed(_previousButtons, InputButtons.ThrowFlash);
-
         bool fragReleased  = input.Buttons.WasReleased(_previousButtons, InputButtons.ThrowFrag);
         bool flashReleased = input.Buttons.WasReleased(_previousButtons, InputButtons.ThrowFlash);
 
-        // Bắt đầu throw: vừa nhấn, và CHƯA đang throw
         if ((fragPressed || flashPressed) && !state.IsThrow)
         {
             _grenadeID = fragPressed ? 1 : 2;
@@ -260,7 +308,6 @@ public class NCharMovementHandler : NetworkBehaviour
             return;
         }
 
-        // Dừng throw: đúng loại lựu đạn đang cầm vừa được NHẢ ra
         if (state.IsThrow)
         {
             bool shouldStop =
@@ -279,6 +326,19 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Mode))
             _playerMotionController.ModeSwitch();
+    }
+    #endregion
+
+    
+    #region Dead Status
+    public void RequestRespawn() => _isRespawnRequested = true;
+    
+    private void Respawn()
+    {
+        _ncc.Teleport(Utils.GetRandomSpawnPoint());
+        _hpHandler.OnRespawn();
+        _isRespawnRequested = false;
+        if (_weaponManager != null) _weaponManager.Respawn();
     }
     #endregion
 }

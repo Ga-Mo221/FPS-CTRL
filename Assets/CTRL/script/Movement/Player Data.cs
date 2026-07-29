@@ -3,6 +3,8 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Player Data", menuName = "FPS/Data/Player Data")]
 public class PlayerData : ScriptableObject
 {
+    [SerializeField] private byte _hp = 100;
+    
     [Tooltip("Lực hấp dẫn áp dụng lên nhân vật (giá trị âm để kéo nhân vật xuống).")]
     [SerializeField] private float _gravity = -20.0f;
 
@@ -55,8 +57,10 @@ public class PlayerData : ScriptableObject
     
     [SerializeField] private float _slide_Height = 1f;
     [SerializeField] private float _slide_Center_Y = 0.045f;
-    
 
+
+    public byte HP => _hp;
+    
     public float Gravity => _gravity;
     public float JumpImpulse => _jumpImpulse;
     public float Braking => _braking;

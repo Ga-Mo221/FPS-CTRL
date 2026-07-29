@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class MotionCall : StateMachineBehaviour
 {
+    // Char
     public void Switch(Animator animator)
     {
-    
         var Manager = animator.GetComponentInParent<WeaponManager>();
 
         if (Manager  == null)
@@ -16,16 +16,19 @@ public class MotionCall : StateMachineBehaviour
         Manager.SwitchWeapon();
     }
 
+    // Char
     public void ResetReload(Animator animator)
     {
         var controller = animator.GetComponentInParent<NCharMovementHandler>();
-
-        if (controller == null)
-            return;
-
-        controller.StopReload();
+        var weaponManager = animator.GetComponentInParent<WeaponManager>();
+        
+        controller?.StopReload();
+        weaponManager?.Weapon_Active()?.Reload();
     }
 
+    // ===================================== WEAPON =========================================================
+    
+    // Gun
     public void WeaponMagazine(Animator animator)
     {
         var controller = animator.GetComponentInParent<WeaponController>();
@@ -38,6 +41,7 @@ public class MotionCall : StateMachineBehaviour
             controller.Data.Volume_Magazine);
     }
     
+    // Gun
     public void WeaponSlide(Animator animator)
     {
         var controller = animator.GetComponentInParent<WeaponController>();

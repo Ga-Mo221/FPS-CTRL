@@ -479,6 +479,7 @@ AnimatorState:
   - {fileID: 6829120256245798646}
   - {fileID: 884677063922391778}
   - {fileID: 2003463399322105258}
+  - {fileID: -523086811133778496}
   m_StateMachineBehaviours: []
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
@@ -821,7 +822,7 @@ AnimatorStateMachine:
   m_StateMachineBehaviours: []
   m_AnyStatePosition: {x: 50, y: 20, z: 0}
   m_EntryPosition: {x: 50, y: 120, z: 0}
-  m_ExitPosition: {x: 800, y: 120, z: 0}
+  m_ExitPosition: {x: 50, y: 70, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: 4397053262437686908}
 --- !u!1101 &-4948524076064960616
@@ -1903,6 +1904,31 @@ BlendTree:
   m_UseAutomaticThresholds: 0
   m_NormalizedBlendValues: 0
   m_BlendType: 2
+--- !u!1101 &-523086811133778496
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 3
+    m_ConditionEvent: MoveY
+    m_EventTreshold: 0.5
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 7542665987169131488}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.25
+  m_TransitionOffset: 0
+  m_ExitTime: 0.9364407
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
 --- !u!1101 &-519842283407514800
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -2116,7 +2142,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: Full Body
     m_StateMachine: {fileID: -5007442506840403082}
-    m_Mask: {fileID: 31900000, guid: d0cd547acf7cb8a47b5eb33c4cd2ba84, type: 2}
+    m_Mask: {fileID: 0}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -2126,8 +2152,8 @@ AnimatorController:
     m_SyncedLayerAffectsTiming: 0
     m_Controller: {fileID: 9100000}
   - serializedVersion: 5
-    m_Name: Shoot
-    m_StateMachine: {fileID: 1783666195266637017}
+    m_Name: Spine
+    m_StateMachine: {fileID: -925199811136364902}
     m_Mask: {fileID: 0}
     m_Motions: []
     m_Behaviours: []
@@ -2138,8 +2164,8 @@ AnimatorController:
     m_SyncedLayerAffectsTiming: 0
     m_Controller: {fileID: 9100000}
   - serializedVersion: 5
-    m_Name: Spine
-    m_StateMachine: {fileID: -925199811136364902}
+    m_Name: Shoot
+    m_StateMachine: {fileID: 1783666195266637017}
     m_Mask: {fileID: 31900000, guid: d0cd547acf7cb8a47b5eb33c4cd2ba84, type: 2}
     m_Motions: []
     m_Behaviours: []

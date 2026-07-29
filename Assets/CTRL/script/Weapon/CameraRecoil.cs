@@ -27,6 +27,7 @@ public class CameraRecoil : MonoBehaviour
     [Tooltip("Nguồn dữ liệu recoil — đọc từ section 'Camera Shake' của GunRecoilData.\n" +
              "Gán qua LoadData() khi đổi súng để camera luôn khớp với khẩu súng đang cầm.")]
     [SerializeField] private GunRecoilData data;
+    [SerializeField] private WeaponData _weaponData;
 
     [Header("Camera Controller")]
     [SerializeField] private Transform camera_CTRL;
@@ -57,8 +58,10 @@ public class CameraRecoil : MonoBehaviour
 
     private void Awake()
     {
+        _weaponData = GetComponent<WeaponController>().Data;
         if (data != null)
             ApplyDataToFields();
+        
     }
 
     private void Update()
@@ -119,13 +122,13 @@ public class CameraRecoil : MonoBehaviour
             case GunRecoilController.FiringMode.Semi:
                 if (Time.time < _nextFireTime) return false;
                 FireOnce();
-                _nextFireTime = Time.time + data.FireDelay;
+                _nextFireTime = Time.time + _weaponData.FireDelay;
                 return true;
 
             case GunRecoilController.FiringMode.Auto:
                 if (Time.time < _nextFireTime) return false;
                 FireOnce();
-                _nextFireTime = Time.time + data.FireDelay;
+                _nextFireTime = Time.time + _weaponData.FireDelay;
                 return true;
 
             case GunRecoilController.FiringMode.Burst:
@@ -134,7 +137,7 @@ public class CameraRecoil : MonoBehaviour
                 if (Time.time < _nextFireTime) return false;
                 TriggerBurst();
                 // Cooldown = thời gian hoàn thành toàn bộ loạt burst, giống GunRecoilController
-                _nextFireTime = Time.time + data.BurstCount * data.FireDelay;
+                _nextFireTime = Time.time + data.BurstCount * _weaponData.FireDelay;
                 return true;
         }
 
@@ -213,7 +216,7 @@ public class CameraRecoil : MonoBehaviour
     private void TriggerBurst()
     {
         _burstRemaining    = data.BurstCount;
-        _burstFireRate     = data.FireDelay;
+        _burstFireRate     = _weaponData.FireDelay;
         _burstNextShotTime = Time.time; // phát đầu tiên ngay lập tức
     }
 

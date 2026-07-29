@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -91,13 +90,28 @@ public class WeaponController : MonoBehaviour
     [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
     [HideLabel]
     [SerializeField] private string _bullet_effect_name = "Shoot Effect";
+    
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/ro", width:0.6f)]
+    [SerializeField] private Transform _ads_Shoot_Point;
+
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/ro")] 
+    [HideLabel] 
+    [SerializeField] private string _ads_Shoot_Point_Name = "Shoot Point";
 
     private Transform _ads_Pivot_transform;
     private bool _isCrouch;
     public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
+    [SerializeField] private int _currentBulletvalue;
+    [SerializeField] private int _currentMaxBullet;
     
     private AudioManager _audio;
+    [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private AudioSource _sound;
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private BulletCaseController _bulletController;
+
+    [SerializeField] private Transform _parrentBullet;
+    private List<ProjectileVisual> _poolBullet = new List<ProjectileVisual>();
     
     // =============================== public Filed ============================================
 
@@ -117,6 +131,7 @@ public class WeaponController : MonoBehaviour
     public  Transform Pole_Right => _pole_Right;
     public TransformConstraint ADS_Pivot => _ads_Pivot;
     public AudioSource Sound => _sound;
+    public Vector3 ADS_Shoot_Point => _ads_Shoot_Point.position;
     
 
     private void Awake()
@@ -128,13 +143,22 @@ public class WeaponController : MonoBehaviour
         _cam_Recoil?.LoadData(_data);
         _gun_Recoil_CTRL?.ReloadData(_data);
     }
+
+    public void Respawn()
+    {
+        Debug.Log("Respawn");
+        _currentMaxBullet = _data.MaxBullet;
+        Reload();
+    }
     
     // ====================================== EVENT ONFIRE =========================
 
     void Start()
     {
+        _parrentBullet.parent = null;
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
         _audio = AudioManager.Instance;
+        Respawn();
     }
 
     void OnDestroy()
@@ -149,9 +173,11 @@ public class WeaponController : MonoBehaviour
 
     private void PlayFireEffect()
     {
+        _currentBulletvalue--;
         _anim.SetTrigger("IsShooting");
         if (_audio != null) _audio.PlayClip(_sound, Data.FireClip, Data.Volume_Fire);
-
+        if (_bulletController != null)
+            _bulletController.Drop();
         // reset effect
         _shoot_Effect.SetActive(false);
         _shoot_Effect.SetActive(true);
@@ -176,19 +202,19 @@ public class WeaponController : MonoBehaviour
 
             float target = _ads ? 1f : 0f;
             float zoom = _ads ? _data.ADS_Zoom : _data.Stand_Zoom;
-            float zoom_y = _ads ? _data.ADS_Zoom_Y : _data.Stamd_Zoom_Y;
+            float zoom_z = _ads ? _data.ADS_Zoom_Z : _data.Stamd_Zoom_Z;
             float Pivot_Height = _ads && _isCrouch ? _data.Ads_Pivot_Height : _data.Stand_Pivot_Height;
-            _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_y, Pivot_Height, _data.ADS_duration));
+            _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Height, _data.ADS_duration));
         }
     }
 
-    private IEnumerator ADSBlend(float targetWeight, float zoomTarget, float zoomY, float pivotHeight, float duration = 0.25f)
+    private IEnumerator ADSBlend(float targetWeight, float zoomTarget, float zoomZ, float pivotHeight, float duration = 0.25f)
     {
         // XÓA HOÀN TOÀN 4 DÒNG CHECK APPROXIMATELY Ở ĐÂY
     
         float start = _ads_Pivot.targets[0].weight;
         float startzoom = _camera_Zoom.fieldOfView;
-        float startzoom_y = _camera_Zoom.transform.localPosition.y;
+        float startzoom_z = _camera_Zoom.transform.localPosition.z;
         float startHeight = _ads_Pivot_transform.localPosition.z;
     
         float time = 0f;
@@ -205,7 +231,7 @@ public class WeaponController : MonoBehaviour
             _camera_Zoom.fieldOfView = Mathf.Lerp(startzoom, zoomTarget, progress);
         
             // Giữ nguyên X và Z của camera, chỉ blend trục Y
-            _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, Mathf.Lerp(startzoom_y, zoomY, progress), _zoomYtarget.z);
+            _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, _zoomYtarget.y, Mathf.Lerp(startzoom_z, zoomZ, progress));
             _ads_Pivot_transform.localPosition = new Vector3(PivotHeight.x, PivotHeight.y, Mathf.Lerp(startHeight, pivotHeight, progress));
         
             yield return null;
@@ -215,7 +241,7 @@ public class WeaponController : MonoBehaviour
         _ads_Pivot.targets[0].weight = targetWeight;
         _sway.SetWeight(targetWeight);
         _camera_Zoom.fieldOfView = zoomTarget;
-        _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, zoomY, _zoomYtarget.z);
+        _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, _zoomYtarget.y, zoomZ);
         _ads_Pivot_transform.transform.localPosition = new Vector3(PivotHeight.x, PivotHeight.y, pivotHeight);
         _blendRoutine = null;
     }
@@ -231,61 +257,62 @@ public class WeaponController : MonoBehaviour
     
     // ======================= FIRE ====================================
 
+    public void Reload()
+    {
+        if (_currentMaxBullet >= _data.DefaultBullet)
+        {
+            _currentMaxBullet -= _data.DefaultBullet - _currentBulletvalue;
+            _currentBulletvalue = _data.DefaultBullet;
+        }else if (_currentMaxBullet > 0)
+        {
+            int thieu = _data.DefaultBullet - _currentBulletvalue;
+            if (thieu <= _currentMaxBullet)
+            {
+                _currentBulletvalue = _data.DefaultBullet;
+                _currentMaxBullet -= thieu;
+            }
+            else
+            {
+                _currentBulletvalue += _currentMaxBullet;
+                _currentMaxBullet = 0;
+            }
+        }
+    }
+
     public bool OnFire()
     {
-        return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire();
+        if (_currentBulletvalue <= 0) return false;
+        return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
     }
 
     public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
     {
         if (_bullet_Prefab == null) return;
-        
-        var projectile = Instantiate(_bullet_Prefab, _bullet_point.position, _bullet_point.rotation);
-        var projectileVisual = projectile.GetComponent<ProjectileVisual>();
+
+        var projectileVisual = GetBullet();
+        projectileVisual.transform.position = _bullet_point.position;
+        projectileVisual.transform.rotation = _bullet_point.rotation;
         projectileVisual.SetHit(hitPosition, hitNormal, showEffect);
     }
+    
+    private ProjectileVisual GetBullet()
+    {
+        foreach (var bullet in _poolBullet)
+        {
+            if (!bullet.gameObject.activeSelf)
+            {
+                bullet.gameObject.SetActive(true);
+                return bullet;
+            }
+        }
 
-    // private (Vector3 hitPosition, Vector3 hitNormal, bool showEffect) GetRaycastHitInfo(Vector3 AimForward)
-    // {
-    //     float maxDistance = _data.Range;
-    //     Vector3 origin = transform.position;
+        GameObject newbullet = Instantiate(_bullet_Prefab, _parrentBullet);
+        var visual = newbullet.GetComponent<ProjectileVisual>();
+        _poolBullet.Add(visual);
 
-    //     // LagCompensation chỉ available khi NetworkProjectConfig bật Lag Compensation
-    //     // và session được khởi tạo đúng. Nếu null thì fallback Physics.Raycast thông thường.
-    //     if (Runner.LagCompensation != null)
-    //     {
-    //         var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
-    //         if (Runner.LagCompensation.Raycast(
-    //                 origin, AimForward, maxDistance,
-    //                 Object.InputAuthority, out var hit,
-    //                 _hitMask, hitOptions))
-    //         {
-    //             bool showEffect = hit.Hitbox == null;
-
-    //             if (hit.Hitbox != null)
-    //                 Debug.Log($"{Time.time} {transform.name} hit hitbox {hit.Hitbox.transform.root.name}");
-    //             else if (hit.Collider != null)
-    //                 Debug.Log($"{Time.time} {transform.name} hit physic collider {hit.Collider.transform.root.name}");
-
-    //             return (hit.Point, hit.Normal, showEffect);
-    //         }
-    //     }
-    //     else
-    //     {
-    //         // Fallback: Physics.Raycast thuần Unity khi LagCompensation chưa được cấu hình.
-    //         // Để dùng LagCompensation đúng: bật "Lag Compensation" trong NetworkProjectConfig
-    //         // và đảm bảo các collider cần hit có component HitboxRoot + Hitbox.
-    //         if (Physics.Raycast(origin, AimForward, out RaycastHit physHit, maxDistance, _hitMask))
-    //         {
-    //             Debug.Log($"{Time.time} {transform.name} [Physics fallback] hit {physHit.collider.transform.root.name}");
-    //             return (physHit.point, physHit.normal, true);
-    //         }
-    //     }
-
-    //     Vector3 missPoint = origin + AimForward * maxDistance;
-    //     return (missPoint, -AimForward, false);
-    // }
-
+        return visual;
+    }
+    
     public void SwitchMode()
     {
         var current_mode = _gun_Recoil_CTRL.GetFiringMode();
@@ -337,7 +364,14 @@ public class WeaponController : MonoBehaviour
         _ads = ads;
         _anim.SetBool("ADS", ads);
     }
-    public void IsReloading(bool isReloading) => _anim.SetBool("IsReloading", isReloading);
+    public bool IsReloading(bool isReloading)
+    {
+        if (isReloading && _currentBulletvalue == _data.DefaultBullet) return false;
+        if (isReloading && _currentMaxBullet == 0) return false;
+        _anim.SetBool("IsReloading", isReloading);
+        return true;
+    }
+    
     public void IsJumping() => _anim.SetTrigger("IsJumping");
 
     public void Move(Vector2 move)
@@ -369,6 +403,9 @@ public class WeaponController : MonoBehaviour
         
         _cam_Recoil = GetComponentInChildren<CameraRecoil>(true);
         if (_cam_Recoil == null) Debug.LogError("CameraRecoil not found!");
+        
+        _bulletController = GetComponentInChildren<BulletCaseController>(true);
+        if (_bulletController == null) Debug.LogError("BulletCaseController not found!");
         
         List<Transform> list_bone_hand = new List<Transform>();
         List<Transform> list_bone_grenade = new List<Transform>();
@@ -438,9 +475,18 @@ public class WeaponController : MonoBehaviour
                 continue;
             }
 
+            if (trans.name.Equals(_ads_Shoot_Point_Name))
+            {
+                _ads_Shoot_Point = trans;
+                continue;
+            }
+
             if (trans.name.Equals(_bullet_effect_name))
                 _shoot_Effect = trans.gameObject;
         }
+
+        _list_Bone_Body = new Transform[0];
+        _list_Bone_Grenade = new Transform[0];
         _list_Bone_Body = _list_Bone_Body.Concat(list_bone_hand).ToArray();
         _list_Bone_Grenade = _list_Bone_Grenade.Concat(list_bone_grenade).ToArray();
     }

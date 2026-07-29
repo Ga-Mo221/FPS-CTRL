@@ -59,7 +59,6 @@ GameObject:
   - component: {fileID: 1989589391399178795}
   - component: {fileID: 4421370981314689599}
   - component: {fileID: 2617089555171110263}
-  - component: {fileID: 4816314861433209954}
   m_Layer: 0
   m_Name: M4
   m_TagString: Untagged
@@ -82,6 +81,7 @@ Transform:
   m_Children:
   - {fileID: 4917590710315638624}
   - {fileID: 8214812703376672340}
+  - {fileID: 2834355157056179275}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4421370981314689599
@@ -167,7 +167,11 @@ MonoBehaviour:
   _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
   _shoot_Effect: {fileID: 1133630563441487478}
   _bullet_effect_name: Shoot Effect
+  _ads_Shoot_Point: {fileID: 5572983106307651861}
+  _ads_Shoot_Point_Name: Shoot Point
   _sound: {fileID: 9036363078410755058}
+  _bulletController: {fileID: 0}
+  _parrentBullet: {fileID: 2834355157056179275}
 --- !u!114 &2617089555171110263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -183,24 +187,6 @@ MonoBehaviour:
   data: {fileID: 0}
   camera_CTRL: {fileID: 0}
   firingMode: 0
---- !u!114 &4816314861433209954
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1140873525885738155}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
-  SortKey: 1244400646
-  ObjectInterest: 1
-  Flags: 262145
-  NestedObjects: []
-  NetworkedBehaviours: []
-  ForceRemoteRenderTimeframe: 0
 --- !u!1 &3351486452706217041
 GameObject:
   m_ObjectHideFlags: 0
@@ -262,6 +248,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1204294253273056058}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3683162720228322140
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5572983106307651861}
+  m_Layer: 0
+  m_Name: Shoot Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5572983106307651861
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3683162720228322140}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: 0.002852, z: 0.000719}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8968942199163345700}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4810471647362899432
 GameObject:
@@ -432,7 +449,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7150188135856656319}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab3261eecbdb10145915454b723ac662, type: 3}
   m_Name: 
@@ -548,6 +565,37 @@ MonoBehaviour:
   gizmoColorX: {r: 1, g: 0, b: 0, a: 1}
   gizmoColorY: {r: 0, g: 1, b: 0, a: 1}
   gizmoColorZ: {r: 0, g: 0, b: 1, a: 1}
+--- !u!1 &8998724132248116746
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2834355157056179275}
+  m_Layer: 0
+  m_Name: Parrent Bullet
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2834355157056179275
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8998724132248116746}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1989589391399178795}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1134379074894610910
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1359,6 +1407,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3191900289274313405, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3916370583819310063}
+    - targetCorrespondingSourceObject: {fileID: 3191900289274313405, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5572983106307651861}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
 --- !u!4 &23495439451077462 stripped

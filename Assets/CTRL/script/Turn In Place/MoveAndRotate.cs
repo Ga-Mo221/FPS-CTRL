@@ -7,16 +7,34 @@ public static class MoveAndRotate
 {
     public static void StartMoving(FlowerSetup flowerSetup)
     {
-        // Guard kiểm tra CanMove (bước "đã được cấp phép/đang trong hàng đợi
-        // di chuyển"). Nếu flower đang CanMove == true (dù đang active animate
-        // hay đang đợi tới lượt), không được phép gọi lại StartMoving, nếu
-        // không Timer/StartPosition sẽ bị reset giữa chừng gây giật hình.
         if (flowerSetup.CanMove || flowerSetup.Target == null)
             return;
 
-        flowerSetup.CanMove = true;
-        flowerSetup.Timer = 0f; // Timer là của riêng từng FlowerSetup
+        // Snap về freeze để StartPosition không bị IK làm lệch
+        flowerSetup.Owner.position = flowerSetup.FreezePosition;
+        flowerSetup.Owner.rotation = flowerSetup.FreezeRotation;
 
+        flowerSetup.CanMove = true;
+        flowerSetup.Timer = 0f;
+        flowerSetup.StartPosition = flowerSetup.Owner.position;
+        flowerSetup.StartRotation = flowerSetup.Owner.rotation;
+    }
+    
+    /// <summary>
+    /// Giống StartMoving nhưng KHÔNG check CanMove — dùng khi cần
+    /// force reset về target (ví dụ khi TurnOn sau khi owner đã lệch).
+    /// </summary>
+    public static void ForceStartMoving(FlowerSetup flowerSetup)
+    {
+        if (flowerSetup.Target == null) return;
+
+        // Snap owner về freeze trước, rồi mới lấy làm StartPosition
+        flowerSetup.Owner.position = flowerSetup.FreezePosition;
+        flowerSetup.Owner.rotation = flowerSetup.FreezeRotation;
+
+        flowerSetup.CanMove = true;
+        flowerSetup.IsMoving = false;
+        flowerSetup.Timer = 0f;
         flowerSetup.StartPosition = flowerSetup.Owner.position;
         flowerSetup.StartRotation = flowerSetup.Owner.rotation;
     }
@@ -27,7 +45,7 @@ public static class MoveAndRotate
     {
         if (flowerSetup.Target == null)
             return;
-
+        
         if (!flowerSetup.IsMoving)
         {
             flowerSetup.Owner.position = flowerSetup.FreezePosition;
@@ -95,6 +113,8 @@ public static class MoveAndRotate
 
         if (!flowerSetup.CanMove)
             return false;
+        
+        //Debug.Log($"{flowerSetup.Owner.position} and {flowerSetup.Target.position}");
 
         // Đánh dấu "đang thực sự animate frame này" để Lock() (chạy trong
         // Update, trước LateUpdate) biết mà KHÔNG ghi đè freeze lên bông hoa
@@ -108,11 +128,11 @@ public static class MoveAndRotate
 
         Vector3 targetPos = flowerSetup.Target.position + Vector3.up * offset;
         Quaternion targetRot = flowerSetup.Target.rotation;
-
+        
         Vector3 pos = Vector3.Lerp(flowerSetup.StartPosition, targetPos, t);
-
+        
         pos.y += jumpHeight * 4f * t * (1f - t);
-
+        
         flowerSetup.Owner.position = pos;
         flowerSetup.Owner.rotation = Quaternion.Slerp(flowerSetup.StartRotation, targetRot, t);
 
@@ -134,8 +154,12 @@ public static class MoveAndRotate
 
     public static void resetFree(FlowerSetup flowerSetup)
     {
-        flowerSetup.FreezePosition = flowerSetup.Target.position;
-        flowerSetup.FreezeRotation = flowerSetup.Target.rotation;
-        StartMoving(flowerSetup);
+        if (flowerSetup.Target == null) return;
+        // Chỉ snapshot vị trí HIỆN TẠI của owner làm freeze,
+        // KHÔNG gọi StartMoving — ToggleTurn sẽ gọi khi delta đủ lớn
+        flowerSetup.FreezePosition = flowerSetup.Owner.position;
+        flowerSetup.FreezeRotation = flowerSetup.Owner.rotation;
+        flowerSetup.CanMove = false;
+        flowerSetup.IsMoving = false;
     }
 }

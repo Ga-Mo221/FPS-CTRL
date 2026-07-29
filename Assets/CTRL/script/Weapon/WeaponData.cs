@@ -11,6 +11,16 @@ public class WeaponData : ScriptableObject
     [SerializeField] private int _index;
     [TabGroup("Weapon Data", "Info")]
     [SerializeField] private string _name;
+    [TabGroup("Weapon Data", "Info")]
+    [Tooltip("Lượng đạn tối đa của súng sau khi thay đạn.")]
+    [SerializeField] private int _defaultBullet = 9;
+    [Tooltip("lượng đạn tối đa có thể mang theo")]
+    [SerializeField] private int _maxBullet = 27;
+    [TabGroup("Weapon Data", "Info")]
+    [Tooltip("Thời gian chờ (giây) giữa hai phát bắn.\n" +
+             "Ví dụ: 0.5 → click nhanh cỡ nào cũng phải chờ 0.5s mới bắn được phát tiếp.")]
+    [Min(0.01f)]
+    [SerializeField] private float _fireDelay = 0.133f;
     
     [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Tầm bắn của đạn có thể bắn trúng kẻ định.(chiều dài của raycat)")]
@@ -25,10 +35,10 @@ public class WeaponData : ScriptableObject
 
     [TabGroup("Weapon Data", "ADS")]
     [Tooltip("camera sẽ di chuyển trục y lên một khoản khi ngắm để tạo cảm giác ngắm tốt hơn.(điều chỉnh sao cho súng nằm gọn trong màn hình)")]
-    [SerializeField] private float _aDS_Zoom_Y = 0.177f;
+    [SerializeField] private float _aDS_Zoom_Z = 0.177f;
     [TabGroup("Weapon Data", "ADS")]
     [Tooltip("vị trí mặc định")]
-    [SerializeField] private float _stamd_Zoom_Y = 0f;
+    [SerializeField] private float _stamd_Zoom_Z = 0f;
 
     [TabGroup("Weapon Data", "ADS")]
     [Range(0,1f)]
@@ -81,11 +91,14 @@ public class WeaponData : ScriptableObject
     
     public string ID => _iD;
     public int Index => _index;
-    public string Name => _name;    
+    public string Name => _name;
+    public int DefaultBullet => _defaultBullet;
+    public int MaxBullet => _maxBullet;
+    public float FireDelay => _fireDelay;
     public float ADS_Zoom => _aDS_Zoom;
     public float Stand_Zoom => _stand_Zoom;
-    public float ADS_Zoom_Y => _aDS_Zoom_Y;
-    public float Stamd_Zoom_Y => _stamd_Zoom_Y;
+    public float ADS_Zoom_Z => _aDS_Zoom_Z;
+    public float Stamd_Zoom_Z => _stamd_Zoom_Z;
     public float ADS_duration => _aDS_duration;
     public float Range => _range;
     public GunRecoilData RecoilData => _recoilData;

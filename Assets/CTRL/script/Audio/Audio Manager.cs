@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[DefaultExecutionOrder(10)]
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance;
@@ -30,6 +31,12 @@ public class AudioManager : MonoBehaviour
         source.volume = volume;
         source.pitch = pitch;
         source.PlayOneShot(clip);
+    }
+
+    public void PlayClipAtPoint(AudioClip clip, Vector3 point, float volume = 1)
+    {
+        if (clip == null) return;
+        AudioSource.PlayClipAtPoint(clip, point, volume);
     }
 
     public void Jump(AudioSource source)

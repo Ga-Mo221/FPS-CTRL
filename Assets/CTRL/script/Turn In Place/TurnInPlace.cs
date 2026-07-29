@@ -1,3 +1,4 @@
+using System.Collections;
 using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -28,41 +29,51 @@ public class TurnInPlace : NetworkBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float offset;
     
-    private bool _canTurn;
-    private bool _lateCanTurn;
+    [SerializeField] private bool _canTurn;
+    private bool _lastIsTurn;
 
+    private CharComponentManager _componentManager;
     private NCharMovementHandler _movementHandler;
+    private NHPHandler _hpHandler;
 
     public override void Spawned()
     {
-        _movementHandler = GetComponent<NCharMovementHandler>();
+        _componentManager = GetComponent<CharComponentManager>();
+        _movementHandler = _componentManager.NCharMovementHandler;
+        _hpHandler = _componentManager.NHPHandler;
         _late_root_Rot_Y = _root.rotation.eulerAngles.y;
     }
-
+    
     public override void Render()
     {
+        if (_hpHandler.IsDead) { TurnOff(); return; }
+
         bool IsTurn = _movementHandler.IsTurnInPlaceActive;
-        if (IsTurn) TurnOn(); else TurnOff();
+        if (IsTurn != _lastIsTurn)
+        {
+            if (IsTurn) TurnOn();
+            else TurnOff();
+            _lastIsTurn = IsTurn;
+        }
 
         if (!_canTurn) return;
-        if (_canTurn != _lateCanTurn)
-        {
-            MoveAndRotate.resetFree(_flowerSetup_L);
-            MoveAndRotate.resetFree(_flowerSetup_R);
-            _lateCanTurn = _canTurn;
-        }
-        MoveAndRotate.Lock(_flowerSetup_L);
-        MoveAndRotate.Lock(_flowerSetup_R);
 
         ToggleTurn();
+
+        bool movedL = false, movedR = false;
         if (!_left)
         {
-            if (!Move(_flowerSetup_L)) Move(_flowerSetup_R);
+            movedL = Move(_flowerSetup_L);
+            if (!movedL) movedR = Move(_flowerSetup_R);
         }
         else
         {
-            if (!Move(_flowerSetup_R)) Move(_flowerSetup_L);
+            movedR = Move(_flowerSetup_R);
+            if (!movedR) movedL = Move(_flowerSetup_L);
         }
+
+        if (!movedL) MoveAndRotate.Lock(_flowerSetup_L);
+        if (!movedR) MoveAndRotate.Lock(_flowerSetup_R);
     }
 
     [Button]
@@ -91,12 +102,30 @@ public class TurnInPlace : NetworkBehaviour
     {
         _flowerSetup_L.IKconstraint.TurnOff(time);
         _flowerSetup_R.IKconstraint.TurnOff(time);
+
+        // Snapshot vị trí hiện tại để FreezePosition không bị stale
+        if (_flowerSetup_L.Owner != null)
+        {
+            _flowerSetup_L.FreezePosition = _flowerSetup_L.Owner.position;
+            _flowerSetup_L.FreezeRotation = _flowerSetup_L.Owner.rotation;
+        }
+        if (_flowerSetup_R.Owner != null)
+        {
+            _flowerSetup_R.FreezePosition = _flowerSetup_R.Owner.position;
+            _flowerSetup_R.FreezeRotation = _flowerSetup_R.Owner.rotation;
+        }
+
         _canTurn = false;
-        _lateCanTurn = false;
     }
 
     public void TurnOn(float time = 0.1f)
     {
+        MoveAndRotate.resetFree(_flowerSetup_L);
+        MoveAndRotate.resetFree(_flowerSetup_R);
+        
+        MoveAndRotate.ForceStartMoving(_flowerSetup_L);
+        MoveAndRotate.ForceStartMoving(_flowerSetup_R);
+        
         _flowerSetup_L.IKconstraint.TurnOn(time);
         _flowerSetup_R.IKconstraint.TurnOn(time);
         _canTurn = true;

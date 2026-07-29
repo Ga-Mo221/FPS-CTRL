@@ -263,10 +263,10 @@ public class AnimatorControllerCreator : EditorWindow
         EditorGUILayout.LabelField("  └ States:", "IsDead, NULL, JUMP UP/AIR/PLAN, SLIDE IN/SLIDING/OUT");
         EditorGUILayout.LabelField("  └ Sub: Locomotion", "Stand (BlendTree 2D, 21 clips) + Crouch (BlendTree 2D, 17 clips)");
         EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("• Spine", "weight 1  |  No Mask");
+        EditorGUILayout.Space(2);
         EditorGUILayout.LabelField("• Shoot", "weight 1  |  No Mask");
         EditorGUILayout.LabelField("  └ States:", "IsDead, NULL, SHOOT");
-        EditorGUILayout.Space(2);
-        EditorGUILayout.LabelField("• Spine", "weight 1  |  No Mask");
         if (controllerMode == ControllerMode.Character)
         {
             int wCount = weaponClipsTab.entries?.Count ?? 0;
@@ -349,21 +349,21 @@ public class AnimatorControllerCreator : EditorWindow
         fullBodyBuilder.Init(singleClips);
         fullBodyBuilder.Build(ac, 0);
 
-        // Layer 1: Shoot
-        shootBuilder.Init(singleClips);
-        shootBuilder.Build(ac, 1);
-
-        // Layer 2: Spine
+        // Layer 1: Spine
         if (controllerMode == ControllerMode.Character)
         {
             charSpineBuilder.Init(singleClips);
-            charSpineBuilder.Build(ac, 2);
+            charSpineBuilder.Build(ac, 1);
         }
         else
         {
             spineBuilder.Init(singleClips);
-            spineBuilder.Build(ac, 2);
+            spineBuilder.Build(ac, 1);
         }
+
+        // Layer 2: Shoot
+        shootBuilder.Init(singleClips);
+        shootBuilder.Build(ac, 2);
 
         // Layer 3: Dead
         deadBuilder.Init(singleClips);

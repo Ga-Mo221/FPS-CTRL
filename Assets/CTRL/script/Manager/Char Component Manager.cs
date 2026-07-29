@@ -1,3 +1,4 @@
+using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -15,6 +16,11 @@ public class CharComponentManager : MonoBehaviour
     public Animator Animator;
     public AudioSource AudioSource;
     public Camera Camera;
+    public NCharacterAnimationHandler NCharacterAnimationHandler;
+    public NShootHandler NShootHandler;
+    public NHPHandler NHPHandler;
+    public UIHPPlayer UihpPlayer;
+    public HitboxRoot HitboxRoot;
 
     [Button]
     public void Setup()
@@ -30,5 +36,10 @@ public class CharComponentManager : MonoBehaviour
         Animator = GetComponentInChildren<Animator>(true);
         AudioSource = GetComponentInChildren<AudioSource>(true);
         Camera = GetComponentInChildren<Camera>(true);
+        NCharacterAnimationHandler = GetComponentInChildren<NCharacterAnimationHandler>(true);
+        NShootHandler = GetComponentInChildren<NShootHandler>(true);
+        NHPHandler = GetComponentInChildren<NHPHandler>(true);
+        UihpPlayer = GetComponentInChildren<UIHPPlayer>(true);
+        HitboxRoot = GetComponentInChildren<HitboxRoot>(true);
     }
 }

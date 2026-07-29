@@ -108,6 +108,14 @@ public class WeaponManager : MonoBehaviour
         Debug.Log("<color=red>[WeaponManager]</color> WeaponController not active.", this);
         return null;
     }
+
+    public void Respawn()
+    {
+        if (_weapon_One_CTRL != null)
+            _weapon_One_CTRL.Respawn();
+        if (_weapon_Two_CTRL != null)
+            _weapon_Two_CTRL.Respawn();
+    }
     
     
 #if UNITY_EDITOR

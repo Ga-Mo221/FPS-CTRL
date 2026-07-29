@@ -68,6 +68,7 @@ public class CharacterState
             return;
 
         s.IsReloading = true;
+        ExitADS(ref s);
         StopMovement(ref s, _c_manager);
     }
 
@@ -128,6 +129,7 @@ public class CharacterState
     public void StartThrow(ref PlayerStateFlags s, ConstraintManager _c_manager)
     {
         s.IsThrow = true;
+        ExitADS(ref s);
         StopCombat(ref s);
         StopMovement(ref s, _c_manager);
     }

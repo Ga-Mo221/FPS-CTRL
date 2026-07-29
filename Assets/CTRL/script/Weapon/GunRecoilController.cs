@@ -143,7 +143,7 @@ public class GunRecoilController : MonoBehaviour
     /// đúng tick mô phỏng — an toàn khi Fusion resimulate/rollback, và khớp với thời điểm
     /// server thực sự tính toán, tránh lệch giữa client dự đoán và server.
     /// </summary>
-    public bool OnFire()
+    public bool OnFire(float delay)
     {
         _time = Time.time;
 
@@ -153,18 +153,18 @@ public class GunRecoilController : MonoBehaviour
         {
             case FiringMode.Semi:
                 FireSemi();
-                _nextFireTime = Time.time + data.FireDelay;
+                _nextFireTime = Time.time + delay;
                 break;
 
             case FiringMode.Auto:
-                FireAuto(data.FireDelay);
-                _nextFireTime = Time.time + data.FireDelay;
+                FireAuto(delay);
+                _nextFireTime = Time.time + delay;
                 break;
 
             case FiringMode.Burst:
-                TriggerBurst(data.FireDelay);
+                TriggerBurst(delay);
                 // Cooldown = thời gian hoàn thành toàn bộ loạt
-                _nextFireTime = Time.time + burstCount * data.FireDelay;
+                _nextFireTime = Time.time + burstCount * delay;
                 break;
         }
 
