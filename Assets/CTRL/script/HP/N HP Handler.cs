@@ -23,6 +23,8 @@ public class NHPHandler : NetworkBehaviour
     private PlayerData _data;
     private NCharMovementHandler _movementHandler;
     private HitboxRoot _hitboxRoot;
+    private NInGameMessagesHandler _inGameMessagesHandler;
+    private NPlayer _nPlayer;
 
     private float _lastDamageTime = float.MinValue;
     private float _nextRegenTime;
@@ -34,6 +36,8 @@ public class NHPHandler : NetworkBehaviour
         _uiHPPlayer = _componentManager.UihpPlayer;
         _movementHandler = _componentManager.NCharMovementHandler;
         _hitboxRoot = _componentManager.HitboxRoot;
+        _inGameMessagesHandler = _componentManager.NInGameMessagesHandler;
+        _nPlayer = _componentManager.NPlayer;
         NewState();
     }
 
@@ -62,7 +66,7 @@ public class NHPHandler : NetworkBehaviour
         _nextRegenTime = Runner.SimulationTime + _regenInterval;
     }
 
-    public bool OnTakeDamage(int damage)
+    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName)
     {
         if (IsDead) return false;
 
@@ -72,8 +76,8 @@ public class NHPHandler : NetworkBehaviour
 
         if (HP <= 0)
         {
+            _inGameMessagesHandler.SendInGameRPCMessage(damageCausedByPlayerNickName, $"<color=red>Killed</color> <b>{_nPlayer.Nickname.ToString()}</b>");
             IsDead = true;
-            
             StartCoroutine(ServerRevoveCO(7f));
             return true;
         }
@@ -107,8 +111,8 @@ public class NHPHandler : NetworkBehaviour
 
     IEnumerator ServerRevoveCO(float timeRespawn)
     {
-        _movementHandler.StateFl = new PlayerStateFlags();
         yield return new WaitForSeconds(timeRespawn);
+        _movementHandler.StateFl = new PlayerStateFlags();
         _movementHandler.RequestRespawn();
     }
 }

@@ -27,6 +27,9 @@ public class WeaponData : ScriptableObject
     [Tooltip("Tầm bắn của đạn có thể bắn trúng kẻ định.(chiều dài của raycat)")]
     [SerializeField] private float _range = 100f;
 
+    [TabGroup("Weapon Data", "Bullet")] 
+    [SerializeField] private int _damage = 10;
+    
     [TabGroup("Weapon Data", "ADS")]
     [Tooltip("mức độ zoom của camera khi không có ống ngắp. giá trị càng nhỏ zoom càng xa.")]
     [SerializeField] private float _aDS_Zoom = 35f;
@@ -102,6 +105,7 @@ public class WeaponData : ScriptableObject
     public float Stamd_Zoom_Z => _stamd_Zoom_Z;
     public float ADS_duration => _aDS_duration;
     public float Range => _range;
+    public int Damage => _damage;
     public GunRecoilData RecoilData => _recoilData;
     public float Ads_Pivot_Height => _ads_Pivot_Height;
     public float Stand_Pivot_Height => _stand_Pivot_Height;

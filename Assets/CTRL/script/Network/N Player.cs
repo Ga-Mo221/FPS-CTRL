@@ -7,20 +7,23 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     public static NPlayer Local { get; private set; }
 
     [SerializeField] private Transform[] _hide_Mesh;
-    [SerializeField] private GameObject _uiLocalPlayer;
     
     [Networked, OnChangedRender(nameof(OnNicknameChanged))]
-    private NetworkString<_16> Nickname { get; set; }
+    public NetworkString<_16> Nickname { get; private set; }
 
     private bool _isPublicJoinMessageSent = false;
     
     public CharComponentManager _componentManager {get; private set;}
     private NInGameMessagesHandler _nInGameMessagesHandler;
+    private UIHPPlayer _uiLocalPlayer;
+    private UIPlayerNickName _uiPlayerNickName;
     
     public override void Spawned()
     {
         _componentManager = GetComponent<CharComponentManager>();
         _nInGameMessagesHandler = _componentManager.NInGameMessagesHandler;
+        _uiLocalPlayer = _componentManager.UihpPlayer;
+        _uiPlayerNickName = _componentManager.UIPlayerNickName;
         
         if (Object.HasInputAuthority)
         {
@@ -35,20 +38,21 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             Debug.Log("<color=green>[NPlayer]</color> Spawned Local Player.", this);
         }else
         {
-            _uiLocalPlayer?.SetActive(false);
+            _uiLocalPlayer?.gameObject.SetActive(false);
             Camera localCamera = _componentManager.Camera;
             localCamera.transform.parent.gameObject.SetActive(false);
-            // localCamera.enabled = false;
-            //
-            // AudioListener audioListener = localCamera.GetComponent<AudioListener>();
-            // if (audioListener != null)
-            // {
-            //     Debug.Log("<color=green>[NPlayer]</color> Client Disable AudioListener.", this);
-            //     audioListener.enabled = false;
-            // }
+            _uiPlayerNickName.SetActive(_type);
+            
+            if (!string.IsNullOrEmpty(Nickname.ToString()))
+            {
+                _uiPlayerNickName.SetNickName(Nickname.ToString());
+            }
             
             Debug.Log("<color=green>[NPlayer]</color> Spawned Remote Player.", this);
         }
+        
+        // set player này là player objcet
+        Runner.SetPlayerObject(Object.InputAuthority, Object);
 
         transform.name = $"Player_{Object.Id}";
     }

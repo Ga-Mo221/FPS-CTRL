@@ -710,13 +710,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4253455490119960499}
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 572373268592378843}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 1.2, y: 35.6}
@@ -1402,7 +1402,10 @@ MonoBehaviour:
   _type: 0
   _hide_Mesh:
   - {fileID: 8021239718931444448}
-  _uiLocalPlayer: {fileID: 6230793577360708317}
+  _Nickname:
+    _length: 0
+    _data:
+      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 --- !u!114 &4273547791336342583
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2181,6 +2184,7 @@ GameObject:
   - component: {fileID: 4482701229216568833}
   - component: {fileID: 4614765068529289096}
   - component: {fileID: 2827167236679798375}
+  - component: {fileID: 5179980533437847842}
   m_Layer: 5
   m_Name: Word Space Canvas
   m_TagString: Untagged
@@ -2287,6 +2291,18 @@ MonoBehaviour:
   _blue: {fileID: 8751182523811649282}
   _red: {fileID: 4913988188365606961}
   _nickName: {fileID: 4214527685668510540}
+--- !u!114 &5179980533437847842
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9214027507992219850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ab3ad5d074df18419367a3313964f68, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIPlayerNameBillboard
 --- !u!1001 &3152186152006872126
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2485,7 +2501,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3379611763258106382, guid: 1fa7eda29474c9240b4c69daf06709f7, type: 3}
   m_PrefabInstance: {fileID: 3152186152006872126}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6230793577360708317}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 516646ad31193174b887a5e3cc6fb3fd, type: 3}
@@ -2496,7 +2512,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7784326798256833824, guid: 1fa7eda29474c9240b4c69daf06709f7, type: 3}
   m_PrefabInstance: {fileID: 3152186152006872126}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6230793577360708317}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e170bb0f6466b8440b9923567d0574f7, type: 3}
@@ -2505,11 +2521,6 @@ MonoBehaviour:
 --- !u!224 &5455768385975954597 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6919808222343807131, guid: 1fa7eda29474c9240b4c69daf06709f7, type: 3}
-  m_PrefabInstance: {fileID: 3152186152006872126}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &6230793577360708317 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 9063187648056180451, guid: 1fa7eda29474c9240b4c69daf06709f7, type: 3}
   m_PrefabInstance: {fileID: 3152186152006872126}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6234121834845321434

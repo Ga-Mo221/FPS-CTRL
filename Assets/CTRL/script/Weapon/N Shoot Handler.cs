@@ -20,6 +20,7 @@ public class NShootHandler : NetworkBehaviour
     private PlayerMotionController _playerMotionController;
     private CharComponentManager _componentManager;
     private WeaponManager _weaponManager;
+    private NPlayer _nPlayer;
     
 
     public override void Spawned()
@@ -28,6 +29,7 @@ public class NShootHandler : NetworkBehaviour
         _movementHandler        = _componentManager.NCharMovementHandler;
         _playerMotionController = _componentManager.PlayerMotionController;
         _weaponManager          = _componentManager.WeaponManager;
+        _nPlayer                = _componentManager.NPlayer;
     }
 
     // ── Simulation (chỉ chạy trên StateAuthority = Host) ───────────────────
@@ -120,7 +122,7 @@ public class NShootHandler : NetworkBehaviour
                     Debug.DrawLine(origin, hit.Point, Color.green, 1f);
                 }
                 
-                HandleHit(hit.Point, hit.Normal, hit.Hitbox?.transform.root);
+                HandleHit(hit.Point, hit.Normal, hit.Hitbox?.transform);
                 return (hit.Point, hit.Normal, showEffect);
             }
         }
@@ -131,16 +133,18 @@ public class NShootHandler : NetworkBehaviour
         return (missPoint, -aimForward, false);
     }
     
-    private void HandleHit(Vector3 point, Vector3 normal, Transform root)
+    private void HandleHit(Vector3 point, Vector3 normal, Transform hitbox)
     {
-        if (root == null) return;
+        if (hitbox == null) return;
         
         //Debug.Log($"[NShootHandler] {transform.name} hit {root.name} at {point}");
 
-        var HPHandler = root.root.gameObject.GetComponent<NHPHandler>();
+        var HPHandler = hitbox.root.gameObject.GetComponent<NHPHandler>();
         if (HPHandler == null) return;
 
-        if (HPHandler.OnTakeDamage(10))
+        var ctrl = _weaponManager != null ? _weaponManager.Weapon_Active() : null;
+        var damage = ctrl != null ? ctrl.Data.Damage : 10;
+        if (HPHandler.OnTakeDamage(damage, _nPlayer.Nickname.ToString()))
             _kill++;
     }
 

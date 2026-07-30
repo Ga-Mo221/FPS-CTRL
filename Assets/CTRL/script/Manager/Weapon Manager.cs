@@ -1,3 +1,4 @@
+using System;
 using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -27,7 +28,7 @@ public class WeaponManager : NetworkBehaviour
     private WeaponController _weapon_Two_CTRL;
     
     // Active Weapon
-    [Networked] private bool _weapon_One_Active { get; set; } 
+    private bool _weapon_One_Active { get; set; } 
     
     [TabGroup("Weapon Manager", "Components")]
     [SerializeField] private CharComponentManager _componentManager;
@@ -61,10 +62,10 @@ public class WeaponManager : NetworkBehaviour
     {
         if (Object.HasStateAuthority)
         {
-            CreateWeapon(_weapon_One_Prefab, out var w1);
-            _weaponOneRef = w1;
             CreateWeapon(_weapon_Two_Prefab, out var w2);
             _weaponTwoRef = w2;
+            CreateWeapon(_weapon_One_Prefab, out var w1);
+            _weaponOneRef = w1;
         }
         if (_weapon_One_CTRL == null || _weapon_Two_CTRL == null)
             ResolveWeaponControllers();
@@ -102,7 +103,7 @@ public class WeaponManager : NetworkBehaviour
             _weaponOneRef?.gameObject.SetActive(true);
             _weaponTwoRef?.gameObject.SetActive(false);
             _anim?.WeaponIndex(_weapon_One_CTRL.Data.Index);
-            Debug.Log("Switch to Weapon One");
+            Debug.Log("Switch to Weapon One", this);
             return true;
         }
         
@@ -112,7 +113,7 @@ public class WeaponManager : NetworkBehaviour
         _weaponOneRef?.gameObject.SetActive(false);
         _weaponTwoRef?.gameObject.SetActive(true);
         _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
-        Debug.Log("Switch to Weapon Two");
+        Debug.Log("Switch to Weapon Two", this);
         return true;
     }
     
