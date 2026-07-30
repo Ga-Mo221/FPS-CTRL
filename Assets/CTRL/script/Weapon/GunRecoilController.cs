@@ -8,7 +8,7 @@ public class GunRecoilController : MonoBehaviour
     //  ENUMS & CONFIG
     // ─────────────────────────────────────────────
 
-    public enum FiringMode { Semi, Auto, Burst }
+    public enum FiringMode { Semi, Auto, Burst, Melee }
 
     // ─────────────────────────────────────────────
     //  EVENTS
@@ -104,24 +104,13 @@ public class GunRecoilController : MonoBehaviour
     private void LateUpdate()
     {
         if (data == null) return;
-
-        // FIX: HandleBurstTick() ĐÃ CHUYỂN sang NetworkTick() bên dưới — không còn gọi
-        // ở đây nữa. LateUpdate giờ chỉ lo phần recoil visual (curve/noise/pushback/transform),
-        // các phần này thuần cosmetic (không quyết định có bắn hay không, không networked),
-        // nên vẫn an toàn khi chạy theo Time.deltaTime của Unity như cũ.
+        
         TickCurveTimers();
         UpdateNoise();
         UpdatePushback();
         ApplyTransform();
     }
-
-    /// <summary>
-    /// FIX: gọi hàm này mỗi network tick từ FixedUpdateNetwork (qua WeaponController),
-    /// bất kể người chơi có đang bấm nút bắn hay không. Đây là nơi DUY NHẤT quyết định
-    /// burst có tiếp tục bắn phát kế tiếp hay không — thay cho HandleBurstTick() dựa vào
-    /// Time.time trong LateUpdate trước đây (chạy ngoài simulation, không resimulate được,
-    /// và không đồng bộ được với WeaponController.FireTick).
-    /// </summary>
+    
     public void NetworkTick(float networkTime)
     {
         _time = networkTime;
@@ -131,18 +120,7 @@ public class GunRecoilController : MonoBehaviour
     // ─────────────────────────────────────────────
     //  PUBLIC API
     // ─────────────────────────────────────────────
-
-    /// <summary>
-    /// Gọi mỗi khi người chơi nhấn/giữ nút bắn.
-    /// Controller tự xử lý cooldown và chặn spam — WeaponController không cần lo timing.
-    /// Trả về true nếu phát bắn thực sự được thực hiện.
-    /// </summary>
-    /// <summary>
-    /// FIX: nhận networkTime từ caller (WeaponController, lấy từ Runner.SimulationTime)
-    /// thay vì tự đọc Time.time. Đảm bảo quyết định "có bắn được không" xác định theo
-    /// đúng tick mô phỏng — an toàn khi Fusion resimulate/rollback, và khớp với thời điểm
-    /// server thực sự tính toán, tránh lệch giữa client dự đoán và server.
-    /// </summary>
+    
     public bool OnFire(float delay)
     {
         _time = Time.time;
@@ -165,6 +143,10 @@ public class GunRecoilController : MonoBehaviour
                 TriggerBurst(delay);
                 // Cooldown = thời gian hoàn thành toàn bộ loạt
                 _nextFireTime = Time.time + burstCount * delay;
+                break;
+            case FiringMode.Melee:
+                MelleOneShoot();
+                _nextFireTime = Time.time + delay;
                 break;
         }
 
@@ -380,11 +362,7 @@ public class GunRecoilController : MonoBehaviour
         _burstFireRate     = fireRateDelay;
         _burstNextShotTime = _time;
     }
-
-    // FIX: giờ được gọi từ NetworkTick() (mỗi network tick, kể cả khi không bấm nút),
-    // dùng _time thay vì Time.time — đảm bảo phát 2, 3 của burst cũng được kích
-    // hoạt đúng trong FixedUpdateNetwork, để WeaponController có thể nghe OnShotFired
-    // và tăng FireTick/raycast một cách an toàn (network-safe) cho từng phát trong loạt.
+    
     private void HandleBurstTick()
     {
         if (_burstRemaining <= 0) return;
@@ -395,11 +373,7 @@ public class GunRecoilController : MonoBehaviour
         _burstRemaining--;
         _burstNextShotTime = _time + _burstFireRate;
     }
-
-    /// <summary>
-    /// Bắn một phát trong burst — dùng semi curve nhưng
-    /// không ảnh hưởng đến _autoActive flag.
-    /// </summary>
+    
     private void FireBurstShot()
     {
         _lastFireTime = Time.time;
@@ -414,15 +388,22 @@ public class GunRecoilController : MonoBehaviour
 
         OnShotFired?.Invoke(FiringMode.Burst);
     }
+    
+    private void MelleOneShoot()
+    {
+        _lastFireTime = Time.time;
+        _semiTimer  = 0f;
+        _semiActive = true;
+        _autoActive = false;        // dừng auto curve nếu đang chạy
+        _autoTimer  = 0f;
+
+        OnShotFired?.Invoke(FiringMode.Semi);
+    }
 
     // ─────────────────────────────────────────────
     //  KICK HELPERS
     // ─────────────────────────────────────────────
-
-    /// <summary>
-    /// Tính kick rotation và cộng vào _targetRot.
-    /// isAuto = true → dùng extraRot multiplier.
-    /// </summary>
+    
     private void ApplyRotationKick(bool isAuto)
     {
         Vector3 aimMult = _isAiming ? data.aimRotMultiplier : Vector3.one;
@@ -446,11 +427,7 @@ public class GunRecoilController : MonoBehaviour
 
         _targetRot += new Vector3(pitchVal, yawVal, rollVal);
     }
-
-    /// <summary>
-    /// Tính kick translation và cộng vào _targetLoc.
-    /// isAuto = true → dùng extraLoc multiplier.
-    /// FIX: extraLoc giờ được sử dụng (trước đây khai báo nhưng bỏ qua).
+    
     /// </summary>
     private void ApplyTranslationKick(bool isAuto)
     {

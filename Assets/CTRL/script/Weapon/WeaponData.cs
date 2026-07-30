@@ -14,6 +14,7 @@ public class WeaponData : ScriptableObject
     [TabGroup("Weapon Data", "Info")]
     [Tooltip("Lượng đạn tối đa của súng sau khi thay đạn.")]
     [SerializeField] private int _defaultBullet = 9;
+    [TabGroup("Weapon Data", "Info")]
     [Tooltip("lượng đạn tối đa có thể mang theo")]
     [SerializeField] private int _maxBullet = 27;
     [TabGroup("Weapon Data", "Info")]

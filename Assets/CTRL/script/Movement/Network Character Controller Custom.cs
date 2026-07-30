@@ -19,6 +19,8 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// Lấy tham chiếu đến cấu trúc dữ liệu mạng NetworkCCData của thực thể này.
     /// </summary>
     new ref NetworkCCData Data => ref ReinterpretState<NetworkCCData>();
+
+    private NCharMovementHandler _movementHandler;
     
     private PlayerData _data;
 
@@ -78,7 +80,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// Hàm callback của Photon Fusion chạy khi thực thể mạng được khởi tạo thành công (Spawned).
     /// Thiết lập cấu hình ban đầu và đồng bộ hóa trạng thái Transform.
     /// </summary>
-    public override void Spawned() {
+    public override void Spawned()
+    {
+        _movementHandler = GetComponent<NCharMovementHandler>();
         _initial = default;
         TryGetComponent(out _controller);
         _controller.enabled = false;
@@ -163,15 +167,15 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         {
             case PlayerState.Standing:
                 newHeight  = _data.StandHeight;
-                newCenterY = _data.Stand_Center_Y;
+                newCenterY = _data.StandCenterY;
                 break;
             case PlayerState.Crouching:
                 newHeight  = _data.CrouchHeight;
-                newCenterY = _data.Crouch_Center_Y;
+                newCenterY = _data.CrouchCenterY;
                 break;
             case PlayerState.Slide:
                 newHeight  = _data.SlideHeight;
-                newCenterY = _data.Slide_Center_Y;
+                newCenterY = _data.SlideCenterY;
                 break;
             default:
                 return;
@@ -214,7 +218,12 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 
     public void Rotate(float rotationY)
     {
-        transform.Rotate(0, rotationY * Runner.DeltaTime * _data.YawModel, 0);
+        var yamModel = _data.YawModel;
+        if (_movementHandler != null)
+            if (_movementHandler.StateFl.IsADS || _movementHandler.StateFl.IsThrow)
+                yamModel *= _data.AdsLookSpeedMultiplier;
+        
+        transform.Rotate(0, rotationY * Runner.DeltaTime * yamModel, 0);
     }
 
     /// <summary>

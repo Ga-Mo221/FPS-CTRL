@@ -43,11 +43,11 @@ public class PlayerMotionController : MonoBehaviour
     
     public void ADS(bool value)
     {
-        _anim.SetBool("ADS", value);
         if (_w_manager == null) return;
         WeaponController controller = _w_manager.Weapon_Active();
         if (controller == null) return;
-        controller.ADS(value);
+         if (controller.ADS(value))
+            _anim.SetBool("ADS", value);
     }
     
     public bool IsReloading(bool value)

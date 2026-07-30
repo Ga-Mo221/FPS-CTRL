@@ -1,7 +1,8 @@
+using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class WeaponManager : MonoBehaviour
+public class WeaponManager : NetworkBehaviour
 {
     [TabGroup("Weapon Manager", "Weapon")]
     [SerializeField] private GameObject _weapon_One_Prefab;
@@ -15,17 +16,18 @@ public class WeaponManager : MonoBehaviour
     [HideLabel]
     [SerializeField] private string _parent_name = "Weapon Parrent";
     
-    
     // Weapon One
-    [SerializeField] private GameObject _weapon_One;
-    [SerializeField] private WeaponController _weapon_One_CTRL;
+    [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
+    private NetworkObject _weaponOneRef { get; set; }
+    private WeaponController _weapon_One_CTRL;
     
     // Weapon Two
-    [SerializeField] private GameObject _weapon_Two;
-    [SerializeField] private WeaponController _weapon_Two_CTRL;
+    [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
+    private NetworkObject _weaponTwoRef { get; set; }
+    private WeaponController _weapon_Two_CTRL;
     
     // Active Weapon
-    [SerializeField] private bool _weapon_One_Active;
+    [Networked] private bool _weapon_One_Active { get; set; } 
     
     [TabGroup("Weapon Manager", "Components")]
     [SerializeField] private CharComponentManager _componentManager;
@@ -33,7 +35,6 @@ public class WeaponManager : MonoBehaviour
 
     [TabGroup("Weapon Manager", "Camera")] 
     [SerializeField] private Camera _camera;
-    public Camera Camera => _camera;
     
     [HorizontalGroup("Weapon Manager/Camera/RecoilRow", width: 0.6f)]
     [SerializeField] private Transform _camera_Recoil;
@@ -43,54 +44,73 @@ public class WeaponManager : MonoBehaviour
     [SerializeField] private string _camera_Name = "Camera Recoil";
     
     private PlayerMotionController _anim;
-    [TabGroup("Weapon Manager", "Components")]
-    //[SerializeField] private CharacterHandler _character_CTRL;
+    
+    // ============================ PUBLIC FIELD ===========================================
+    
+    public Transform WeaponParent => _weapon_Parrent;
+    public Transform Camera_Recoil => _camera_Recoil;
+    public Camera Camera => _camera;
 
     private void Awake()
     {
         if (_componentManager == null) return;
         _anim = _componentManager.PlayerMotionController;
     }
+    
+    public override void Spawned()
+    {
+        if (Object.HasStateAuthority)
+        {
+            CreateWeapon(_weapon_One_Prefab, out var w1);
+            _weaponOneRef = w1;
+            CreateWeapon(_weapon_Two_Prefab, out var w2);
+            _weaponTwoRef = w2;
+        }
+        if (_weapon_One_CTRL == null || _weapon_Two_CTRL == null)
+            ResolveWeaponControllers();
+    }
 
     private void Start()
     {
-        CreateWeapon(_weapon_One_Prefab, out _weapon_One, out _weapon_One_CTRL);
-        CreateWeapon(_weapon_Two_Prefab, out _weapon_Two, out _weapon_Two_CTRL);
         SwitchWeapon();
     }
 
-    private void CreateWeapon(GameObject prefab, out GameObject instan, out WeaponController ctrl)
+    private void CreateWeapon(GameObject prefab, out NetworkObject instan)
     {
         instan = null;
-        ctrl = null;
         if (prefab == null) return;
-        instan = Instantiate(prefab, _weapon_Parrent);
-        ctrl = instan.GetComponent<WeaponController>();
-        ctrl.SetCameraCTRL(_camera_Recoil);
-        ctrl.Camera_Zoom = _camera;
-        ctrl.Manager = this;
-        _componentManager.ConstraintManager.AddNewWeapon(ctrl);
-        instan.SetActive(false);
+        
+        instan = Runner.Spawn(
+            prefab,
+            position: _weapon_Parrent.position,
+            rotation: _weapon_Parrent.rotation,
+            inputAuthority: Object.InputAuthority,
+            onBeforeSpawned: (runner, obj) =>
+            {
+                // Chạy TRƯỚC khi object replicate ra network — set owner ở đây
+                // để đảm bảo mọi client nhận được OwnerCharacter cùng lúc obj spawn
+                obj.GetComponent<WeaponController>().OwnerCharacter = Object;
+            });
     }
 
     public bool SwitchWeapon()
     {
-        if (!_weapon_One_Active && _weapon_One != null)
+        if (!_weapon_One_Active && _weaponOneRef != null)
         {
             _weapon_One_Active = true;
             _componentManager.ConstraintManager?.SwitchWeapon(_weapon_One_CTRL.Data.ID);
-            _weapon_One?.SetActive(true);
-            _weapon_Two?.SetActive(false);
+            _weaponOneRef?.gameObject.SetActive(true);
+            _weaponTwoRef?.gameObject.SetActive(false);
             _anim?.WeaponIndex(_weapon_One_CTRL.Data.Index);
             Debug.Log("Switch to Weapon One");
             return true;
         }
         
-        if (_weapon_Two == null) return false;
+        if (_weaponTwoRef == null) return false;
         _weapon_One_Active = false;
         _componentManager.ConstraintManager?.SwitchWeapon(_weapon_Two_CTRL.Data.ID);
-        _weapon_One?.SetActive(false);
-        _weapon_Two?.SetActive(true);
+        _weaponOneRef?.gameObject.SetActive(false);
+        _weaponTwoRef?.gameObject.SetActive(true);
         _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
         Debug.Log("Switch to Weapon Two");
         return true;
@@ -101,9 +121,9 @@ public class WeaponManager : MonoBehaviour
 
     public WeaponController Weapon_Active()
     {
-        if (_weapon_One_Active && _weapon_One != null && _weapon_One_CTRL != null)
+        if (_weapon_One_Active && _weaponOneRef != null && _weapon_One_CTRL != null)
             return _weapon_One_CTRL;
-        if (!_weapon_One_Active && _weapon_Two != null && _weapon_Two_CTRL != null)
+        if (!_weapon_One_Active && _weaponTwoRef != null && _weapon_Two_CTRL != null)
             return _weapon_Two_CTRL;
         Debug.Log("<color=red>[WeaponManager]</color> WeaponController not active.", this);
         return null;
@@ -115,6 +135,28 @@ public class WeaponManager : MonoBehaviour
             _weapon_One_CTRL.Respawn();
         if (_weapon_Two_CTRL != null)
             _weapon_Two_CTRL.Respawn();
+    }
+
+    void OnWeaponRefsChanged()
+    {
+        if (_weaponOneRef != null)
+            _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
+        if (_weaponTwoRef != null)
+            _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
+    }
+    
+    private void ResolveWeaponControllers()
+    {
+        if (_weaponOneRef != null && _weapon_One_CTRL == null)
+        {
+            _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
+            _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL);
+        }
+        if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
+        {
+            _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
+            _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL);
+        }
     }
     
     

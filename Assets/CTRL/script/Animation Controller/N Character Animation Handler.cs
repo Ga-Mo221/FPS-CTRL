@@ -21,7 +21,7 @@ public class NCharacterAnimationHandler : NetworkBehaviour
 
     public override void Render()
     {
-        var state = _movementHandler._state;
+        var state = _movementHandler.StateFl;
         _smoothTime = _movementHandler.Data.MoveSmooth;
         
         _playerMotionController.IsDead(_hpHandler.IsDead);
@@ -35,7 +35,7 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         
         _playerMotionController.IsGrouded(_componentManager.NetworkCharacterController.Grounded);
         _playerMotionController.ADS(state.IsADS);
-        _playerMotionController.GrenadeID(_movementHandler._grenadeID);
+        _playerMotionController.GrenadeID(_movementHandler.GrenadeID);
         _playerMotionController.IsThrow(state.IsThrow);
         _playerMotionController.IsCrouching(state.IsCrouch);
         _playerMotionController.IsSliding(state.IsSlide);

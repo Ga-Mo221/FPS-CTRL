@@ -16,7 +16,7 @@ public class UIADSPlayer : MonoBehaviour
 
     private void Update()
     {
-        var _state = _nCharMovementHandler._state;
+        var _state = _nCharMovementHandler.StateFl;
         Color defaultColor = _aimImage.color;
         
         if (_state.IsADS)

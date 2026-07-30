@@ -21,6 +21,9 @@ public class CharComponentManager : MonoBehaviour
     public NHPHandler NHPHandler;
     public UIHPPlayer UihpPlayer;
     public HitboxRoot HitboxRoot;
+    public UIPlayerNickName UIPlayerNickName;
+    public UIInGameMessagesHandler UIInGameMessagesHandler;
+    public NInGameMessagesHandler NInGameMessagesHandler;
 
     [Button]
     public void Setup()
@@ -41,5 +44,8 @@ public class CharComponentManager : MonoBehaviour
         NHPHandler = GetComponentInChildren<NHPHandler>(true);
         UihpPlayer = GetComponentInChildren<UIHPPlayer>(true);
         HitboxRoot = GetComponentInChildren<HitboxRoot>(true);
+        UIPlayerNickName = GetComponentInChildren<UIPlayerNickName>(true);
+        UIInGameMessagesHandler = GetComponentInChildren<UIInGameMessagesHandler>(true);
+        NInGameMessagesHandler = GetComponentInChildren<NInGameMessagesHandler>(true);
     }
 }

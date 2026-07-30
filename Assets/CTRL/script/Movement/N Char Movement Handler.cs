@@ -6,35 +6,39 @@ public class NCharMovementHandler : NetworkBehaviour
 {
     [SerializeField] private PlayerData _data;
     public PlayerData Data => _data;
-    
-    [Networked] public Vector2 MoveDirection {get; set;}
-    
-    [Networked] public PlayerStateFlags _state {get; set;}
+    [Networked] public Vector2 MoveDirection {get; private set;}
+    [Networked] public PlayerStateFlags StateFl {get; set;}
     private PlayerStateFlags _newState;
-    [Networked] public int _grenadeID {get; set;}
-    [Networked] public NetworkBool IsTurnInPlaceActive { get; set; }
+    [Networked] public int GrenadeID {get; private set;}
+    [Networked] private NetworkBool Frag { get; set; }
+    [Networked] private NetworkBool Flash { get; set; }
+    [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
     [Networked] public NetworkBool IsJump { get; set; }
-    [Networked] public float NetworkedPitch { get; set; }
-    
-    [Networked] private TickTimer _switchTimer { get; set; }
-    [Networked] private TickTimer _slideTimer { get; set; }
-    
-    [Networked] public float _currentSpeed { get; set; }
-    [Networked] public float _acceleration { get; set; }
-
+    [Networked] public float NetworkedPitch { get; private set; }
     // ── Fire state — thay IsFiring(bool) bằng FireCount(int) để tiết kiệm băng thông
     // IsFiring chỉ cần 1 tick để NShootHandler đọc trong cùng FixedUpdateNetwork,
     // không cần sync ra ngoài. FireCount sync để remote clients spawn visual.
     // AimForward sync để Host/remote dùng cùng hướng bắn chính xác từ InputData.
-    [Networked] public int   FireCount   { get; set; }  // tăng mỗi phát bắn
-    [Networked] public Vector3 AimForward { get; set; }  // hướng bắn từ NInputData
-    [Networked] public ShotInfo LastShotInfo { get; set; } // kết quả raycast từ Host
-
+    [Networked] public int   FireCount   { get; private set; }  // tăng mỗi phát bắn
+    [Networked] public Vector3 AimForward { get; private set; }  // hướng bắn từ NInputData
+    [Networked] public ShotInfo LastShotInfo { get; private set; } // kết quả raycast từ Host
     // IsFiring chỉ dùng nội bộ trong frame FixedUpdateNetwork, không cần Networked
     public bool IsFiring { get; private set; }
-
+    [Networked] private TickTimer _switchTimer { get; set; }
+    [Networked] private TickTimer _slideTimer { get; set; }
+    [Networked] private float _currentSpeed { get; set; }
+    [Networked] private float _acceleration { get; set; }
     private bool _isRespawnRequested;
-
+    private CharacterState _stateLogic;
+    [Networked] private NetworkButtons _previousButtons { get; set; }
+    
+    private CharComponentManager _componentManager;
+    private NetworkCharacterControllerCustom _ncc;
+    private ConstraintManager _constraintManager;
+    private PlayerMotionController _playerMotionController;
+    private NHPHandler  _hpHandler;
+    private WeaponManager _weaponManager;
+    
     // ── helpers cho NShootHandler ──────────────────────────────────────────
     public void IncrementFireCount() => FireCount++;
     public void SetLastShotInfo(Vector3 pos, Vector3 normal, bool showEffect)
@@ -46,16 +50,6 @@ public class NCharMovementHandler : NetworkBehaviour
             ShowEffect  = showEffect
         };
     }
-
-    private CharacterState _stateLogic;
-    [Networked] private NetworkButtons _previousButtons { get; set; }
-    
-    private CharComponentManager _componentManager;
-    private NetworkCharacterControllerCustom _ncc;
-    private ConstraintManager _constraintManager;
-    private PlayerMotionController _playerMotionController;
-    private NHPHandler  _hpHandler;
-    private WeaponManager _weaponManager;
 
     public override void Spawned()
     {
@@ -94,17 +88,23 @@ public class NCharMovementHandler : NetworkBehaviour
             // Tính pitch trực tiếp trên Host, lưu vào networked property
             float minPitch = _data.PitchMin;
             float maxPitch = _data.PitchMax;
+            var pitchCamera = _data.PitchCamera;
+            
+            if (StateFl.IsADS || StateFl.IsThrow)
+                pitchCamera *= _data.AdsLookSpeedMultiplier;
+            
             NetworkedPitch = Mathf.Clamp(
-                NetworkedPitch - inputdata.LookDelta.y * _data.PitchCamera * Runner.DeltaTime,
+                NetworkedPitch - inputdata.LookDelta.y * pitchCamera * Runner.DeltaTime,
                 minPitch, maxPitch
             );
+
             
             _playerMotionController.ActiveWeponCTRL()?.SetLookDelta(inputdata.LookDelta);
 
             // Lưu AimForward từ InputData — chính xác hơn camera local, đồng bộ cho mọi máy
             AimForward = inputdata.AimForward;
             
-            _newState = _state;
+            _newState = StateFl;
 
             ShootHandler(inputdata, ref _newState);
             ReloadHandler(inputdata, ref _newState);
@@ -116,6 +116,8 @@ public class NCharMovementHandler : NetworkBehaviour
             RunHandler(inputdata, ref _newState);
             CrouchOrSlideHandler(inputdata, ref _newState);
             MoveHandler(inputdata, ref _newState);
+
+            CCSetHeight();
             
             _ncc.Rotate(inputdata.LookDelta.x);
             
@@ -125,8 +127,18 @@ public class NCharMovementHandler : NetworkBehaviour
             _ncc.Move(moveDirection, _currentSpeed, _acceleration);
             
             _previousButtons = inputdata.Buttons;
-            _state = _newState;
+            StateFl = _newState;
         }
+    }
+
+    private void CCSetHeight()
+    {
+        if (StateFl.IsSlide)
+            _ncc.SetControllerHeight(PlayerState.Slide);
+        else if (StateFl.IsCrouch)
+            _ncc.SetControllerHeight(PlayerState.Crouching);
+        else _ncc.SetControllerHeight(PlayerState.Standing);
+            
     }
     
 #region Movement
@@ -158,7 +170,7 @@ public class NCharMovementHandler : NetworkBehaviour
             
             _stateLogic.StopReload(ref state);
             _stateLogic.StopThrow(ref state);
-            _grenadeID = 0;
+            GrenadeID = 0;
 
             if (state.IsSprint) return;
 
@@ -225,6 +237,7 @@ public class NCharMovementHandler : NetworkBehaviour
         switch (_playerMotionController.ActiveWeaponMode())
         {
             case GunRecoilController.FiringMode.Semi:
+            case GunRecoilController.FiringMode.Melee:
             case GunRecoilController.FiringMode.Burst:
                 if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
                     IsFiring = true;
@@ -238,13 +251,13 @@ public class NCharMovementHandler : NetworkBehaviour
     
     public bool FireOnce()
     {
-        var state = _state;
+        var state = StateFl;
         _stateLogic.ToggleShoot(ref state, _constraintManager);
         var ctrl = _playerMotionController.ActiveWeponCTRL();
         var canShoot = false;
         if (ctrl != null)
             canShoot = ctrl.OnFire();
-        _state = state;
+        StateFl = state;
         return canShoot;
     }
     
@@ -270,10 +283,9 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         if (!Object.HasStateAuthority) return;
 
-        var s = _state;
-        Debug.Log("Stop reload");
+        var s = StateFl;
         _stateLogic.StopReload(ref s);
-        _state = s;
+        StateFl = s;
     }
 
     private void SwitchWeaponHandler(NInputData input, ref PlayerStateFlags state)
@@ -303,20 +315,31 @@ public class NCharMovementHandler : NetworkBehaviour
 
         if ((fragPressed || flashPressed) && !state.IsThrow)
         {
-            _grenadeID = fragPressed ? 1 : 2;
-            _stateLogic.StartThrow(ref state, _constraintManager);
+            if (fragPressed && !Frag)
+            {
+                GrenadeID = 1;
+                _stateLogic.StartThrow(ref state, _constraintManager);
+            }
+            else if (flashPressed && !Flash)
+            {
+                GrenadeID = 2;
+                _stateLogic.StartThrow(ref state, _constraintManager);
+            }
+            
             return;
         }
 
         if (state.IsThrow)
         {
             bool shouldStop =
-                (_grenadeID == 1 && fragReleased) ||
-                (_grenadeID == 2 && flashReleased);
+                (GrenadeID == 1 && fragReleased) ||
+                (GrenadeID == 2 && flashReleased);
 
             if (shouldStop)
             {
-                _grenadeID = 0;
+                if (GrenadeID == 1) Frag = true;
+                if (GrenadeID == 2) Flash = true;
+                GrenadeID = 0;
                 _stateLogic.StopThrow(ref state);
             }
         }

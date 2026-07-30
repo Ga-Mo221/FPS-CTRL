@@ -14,7 +14,7 @@ public class FreeCameraController : MonoBehaviour
 
     [Header("Death Settings")]
     [Tooltip("Tốc độ lerp pitch về 0 khi nhân vật chết (độ/giây)")]
-    [SerializeField] private float deathPitchResetSpeed = 2f;
+    [SerializeField] private float deathPitchResetSpeed = 10f;
     private bool _deathResetDone;
     
     [SerializeField] private TransformConstraint _cameraConstraint;

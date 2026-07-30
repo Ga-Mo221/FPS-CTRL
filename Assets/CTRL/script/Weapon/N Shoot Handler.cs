@@ -45,10 +45,13 @@ public class NShootHandler : NetworkBehaviour
             {
                 // Tăng FireCount trên NCharMovementHandler → mọi máy detect qua Render()
                 _movementHandler.IncrementFireCount();
-
-                // Lưu kết quả raycast để sync visual đúng điểm chạm
-                var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(aimForward);
-                _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
+                
+                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Gun)
+                {
+                    // Lưu kết quả raycast để sync visual đúng điểm chạm
+                    var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(aimForward);
+                    _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
+                }
             }
         }
     }
@@ -73,11 +76,14 @@ public class NShootHandler : NetworkBehaviour
             _movementHandler.FireOnce();
         }
 
-        // Spawn visual thông qua WeaponController — mỗi súng dùng prefab đạn riêng
-        var shotInfo = _movementHandler.LastShotInfo;
-        _playerMotionController
-            .ActiveWeponCTRL()
-            ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+        if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Gun)
+        {
+            // Spawn visual thông qua WeaponController — mỗi súng dùng prefab đạn riêng
+            var shotInfo = _movementHandler.LastShotInfo;
+            _playerMotionController
+                .ActiveWeponCTRL()
+                ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+        }
     }
 
     // ── Raycast + damage — chỉ chạy trên StateAuthority ──────────────────
@@ -88,7 +94,7 @@ public class NShootHandler : NetworkBehaviour
 
         // Lấy origin từ bullet point của weapon nếu có, fallback về transform
         Vector3 origin = _componentManager.Camera.transform.position;
-        if (_movementHandler._state.IsADS)
+        if (_movementHandler.StateFl.IsADS)
         {
             origin = weaponCtrl.ADS_Shoot_Point;
         }

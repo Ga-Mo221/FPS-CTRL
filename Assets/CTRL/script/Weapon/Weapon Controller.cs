@@ -1,22 +1,55 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class WeaponController : MonoBehaviour
+public class WeaponController : NetworkBehaviour
 {
+    [SerializeField] private WeaponType _type = WeaponType.Gun;
+    
+    // =========================== NETWORK ==========================================
+    [TabGroup("Weapon Controller", "Runtime")]
+    [Networked] public NetworkObject OwnerCharacter { get; set; }
+    
+    [Networked, OnChangedRender(nameof(OnBulletCountChange))]
+    private int _currentBulletvalue { get; set; }
+    [Networked, OnChangedRender(nameof(OnBulletCountChange))]
+    private int _currentMaxBullet { get; set; }
+    
+    // ============================ LOCAL FILED =====================================
+    
+    // ========================= WEAPON DATA =============================
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private WeaponData _data;
     
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private Animator _anim;
-    
-    [TabGroup("Weapon Controller", "Runtime")]
-    [SerializeField] private WeaponManager  _manager;
 
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private TransformConstraint _ads_Pivot;
+    
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private GunRecoilController _gun_Recoil_CTRL;
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private WeaponSway _sway;
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private CameraRecoil _cam_Recoil;
+    
+    [BoxGroup("Weapon Controller/Weapon Data/Bullet")]
+    [SerializeField] private GameObject _bullet_Prefab;
+    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row", width: 0.6f)]
+    [SerializeField] private GameObject _shoot_Effect;
+    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
+    [HideLabel]
+    [SerializeField] private string _bullet_effect_name = "Shoot Effect";
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private AudioSource _sound;
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private BulletCaseController _bulletController;
+    
+    // ========================= TRANSFORM =============================
     
     [TabGroup("Weapon Controller", "Transform")]
     [BoxGroup("Weapon Controller/Transform/Hand List")]
@@ -36,8 +69,6 @@ public class WeaponController : MonoBehaviour
     [HorizontalGroup("Weapon Controller/Transform/camera")]
     [HideLabel]
     [SerializeField] private string _camera_ShakeName = "RAW_Camera";
-    [TabGroup("Weapon Controller", "Runtime")]
-    [SerializeField] private Camera _camera_Zoom;
     
     [BoxGroup("Weapon Controller/Transform/IK Left")]
     [HorizontalGroup("Weapon Controller/Transform/IK Left/IKhand_Left", width: 0.6f)]
@@ -65,17 +96,6 @@ public class WeaponController : MonoBehaviour
     [HideLabel]
     [SerializeField] private string _Elbow_Right_Name = "RAW_Elbow_R";
     
-    private bool _ads;
-    private bool _lastAdsState;
-    private Coroutine _blendRoutine;
-    [TabGroup("Weapon Controller", "Weapon Data")]
-    [SerializeField] private GunRecoilController _gun_Recoil_CTRL;
-    public GunRecoilController GunRecoilCTRL => _gun_Recoil_CTRL;
-    [TabGroup("Weapon Controller", "Weapon Data")]
-    [SerializeField] private WeaponSway _sway;
-    [TabGroup("Weapon Controller", "Weapon Data")]
-    [SerializeField] private CameraRecoil _cam_Recoil;
-    
     [BoxGroup("Weapon Controller/Transform/Bullet")]
     [HorizontalGroup("Weapon Controller/Transform/Bullet/row", width:0.6f)]
     [SerializeField] private Transform _bullet_point;
@@ -83,45 +103,42 @@ public class WeaponController : MonoBehaviour
     [HideLabel]
     [SerializeField] private string _bullet_point_name = "Bullet Point";
     
-    [BoxGroup("Weapon Controller/Weapon Data/Bullet")]
-    [SerializeField] private GameObject _bullet_Prefab;
-    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row", width: 0.6f)]
-    [SerializeField] private GameObject _shoot_Effect;
-    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
-    [HideLabel]
-    [SerializeField] private string _bullet_effect_name = "Shoot Effect";
-    
     [HorizontalGroup("Weapon Controller/Transform/Bullet/ro", width:0.6f)]
     [SerializeField] private Transform _ads_Shoot_Point;
 
     [HorizontalGroup("Weapon Controller/Transform/Bullet/ro")] 
     [HideLabel] 
     [SerializeField] private string _ads_Shoot_Point_Name = "Shoot Point";
+    
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/parrent", width: 0.6f)]
+    [SerializeField] private Transform _parrentBullet;
 
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/parrent")]
+    [HideLabel]
+    [SerializeField] private string _parrentBullet_name = "Parrent Bullet";
+    
+    // ========================= RUNTIME =============================
+    
+    [TabGroup("Weapon Controller", "Runtime")]
+    [SerializeField] private CharComponentManager _componentManager;
+    
+    [TabGroup("Weapon Controller", "Runtime")]
+    [SerializeField] private Camera _camera_Zoom;
+
+    private bool _ads;
+    private bool _lastAdsState;
+    private Coroutine _blendRoutine;
+    
     private Transform _ads_Pivot_transform;
     private bool _isCrouch;
-    public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
-    [SerializeField] private int _currentBulletvalue;
-    [SerializeField] private int _currentMaxBullet;
     
     private AudioManager _audio;
-    [TabGroup("Weapon Controller", "Weapon Data")]
-    [SerializeField] private AudioSource _sound;
-    [TabGroup("Weapon Controller", "Weapon Data")]
-    [SerializeField] private BulletCaseController _bulletController;
-
-    [SerializeField] private Transform _parrentBullet;
+    
     private List<ProjectileVisual> _poolBullet = new List<ProjectileVisual>();
     
     // =============================== public Filed ============================================
-
-    public WeaponManager Manager
-    {
-        set => _manager = value;
-    }
     
     public WeaponData Data => _data;
-    public Camera Camera_Zoom {set => _camera_Zoom = value;}
     public Transform Camera_Shake => _camera_Shake;
     public Transform[] List_Bone_Body => _list_Bone_Body;
     public Transform[] List_Bone_Grenade => _list_Bone_Grenade;
@@ -132,7 +149,27 @@ public class WeaponController : MonoBehaviour
     public TransformConstraint ADS_Pivot => _ads_Pivot;
     public AudioSource Sound => _sound;
     public Vector3 ADS_Shoot_Point => _ads_Shoot_Point.position;
+    public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
+    public GunRecoilController GunRecoilCTRL => _gun_Recoil_CTRL;
+
+    public WeaponType WeaponType => _type;
     
+    public override void Spawned()
+    {
+        AttachToOwner();
+        
+        switch (_type)
+        {
+            case WeaponType.Gun:
+                _cam_Recoil.SetCameraCTRL(_componentManager.WeaponManager.Camera_Recoil);
+                _camera_Zoom = _componentManager.WeaponManager.Camera;
+                break;
+            case WeaponType.Melee:
+                _gun_Recoil_CTRL.SetFiringMode(GunRecoilController.FiringMode.Melee);
+                break;
+        }
+        gameObject.SetActive(false);
+    }
 
     private void Awake()
     {
@@ -140,24 +177,52 @@ public class WeaponController : MonoBehaviour
             _anim = GetComponentInChildren<Animator>();
         if (_anim == null) Debug.LogError("Không tìm thấy Animator!");
         if (_data == null) return;
-        _cam_Recoil?.LoadData(_data);
+        
+        switch (_type)
+        {
+            case WeaponType.Gun:
+                _cam_Recoil?.LoadData(_data);
+                break;
+            case WeaponType.Melee:
+                break;
+        }
+        
         _gun_Recoil_CTRL?.ReloadData(_data);
+    }
+    
+    private void AttachToOwner()
+    {
+        if (OwnerCharacter == null) return;
+
+        _componentManager = OwnerCharacter.GetComponent<CharComponentManager>();
+        if (_componentManager == null) return;
+
+        Transform socket = _componentManager.WeaponManager.WeaponParent;
+        transform.SetParent(socket, worldPositionStays: false);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
     }
 
     public void Respawn()
-    {
-        Debug.Log("Respawn");
+    { 
+        if (_type != WeaponType.Gun) return;
+        
         _currentMaxBullet = _data.MaxBullet;
-        Reload();
+        _currentBulletvalue = _data.DefaultBullet;
     }
     
     // ====================================== EVENT ONFIRE =========================
 
     void Start()
     {
-        _parrentBullet.parent = null;
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
         _audio = AudioManager.Instance;
+        
+        if (_type != WeaponType.Gun) return;
+        
+        _parrentBullet.name = $"{_parrentBullet_name} for {transform.root.name} : {transform.name}";
+        _parrentBullet.parent = null;
+        
         Respawn();
     }
 
@@ -173,20 +238,28 @@ public class WeaponController : MonoBehaviour
 
     private void PlayFireEffect()
     {
-        _currentBulletvalue--;
+        switch (_type)
+        {
+            case WeaponType.Gun:
+                _currentBulletvalue--;
+                if (_bulletController != null)
+                    _bulletController.Drop();
+                    // reset effect
+                    _shoot_Effect.SetActive(false);
+                    _shoot_Effect.SetActive(true);
+                break;
+            case WeaponType.Melee:
+                break;
+        }
         _anim.SetTrigger("IsShooting");
         if (_audio != null) _audio.PlayClip(_sound, Data.FireClip, Data.Volume_Fire);
-        if (_bulletController != null)
-            _bulletController.Drop();
-        // reset effect
-        _shoot_Effect.SetActive(false);
-        _shoot_Effect.SetActive(true);
     }
 
     // ========================================== ADS ==================================
     
     private void Update()
     {
+        if (_type != WeaponType.Gun) return;
         ADSHandler();
     }
 
@@ -251,10 +324,6 @@ public class WeaponController : MonoBehaviour
     public void SetLookDelta(Vector2 value) => _sway.SetLookDelta(value);
     public void SetMoveDirection(Vector2 value) => _sway.SetMoveDirection(value);
     
-    // ======================= CAMERA RECOIL ===========================
-    
-    public void SetCameraCTRL(Transform camera) => _cam_Recoil.SetCameraCTRL(camera);
-    
     // ======================= FIRE ====================================
 
     public void Reload()
@@ -281,8 +350,16 @@ public class WeaponController : MonoBehaviour
 
     public bool OnFire()
     {
-        if (_currentBulletvalue <= 0) return false;
-        return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
+        switch (_type)
+        {
+            case WeaponType.Gun:
+                if (_currentBulletvalue <= 0) return false;
+                return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
+            case WeaponType.Melee:
+                return _gun_Recoil_CTRL.OnFire(_data.FireDelay);
+            default:
+                return false;
+        }
     }
 
     public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
@@ -315,6 +392,8 @@ public class WeaponController : MonoBehaviour
     
     public void SwitchMode()
     {
+        if (_type != WeaponType.Gun) return;
+        
         var current_mode = _gun_Recoil_CTRL.GetFiringMode();
         switch (current_mode)
         {
@@ -346,6 +425,12 @@ public class WeaponController : MonoBehaviour
         }
         return false;
     }
+
+    // Cập nhật UI khi số lượng đạn thay đổi.
+    void OnBulletCountChange()
+    {
+        
+    }
     
     // ============================================ ANIMATOR =================================================
     
@@ -359,15 +444,22 @@ public class WeaponController : MonoBehaviour
     public void IsSliding(bool isSliding) => _anim.SetBool("IsSliding", isSliding); 
     public void IsThrow(bool isThrow) => _anim.SetBool("IsThrow", isThrow);
     public void IsSwitching(bool isSwitching) => _anim.SetBool("IsSwitching", isSwitching);
-    public void ADS(bool ads)
+    public bool ADS(bool ads)
     {
+        if (_type != WeaponType.Gun) return false;
         _ads = ads;
         _anim.SetBool("ADS", ads);
+        return true;
     }
     public bool IsReloading(bool isReloading)
     {
-        if (isReloading && _currentBulletvalue == _data.DefaultBullet) return false;
-        if (isReloading && _currentMaxBullet == 0) return false;
+        if (isReloading)
+        {
+            if (_type != WeaponType.Gun)  return false;
+            if (_currentBulletvalue == _data.DefaultBullet) return false;
+            if (_currentMaxBullet == 0)  return false;
+        }
+        
         _anim.SetBool("IsReloading", isReloading);
         return true;
     }
@@ -411,6 +503,12 @@ public class WeaponController : MonoBehaviour
         List<Transform> list_bone_grenade = new List<Transform>();
         foreach (var trans in GetComponentsInChildren<Transform>(true))
         {
+            if (trans.name.Equals(_parrentBullet_name))
+            {
+                _parrentBullet = trans;
+                continue;
+            }
+            
             // camera shake
             if (trans.name.Equals(_camera_ShakeName))
             {

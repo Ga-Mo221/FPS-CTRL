@@ -59,6 +59,7 @@ GameObject:
   - component: {fileID: 1989589391399178795}
   - component: {fileID: 4421370981314689599}
   - component: {fileID: 2617089555171110263}
+  - component: {fileID: 990022015391576882}
   m_Layer: 0
   m_Name: M4
   m_TagString: Untagged
@@ -96,6 +97,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc2fadae3e9efe549952b0cca6fae4ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
+  _OwnerCharacter: {fileID: 0}
   _data: {fileID: 11400000, guid: 14b257ca8e5a0574c895afcd46230619, type: 2}
   _anim: {fileID: 97223929395780616}
   _manager: {fileID: 0}
@@ -169,6 +171,8 @@ MonoBehaviour:
   _bullet_effect_name: Shoot Effect
   _ads_Shoot_Point: {fileID: 5572983106307651861}
   _ads_Shoot_Point_Name: Shoot Point
+  _currentBulletvalue: 0
+  _currentMaxBullet: 0
   _sound: {fileID: 9036363078410755058}
   _bulletController: {fileID: 0}
   _parrentBullet: {fileID: 2834355157056179275}
@@ -185,8 +189,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraRecoil
   data: {fileID: 0}
+  _weaponData: {fileID: 0}
   camera_CTRL: {fileID: 0}
   firingMode: 0
+--- !u!114 &990022015391576882
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1140873525885738155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3788029449
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 4421370981314689599}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &3351486452706217041
 GameObject:
   m_ObjectHideFlags: 0

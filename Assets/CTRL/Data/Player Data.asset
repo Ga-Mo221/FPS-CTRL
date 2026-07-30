@@ -12,31 +12,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30e893d6fd6c72740b2a28813a2d20af, type: 3}
   m_Name: Player Data
   m_EditorClassIdentifier: Assembly-CSharp::PlayerData
+  _hp: 100
   _gravity: -20
   _jumpImpulse: 8
   _acceleration: 300
   _braking: 10
-  _yaw_model: 1000
-  _pitch_camera: 1000
-  _pitch_Min: -80
-  _pitch_Max: 80
-  _groundCheckRadius: 0.3
-  _groundCheckOffset: 0.25
+  _aimSpeed: 1.2
+  _walkSpeed: 4.7
+  _crouchSpeed: 2.5
+  _runSpeed: 5.8
+  _sprintSpeed: 7.6
+  _slideSpeed: 10
+  _slideAcceleration: 0
+  _slideHoldDuration: 0.5
+  _yawModel: 1000
+  _pitchCamera: 1000
+  _pitchMin: -80
+  _pitchMax: 80
+  _adsLookSpeedMultiplier: 0.3
+  _groundCheckRadius: 0.22
+  _groundCheckOffset: 0.198
   _groundMask:
     serializedVersion: 2
     m_Bits: 8
-  _aim_Speed: 1.2
-  _walk_Speed: 4.7
-  _crouch_Speed: 2.5
-  _run_Speed: 5.8
-  _sprint_Speed: 7.6
-  _slide_Speed: 10
-  _slide_acceleration: 1
-  _slide_Hold_Duration: 0.4
+  _standHeight: 1.82
+  _standCenterY: 0.9
+  _crouchHeight: 1.4
+  _crouchCenterY: 0.7
+  _slideHeight: 1
+  _slideCenterY: 0.5
   _moveSmoothSpeed: 0.08
-  _stand_Height: 2.71
-  _stand_Center_Y: 0.9
-  _crouch_Height: 1.2
-  _crouch_Center_Y: 0.1
-  _slide_Height: 1
-  _slide_Center_Y: 0.045

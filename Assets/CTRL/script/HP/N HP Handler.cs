@@ -8,7 +8,10 @@ public class NHPHandler : NetworkBehaviour
     private int HP { get; set; }
 
     [Networked, OnChangedRender(nameof(OnStateChanged))]
-    public bool IsDead { get; set; }
+    public bool IsDead { get; private set; }
+
+    [Networked, OnChangedRender(nameof(OnDeadCountChanged))]
+    public int DeadCount { get; private set; } = 0;
 
     [Header("Regen Settings")]
     [SerializeField] private float _regenDelay = 5f;      // Giây không nhận damage trước khi hồi máu
@@ -88,6 +91,13 @@ public class NHPHandler : NetworkBehaviour
         //Debug.Log($"[HPHandler] {Time.time} OnStateChanged isDead: {IsDead}", this);
         _uiHPPlayer.SetDead(IsDead);
         _hitboxRoot.HitboxRootActive = !IsDead;
+        if (IsDead)
+            DeadCount++;
+    }
+
+    void OnDeadCountChanged()
+    {
+        // thay doi ui KDA
     }
 
     public void OnRespawn()
@@ -97,6 +107,7 @@ public class NHPHandler : NetworkBehaviour
 
     IEnumerator ServerRevoveCO(float timeRespawn)
     {
+        _movementHandler.StateFl = new PlayerStateFlags();
         yield return new WaitForSeconds(timeRespawn);
         _movementHandler.RequestRespawn();
     }

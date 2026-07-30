@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 3166550086558098985}
   - component: {fileID: 5055187625301300164}
   - component: {fileID: 3609666211312800335}
+  - component: {fileID: 1087923967531187293}
   m_Layer: 0
   m_Name: 9mm Demon
   m_TagString: Untagged
@@ -48,10 +49,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc2fadae3e9efe549952b0cca6fae4ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
+  _type: 0
+  _OwnerCharacter: {fileID: 0}
   _data: {fileID: 11400000, guid: 8d6f5de50716fd042bee86703c9de869, type: 2}
   _anim: {fileID: 4031442188459780953}
-  _manager: {fileID: 0}
   _ads_Pivot: {fileID: 4367730149348134890}
+  _gun_Recoil_CTRL: {fileID: 5078299184062921433}
+  _sway: {fileID: 3194875181811507390}
+  _cam_Recoil: {fileID: 3609666211312800335}
+  _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
+  _shoot_Effect: {fileID: 5259768180241539910}
+  _bullet_effect_name: Shoot Effect
+  _sound: {fileID: 7204803870130367587}
+  _bulletController: {fileID: 3275467144244299705}
   _list_Bone_Body:
   - {fileID: 450364656847194672}
   - {fileID: 3824368220671226051}
@@ -102,7 +112,6 @@ MonoBehaviour:
   _grenade_Frag_Name: RAW_Frag
   _camera_Shake: {fileID: 7877428770424236442}
   _camera_ShakeName: RAW_Camera
-  _camera_Zoom: {fileID: 0}
   _hand_Left: {fileID: 3097094582638978326}
   _hand_Left_Name: RAW_Hand_L
   _pole_Left: {fileID: 1819375448365087353}
@@ -111,19 +120,14 @@ MonoBehaviour:
   _hand_Right_Name: RAW_Hand_R
   _pole_Right: {fileID: 1213193478355311154}
   _Elbow_Right_Name: RAW_Elbow_R
-  _gun_Recoil_CTRL: {fileID: 5078299184062921433}
-  _sway: {fileID: 3194875181811507390}
-  _cam_Recoil: {fileID: 3609666211312800335}
   _bullet_point: {fileID: 4009172440263591744}
   _bullet_point_name: Bullet Point
-  _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
-  _shoot_Effect: {fileID: 5259768180241539910}
-  _bullet_effect_name: Shoot Effect
   _ads_Shoot_Point: {fileID: 5639741700544439683}
   _ads_Shoot_Point_Name: Shoot Point
-  _sound: {fileID: 7204803870130367587}
-  _bulletController: {fileID: 3275467144244299705}
   _parrentBullet: {fileID: 4523907242152603641}
+  _parrentBullet_name: Parrent Bullet
+  _componentManager: {fileID: 0}
+  _camera_Zoom: {fileID: 0}
 --- !u!114 &3609666211312800335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -137,8 +141,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraRecoil
   data: {fileID: 0}
+  _weaponData: {fileID: 0}
   camera_CTRL: {fileID: 0}
   firingMode: 0
+--- !u!114 &1087923967531187293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 32299828348215259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 602267981
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 5055187625301300164}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &71500863966359988
 GameObject:
   m_ObjectHideFlags: 0
