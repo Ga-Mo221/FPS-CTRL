@@ -7,15 +7,58 @@ using UnityEngine;
 public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [SerializeField] private NPlayer _playerPrefab;
+
+    // list kiem tra nguoi choi da ton tai trong room chua de phuc vu cho viec chuyen doi host
+    private Dictionary<int, NPlayer> mapTokenIDWithNPlayer;
     
     CharacterInputHandler CharacterInputHandler;
+
+    private void Awake()
+    {
+        mapTokenIDWithNPlayer = new Dictionary<int, NPlayer>();
+    }
+
+    private int GetPlayerToken(NetworkRunner runner, PlayerRef player)
+    {
+        if (runner.LocalPlayer == player)
+        {
+            return NConnectionTokenUtils.HashToken(GameManager.instance.GetConnectionToken());
+        }
+        
+        var token = runner.GetPlayerConnectionToken(player);
+
+        if (token != null)
+            return NConnectionTokenUtils.HashToken(token);
+        
+        Debug.LogWarning("<color=orange>[Spawner]</color> GetPlayerToken returned invalid token");
+        return 0;
+    }
+
+    public void SetConnectionTokenMapping(int token, NPlayer nPlayer)
+    {
+        mapTokenIDWithNPlayer.Add(token, nPlayer);
+    }
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
         if (runner.IsServer)
         {
-            Debug.Log("<color=orange>[Spawner]</color> OnPlayerJoined we are Sever. Spawning players...");
-            runner.Spawn(_playerPrefab, Utils.GetRandomSpawnPoint(), Quaternion.identity, player);
+            int playerToken = GetPlayerToken(runner, player);
+            Debug.Log($"<color=orange>[Spawner]</color> OnPlayerJoined we are Sever. Connection token : {playerToken}");
+
+            if (mapTokenIDWithNPlayer.TryGetValue(playerToken, out NPlayer nPlayer))
+            {
+                Debug.Log($"Found old connection token for token {playerToken}. Assigning controllers to that player.");
+                nPlayer.GetComponent<NetworkObject>().AssignInputAuthority(player);
+                nPlayer.Spawned();
+                return;
+            }
+            
+            Debug.Log($"Spawning new player for connection token {playerToken}");
+            NPlayer newNplayer = runner.Spawn(_playerPrefab, Utils.GetRandomSpawnPoint(), Quaternion.identity, player);
+            
+            newNplayer.Token = playerToken;
+            mapTokenIDWithNPlayer[playerToken] = newNplayer;
         }
         else Debug.Log("<color=orange>[Spawner]</color> OnPlayerJoined.");
     }
@@ -31,9 +74,15 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
             CharacterInputHandler.ResetButton();
         }
     }
-    
-    //public async void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
+
+    public async void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
+    {
+        Debug.Log("<color=orange>[Spawner]</color> On Host Migration");
+
+        await runner.Shutdown(shutdownReason: ShutdownReason.HostMigration);
+        FindAnyObjectByType<NetworkRunnerHandler>().StartHostMigration(hostMigrationToken);
+    }
+    //public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }

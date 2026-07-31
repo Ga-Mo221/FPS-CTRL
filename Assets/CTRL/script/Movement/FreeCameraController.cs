@@ -42,8 +42,6 @@ public class FreeCameraController : MonoBehaviour
     private void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
-        if (_componentManager.Camera.transform.parent.gameObject.activeSelf)
-            _componentManager.Camera.transform.parent.parent = null;
     }
 
     // Quan trọng: Phải xoay xương trong LateUpdate để ghi đè lên Animator

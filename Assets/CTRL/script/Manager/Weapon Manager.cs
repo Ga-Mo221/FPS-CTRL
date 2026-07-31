@@ -1,4 +1,3 @@
-using System;
 using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;

@@ -41,9 +41,7 @@ public class WeaponController : NetworkBehaviour
     [SerializeField] private GameObject _bullet_Prefab;
     [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row", width: 0.6f)]
     [SerializeField] private GameObject _shoot_Effect;
-    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
-    [HideLabel]
-    [SerializeField] private string _bullet_effect_name = "Shoot Effect";
+    
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private AudioSource _sound;
     [TabGroup("Weapon Controller", "Weapon Data")]
@@ -57,6 +55,41 @@ public class WeaponController : NetworkBehaviour
     
     [BoxGroup("Weapon Controller/Transform/Grenade List")]
     [SerializeField] private Transform[] _list_Bone_Grenade;
+    
+    [HorizontalGroup("Weapon Controller/Transform/camera", width: 0.6f)]
+    [SerializeField] private Transform _camera_Shake;
+    
+    [BoxGroup("Weapon Controller/Transform/IK Left")]
+    [HorizontalGroup("Weapon Controller/Transform/IK Left/IKhand_Left", width: 0.6f)]
+    [SerializeField] private Transform _hand_Left;
+    
+    [HorizontalGroup("Weapon Controller/Transform/IK Left/Elbow_Left", width: 0.6f)]
+    [SerializeField] private Transform _pole_Left;
+    
+    [BoxGroup("Weapon Controller/Transform/IK Right")]
+    [HorizontalGroup("Weapon Controller/Transform/IK Right/IKhand_Right", width: 0.6f)]
+    [SerializeField] private Transform _hand_Right;
+    
+    [HorizontalGroup("Weapon Controller/Transform/IK Right/Elbow_Right", width: 0.6f)]
+    [SerializeField] private Transform _pole_Right;
+    
+    [BoxGroup("Weapon Controller/Transform/Bullet")]
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/row", width:0.6f)]
+    [SerializeField] private Transform _bullet_point;
+    
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/ro", width:0.6f)]
+    [SerializeField] private Transform _ads_Shoot_Point;
+    
+    [HorizontalGroup("Weapon Controller/Transform/Bullet/parrent", width: 0.6f)]
+    [SerializeField] private Transform _parrentBullet;
+    
+    // =========================== NAME ==============================
+    
+#if UNITY_EDITOR
+    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
+    [HideLabel]
+    [SerializeField] private string _bullet_effect_name = "Shoot Effect";
+    
     [HorizontalGroup("Weapon Controller/Transform/Grenade List/grenade")]
     [HideLabel]
     [SerializeField] private string _grenade_Flash_Name = "RAW_Flash";
@@ -64,58 +97,38 @@ public class WeaponController : NetworkBehaviour
     [HideLabel]
     [SerializeField] private string _grenade_Frag_Name = "RAW_Frag";
     
-    [HorizontalGroup("Weapon Controller/Transform/camera", width: 0.6f)]
-    [SerializeField] private Transform _camera_Shake;
     [HorizontalGroup("Weapon Controller/Transform/camera")]
     [HideLabel]
     [SerializeField] private string _camera_ShakeName = "RAW_Camera";
     
-    [BoxGroup("Weapon Controller/Transform/IK Left")]
-    [HorizontalGroup("Weapon Controller/Transform/IK Left/IKhand_Left", width: 0.6f)]
-    [SerializeField] private Transform _hand_Left;
     [HorizontalGroup("Weapon Controller/Transform/IK Left/IKhand_Left")] 
     [HideLabel]
     [SerializeField] private string _hand_Left_Name = "RAW_Hand_L";
     
-    [HorizontalGroup("Weapon Controller/Transform/IK Left/Elbow_Left", width: 0.6f)]
-    [SerializeField] private Transform _pole_Left;
     [HorizontalGroup("Weapon Controller/Transform/IK Left/Elbow_Left")]
     [HideLabel]
     [SerializeField] private string _Elbow_Left_Name = "RAW_Elbow_L";
     
-    [BoxGroup("Weapon Controller/Transform/IK Right")]
-    [HorizontalGroup("Weapon Controller/Transform/IK Right/IKhand_Right", width: 0.6f)]
-    [SerializeField] private Transform _hand_Right;
     [HorizontalGroup("Weapon Controller/Transform/IK Right/IKhand_Right")] 
     [HideLabel]
     [SerializeField] private string _hand_Right_Name = "RAW_Hand_R";
     
-    [HorizontalGroup("Weapon Controller/Transform/IK Right/Elbow_Right", width: 0.6f)]
-    [SerializeField] private Transform _pole_Right;
     [HorizontalGroup("Weapon Controller/Transform/IK Right/Elbow_Right")]
     [HideLabel]
     [SerializeField] private string _Elbow_Right_Name = "RAW_Elbow_R";
     
-    [BoxGroup("Weapon Controller/Transform/Bullet")]
-    [HorizontalGroup("Weapon Controller/Transform/Bullet/row", width:0.6f)]
-    [SerializeField] private Transform _bullet_point;
     [HorizontalGroup("Weapon Controller/Transform/Bullet/row")]
     [HideLabel]
     [SerializeField] private string _bullet_point_name = "Bullet Point";
     
-    [HorizontalGroup("Weapon Controller/Transform/Bullet/ro", width:0.6f)]
-    [SerializeField] private Transform _ads_Shoot_Point;
-
     [HorizontalGroup("Weapon Controller/Transform/Bullet/ro")] 
     [HideLabel] 
     [SerializeField] private string _ads_Shoot_Point_Name = "Shoot Point";
     
-    [HorizontalGroup("Weapon Controller/Transform/Bullet/parrent", width: 0.6f)]
-    [SerializeField] private Transform _parrentBullet;
-
     [HorizontalGroup("Weapon Controller/Transform/Bullet/parrent")]
     [HideLabel]
     [SerializeField] private string _parrentBullet_name = "Parrent Bullet";
+#endif
     
     // ========================= RUNTIME =============================
     
