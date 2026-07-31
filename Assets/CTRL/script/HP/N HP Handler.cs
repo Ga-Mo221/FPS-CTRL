@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Fusion;
 using UnityEngine;
@@ -5,13 +6,15 @@ using UnityEngine;
 public class NHPHandler : NetworkBehaviour
 {
     [Networked, OnChangedRender(nameof(OnHPChanged))]
-    private int HP { get; set; }
+    public int HP { get; set; }
 
     [Networked, OnChangedRender(nameof(OnStateChanged))]
     public bool IsDead { get; private set; }
 
     [Networked, OnChangedRender(nameof(OnDeadCountChanged))]
     public int DeadCount { get; private set; } = 0;
+
+    public bool SkipSettingStartValues;
 
     [Header("Regen Settings")]
     [SerializeField] private float _regenDelay = 5f;      // Giây không nhận damage trước khi hồi máu
@@ -38,7 +41,15 @@ public class NHPHandler : NetworkBehaviour
         _hitboxRoot = _componentManager.HitboxRoot;
         _inGameMessagesHandler = _componentManager.NInGameMessagesHandler;
         _nPlayer = _componentManager.NPlayer;
-        NewState();
+    }
+
+    private void Start()
+    {
+        if (!SkipSettingStartValues)
+        {
+            NewState();
+        }
+        _uiHPPlayer.SetHP(HP);
     }
 
     private void NewState()
@@ -49,22 +60,22 @@ public class NHPHandler : NetworkBehaviour
         _lastDamageTime = float.MinValue;
     }
 
-    public override void FixedUpdateNetwork()
-    {
-        // Chỉ Host mới xử lý regen
-        if (!HasStateAuthority) return;
-        if (IsDead) return;
-        if (HP >= _data.HP) return;
-
-        // Chưa đủ thời gian nghỉ sau damage
-        if (Runner.SimulationTime < _lastDamageTime + _regenDelay) return;
-
-        // Chờ đến tick hồi máu tiếp theo
-        if (Runner.SimulationTime < _nextRegenTime) return;
-
-        HP = Mathf.Min(HP + _regenAmount, _data.HP);
-        _nextRegenTime = Runner.SimulationTime + _regenInterval;
-    }
+    // public override void FixedUpdateNetwork()
+    // {
+    //     // Chỉ Host mới xử lý regen
+    //     if (!HasStateAuthority) return;
+    //     if (IsDead) return;
+    //     if (HP >= _data.HP) return;
+    //
+    //     // Chưa đủ thời gian nghỉ sau damage
+    //     if (Runner.SimulationTime < _lastDamageTime + _regenDelay) return;
+    //
+    //     // Chờ đến tick hồi máu tiếp theo
+    //     if (Runner.SimulationTime < _nextRegenTime) return;
+    //
+    //     HP = Mathf.Min(HP + _regenAmount, _data.HP);
+    //     _nextRegenTime = Runner.SimulationTime + _regenInterval;
+    // }
 
     public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName)
     {

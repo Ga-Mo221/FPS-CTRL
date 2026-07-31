@@ -19,12 +19,12 @@ public class WeaponManager : NetworkBehaviour
     // Weapon One
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     private NetworkObject _weaponOneRef { get; set; }
-    private WeaponController _weapon_One_CTRL;
+    public WeaponController _weapon_One_CTRL;
     
     // Weapon Two
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     private NetworkObject _weaponTwoRef { get; set; }
-    private WeaponController _weapon_Two_CTRL;
+    public WeaponController _weapon_Two_CTRL;
     
     // Active Weapon
     private bool _weapon_One_Active { get; set; } 
@@ -50,6 +50,7 @@ public class WeaponManager : NetworkBehaviour
     public Transform WeaponParent => _weapon_Parrent;
     public Transform Camera_Recoil => _camera_Recoil;
     public Camera Camera => _camera;
+    public bool SkipWeaponSpawn { get; set; } = false;
 
     private void Awake()
     {
@@ -59,7 +60,7 @@ public class WeaponManager : NetworkBehaviour
     
     public override void Spawned()
     {
-        if (Object.HasStateAuthority)
+        if (Object.HasStateAuthority && !SkipWeaponSpawn)
         {
             CreateWeapon(_weapon_Two_Prefab, out var w2);
             _weaponTwoRef = w2;
@@ -152,7 +153,7 @@ public class WeaponManager : NetworkBehaviour
             _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
             _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL);
         }
-        if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
+        else if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
         {
             _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
             _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL);

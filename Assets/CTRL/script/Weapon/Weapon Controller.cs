@@ -14,9 +14,9 @@ public class WeaponController : NetworkBehaviour
     [Networked] public NetworkObject OwnerCharacter { get; set; }
     
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    private int _currentBulletvalue { get; set; }
+    public int _currentBulletvalue { get; set; }
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    private int _currentMaxBullet { get; set; }
+    public int _currentMaxBullet { get; set; }
     
     // ============================ LOCAL FILED =====================================
     
@@ -164,8 +164,8 @@ public class WeaponController : NetworkBehaviour
     public Vector3 ADS_Shoot_Point => _ads_Shoot_Point.position;
     public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
     public GunRecoilController GunRecoilCTRL => _gun_Recoil_CTRL;
-
     public WeaponType WeaponType => _type;
+    public bool SkipRespawnBullet;
     
     public override void Spawned()
     {
@@ -228,20 +228,23 @@ public class WeaponController : NetworkBehaviour
 
     void Start()
     {
-        _gun_Recoil_CTRL.OnShotFired += HandleShot;
         _audio = AudioManager.Instance;
         
         if (_type != WeaponType.Gun) return;
         
-        _parrentBullet.name = $"{_parrentBullet_name} for {transform.root.name} : {transform.name}";
+        _parrentBullet.name = $"{_parrentBullet.name} for {transform.root.name} : {transform.name}";
         _parrentBullet.parent = null;
         
+        if (SkipRespawnBullet) return;
+        _gun_Recoil_CTRL.OnShotFired += HandleShot;
         Respawn();
     }
 
     void OnDestroy()
     {
         _gun_Recoil_CTRL.OnShotFired -= HandleShot;
+        if (_parrentBullet != null)
+            Destroy(_parrentBullet.gameObject);
     }
 
     private void HandleShot(GunRecoilController.FiringMode mode)

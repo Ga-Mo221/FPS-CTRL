@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -27,7 +26,14 @@ public class BulletCaseController : MonoBehaviour
 
     private void Start()
     {
+        _parrent.name = $"Bullet Cace for {transform.root.name}";
         _parrent.parent = null;
+    }
+
+    private void OnDestroy()
+    {
+        if (_parrent != null)
+            Destroy(_parrent.gameObject);
     }
 
     [Button]
