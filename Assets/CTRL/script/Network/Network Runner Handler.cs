@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Fusion;
@@ -102,9 +103,21 @@ public class NetworkRunnerHandler : MonoBehaviour
     void HostMigrationResume(NetworkRunner runner)
     {
         Debug.Log("<color=orange>[NetworkRunnerHandler]</color> HostMigrationResume Started", this);
+        var weaponManagersToResolve = new List<WeaponManager>();
 
         foreach (var resumeNetworkObject in runner.GetResumeSnapshotNetworkObjects())
         {
+            if (resumeNetworkObject.TryGetBehaviour<NetworkGameState>(out var oldGameState))
+            {
+                runner.Spawn(resumeNetworkObject,
+                    onBeforeSpawned: (runner, newNetworkObject) =>
+                    {
+                        newNetworkObject.CopyStateFrom(resumeNetworkObject);
+                        Debug.Log("<color=orange>[NetworkRunnerHandler]</color> NetworkGameState resumed");
+                    });
+                continue;
+            }
+            
             if (resumeNetworkObject.TryGetBehaviour<NetworkCharacterControllerCustom>(out var characterController))
             {
                 // Đọc thẳng từ NetworkState thay vì transform
@@ -117,6 +130,18 @@ public class NetworkRunnerHandler : MonoBehaviour
                     onBeforeSpawned: (runner, newNetworkObject) =>
                     {
                         newNetworkObject.CopyStateFrom(resumeNetworkObject);
+
+                        if (resumeNetworkObject.TryGetBehaviour<NPlayer>(out var oldNPlayer))
+                        {
+                            NPlayer newNPlayer = newNetworkObject.GetComponent<NPlayer>();
+                            newNPlayer.CopyStateFrom(oldNPlayer);
+                        }
+
+                        if (resumeNetworkObject.TryGetBehaviour<NShootHandler>(out var oldNShootHandler))
+                        {
+                            NShootHandler newNShootHandler = newNetworkObject.GetComponent<NShootHandler>();
+                            newNShootHandler.CopyStateFrom(oldNShootHandler);
+                        }
                         
                         if (resumeNetworkObject.TryGetBehaviour<NHPHandler>(out NHPHandler oldHPHandler))
                         {
@@ -135,12 +160,14 @@ public class NetworkRunnerHandler : MonoBehaviour
                             Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> NCharMovemenHandler Backup");
                         }
 
-                        if (resumeNetworkObject.TryGetBehaviour<WeaponManager>(out WeaponManager oldWeaponManager))
+                        if (newNetworkObject.TryGetBehaviour<WeaponManager>(out var newWM))
                         {
-                            WeaponManager newWeaponManager = newNetworkObject.GetComponent<WeaponManager>();
-                            newWeaponManager.CopyStateFrom(oldWeaponManager);
-                        
-                            //newWeaponManager.SkipWeaponSpawn = true;
+                            newWM.CopyStateFrom(resumeNetworkObject.GetBehaviour<WeaponManager>());
+                            newWM.SkipWeaponSpawn = true;
+                            newWM.NeedsResolveAfterMigration = true;
+
+                            // ✅ Collect để resolve sau
+                            weaponManagersToResolve.Add(newWM);
                         }
 
                         if (resumeNetworkObject.TryGetBehaviour<NPlayer>(out var oldNplayer))
@@ -195,29 +222,25 @@ public class NetworkRunnerHandler : MonoBehaviour
             }
         }
         
-        // foreach (var resumeNetworkObject in runner.GetResumeSnapshotNetworkObjects())
-        // {
-        //     if (!resumeNetworkObject.TryGetBehaviour<WeaponController>(out var oldWeaponCtrl))
-        //         continue;
-        //
-        //     runner.Spawn(resumeNetworkObject,
-        //         onBeforeSpawned: (runner, newNetworkObject) =>
-        //         {
-        //             newNetworkObject.CopyStateFrom(resumeNetworkObject);
-        //
-        //             if (newNetworkObject.TryGetBehaviour<WeaponController>(out var newWeaponCtrl))
-        //             {
-        //                 newWeaponCtrl.CopyStateFrom(oldWeaponCtrl);
-        //             
-        //                 // ✅ Restore OwnerCharacter - quan trọng vì đây là reference
-        //                 // sang NPlayer object, cần remap sang object mới sau migration
-        //                 newWeaponCtrl.OwnerCharacter = oldWeaponCtrl.OwnerCharacter;
-        //                 newWeaponCtrl.SkipRespawnBullet = true;
-        //             
-        //                 Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> WeaponController resumed: {resumeNetworkObject.name}");
-        //             }
-        //         });
-        // }
+        foreach (var resumeNetworkObject in runner.GetResumeSnapshotNetworkObjects())
+        {
+            if (!resumeNetworkObject.TryGetBehaviour<WeaponController>(out var oldWeaponCtrl))
+                continue;
+
+            runner.Spawn(resumeNetworkObject,
+                onBeforeSpawned: (runner, newNetworkObject) =>
+                {
+                    newNetworkObject.CopyStateFrom(resumeNetworkObject);
+
+                    if (newNetworkObject.TryGetBehaviour<WeaponController>(out var newWeaponCtrl))
+                    {
+                        newWeaponCtrl.CopyStateFrom(oldWeaponCtrl);
+                        newWeaponCtrl.OwnerCharacter = oldWeaponCtrl.OwnerCharacter;
+                        newWeaponCtrl.SkipRespawnBullet = true;
+                        Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> {newWeaponCtrl.transform.name}");
+                    }
+                });
+        }
 
         foreach (var resumeNetworkObject in runner.GetResumeSnapshotNetworkObjects())
         {
@@ -226,11 +249,29 @@ public class NetworkRunnerHandler : MonoBehaviour
         }
 
         Debug.Log("<color=orange>[NetworkRunnerHandler]</color> HostMigrationResume Completed", this);
+        
+        FindFirstObjectByType<NSpawner>().RecalculateTeamCounts();
 
         // ✅ Dọn những player không reconnect lại sau host migration (rời game hẳn giữa lúc
         // migration đang diễn ra) - tránh object của họ treo lại vĩnh viễn trong scene.
         // Chờ 1 khoảng trước khi dọn, để tránh dọn nhầm những player đang trên đường reconnect.
         StartCoroutine(HostMigrationCleanUpCO(runner));
+        StartCoroutine(ResolveWeaponManagersAfterMigration(weaponManagersToResolve));
+    }
+    
+    private IEnumerator ResolveWeaponManagersAfterMigration(List<WeaponManager> managers)
+    {
+        // Chờ 1 frame để Spawned() của WeaponManager + WeaponController chạy xong
+        yield return null;
+
+        foreach (var wm in managers)
+        {
+            if (wm == null || !wm.Object.IsValid) continue;
+
+            // ✅ RPC broadcast xuống tất cả client thay vì chỉ chạy local
+            wm.Rpc_ResolveAfterMigration();
+            Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Rpc_ResolveAfterMigration sent: {wm.name}");
+        }
     }
 
     private IEnumerator HostMigrationCleanUpCO(NetworkRunner runner)

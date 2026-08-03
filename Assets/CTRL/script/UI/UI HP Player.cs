@@ -1,41 +1,61 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class UIHPPlayer : MonoBehaviour
 {
     private int _hp;
-    [SerializeField] private int _helpHP = 30;
+    private int _maxHP;
+    
+    [SerializeField] private TextMeshProUGUI _hpText;
+    
     [SerializeField] private Image _uiOnHitImage;
+    [SerializeField] private int _helpHP = 30;
     [SerializeField] private float _hitImageAlpha = 80f;
 
     [SerializeField] private Image _uiDead_BlackImage;
+    
+    [Header("Grenade Flash")]
+    [SerializeField] private Image _uiFlash_WhiteImage;
+    [SerializeField] private float _flashbangDuration = 5f;
 
-    [Header("Flash Settings")]
+    [Header("HP Flash Settings")]
     [SerializeField] private float _fadeInDuration  = 0.1f;   // Thời gian fade sáng lên
     [SerializeField] private float _fadeOutDuration = 0.4f;   // Thời gian fade tối xuống
     [SerializeField] private float _lowHPPauseDuration = 0.3f; // Khoảng nghỉ giữa 2 lần nhấp nháy liên tục
 
     private Coroutine _lowHPFlashCoroutine;
     private Coroutine _flashOnceCoroutine;
+    
+    private PlayerData _data;
+    private CharComponentManager _componentManager;
 
     private void Start()
     {
         SetImageAlpha(_uiOnHitImage, 0f);
         SetImageAlpha(_uiDead_BlackImage, 0f);
+        SetImageAlpha(_uiFlash_WhiteImage, 0f);
     }
 
-    public void Init(int HP)
+    public void Init(int HP, PlayerData data,  CharComponentManager componentManager)
     {
         _hp = HP;
+        _maxHP = HP;
+        _data = data;
+        _componentManager = componentManager;
     }
 
-    public void SetHP(int newHP)
+    public void SetHP(int newHP, int maxHP)
     {
         if (!gameObject.activeSelf) return;
         
         int previousHP = _hp;
         _hp = newHP;
+        _maxHP = maxHP;
+        
+        if (_hpText != null)
+            _hpText.text = $"{newHP} / {_maxHP}";
 
         // Máu giảm → nhấp nháy 1 lần
         if (_hp < previousHP)
@@ -52,7 +72,6 @@ public class UIHPPlayer : MonoBehaviour
         {
             StopLowHPFlash();
         }
-
     }
 
     // ─── Flash 1 lần khi bị hit ───────────────────────────────────────────────
@@ -110,6 +129,32 @@ public class UIHPPlayer : MonoBehaviour
             yield return StartCoroutine(FadeTo(_uiOnHitImage, 0f, _fadeOutDuration));
             yield return new WaitForSeconds(_lowHPPauseDuration);
         }
+    }
+
+    
+    public void Flash(float distance, float radius)
+    {
+        float time = _flashbangDuration * (1 - distance / radius);
+        StartCoroutine(startFlashGrenade(time));
+        Debug.Log($"{transform.root.name} Choang {time}");
+    }
+
+    IEnumerator startFlashGrenade(float duration)
+    {
+        if (_componentManager.NetworkObject.HasInputAuthority)
+        {
+            AudioManager.Instance.PlayClip
+            (
+                _componentManager.Audio_Flashbang,
+                _data.FlashbangClips,
+                _data.Volume_Flashbang,
+                0.2f, 4f, 2f
+            );
+        }
+        yield return StartCoroutine(FadeTo(_uiFlash_WhiteImage, 1f, 0.2f));
+        yield return new WaitForSeconds(duration);
+        GameManager.instance.FlashbangEffect.TriggerFlashbang(6f);
+        yield return StartCoroutine(FadeTo(_uiFlash_WhiteImage, 0f, 3f));
     }
 
     // ─── Fade mượt theo thời gian ─────────────────────────────────────────────

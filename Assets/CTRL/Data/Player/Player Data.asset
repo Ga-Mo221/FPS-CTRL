@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30e893d6fd6c72740b2a28813a2d20af, type: 3}
+  m_Name: Player Data
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerData
+  _hp: 100
+  _gravity: -20
+  _jumpImpulse: 8
+  _acceleration: 300
+  _braking: 10
+  _aimSpeed: 1.2
+  _walkSpeed: 4.7
+  _crouchSpeed: 2.5
+  _runSpeed: 5.8
+  _sprintSpeed: 7.6
+  _slideSpeed: 10
+  _slideAcceleration: 0
+  _slideHoldDuration: 0.5
+  _yawModel: 1000
+  _pitchCamera: 1000
+  _pitchMin: -80
+  _pitchMax: 80
+  _adsLookSpeedMultiplier: 0.3
+  _groundCheckRadius: 0.22
+  _groundCheckOffset: 0.198
+  _groundMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _standHeight: 1.82
+  _standCenterY: 0.9
+  _crouchHeight: 1.4
+  _crouchCenterY: 0.7
+  _slideHeight: 1
+  _slideCenterY: 0.5
+  _moveSmoothSpeed: 0.08
+  _volume_Foot: 0.073
+  _footStepClip:
+  - {fileID: 8300000, guid: 00135ffcaf010c245bc7f8df5b43067f, type: 3}
+  - {fileID: 8300000, guid: fad5317e531f16d4fb080f172cc22569, type: 3}
+  - {fileID: 8300000, guid: 90a13b3313c41fa4497aef3997ee25b5, type: 3}
+  - {fileID: 8300000, guid: fbb2e1ca9cc400d428b3a04511fc5176, type: 3}
+  - {fileID: 8300000, guid: 20212b0b08b126943959ea790f5fec57, type: 3}
+  - {fileID: 8300000, guid: e50edf1812306fb479c1104e1aa5391e, type: 3}
+  - {fileID: 8300000, guid: bac145febcb7b7d408979e4e93d3b220, type: 3}
+  _volume_Jump: 1
+  _jumpClips:
+  - {fileID: 8300000, guid: b97564e3675df5b43bd590bcce2e3bad, type: 3}
+  - {fileID: 8300000, guid: 0444f0a76ca6991468703c43de430823, type: 3}
+  - {fileID: 8300000, guid: 4ceaed56f3773bf4a8c1a258e9cdc316, type: 3}
+  _volume_Slide: 1
+  _slideClips:
+  - {fileID: 8300000, guid: b3d59fb78e0754a4f994d6aa91dd8e16, type: 3}
+  _volume_TakeDamage: 0.202
+  _takeDamageClips:
+  - {fileID: 8300000, guid: 9c2feb87e698ddf42ba6d2d74f74a641, type: 3}
+  - {fileID: 8300000, guid: adc4d3a20ec96404b85e37aa7e750b86, type: 3}
+  _volume_HitDamage: 1
+  _hitDamageClips: []
+  _volume_Flashbang: 2
+  _flashbangClips:
+  - {fileID: 8300000, guid: f86a949db5e79dc43a0e14a9b9799d67, type: 3}

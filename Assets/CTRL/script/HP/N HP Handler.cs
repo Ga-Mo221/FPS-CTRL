@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using Fusion;
 using UnityEngine;
@@ -6,13 +5,17 @@ using UnityEngine;
 public class NHPHandler : NetworkBehaviour
 {
     [Networked, OnChangedRender(nameof(OnHPChanged))]
-    public int HP { get; set; }
+    private int HP { get; set; }
+    [SerializeField] private float _oldHP;
 
     [Networked, OnChangedRender(nameof(OnStateChanged))]
     public bool IsDead { get; private set; }
 
     [Networked, OnChangedRender(nameof(OnDeadCountChanged))]
     public int DeadCount { get; private set; } = 0;
+    
+    [Networked] private TickTimer _revivePhase1Timer { get; set; } // chờ trước DisableCCC
+    [Networked] private TickTimer _revivePhase2Timer { get; set; } // chờ trước RequestRespawn
 
     public bool SkipSettingStartValues;
 
@@ -49,56 +52,96 @@ public class NHPHandler : NetworkBehaviour
         {
             NewState();
         }
-        _uiHPPlayer.SetHP(HP);
+        _uiHPPlayer.SetHP(HP, _data.HP);
+    }
+
+    private void OnEnable()
+    {
+        StartCoroutine(OnHotMigrationHP());
+    }
+
+    IEnumerator OnHotMigrationHP()
+    {
+        yield return null;
+        yield return null;
+        _uiHPPlayer.SetHP(HP, _data.HP);
     }
 
     private void NewState()
     {
         IsDead = false;
         HP = _data.HP;
-        _uiHPPlayer.Init(HP);
+        _uiHPPlayer.Init(HP, _data, _componentManager);
         _lastDamageTime = float.MinValue;
     }
 
-    // public override void FixedUpdateNetwork()
-    // {
-    //     // Chỉ Host mới xử lý regen
-    //     if (!HasStateAuthority) return;
-    //     if (IsDead) return;
-    //     if (HP >= _data.HP) return;
-    //
-    //     // Chưa đủ thời gian nghỉ sau damage
-    //     if (Runner.SimulationTime < _lastDamageTime + _regenDelay) return;
-    //
-    //     // Chờ đến tick hồi máu tiếp theo
-    //     if (Runner.SimulationTime < _nextRegenTime) return;
-    //
-    //     HP = Mathf.Min(HP + _regenAmount, _data.HP);
-    //     _nextRegenTime = Runner.SimulationTime + _regenInterval;
-    // }
-
-    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName)
+    public override void FixedUpdateNetwork()
     {
+        if (!HasStateAuthority) return;
+
+        // Phase 1: DisableCCC
+        if (_revivePhase1Timer.Expired(Runner))
+        {
+            _revivePhase1Timer = default;
+            _movementHandler.DisableCCC();
+            _revivePhase2Timer = TickTimer.CreateFromSeconds(Runner, /* timeRespawn/2 */ 3.5f);
+        }
+
+        // Phase 2: RequestRespawn
+        if (_revivePhase2Timer.Expired(Runner))
+        {
+            _revivePhase2Timer = default;
+            _movementHandler.RequestRespawn();
+        }
+
+        // Regen logic...
+        if (IsDead) return;
+        if (HP >= _data.HP) return;
+        if (Runner.SimulationTime < _lastDamageTime + _regenDelay) return;
+        if (Runner.SimulationTime < _nextRegenTime) return;
+        HP = Mathf.Min(HP + _regenAmount, _data.HP);
+        _nextRegenTime = Runner.SimulationTime + _regenInterval;
+    }
+
+    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName, NetworkId id, float Trauma = 0.2f)
+    {
+        if (!_movementHandler.CanTakeDamage) return false;
         if (IsDead) return false;
 
+        if (damage > HP)
+            damage = HP;
+        
+        _oldHP = HP;
         HP -= damage;
         _lastDamageTime = Runner.SimulationTime;
         _nextRegenTime = _lastDamageTime + _regenDelay + _regenInterval;
+        
+        if (Object.HasStateAuthority)
+            RPC_ApplyTrauma(Trauma);
 
         if (HP <= 0)
         {
             _inGameMessagesHandler.SendInGameRPCMessage(damageCausedByPlayerNickName, $"<color=red>Killed</color> <b>{_nPlayer.Nickname.ToString()}</b>");
             IsDead = true;
-            StartCoroutine(ServerRevoveCO(7f));
+            StartServerRevive(7f);
+            if (Object.Id == id) return false;
             return true;
         }
         return false;
     }
+    
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_ApplyTrauma(float trauma)
+    {
+        _componentManager.CameraShake.AddTrauma(trauma);
+        AudioManager.Instance.PlayClip(_componentManager.Audio_Body, _data.HitDamageClips, _data.Volume_HitDamage);
+    }
 
     void OnHPChanged()
     {
+        if (!Object.HasInputAuthority) return;
         //Debug.Log($"[HPHandler] {Time.time} OnHPChanged value: {HP}", this);
-        _uiHPPlayer.SetHP(HP);
+        _uiHPPlayer.SetHP(HP, _data.HP);
     }
 
     void OnStateChanged()
@@ -117,13 +160,27 @@ public class NHPHandler : NetworkBehaviour
 
     public void OnRespawn()
     {
-        NewState();
+        if (Object.HasStateAuthority)
+            NewState();
+        
+        _uiHPPlayer.SetHP(_data.HP, _data.HP);
+        _uiHPPlayer.SetDead(false);
+        _hitboxRoot.HitboxRootActive = true;
     }
 
-    IEnumerator ServerRevoveCO(float timeRespawn)
+    private void StartServerRevive(float timeRespawn)
     {
-        yield return new WaitForSeconds(timeRespawn);
-        _movementHandler.StateFl = new PlayerStateFlags();
-        _movementHandler.RequestRespawn();
+        if (!Object.HasStateAuthority) return;
+        _revivePhase1Timer = TickTimer.CreateFromSeconds(Runner, timeRespawn / 2f);
     }
+    
+    // IEnumerator ServerRevoveCO(float timeRespawn)
+    // {
+    //     if (!Object.HasStateAuthority) yield break;
+    //     
+    //     yield return new WaitForSeconds(timeRespawn/2);
+    //     _movementHandler.DisableCCC();
+    //     yield return new WaitForSeconds(timeRespawn/2);
+    //     _movementHandler.RequestRespawn();
+    // }
 }

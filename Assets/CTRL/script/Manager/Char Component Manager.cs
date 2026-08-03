@@ -14,7 +14,9 @@ public class CharComponentManager : MonoBehaviour
     public PlayerMotionController PlayerMotionController;
     public TurnInPlace TurnInPlace;
     public Animator Animator;
-    public AudioSource AudioSource;
+    public AudioSource Audio_Body;
+    public AudioSource Audio_HitSound;
+    public AudioSource Audio_Flashbang;
     public Camera Camera;
     public NCharacterAnimationHandler NCharacterAnimationHandler;
     public NShootHandler NShootHandler;
@@ -24,6 +26,10 @@ public class CharComponentManager : MonoBehaviour
     public UIPlayerNickName UIPlayerNickName;
     public UIInGameMessagesHandler UIInGameMessagesHandler;
     public NInGameMessagesHandler NInGameMessagesHandler;
+    public UIWeapon UIWeapon;
+    public Transform CameraClippingPoint;
+    public CameraShake CameraShake;
+    public NetworkObject NetworkObject;
 
     [Button]
     public void Setup()
@@ -37,7 +43,7 @@ public class CharComponentManager : MonoBehaviour
         PlayerMotionController = GetComponentInChildren<PlayerMotionController>(true);
         TurnInPlace = GetComponentInChildren<TurnInPlace>(true);
         Animator = GetComponentInChildren<Animator>(true);
-        AudioSource = GetComponentInChildren<AudioSource>(true);
+        Audio_Body = GetComponentInChildren<AudioSource>(true);
         Camera = GetComponentInChildren<Camera>(true);
         NCharacterAnimationHandler = GetComponentInChildren<NCharacterAnimationHandler>(true);
         NShootHandler = GetComponentInChildren<NShootHandler>(true);
@@ -47,5 +53,8 @@ public class CharComponentManager : MonoBehaviour
         UIPlayerNickName = GetComponentInChildren<UIPlayerNickName>(true);
         UIInGameMessagesHandler = GetComponentInChildren<UIInGameMessagesHandler>(true);
         NInGameMessagesHandler = GetComponentInChildren<NInGameMessagesHandler>(true);
+        UIWeapon = GetComponentInChildren<UIWeapon>(true);
+        CameraShake = GetComponentInChildren<CameraShake>(true);
+        NetworkObject = GetComponent<NetworkObject>();
     }
 }

@@ -53,30 +53,30 @@ public class WeaponData : ScriptableObject
     [FoldoutGroup("Sound/sound/Fire")]
     [SerializeField] private AudioClip _fire_clip;
     [FoldoutGroup("Sound/sound/Fire")] 
-    [Range(0.5f, 2f)]
+    [Range(0.05f, 2f)]
     [SerializeField] private float _volume_fire = 1f;
     
     [FoldoutGroup("Sound/sound/Magazine")]
     [SerializeField] private AudioClip _magazine_in_clip;
     [FoldoutGroup("Sound/sound/Magazine")]
-    [Range(0.5f, 2f)]
+    [Range(0.05f, 2f)]
     [SerializeField] private float _volume_magazine = 1f;
     [FoldoutGroup("Sound/sound/Slide")]
     [SerializeField] private AudioClip _slide_clip;
     [FoldoutGroup("Sound/sound/Slide")]
-    [Range(0.5f, 2f)]
+    [Range(0.05f, 2f)]
     [SerializeField] private float _volume_slide = 1f;
     
     [FoldoutGroup("Sound/sound/Switch")]
     [SerializeField] private AudioClip _switch_clip;
     [FoldoutGroup("Sound/sound/Switch")]
-    [Range(0.5f, 2f)]
+    [Range(0.05f, 2f)]
     [SerializeField] private float _volume_switch = 1f;
     
     [FoldoutGroup("Sound/sound/Switch Mode")]
     [SerializeField] private AudioClip _switch_model_clip;
     [FoldoutGroup("Sound/sound/Switch Mode")]
-    [Range(0.5f, 2f)]
+    [Range(0.05f, 2f)]
     [SerializeField] private float _volume_switch_model = 1f;
     
     

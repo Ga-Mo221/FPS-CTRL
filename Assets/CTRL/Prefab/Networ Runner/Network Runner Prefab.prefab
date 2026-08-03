@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1727729513468264959}
   - component: {fileID: 1815741166377881277}
   - component: {fileID: -7853145853544781942}
+  - component: {fileID: 5578656783627765957}
   m_Layer: 0
   m_Name: Network Runner Prefab
   m_TagString: Untagged
@@ -58,3 +59,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NSpawner
   _playerPrefab: {fileID: 6994213610445770504, guid: 0a0f94391eeabc04bb1d57d571fda20e, type: 3}
+  _networkGameStatePrefab: {fileID: 248519005544209240, guid: 56742d253721dfe46b5bff7dbda4f4b6, type: 3}
+  BlueCount: 0
+  RedCount: 0
+--- !u!114 &5578656783627765957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3966495665787669529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b5a1ff9dee264bfd829a39e6542dcbd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Addons.Physics::Fusion.Addons.Physics.RunnerSimulatePhysics3D
+  _physicsAuthority: 2
+  _physicsTiming: 3
+  ClientPhysicsSimulation: 0
+  DeltaTimeMultiplier: 1
+  SetUnityFixedTimestep: 0

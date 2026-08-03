@@ -35,9 +35,19 @@ public class CharacterInputHandler : MonoBehaviour
 
     private void Update()
     {
+        OnUI();
         if (!_movementHandler.Object.HasInputAuthority) return;
         
-        _moveDirection = _input.MoveDirection;
+        if (NetworkGameState.Instance != null && NetworkGameState.Instance.IsMatchOver()) return;
+        
+        if (GameManager.instance.OnUI) return;
+        
+        if (NetworkGameState.Instance != null && NetworkGameState.Instance.GameStarted)
+        {
+            _moveDirection = _input.MoveDirection;
+        }
+        else _moveDirection = Vector2.zero;
+        
         _lookDelta = _input.LookDelta;
         _zoomDelta = _input.ZoomDelta;
         _aimForward = _componentManager.Camera.transform.forward;
@@ -65,17 +75,23 @@ public class CharacterInputHandler : MonoBehaviour
     {
         NInputData nInputData = new NInputData();
         
-        nInputData.MoveDirection = _moveDirection;
-        nInputData.LookDelta     = _lookDelta;
-        nInputData.ZoomDelta     = _zoomDelta;
-        nInputData.AimForward    = _aimForward;
-        
-        nInputData.Buttons      = _buttons;
-        
-        nInputData.Buttons.Set(InputButtons.Attack, _input.GetSkillAction(ATTACK, TISButtonReadMode.Hold));
-        nInputData.Buttons.Set(InputButtons.ADS, _input.GetSkillAction(ADS, TISButtonReadMode.Hold));
-        nInputData.Buttons.Set(InputButtons.ThrowFrag, _input.GetSkillAction(THROW_FRAG, TISButtonReadMode.Hold));
-        nInputData.Buttons.Set(InputButtons.ThrowFlash, _input.GetSkillAction(THROW_FLASH, TISButtonReadMode.Hold));
+        if (!GameManager.instance.OnUI && NetworkGameState.Instance != null && !NetworkGameState.Instance.IsMatchOver())
+        {
+            nInputData.MoveDirection = _moveDirection;
+            nInputData.LookDelta = _lookDelta;
+            nInputData.ZoomDelta = _zoomDelta;
+            nInputData.AimForward = _aimForward;
+
+            nInputData.Buttons = _buttons;
+
+            nInputData.Buttons.Set(InputButtons.ADS,        _input.GetSkillAction(ADS,         TISButtonReadMode.Hold));
+            if (NetworkGameState.Instance != null && NetworkGameState.Instance.GameStarted)
+            {
+                nInputData.Buttons.Set(InputButtons.Attack, _input.GetSkillAction(ATTACK, TISButtonReadMode.Hold));
+                nInputData.Buttons.Set(InputButtons.ThrowFrag, _input.GetSkillAction(THROW_FRAG, TISButtonReadMode.Hold));
+                nInputData.Buttons.Set(InputButtons.ThrowFlash, _input.GetSkillAction(THROW_FLASH, TISButtonReadMode.Hold));
+            }
+        }
         
         return nInputData;
     }
@@ -83,5 +99,13 @@ public class CharacterInputHandler : MonoBehaviour
     public void ResetButton()
     {
         _buttons = default;
+    }
+
+    private void OnUI()
+    {
+        if (_input.GetSkillAction("ESC"))
+        {
+            GameManager.instance.OnUI = !GameManager.instance.OnUI;
+        }
     }
 }

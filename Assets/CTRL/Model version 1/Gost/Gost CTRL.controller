@@ -1,5 +1,37 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9220930759680684228
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 0
+    triggerValue: 0
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -4318171727382088057}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: StopSwitch
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1101 &-9152573908037218990
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -428,7 +460,7 @@ AnimatorStateMachine:
     m_Position: {x: 1240, y: 130, z: 0}
   - serializedVersion: 1
     m_StateMachine: {fileID: 3119288584470315674}
-    m_Position: {x: 1050, y: 20, z: 0}
+    m_Position: {x: 1010, y: 20, z: 0}
   - serializedVersion: 1
     m_StateMachine: {fileID: 7732404366550012508}
     m_Position: {x: 540, y: 20, z: 0}
@@ -600,6 +632,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-7364559894483523122
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0.093
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 3176860968918952677}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: HideFlash
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1102 &-7275576081476635236
 AnimatorState:
   serializedVersion: 6
@@ -721,6 +785,9 @@ AnimatorStateTransition:
   - m_ConditionMode: 2
     m_ConditionEvent: IsDead
     m_EventTreshold: 0
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsSwitching
+    m_EventTreshold: 0
   - m_ConditionMode: 6
     m_ConditionEvent: WeaponIndex
     m_EventTreshold: 1
@@ -750,7 +817,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 786653984407749622}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -753663699231681851}
+  - {fileID: -5807360217028817591}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -765,6 +834,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &-6917555276231391060
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &-6724573970615579620
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -1004,6 +1085,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-5807360217028817591
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0.05
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -753663699231681851}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: DeadVFX
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1101 &-5524584831703426604
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -1285,6 +1398,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &-4318171727382088057
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &-4308797009019125020
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -1332,6 +1457,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-4025314922435878220
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!114 &-3953813597406276787
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1376,7 +1513,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 4585538675209567825}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 3176860968918952677}
+  - {fileID: -7364559894483523122}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -1496,6 +1635,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-3556148992069150972
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &-3345645784821404516
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -1657,7 +1808,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: -5524584831703426604}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -3556148992069150972}
+  - {fileID: -1079573618730611287}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -1758,7 +1911,9 @@ AnimatorState:
   - {fileID: 1357722453760055135}
   - {fileID: -6455805196853014702}
   - {fileID: 2953266550466139353}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 5125882073157138959}
+  - {fileID: 576648724068433144}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -1910,7 +2065,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 3647191921498007563}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 9081096461686374901}
+  - {fileID: -1219927297209423063}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -1937,7 +2094,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: -2615450893774485282}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -4318171727382088057}
+  - {fileID: -9220930759680684228}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -2086,6 +2245,70 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &-1494930898835670084
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0.415
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 4886978107186815900}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: HideFrag
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
+--- !u!114 &-1219927297209423063
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 0
+    triggerValue: 0
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 9081096461686374901}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: StopSwitch
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1102 &-1140414083294476449
 AnimatorState:
   serializedVersion: 6
@@ -2175,6 +2398,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-1079573618730611287
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 0
+    triggerValue: 0
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -3556148992069150972}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: DisplayFlash
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1101 &-996028952808186195
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -2228,6 +2483,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-753663699231681851
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &-713822355820452165
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -2253,6 +2520,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-604175561690744991
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0.95
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -4025314922435878220}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: DeadVFX
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1101 &-396635980522666815
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -2291,6 +2590,7 @@ AnimatorState:
   m_Transitions:
   - {fileID: 1413191648632814186}
   - {fileID: -7058298044963187417}
+  - {fileID: 2551005435444896729}
   m_StateMachineBehaviours: []
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
@@ -2459,10 +2759,10 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: -7275576081476635236}
-    m_Position: {x: 200, y: 0, z: 0}
+    m_Position: {x: 360, y: -20, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 6038309270514112311}
-    m_Position: {x: 235, y: 65, z: 0}
+    m_Position: {x: 360, y: 50, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -6233389606061517825}
     m_Position: {x: 360, y: 120, z: 0}
@@ -2500,7 +2800,7 @@ AnimatorStateMachine:
   m_StateMachineBehaviours: []
   m_AnyStatePosition: {x: 50, y: 20, z: 0}
   m_EntryPosition: {x: 50, y: 120, z: 0}
-  m_ExitPosition: {x: 470, y: 10, z: 0}
+  m_ExitPosition: {x: 40, y: 70, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -6233389606061517825}
 --- !u!1102 &136739014687377158
@@ -2595,7 +2895,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 5824940644322771364}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 4674529832849596760}
+  - {fileID: 6763325413843981905}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -2635,6 +2937,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &576648724068433144
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 5125882073157138959}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: ResetDeadVFX
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1101 &592534160339272828
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -3033,7 +3367,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 1162054064727196945}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -6917555276231391060}
+  - {fileID: 6888530840132724149}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -3341,6 +3677,9 @@ AnimatorStateTransition:
   - m_ConditionMode: 2
     m_ConditionEvent: IsDead
     m_EventTreshold: 0
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsSwitching
+    m_EventTreshold: 0
   - m_ConditionMode: 6
     m_ConditionEvent: WeaponIndex
     m_EventTreshold: 0
@@ -3568,6 +3907,66 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &2355945439693505579
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0.95
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 4165657698115129586}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: DeadVFX
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
+--- !u!1101 &2551005435444896729
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsDead
+    m_EventTreshold: 0
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsSwitching
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: -8659791266052647843}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0
+  m_TransitionOffset: 0
+  m_ExitTime: 0.75
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
 --- !u!1101 &2563565090935694162
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -3709,6 +4108,18 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
   showDebugLog: 0
+--- !u!114 &2961791762114146345
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1102 &3102593901616617455
 AnimatorState:
   serializedVersion: 6
@@ -3775,6 +4186,18 @@ AnimatorStateMachine:
   m_ExitPosition: {x: 800, y: 120, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -7097329892266977510}
+--- !u!114 &3176860968918952677
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &3212363363880869026
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -3847,6 +4270,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &4165657698115129586
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &4169273971135551530
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -3912,7 +4347,7 @@ AnimatorStateMachine:
   m_StateMachineBehaviours: []
   m_AnyStatePosition: {x: 50, y: 20, z: 0}
   m_EntryPosition: {x: 50, y: 120, z: 0}
-  m_ExitPosition: {x: 800, y: 120, z: 0}
+  m_ExitPosition: {x: 960, y: 130, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -2950052831307028233}
 --- !u!1101 &4279702483077746073
@@ -4093,6 +4528,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &4674529832849596760
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &4839567040679589458
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -4149,6 +4596,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &4886978107186815900
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!114 &5025319006630577515
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4181,6 +4640,18 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
   showDebugLog: 0
+--- !u!114 &5125882073157138959
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &5450493600192999501
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -4440,6 +4911,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &6546306174425957320
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 2961791762114146345}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: ResetJump
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1101 &6668210286806522116
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -4465,6 +4968,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &6763325413843981905
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 0
+    triggerValue: 0
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 4674529832849596760}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: DisplayFrag
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1107 &6849934118252925239
 AnimatorStateMachine:
   serializedVersion: 6
@@ -4530,6 +5065,38 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &6888530840132724149
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerValue: 0.95
+    fireOnce: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -6917555276231391060}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: DeadVFX
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  showDebugLog: 0
 --- !u!1102 &7310220338303259836
 AnimatorState:
   serializedVersion: 6
@@ -4637,7 +5204,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 2237790403004351978}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 4165657698115129586}
+  - {fileID: 2355945439693505579}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -4893,7 +5462,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 1679869582981443851}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -4025314922435878220}
+  - {fileID: -604175561690744991}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -5123,7 +5694,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: -8730607319176386950}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 4886978107186815900}
+  - {fileID: -1494930898835670084}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -5241,6 +5814,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &9081096461686374901
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &9090415120827294509
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -5301,7 +5886,9 @@ AnimatorState:
   m_Transitions:
   - {fileID: -8782491237961342973}
   - {fileID: -3024216368707095463}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: 2961791762114146345}
+  - {fileID: 6546306174425957320}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0

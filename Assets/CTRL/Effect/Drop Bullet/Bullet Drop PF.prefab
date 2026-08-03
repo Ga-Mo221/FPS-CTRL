@@ -9,9 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7195050544488745171}
-  - component: {fileID: 8382179823462785184}
-  - component: {fileID: 2928878365691678604}
-  - component: {fileID: 9132415931385775024}
+  - component: {fileID: 3839365033226271345}
   - component: {fileID: 7548805038555451860}
   m_Layer: 0
   m_Name: Bullet Drop PF
@@ -37,75 +35,30 @@ Transform:
   - {fileID: 3949264464768367463}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
---- !u!54 &8382179823462785184
-Rigidbody:
+--- !u!114 &3839365033226271345
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 897255734151824282}
-  serializedVersion: 5
-  m_Mass: 0.5
-  m_LinearDamping: 1.5
-  m_AngularDamping: 0.5
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 2
---- !u!65 &2928878365691678604
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 897255734151824282}
-  m_Material: {fileID: 13400000, guid: fd1208a018b9d1b49a31985555a62439, type: 2}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.00024326704, y: 0.00040630795, z: 0.00025391567}
-  m_Center: {x: -0.0000014854595, y: 0.000009927986, z: 0.0000034038967}
---- !u!65 &9132415931385775024
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 897255734151824282}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3354d223d32074244913827a4a895b86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomLocalRigidbody
+  velocity: {x: 0, y: 0, z: 0}
+  gravity: {x: 0, y: -9.81, z: 0}
+  drag: 0.05
+  bounciness: 0.4
+  radius: 0.001
+  collisionMask:
     serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.00046210922, y: 0.00059821625, z: 0.00044155103}
-  m_Center: {x: -0.0000008093193, y: 0.0000105128565, z: 0.0000029270595}
+    m_Bits: 9
+  stopThreshold: 0.5
+  onCollisionEnterInspector:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &7548805038555451860
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -125,7 +78,6 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 9da32eb45254a914c99931bd60d21c59, type: 3}
   - {fileID: 8300000, guid: e04b589f1508d3a46ab0d10930c2ec7f, type: 3}
   _source: {fileID: 1808799509612575644}
-  _rb: {fileID: 8382179823462785184}
   _audio: {fileID: 0}
 --- !u!1 &5229657382986122600
 GameObject:

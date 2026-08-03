@@ -76,6 +76,14 @@ public class CharacterSpineLayerBuilder : LayerBuilder
         AddExitTrans(flashThrow, nullS, 0.9f, 0.075f);
 
         root.defaultState = isDead;
+        
+        // ── IsDead → NULL : IsDead==false && IsSwitching==false ──────
+        {
+            var t = isDead.AddTransition(nullS);
+            SetTrans(t, 0f, false);
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsDead");
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsSwitching");
+        }
 
         // ── NULL → IsDead ─────────────────────────────────────
         AddBoolTrans(nullS, isDead, "IsDead", true, 0f);

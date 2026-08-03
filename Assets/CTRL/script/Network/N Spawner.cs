@@ -8,6 +8,8 @@ using UnityEngine;
 public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [SerializeField] private NPlayer _playerPrefab;
+    [SerializeField] private NetworkGameState _networkGameStatePrefab;
+    private NetworkGameState _networkGameState;
 
     public static NSpawner Instance { get; private set; }
 
@@ -16,6 +18,9 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
     private Dictionary<int, NPlayer> mapTokenIDWithNPlayer;
 
     CharacterInputHandler CharacterInputHandler;
+    
+    public byte BlueCount = 0;
+    public byte RedCount = 0;
 
     private void Awake()
     {
@@ -34,6 +39,17 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         {
             Debug.Log("<color=orange>[Spawner]</color> OnPlayerJoined (client).");
             return;
+        }
+        
+        // Chỉ spawn mới khi chưa có (lần đầu, không phải migration)
+        if (_networkGameState == null && NetworkGameState.Instance == null)
+        {
+            _networkGameState = runner.Spawn(_networkGameStatePrefab);
+        }
+        else if (_networkGameState == null && NetworkGameState.Instance != null)
+        {
+            // Resume từ migration đã tạo rồi, chỉ cần lấy reference
+            _networkGameState = NetworkGameState.Instance;
         }
 
         // ✅ QUAN TRỌNG: nếu player này đã có PlayerObject rồi (ví dụ vừa được resume
@@ -59,10 +75,37 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         // Spawn ngay lập tức; danh tính (token) sẽ được chính client gửi lên qua RPC ngay sau khi Spawned().
         Debug.Log($"<color=orange>[Spawner]</color> OnPlayerJoined we are Server. Spawning placeholder player for {player}");
 
-        NPlayer newNplayer = runner.Spawn(_playerPrefab, Utils.GetRandomSpawnPoint(), Quaternion.identity, player);
+        NPlayer newNplayer = runner.Spawn(
+            _playerPrefab,
+            Utils.GetRandomSpawnPoint(),
+            Quaternion.identity,
+            player,
+            onBeforeSpawned: (runner, obj) =>
+            {
+                // Chạy SAU khi object tạo, TRƯỚC khi Spawned() được gọi
+                // => InitPlayer() đọc gamePlayMode đã có giá trị đúng rồi
+                NPlayer nPlayer = obj.GetComponent<NPlayer>();
+                nPlayer.GamePlayMode = GameManager.instance.GetGamePlayMode();
 
-        // set player object ngay (NPlayer.Spawned() cũng làm việc này, nhưng set sớm không hại gì)
+                // Team mode: server gán team cân bằng
+                if (nPlayer.GamePlayMode == GamePlayMode.Team)
+                    nPlayer.NetworkedTeam = AssignTeam();
+            }
+        );
+        
         runner.SetPlayerObject(player, newNplayer.Object);
+    }
+    
+    private PlayerTeam AssignTeam()
+    {
+        // Auto-balance: ai ít hơn thì vào
+        if (BlueCount <= RedCount)
+        {
+            BlueCount++;
+            return PlayerTeam.Blue;
+        }
+        RedCount++;
+        return PlayerTeam.Red;
     }
 
     // ✅ Được gọi từ NPlayer (server-side) khi nhận được Rpc_RegisterToken từ client.
@@ -165,10 +208,29 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         await runner.Shutdown(shutdownReason: ShutdownReason.HostMigration);
         FindAnyObjectByType<NetworkRunnerHandler>().StartHostMigration(hostMigrationToken);
     }
+    
+    public void RecalculateTeamCounts()
+    {
+        BlueCount = 0;
+        RedCount = 0;
 
+        foreach (var kvp in mapTokenIDWithNPlayer)
+        {
+            NPlayer np = kvp.Value;
+            if (np == null || np.Object == null || !np.Object.IsValid) continue;
+
+            if (np.NetworkedTeam == PlayerTeam.Blue)
+                BlueCount++;
+            else if (np.NetworkedTeam == PlayerTeam.Red)
+                RedCount++;
+        }
+
+        Debug.Log($"<color=orange>[Spawner]</color> RecalculateTeamCounts: Blue={BlueCount}, Red={RedCount}");
+    }
+    
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
-    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
     public void OnConnectedToServer(NetworkRunner runner) { Debug.Log("<color=orange>[Spawner]</color> Connected to Server", this); }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { Debug.Log($"<color=orange>[Spawner]</color> Disconnected: {reason}", this); }
@@ -204,6 +266,16 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
             if (nPlayer.Object.InputAuthority.IsNone)
             {
                 Debug.Log($"<color=orange>[Spawner]</color> Player with token {entry.Key} did not reconnect after host migration. Despawning.");
+                
+                if (nPlayer.NetworkedTeam == PlayerTeam.Blue)
+                {
+                    if (BlueCount > 0) BlueCount--;
+                }
+                else if (nPlayer.NetworkedTeam == PlayerTeam.Red)
+                {
+                    if (RedCount > 0) RedCount--;
+                }
+                
                 nPlayer.Runner.Despawn(nPlayer.Object);
                 mapTokenIDWithNPlayer.Remove(entry.Key);
             }

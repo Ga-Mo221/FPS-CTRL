@@ -13,9 +13,9 @@ public class UIPlayerNickName : MonoBehaviour
         _nickName.text = nickName;
     }
 
-    public void SetActive(PlayerType type)
+    public void SetActive(PlayerTeam team)
     {
-        if (type == PlayerType.Blue)
+        if (team == PlayerTeam.Blue)
         {
             _blue.SetActive(true);
             _red.SetActive(false);

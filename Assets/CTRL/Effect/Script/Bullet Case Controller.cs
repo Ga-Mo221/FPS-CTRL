@@ -27,7 +27,7 @@ public class BulletCaseController : MonoBehaviour
     private void Start()
     {
         _parrent.name = $"Bullet Cace for {transform.root.name}";
-        _parrent.parent = null;
+        _parrent.parent = GameManager.instance.BulletCaseParrent;
     }
 
     private void OnDestroy()

@@ -4,6 +4,13 @@ using UnityEngine;
 [DefaultExecutionOrder(25)] // sau NCharMovementHandler (20)
 public class NShootHandler : NetworkBehaviour
 {
+    [SerializeField] private GrenadeHandler _fragPrefab;
+    [SerializeField] private GrenadeHandler _flashPrefab;
+    [SerializeField] private Transform _throwPointRight;
+    [SerializeField] private Transform _throwPointLeft;
+    [Tooltip("lực ném")]
+    [SerializeField] private float _fore = 10f;
+    
     [Header("Hit Detection")]
     [SerializeField] private LayerMask _hitMask;
     
@@ -14,14 +21,16 @@ public class NShootHandler : NetworkBehaviour
     // Theo dõi _fireCount đã được chuyển sang NCharMovementHandler
     // NShootHandler
     private int _lastFireCount;
+    public Vector3 _aimForward;
 
     // ── Local cache ────────────────────────────────────────────────────────
     private NCharMovementHandler _movementHandler;
     private PlayerMotionController _playerMotionController;
     private CharComponentManager _componentManager;
     private WeaponManager _weaponManager;
-    private NPlayer _nPlayer;
-    
+    public NPlayer nPlayer;
+    private AudioSource _hitSound;
+    private PlayerData _playerData;
 
     public override void Spawned()
     {
@@ -29,7 +38,9 @@ public class NShootHandler : NetworkBehaviour
         _movementHandler        = _componentManager.NCharMovementHandler;
         _playerMotionController = _componentManager.PlayerMotionController;
         _weaponManager          = _componentManager.WeaponManager;
-        _nPlayer                = _componentManager.NPlayer;
+        nPlayer                 = _componentManager.NPlayer;
+        _hitSound               = _componentManager.Audio_HitSound;
+        _playerData             = _movementHandler.Data;
     }
 
     // ── Simulation (chỉ chạy trên StateAuthority = Host) ───────────────────
@@ -37,11 +48,11 @@ public class NShootHandler : NetworkBehaviour
     {
         if (!Object.HasStateAuthority) return;
 
+        // AimForward lấy trực tiếp từ NInputData — chính xác hơn camera local
+        _aimForward = _movementHandler.AimForward;
+        
         if (_movementHandler.IsFiring)
         {
-            // AimForward lấy trực tiếp từ NInputData — chính xác hơn camera local
-            Vector3 aimForward = _movementHandler.AimForward;
-
             // Gọi FireOnce() trên Host (animation + recoil)
             if (_movementHandler.FireOnce())
             {
@@ -51,7 +62,7 @@ public class NShootHandler : NetworkBehaviour
                 if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Gun)
                 {
                     // Lưu kết quả raycast để sync visual đúng điểm chạm
-                    var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(aimForward);
+                    var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(_aimForward);
                     _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
                 }
             }
@@ -78,7 +89,7 @@ public class NShootHandler : NetworkBehaviour
             _movementHandler.FireOnce();
         }
 
-        if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Gun)
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Gun)
         {
             // Spawn visual thông qua WeaponController — mỗi súng dùng prefab đạn riêng
             var shotInfo = _movementHandler.LastShotInfo;
@@ -138,14 +149,70 @@ public class NShootHandler : NetworkBehaviour
         if (hitbox == null) return;
         
         //Debug.Log($"[NShootHandler] {transform.name} hit {root.name} at {point}");
-
+        
+        var hitNplayer = hitbox.root.gameObject.GetComponent<NPlayer>();
         var HPHandler = hitbox.root.gameObject.GetComponent<NHPHandler>();
-        if (HPHandler == null) return;
+        var bodyParts = hitbox.GetComponent<BodyPartsHandler>();
+        if (HPHandler == null && hitNplayer == null && bodyParts == null) return;
+        
+        if (nPlayer.GamePlayMode == GamePlayMode.Solo)
+            HitDamage(HPHandler, bodyParts);
+        else if (nPlayer.NetworkedTeam != hitNplayer.NetworkedTeam)
+            HitDamage(HPHandler, bodyParts);
+    }
 
+    private void HitDamage(NHPHandler HPHandler, BodyPartsHandler bodyParts)
+    {
         var ctrl = _weaponManager != null ? _weaponManager.Weapon_Active() : null;
         var damage = ctrl != null ? ctrl.Data.Damage : 10;
-        if (HPHandler.OnTakeDamage(damage, _nPlayer.Nickname.ToString()))
+
+        switch (bodyParts.GetBodyParts())
+        {
+            case BodyParts.Head:
+                damage *= 3;
+                break;
+            case BodyParts.Legs:
+                damage = Mathf.RoundToInt(damage * 0.5f);
+                break;
+            case BodyParts.Hand:
+            case BodyParts.Body:
+                break;
+        }
+        
+        if (HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), Object.Id))
             _kill++;
+        
+        RPC_ApplyAudio();
+    }
+    
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_ApplyAudio()
+    {
+        AudioManager.Instance.PlayClip(_hitSound, _playerData.TakeDamageClips, _playerData.Volume_TakeDamage, true, 0.5f, 1f);
+    }
+
+    public void ThrowFrag()
+    {
+        if (!Object.HasStateAuthority) return;
+        
+         Runner.Spawn(_fragPrefab, _throwPointRight.position + _aimForward, Quaternion.LookRotation(_aimForward),
+            Object.InputAuthority,
+            (runner, spawnedGrenade) =>
+        {
+            spawnedGrenade.GetComponent<GrenadeHandler>().Throw(_aimForward * _fore, Object.InputAuthority, nPlayer.Nickname.ToString(), _hitMask, Object.Id, this);
+        });
+    }
+    
+    public void ThrowFlash()
+    {
+        if (!Object.HasStateAuthority) return;
+        
+        Runner.Spawn(_flashPrefab, _throwPointLeft.position + _aimForward, Quaternion.LookRotation(_aimForward),
+            Object.InputAuthority,
+            (runner, spawnedGrenade) =>
+            {
+                spawnedGrenade.GetComponent<GrenadeHandler>().Throw(_aimForward * _fore, Object.InputAuthority, nPlayer.Nickname.ToString(), _hitMask, Object.Id, this);
+            });
     }
 
     void OnKillChange()

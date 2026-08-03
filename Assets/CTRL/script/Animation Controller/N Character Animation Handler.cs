@@ -10,6 +10,7 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     private Vector2 _move;
     private Vector2 _velocity;
     private float _smoothTime;
+    private int _lastFireCount;
 
     public override void Spawned()
     {
@@ -23,6 +24,12 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     {
         var state = _movementHandler.StateFl;
         _smoothTime = _movementHandler.Data.MoveSmooth;
+        
+        if (_movementHandler.FireCount != _lastFireCount)
+        {
+            _lastFireCount = _movementHandler.FireCount;
+            _playerMotionController.IsShooting();
+        }
         
         _playerMotionController.IsDead(_hpHandler.IsDead);
 

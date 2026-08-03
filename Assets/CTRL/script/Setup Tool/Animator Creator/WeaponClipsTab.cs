@@ -424,6 +424,7 @@ public class WeaponClipsTab
             var t = isDead.AddTransition(switchInState);
             SetTrans(t, 0f, false);
             t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsDead");
+            t.AddCondition(AnimatorConditionMode.If, 0, "IsSwitching");
             t.AddCondition(AnimatorConditionMode.Equals, weaponIndex, "WeaponIndex");
         }
 

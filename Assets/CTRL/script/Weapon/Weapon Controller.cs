@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Fusion;
 using Sirenix.OdinInspector;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class WeaponController : NetworkBehaviour
@@ -134,6 +135,9 @@ public class WeaponController : NetworkBehaviour
     
     [TabGroup("Weapon Controller", "Runtime")]
     [SerializeField] private CharComponentManager _componentManager;
+
+    [TabGroup("Weapon Controller", "Runtime")] 
+    [SerializeField] private UIWeapon _uiWeapon;
     
     [TabGroup("Weapon Controller", "Runtime")]
     [SerializeField] private Camera _camera_Zoom;
@@ -210,6 +214,8 @@ public class WeaponController : NetworkBehaviour
         _componentManager = OwnerCharacter.GetComponent<CharComponentManager>();
         if (_componentManager == null) return;
 
+        _uiWeapon = _componentManager.UIWeapon;
+
         Transform socket = _componentManager.WeaponManager.WeaponParent;
         transform.SetParent(socket, worldPositionStays: false);
         transform.localPosition = Vector3.zero;
@@ -228,16 +234,25 @@ public class WeaponController : NetworkBehaviour
 
     void Start()
     {
+        if (_uiWeapon != null)
+            _uiWeapon.SetBullet(_currentMaxBullet, _currentBulletvalue, _data);
+        
         _audio = AudioManager.Instance;
         
         if (_type != WeaponType.Gun) return;
         
         _parrentBullet.name = $"{_parrentBullet.name} for {transform.root.name} : {transform.name}";
-        _parrentBullet.parent = null;
+        _parrentBullet.parent = GameManager.instance.BulletParrent;
         
-        if (SkipRespawnBullet) return;
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
+        if (SkipRespawnBullet) return;
         Respawn();
+    }
+
+    private void OnEnable()
+    {
+        if (_uiWeapon != null)
+            _uiWeapon.SetBullet(_currentMaxBullet, _currentBulletvalue, _data);
     }
 
     void OnDestroy()
@@ -445,7 +460,7 @@ public class WeaponController : NetworkBehaviour
     // Cập nhật UI khi số lượng đạn thay đổi.
     void OnBulletCountChange()
     {
-        
+        _uiWeapon.SetBullet(_currentBulletvalue, _currentMaxBullet, _data);
     }
     
     // ============================================ ANIMATOR =================================================

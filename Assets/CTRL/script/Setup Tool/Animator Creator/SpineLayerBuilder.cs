@@ -64,8 +64,20 @@ public class SpineLayerBuilder : LayerBuilder
         AddExitTrans(fragThrow,  nullS, 0.9f, 0.068f);
         AddExitTrans(flashThrow, nullS, 0.9f, 0.075f);
 
+        // ── IsDead → NULL (hồi sinh) ──────────────
+        {
+            var t = isDead.AddTransition(nullS);
+            SetTrans(t, 0f, false);
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsDead");
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsSwitching");
+        }
         // ── IsDead → SWITCH IN → NULL (hồi sinh) ──────────────
-        AddBoolTrans(isDead, switchIn, "IsDead", false, 0f);
+        {
+            var t = isDead.AddTransition(switchIn);
+            SetTrans(t, 0f, false);
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsDead");
+            t.AddCondition(AnimatorConditionMode.If,    0, "IsSwitching");
+        }
         AddExitTrans(switchIn, nullS,  0.75f, 0.25f);
 
         // ── NULL → IsDead (chết) ──────────────────────────────

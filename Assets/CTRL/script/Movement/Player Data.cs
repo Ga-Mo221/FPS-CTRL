@@ -156,10 +156,50 @@ public class PlayerData : ScriptableObject
     // ─────────────────────────────────────────────
 
     [Header("Animation")]
-    [Tooltip("Tốc độ làm mượt (smooth) giá trị di chuyển truyền vào Animator. Giá trị nhỏ cho chuyển động mượt hơn nhưng phản hồi chậm hơn.")]
+    [Tooltip("Tốc độ làm mượt (smooth) giá trị di chuyển truyền vào Animator. Giá trị lớn cho chuyển động mượt hơn nhưng phản hồi chậm hơn.")]
     [SerializeField] private float _moveSmoothSpeed = 0.08f;
 
+    // ─────────────────────────────────────────────
+    //  SOURCE
+    // ─────────────────────────────────────────────
 
+    [TabGroup("sound", "Source")] 
+    [FoldoutGroup("sound/Source/Foot Step")] 
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_Foot = 1f;
+    [FoldoutGroup("sound/Source/Foot Step")]
+    [SerializeField] private AudioClip[] _footStepClip;
+    
+    [FoldoutGroup("sound/Source/Jump")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_Jump = 1f;
+    [FoldoutGroup("sound/Source/Jump")]
+    [SerializeField] private AudioClip[] _jumpClips;
+    
+    [FoldoutGroup("sound/Source/Slide")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_Slide = 1f;
+    [FoldoutGroup("sound/Source/Slide")]
+    [SerializeField] private AudioClip[] _slideClips;
+    
+    [FoldoutGroup("sound/Source/Take Damage")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_TakeDamage = 1f;
+    [FoldoutGroup("sound/Source/Take Damage")]
+    [SerializeField] private AudioClip[] _takeDamageClips;
+    
+    [FoldoutGroup("sound/Source/Hit Damage")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_HitDamage = 1f;
+    [FoldoutGroup("sound/Source/Hit Damage")]
+    [SerializeField] private AudioClip[] _hitDamageClips;
+    
+    [FoldoutGroup("sound/Source/Flashbang")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_Flashbang = 1f;
+    [FoldoutGroup("sound/Source/Flashbang")]
+    [SerializeField] private AudioClip[] _flashbangClips;
+    
     // ═════════════════════════════════════════════
     //  PUBLIC PROPERTIES
     // ═════════════════════════════════════════════
@@ -197,6 +237,20 @@ public class PlayerData : ScriptableObject
     public float CrouchCenterY => _crouchCenterY;
     public float SlideHeight   => _slideHeight;
     public float SlideCenterY  => _slideCenterY;
+    
+    // Source
+    public float Volume_FootStep => _volume_Foot;
+    public AudioClip[] FootStepClip => _footStepClip;
+    public float Volume_Jump => _volume_Jump;
+    public AudioClip[] JumpClips => _jumpClips;
+    public float Volume_Slide => _volume_Slide;
+    public AudioClip[] SlideClips => _slideClips;
+    public  float Volume_TakeDamage => _volume_TakeDamage;
+    public AudioClip[] TakeDamageClips => _takeDamageClips;
+    public  float Volume_HitDamage => _volume_HitDamage;
+    public AudioClip[] HitDamageClips => _hitDamageClips;
+    public  float Volume_Flashbang => _volume_Flashbang;
+    public AudioClip[] FlashbangClips => _flashbangClips;
 
 
     // ═════════════════════════════════════════════

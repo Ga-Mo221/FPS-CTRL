@@ -12,16 +12,29 @@ public class BulletDropSound : MonoBehaviour
     
     [SerializeField] private AudioClip[]  _clips;
     [SerializeField] private AudioSource _source;
-    [SerializeField] private Rigidbody _rb;
     [SerializeField] private AudioManager _audio;
     
+    private CustomLocalRigidbody _rbLocal;
 
     private void Awake()
     {
         _audio = AudioManager.Instance;
+        _rbLocal = GetComponent<CustomLocalRigidbody>();
+    }
+    
+    private void OnEnable()
+    {
+        // Đăng ký nhận Callback
+        _rbLocal.OnCollisionEnterLocal += HandleCollision;
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnDisable()
+    {
+        // Hủy đăng ký khi Object bị vô hiệu hóa
+        _rbLocal.OnCollisionEnterLocal -= HandleCollision;
+    }
+    
+    private void HandleCollision(CustomLocalRigidbody.CustomCollisionData data)
     {
         if (_played) return;
         _played = true;
@@ -43,10 +56,7 @@ public class BulletDropSound : MonoBehaviour
         _volume = volume;
         _duration = duration;
 
-        _rb.linearVelocity = Vector3.zero;
-        _rb.angularVelocity = Vector3.zero;
-
-        _rb.AddForce(_direction * ejectForce, ForceMode.Impulse);
-        _rb.AddTorque(Random.onUnitSphere * torqueForce, ForceMode.Impulse);
+        _rbLocal.AddForce(_direction * ejectForce);
+        //_rbLocal.AddTorque(Random.onUnitSphere * torqueForce, ForceMode.Impulse);
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -10,6 +9,14 @@ public class FootStepAudio : MonoBehaviour
     [SerializeField] private float _radius = 0.2f;
     [SerializeField] private LayerMask _groundLayer;
     private bool _lateResul;
+    private NCharMovementHandler _movementHandler;
+    private PlayerData _data;
+
+    private void Awake()
+    {
+        _movementHandler = GetComponentInParent<NCharMovementHandler>();
+        if (_movementHandler != null) _data = _movementHandler.Data;
+    }
 
     private void Start()
     {
@@ -18,6 +25,7 @@ public class FootStepAudio : MonoBehaviour
 
     private void Update()
     {
+        if (_data == null) return;
         PlayAudio();
     }
 
@@ -28,7 +36,8 @@ public class FootStepAudio : MonoBehaviour
         if (Isgrounded != _lateResul)
         {
             _lateResul = Isgrounded;
-            if (_lateResul) _audio.FootStep(_sound);
+            if (_lateResul) 
+                _audio.PlayClip(_sound, _data.FootStepClip, _data.Volume_FootStep, false);
         }
     }
     

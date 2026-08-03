@@ -10,8 +10,8 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public PlayerStateFlags StateFl {get; set;}
     private PlayerStateFlags _newState;
     [Networked] public int GrenadeID {get; private set;}
-    [Networked] private NetworkBool Frag { get; set; }
-    [Networked] private NetworkBool Flash { get; set; }
+    [Networked] public NetworkBool Frag { get; set; }
+    [Networked] public NetworkBool Flash { get; set; }
     [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
     [Networked] public NetworkBool IsJump { get; set; }
     [Networked] public float NetworkedPitch { get; private set; }
@@ -24,13 +24,18 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public ShotInfo LastShotInfo { get; private set; } // kết quả raycast từ Host
     // IsFiring chỉ dùng nội bộ trong frame FixedUpdateNetwork, không cần Networked
     public bool IsFiring { get; private set; }
-    [Networked] private TickTimer _switchTimer { get; set; }
     [Networked] private TickTimer _slideTimer { get; set; }
+    [Networked] private TickTimer _respawnInvincibleTimer { get; set; }
     [Networked] private float _currentSpeed { get; set; }
     [Networked] private float _acceleration { get; set; }
     private bool _isRespawnRequested;
     private CharacterState _stateLogic;
     [Networked] private NetworkButtons _previousButtons { get; set; }
+    
+    [Networked, OnChangedRender(nameof(OnControllerEnabledChanged))]
+    private NetworkBool IsControllerEnabled { get; set; } = true;
+    
+    [Networked] public NetworkBool CanTakeDamage { get; set; } = true;
     
     private CharComponentManager _componentManager;
     private NetworkCharacterControllerCustom _ncc;
@@ -74,13 +79,19 @@ public class NCharMovementHandler : NetworkBehaviour
                 Respawn();
                 return;
             }
+
+            if (!CanTakeDamage && _respawnInvincibleTimer.Expired(Runner))
+                CanTakeDamage = true;
             
             if (_hpHandler.IsDead)
             {
-                _ncc.Move(Vector3.zero, 0, 0);
+                if (_ncc.Controller.enabled)
+                    _ncc.Move(Vector3.zero, 0, 0);
                 return;
             }
         }
+        
+        //if (GameManager.instance.OnUI) return;
         
         if (GetInput(out NInputData inputdata))
         {
@@ -295,13 +306,14 @@ public class NCharMovementHandler : NetworkBehaviour
         if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
             _stateLogic.StartSwitch(ref state);
-            _switchTimer = TickTimer.CreateFromSeconds(Runner, 0.1f);
         }
+    }
 
-        if (state.IsSwitching && _switchTimer.Expired(Runner))
-        {
-            _stateLogic.StopSwitch(ref state);
-        }
+    public void StopSwitch()
+    {
+        var s = StateFl;
+        _stateLogic.StopSwitch(ref s);
+        StateFl = s;
     }
 
     private void GrenadeHandler(NInputData input, ref PlayerStateFlags state)
@@ -337,8 +349,8 @@ public class NCharMovementHandler : NetworkBehaviour
 
             if (shouldStop)
             {
-                if (GrenadeID == 1) Frag = true;
-                if (GrenadeID == 2) Flash = true;
+                //if (GrenadeID == 1) Frag = true;
+                //if (GrenadeID == 2) Flash = true;
                 GrenadeID = 0;
                 _stateLogic.StopThrow(ref state);
             }
@@ -354,14 +366,39 @@ public class NCharMovementHandler : NetworkBehaviour
 
     
     #region Dead Status
-    public void RequestRespawn() => _isRespawnRequested = true;
+    public void RequestRespawn()
+    {
+        if (!Object.HasStateAuthority) return;
+        
+        StateFl = new PlayerStateFlags();
+        _isRespawnRequested = true;
+    }
+
+    public void DisableCCC()  // tên giữ nguyên
+    {
+        if (!HasStateAuthority) return;
+        IsControllerEnabled = false;
+        CanTakeDamage = false;
+        Debug.Log("<color=gray>[NCharMovementHandler]</color> Dead");
+    }
     
+    void OnControllerEnabledChanged()
+    {
+        // Chạy trên MỌI máy khi IsControllerEnabled thay đổi
+        _ncc.Controller.enabled = IsControllerEnabled;
+        Debug.Log($"<color=gray>[NCharMovementHandler]</color> {transform.name}: {IsControllerEnabled}");
+    }
+
     private void Respawn()
     {
+        IsControllerEnabled = true;
+        _ncc.Controller.enabled = true;
         _ncc.Teleport(Utils.GetRandomSpawnPoint());
         _hpHandler.OnRespawn();
         _isRespawnRequested = false;
         if (_weaponManager != null) _weaponManager.Respawn();
+        CanTakeDamage = false;
+        _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, 2f);
     }
     #endregion
 }

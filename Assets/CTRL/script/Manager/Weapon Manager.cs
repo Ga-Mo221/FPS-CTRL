@@ -12,22 +12,19 @@ public class WeaponManager : NetworkBehaviour
     [HorizontalGroup("Weapon Manager/Weapon/Parent", width: 0.6f)]
     [SerializeField] private Transform _weapon_Parrent;
     
-    [HorizontalGroup("Weapon Manager/Weapon/Parent")]
-    [HideLabel]
-    [SerializeField] private string _parent_name = "Weapon Parrent";
     
     // Weapon One
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
-    private NetworkObject _weaponOneRef { get; set; }
+    public NetworkObject _weaponOneRef { get; set; }
     public WeaponController _weapon_One_CTRL;
     
     // Weapon Two
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
-    private NetworkObject _weaponTwoRef { get; set; }
+    public NetworkObject _weaponTwoRef { get; set; }
     public WeaponController _weapon_Two_CTRL;
     
     // Active Weapon
-    private bool _weapon_One_Active { get; set; } 
+    [Networked] public byte _weapon_Active { get; set; } = 0;
     
     [TabGroup("Weapon Manager", "Components")]
     [SerializeField] private CharComponentManager _componentManager;
@@ -39,9 +36,14 @@ public class WeaponManager : NetworkBehaviour
     [HorizontalGroup("Weapon Manager/Camera/RecoilRow", width: 0.6f)]
     [SerializeField] private Transform _camera_Recoil;
     
+#if UNITY_EDITOR
     [HorizontalGroup("Weapon Manager/Camera/RecoilRow")]
     [HideLabel]
     [SerializeField] private string _camera_Name = "Camera Recoil";
+    [HorizontalGroup("Weapon Manager/Weapon/Parent")]
+    [HideLabel]
+    [SerializeField] private string _parent_name = "Weapon Parrent";
+#endif
     
     private PlayerMotionController _anim;
     
@@ -51,6 +53,7 @@ public class WeaponManager : NetworkBehaviour
     public Transform Camera_Recoil => _camera_Recoil;
     public Camera Camera => _camera;
     public bool SkipWeaponSpawn { get; set; } = false;
+    public bool NeedsResolveAfterMigration { get; set; } = false;
 
     private void Awake()
     {
@@ -68,12 +71,22 @@ public class WeaponManager : NetworkBehaviour
             _weaponOneRef = w1;
         }
         if (_weapon_One_CTRL == null || _weapon_Two_CTRL == null)
-            ResolveWeaponControllers();
+            if (!NeedsResolveAfterMigration)
+                ResolveWeaponControllers();
+    }
+    
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void Rpc_ResolveAfterMigration(RpcInfo info = default)
+    {
+        ResolveWeaponControllers();
+        SwitchWeapon(_weapon_Active);
+        Debug.Log($"<color=green>[WeaponManager]</color> ResolveWeaponControllers after migration: {name}", this);
     }
 
     private void Start()
     {
-        SwitchWeapon();
+        if (!NeedsResolveAfterMigration)
+            SwitchWeapon(_weapon_Active);
     }
 
     private void CreateWeapon(GameObject prefab, out NetworkObject instan)
@@ -94,27 +107,54 @@ public class WeaponManager : NetworkBehaviour
             });
     }
 
-    public bool SwitchWeapon()
+    public bool SwitchWeapon(int index = 0)
     {
-        if (!_weapon_One_Active && _weaponOneRef != null)
+        if (index == 0)
         {
-            _weapon_One_Active = true;
+            if (_weapon_Active != 1) return SwitchToWeaponOne();
+            if (_weapon_Active != 2) return SwitchToWeaponTwo();
+        }
+        else if (index == 1)
+        {
+            return SwitchToWeaponOne();
+        }
+        else if (index == 2)
+        {
+            return SwitchToWeaponTwo();
+        }
+        return false;
+    }
+
+    private bool SwitchToWeaponOne()
+    {
+        if (_weaponOneRef != null)
+        {
+            _weapon_Active = 1;
             _componentManager.ConstraintManager?.SwitchWeapon(_weapon_One_CTRL.Data.ID);
             _weaponOneRef?.gameObject.SetActive(true);
             _weaponTwoRef?.gameObject.SetActive(false);
             _anim?.WeaponIndex(_weapon_One_CTRL.Data.Index);
-            Debug.Log("Switch to Weapon One", this);
+            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon One", this);
             return true;
         }
         
-        if (_weaponTwoRef == null) return false;
-        _weapon_One_Active = false;
-        _componentManager.ConstraintManager?.SwitchWeapon(_weapon_Two_CTRL.Data.ID);
-        _weaponOneRef?.gameObject.SetActive(false);
-        _weaponTwoRef?.gameObject.SetActive(true);
-        _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
-        Debug.Log("Switch to Weapon Two", this);
-        return true;
+        return false;
+    }
+
+    private bool SwitchToWeaponTwo()
+    {
+        if (_weaponTwoRef != null)
+        {
+            _weapon_Active = 2;
+            _componentManager.ConstraintManager?.SwitchWeapon(_weapon_Two_CTRL.Data.ID);
+            _weaponOneRef?.gameObject.SetActive(false);
+            _weaponTwoRef?.gameObject.SetActive(true);
+            _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
+            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
+            return  true;
+        }
+
+        return false;
     }
     
     public void SetWeaponOnePrefab(GameObject prefab) => _weapon_One_Prefab = prefab;
@@ -122,9 +162,9 @@ public class WeaponManager : NetworkBehaviour
 
     public WeaponController Weapon_Active()
     {
-        if (_weapon_One_Active && _weaponOneRef != null && _weapon_One_CTRL != null)
+        if (_weapon_Active == 1 && _weaponOneRef != null && _weapon_One_CTRL != null)
             return _weapon_One_CTRL;
-        if (!_weapon_One_Active && _weaponTwoRef != null && _weapon_Two_CTRL != null)
+        if (_weapon_Active == 2 && _weaponTwoRef != null && _weapon_Two_CTRL != null)
             return _weapon_Two_CTRL;
         Debug.Log("<color=red>[WeaponManager]</color> WeaponController not active.", this);
         return null;
@@ -152,8 +192,8 @@ public class WeaponManager : NetworkBehaviour
         {
             _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
             _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL);
-        }
-        else if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
+        } 
+        if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
         {
             _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
             _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL);

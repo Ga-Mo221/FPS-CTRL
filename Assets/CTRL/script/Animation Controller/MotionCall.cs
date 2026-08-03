@@ -16,6 +16,51 @@ public class MotionCall : StateMachineBehaviour
         Manager.SwitchWeapon();
     }
 
+    public void StopSwitch(Animator animator)
+    {
+        var controller = animator.GetComponentInParent<NCharMovementHandler>();
+        controller?.StopSwitch();
+    }
+
+    public void ResetJump(Animator animator)
+    {
+        animator.ResetTrigger("IsJumping");
+    }
+
+    public void DisplayFrag(Animator animator)
+    {
+        var dis = animator.GetComponent<DisplayObject>();
+        if (dis == null) return;
+        dis.EnableObj(0);
+    }
+
+    public void DisplayFlash(Animator animator)
+    {
+        var dis = animator.GetComponent<DisplayObject>();
+        if (dis == null) return;
+        dis.EnableObj(1);
+    }
+
+    public void HideFrag(Animator animator)
+    {
+        var dis = animator.GetComponent<DisplayObject>();
+        var shoot = animator.GetComponentInParent<NShootHandler>();
+        if (shoot != null)
+            shoot.ThrowFrag();
+        if (dis == null) return;
+        dis.DisableObj(0);
+    }
+
+    public void HideFlash(Animator animator)
+    {
+        var dis = animator.GetComponent<DisplayObject>();
+        var shoot = animator.GetComponentInParent<NShootHandler>();
+        if (shoot != null)
+            shoot.ThrowFlash();
+        if (dis == null) return;
+        dis.DisableObj(1);
+    }
+
     // Char
     public void ResetReload(Animator animator)
     {
@@ -24,6 +69,22 @@ public class MotionCall : StateMachineBehaviour
         
         controller?.StopReload();
         weaponManager?.Weapon_Active()?.Reload();
+    }
+
+    public void DeadVFX(Animator animator)
+    {
+        var Disso = animator.GetComponent<DissolvingController>();
+        
+        if (Disso == null) return;
+        Disso.Dissolve();
+    }
+
+    public void ResetDeadVFX(Animator animator)
+    {
+        var Disso = animator.GetComponent<DissolvingController>();
+        
+        if (Disso == null) return;
+        Disso.ResetMaterials();
     }
 
     // ===================================== WEAPON =========================================================

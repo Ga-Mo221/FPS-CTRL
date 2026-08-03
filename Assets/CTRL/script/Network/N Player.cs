@@ -1,15 +1,14 @@
-using System;
 using System.Collections;
 using Fusion;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 public class NPlayer : NetworkBehaviour, IPlayerLeft
 {
-    [SerializeField] private PlayerType _type = PlayerType.Blue;
-    public static NPlayer Local { get; private set; }
+    // ======================= Network field ==============================
 
-    [SerializeField] private Transform[] _hide_Mesh;
+    [Networked] public PlayerTeam NetworkedTeam { get; set; } = PlayerTeam.Zero;
+    
+    [Networked] public GamePlayMode GamePlayMode { get; set; }
     
     [Networked, OnChangedRender(nameof(OnNicknameChanged))]
     public NetworkString<_16> Nickname { get; private set; }
@@ -18,6 +17,10 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
     // ✅ Lưu raw 16 bytes của Guid token để có thể restore sau host migration
     [Networked, Capacity(16)] public NetworkArray<byte> RawToken => default;
+    
+    // ===================== Private Field ==================================
+    
+    [SerializeField] private Transform[] _hide_Mesh;
 
     private bool _isPublicJoinMessageSent = false;
     
@@ -25,6 +28,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     private NInGameMessagesHandler _nInGameMessagesHandler;
     private UIHPPlayer _uiLocalPlayer;
     private UIPlayerNickName _uiPlayerNickName;
+    private NShootHandler _shootHandler;
 
     // ✅ Cache TRỰC TIẾP GameObject camera đã bị reparent ra ngoài (transform.parent = null),
     // thay vì đi qua _componentManager lúc OnDestroy(). Lý do: khi runner.Shutdown() (host migration)
@@ -34,11 +38,15 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     // và ta mất luôn đường tới camera cần Destroy() thủ công -> camera bị leak.
     // Cache thẳng ở đây đảm bảo OnDestroy() luôn dọn được camera, bất kể _componentManager sống hay đã chết.
     private GameObject _detachedCameraRoot;
+    
+    // ============================== Public Field =====================================
+    
+    public static NPlayer Local { get; private set; }
 
-    [Button]
     public override void Spawned()
     {
         InitPlayer();
+        GameManager.instance.PlayerList.Add(_shootHandler);
     }
     
     public void OnHostMigrated()
@@ -53,6 +61,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         _nInGameMessagesHandler = _componentManager.NInGameMessagesHandler;
         _uiLocalPlayer = _componentManager.UihpPlayer;
         _uiPlayerNickName = _componentManager.UIPlayerNickName;
+        _shootHandler = _componentManager.NShootHandler;
         
         bool isLocalPlayer = Object.HasInputAuthority 
                              || (Runner.IsServer && Object.StateAuthority == Runner.LocalPlayer);
@@ -69,7 +78,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
             var parrentCamera = _componentManager.Camera.transform.parent.gameObject;
             parrentCamera.SetActive(true);
-            parrentCamera.transform.parent = null;
+            parrentCamera.transform.parent.parent.parent = null;
             _uiPlayerNickName.gameObject.SetActive(false);
 
             // ✅ Cache ngay sau khi reparent - đây là GameObject "mồ côi" cần tự Destroy() sau này.
@@ -97,7 +106,6 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             _uiLocalPlayer?.gameObject.SetActive(false);
             GameObject localCamera = _componentManager.Camera.transform.parent.gameObject;
             localCamera.SetActive(false);
-            _uiPlayerNickName.SetActive(_type);
             
             if (!string.IsNullOrEmpty(Nickname.ToString()))
             {
@@ -105,6 +113,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             }
             
             Debug.Log("<color=green>[NPlayer]</color> Spawned Remote Player.", this);
+            StartCoroutine(SetRemotePlayerDisplayNextFrame());
         }
 
         // ❌ KHÔNG gọi Rpc_SyncTokenToClient ở đây nữa.
@@ -118,6 +127,35 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
         transform.name = $"Player_{Object.Id}";
     }
+    
+    private IEnumerator SetRemotePlayerDisplayNextFrame()
+    {
+        // Chờ đến khi Local được set (tối đa vài frame)
+        yield return new WaitUntil(() => NPlayer.Local != null);
+    
+        _uiPlayerNickName.SetActive(DisplayTeam);
+    
+        if (!string.IsNullOrEmpty(Nickname.ToString()))
+            _uiPlayerNickName.SetNickName(Nickname.ToString());
+    }
+    
+    private PlayerTeam DisplayTeam
+    {
+        get
+        {
+            if (Object.HasInputAuthority) 
+                return PlayerTeam.Blue; // luôn là mình
+
+            // Solo mode: địch luôn Red
+            if (GamePlayMode == GamePlayMode.Solo)
+                return PlayerTeam.Red;
+
+            // Team mode: cùng team với mình → Blue, khác team → Red
+            return NetworkedTeam == NPlayer.Local.NetworkedTeam 
+                ? PlayerTeam.Blue 
+                : PlayerTeam.Red;
+        }
+    }
 
     public void PlayerLeft(PlayerRef player)
     {
@@ -126,11 +164,25 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             if (Runner.TryGetPlayerObject(player, out NetworkObject playerLeftNetworkObject))
             {
                 if (playerLeftNetworkObject == Object)
+                {
                     Local.GetComponent<NInGameMessagesHandler>().SendInGameRPCMessage(
                         playerLeftNetworkObject.GetComponent<NPlayer>().Nickname.ToString(), "Left");
+
+                    // ✅ Giảm count theo team ngay tại đây, lúc này object vẫn còn sống
+                    if (NetworkedTeam == PlayerTeam.Blue)
+                    {
+                        if (NSpawner.Instance.BlueCount > 0) NSpawner.Instance.BlueCount--;
+                    }
+                    else if (NetworkedTeam == PlayerTeam.Red)
+                    {
+                        if (NSpawner.Instance.RedCount > 0) NSpawner.Instance.RedCount--;
+                    }
+                
+                    Debug.Log($"<color=green>[NPlayer]</color> Player left. Team: {NetworkedTeam}. Blue: {NSpawner.Instance.BlueCount}, Red: {NSpawner.Instance.RedCount}");
+                }
             }
         }
-        
+
         if (player == Object.InputAuthority)
             Runner.Despawn(Object);
     }
