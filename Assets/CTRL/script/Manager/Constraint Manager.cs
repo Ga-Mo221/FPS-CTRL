@@ -19,12 +19,14 @@ public class ConstraintManager : MonoBehaviour
     [Tooltip("Tâm màn hình để aim weapon vào.")]
     [SerializeField] private Transform _ads_Pivot;
 
+#if UNITY_EDITOR
     [HorizontalGroup("Constraint Manager/Camera/Shake")]
     [HideLabel]
     [SerializeField] private string _camera_name = "Camera Shake";
     [HorizontalGroup("Constraint Manager/Camera/Pivot")]
     [HideLabel]
     [SerializeField] private string _ads_Pivot_name = "ADS Pivot";
+#endif
     
     [TabGroup("Constraint Manager", "IK")]
     [Header("IK")]

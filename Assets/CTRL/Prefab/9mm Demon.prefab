@@ -51,6 +51,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
   _type: 0
   _OwnerCharacter: {fileID: 0}
+  __currentBulletvalue: 0
+  __currentMaxBullet: 0
   _data: {fileID: 11400000, guid: 8d6f5de50716fd042bee86703c9de869, type: 2}
   _anim: {fileID: 4031442188459780953}
   _ads_Pivot: {fileID: 4367730149348134890}
@@ -59,7 +61,6 @@ MonoBehaviour:
   _cam_Recoil: {fileID: 3609666211312800335}
   _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
   _shoot_Effect: {fileID: 5259768180241539910}
-  _bullet_effect_name: Shoot Effect
   _sound: {fileID: 7204803870130367587}
   _bulletController: {fileID: 3275467144244299705}
   _list_Bone_Body:
@@ -108,26 +109,29 @@ MonoBehaviour:
   - {fileID: 7245250711241539299}
   - {fileID: 6226147801125146957}
   - {fileID: 4329188164778781222}
+  _camera_Shake: {fileID: 7877428770424236442}
+  _hand_Left: {fileID: 3097094582638978326}
+  _pole_Left: {fileID: 1819375448365087353}
+  _hand_Right: {fileID: 4707148368946643848}
+  _pole_Right: {fileID: 1213193478355311154}
+  _bullet_point: {fileID: 4009172440263591744}
+  _ads_Shoot_Point: {fileID: 5639741700544439683}
+  _parrentBullet: {fileID: 4523907242152603641}
+  _bullet_effect_name: Shoot Effect
   _grenade_Flash_Name: RAW_Flash
   _grenade_Frag_Name: RAW_Frag
-  _camera_Shake: {fileID: 7877428770424236442}
   _camera_ShakeName: RAW_Camera
-  _hand_Left: {fileID: 3097094582638978326}
   _hand_Left_Name: RAW_Hand_L
-  _pole_Left: {fileID: 1819375448365087353}
   _Elbow_Left_Name: RAW_Elbow_L
-  _hand_Right: {fileID: 4707148368946643848}
   _hand_Right_Name: RAW_Hand_R
-  _pole_Right: {fileID: 1213193478355311154}
   _Elbow_Right_Name: RAW_Elbow_R
-  _bullet_point: {fileID: 4009172440263591744}
   _bullet_point_name: Bullet Point
-  _ads_Shoot_Point: {fileID: 5639741700544439683}
   _ads_Shoot_Point_Name: Shoot Point
-  _parrentBullet: {fileID: 4523907242152603641}
   _parrentBullet_name: Parrent Bullet
   _componentManager: {fileID: 0}
+  _uiWeapon: {fileID: 0}
   _camera_Zoom: {fileID: 0}
+  SkipRespawnBullet: 0
 --- !u!114 &3609666211312800335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2360,7 +2364,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: d026d28eacba2e5468b011799f331238, type: 3}
   m_Controller: {fileID: 9100000, guid: f90dfa726c3fa3841b21bbbf0ae0d8c0, type: 2}
-  m_CullingMode: 1
+  m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0

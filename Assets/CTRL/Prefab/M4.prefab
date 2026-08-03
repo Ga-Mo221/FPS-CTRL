@@ -97,11 +97,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc2fadae3e9efe549952b0cca6fae4ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
+  _type: 0
   _OwnerCharacter: {fileID: 0}
+  __currentBulletvalue: 0
+  __currentMaxBullet: 0
   _data: {fileID: 11400000, guid: 14b257ca8e5a0574c895afcd46230619, type: 2}
   _anim: {fileID: 97223929395780616}
-  _manager: {fileID: 0}
   _ads_Pivot: {fileID: 88861942976322340}
+  _gun_Recoil_CTRL: {fileID: 3257941048347534373}
+  _sway: {fileID: 2737721342313816658}
+  _cam_Recoil: {fileID: 2617089555171110263}
+  _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
+  _shoot_Effect: {fileID: 1133630563441487478}
+  _sound: {fileID: 9036363078410755058}
+  _bulletController: {fileID: 0}
   _list_Bone_Body:
   - {fileID: 5884999175780660119}
   - {fileID: 1130357339543527197}
@@ -148,34 +157,29 @@ MonoBehaviour:
   - {fileID: 7886592136997471646}
   - {fileID: 7427192149481135315}
   - {fileID: 3398796028697951090}
+  _camera_Shake: {fileID: 7608732716604319700}
+  _hand_Left: {fileID: 1557062606138213212}
+  _pole_Left: {fileID: 3739570068920032260}
+  _hand_Right: {fileID: 3956564838453620580}
+  _pole_Right: {fileID: 1204294253273056058}
+  _bullet_point: {fileID: 3916370583819310063}
+  _ads_Shoot_Point: {fileID: 5572983106307651861}
+  _parrentBullet: {fileID: 2834355157056179275}
+  _bullet_effect_name: Shoot Effect
   _grenade_Flash_Name: RAW_Flash
   _grenade_Frag_Name: RAW_Frag
-  _camera_Shake: {fileID: 7608732716604319700}
   _camera_ShakeName: RAW_Camera
-  _camera_Zoom: {fileID: 0}
-  _hand_Left: {fileID: 1557062606138213212}
   _hand_Left_Name: RAW_Hand_L
-  _pole_Left: {fileID: 3739570068920032260}
   _Elbow_Left_Name: RAW_Elbow_L
-  _hand_Right: {fileID: 3956564838453620580}
   _hand_Right_Name: RAW_Hand_R
-  _pole_Right: {fileID: 1204294253273056058}
   _Elbow_Right_Name: RAW_Elbow_R
-  _gun_Recoil_CTRL: {fileID: 3257941048347534373}
-  _sway: {fileID: 2737721342313816658}
-  _cam_Recoil: {fileID: 2617089555171110263}
-  _bullet_point: {fileID: 3916370583819310063}
   _bullet_point_name: Bullet Point
-  _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
-  _shoot_Effect: {fileID: 1133630563441487478}
-  _bullet_effect_name: Shoot Effect
-  _ads_Shoot_Point: {fileID: 5572983106307651861}
   _ads_Shoot_Point_Name: Shoot Point
-  _currentBulletvalue: 0
-  _currentMaxBullet: 0
-  _sound: {fileID: 9036363078410755058}
-  _bulletController: {fileID: 0}
-  _parrentBullet: {fileID: 2834355157056179275}
+  _parrentBullet_name: Parrent Bullet
+  _componentManager: {fileID: 0}
+  _uiWeapon: {fileID: 0}
+  _camera_Zoom: {fileID: 0}
+  SkipRespawnBullet: 0
 --- !u!114 &2617089555171110263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1283,6 +1287,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 8ef6134a5f6ccc64580cec2dc5cb9643, type: 2}
+    - target: {fileID: 5866666021909216657, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6146891461529987269, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: -49.194546
