@@ -109,6 +109,11 @@ public class WeaponManager : NetworkBehaviour
 
     public bool SwitchWeapon(int index = 0)
     {
+        if (_weapon_One_CTRL == null && _weaponOneRef != null || _weapon_Two_CTRL == null && _weaponTwoRef != null)
+        {
+            ResolveWeaponControllers();
+        }
+        
         if (index == 0)
         {
             if (_weapon_Active != 1) return SwitchToWeaponOne();

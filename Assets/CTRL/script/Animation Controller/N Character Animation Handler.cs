@@ -11,6 +11,8 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     private Vector2 _velocity;
     private float _smoothTime;
     private int _lastFireCount;
+    private bool _localIsSwitching;
+    private int _lastSwitchCount;
 
     public override void Spawned()
     {
@@ -46,12 +48,30 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         _playerMotionController.IsThrow(state.IsThrow);
         _playerMotionController.IsCrouching(state.IsCrouch);
         _playerMotionController.IsSliding(state.IsSlide);
-        _playerMotionController.IsSwitching(state.IsSwitching);
+        
+        if (_movementHandler.SwitchCount != _lastSwitchCount)
+        {
+            _lastSwitchCount = _movementHandler.SwitchCount;
+            _localIsSwitching = true;
+            Debug.Log("switch");
+        }
+        
+        _playerMotionController.IsSwitching(_localIsSwitching);
 
         if (_movementHandler.IsJump)
         {
             _playerMotionController.IsJumping();
             _movementHandler.IsJump = false;
         }
+        else
+        {
+            _playerMotionController.ResetJumping();
+        }
+    }
+    
+    public void LocalStopSwitch()
+    {
+        _localIsSwitching = false;
+        Debug.Log("LocalStopSwitch");
     }
 }

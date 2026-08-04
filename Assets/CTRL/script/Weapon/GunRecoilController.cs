@@ -426,9 +426,17 @@ public class GunRecoilController : MonoBehaviour
         float yawVal  = yawBase * (isAuto ? data.extraRot.z : 1f) * aimMult.z;
 
         _targetRot += new Vector3(pitchVal, yawVal, rollVal);
+
+        // Clamp tích lũy để tránh weapon model xoay tròn khi bắn Auto liên tục
+        // Giới hạn được tính tự động từ data (pitch/roll/yaw + extraRot + clampMultiplier)
+        var pitchClamp = data.MaxPitch;
+        var rollClamp  = data.MaxRoll;
+        var yawClamp   = data.MaxYaw;
+        _targetRot.x = Mathf.Clamp(_targetRot.x, pitchClamp.x, pitchClamp.y);
+        _targetRot.y = Mathf.Clamp(_targetRot.y, yawClamp.x,   yawClamp.y);
+        _targetRot.z = Mathf.Clamp(_targetRot.z, rollClamp.x,  rollClamp.y);
     }
     
-    /// </summary>
     private void ApplyTranslationKick(bool isAuto)
     {
         Vector3 aimMult  = _isAiming ? data.aimLocMultiplier : Vector3.one;

@@ -99,6 +99,15 @@ public class PlayerMotionController : MonoBehaviour
         if (controller == null) return;
         controller.IsJumping();
     }
+
+    public void ResetJumping()
+    {
+        _anim.ResetTrigger("IsJumping");
+        if (_w_manager == null) return;
+        WeaponController controller = _w_manager.Weapon_Active();
+        if (controller == null) return;
+        controller.ResetJumping();
+    }
     
     public void IsShooting()
     {

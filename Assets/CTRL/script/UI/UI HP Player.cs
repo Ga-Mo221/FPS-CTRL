@@ -102,14 +102,16 @@ public class UIHPPlayer : MonoBehaviour
     private void StartLowHPFlash()
     {
         if (_lowHPFlashCoroutine != null) return;
-        _lowHPFlashCoroutine = StartCoroutine(LowHPFlashLoop());
+        if (gameObject.activeSelf)
+            _lowHPFlashCoroutine = StartCoroutine(LowHPFlashLoop());
     }
 
     private void StopLowHPFlash()
     {
         if (_lowHPFlashCoroutine != null)
         {
-            StopCoroutine(_lowHPFlashCoroutine);
+            if (gameObject.activeSelf)
+                StopCoroutine(_lowHPFlashCoroutine);
             _lowHPFlashCoroutine = null;
         }
 
@@ -135,8 +137,9 @@ public class UIHPPlayer : MonoBehaviour
     public void Flash(float distance, float radius)
     {
         float time = _flashbangDuration * (1 - distance / radius);
-        StartCoroutine(startFlashGrenade(time));
-        Debug.Log($"{transform.root.name} Choang {time}");
+        if (gameObject.activeSelf)
+            StartCoroutine(startFlashGrenade(time));
+        //Debug.Log($"{transform.root.name} Choang {time}");
     }
 
     IEnumerator startFlashGrenade(float duration)

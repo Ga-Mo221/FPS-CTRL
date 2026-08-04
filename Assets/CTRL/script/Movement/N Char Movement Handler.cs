@@ -37,6 +37,8 @@ public class NCharMovementHandler : NetworkBehaviour
     
     [Networked] public NetworkBool CanTakeDamage { get; set; } = true;
     
+    [Networked] public int SwitchCount { get; private set; }
+    
     private CharComponentManager _componentManager;
     private NetworkCharacterControllerCustom _ncc;
     private ConstraintManager _constraintManager;
@@ -217,6 +219,8 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Jump
     private void JumpHandler(NInputData input, ref PlayerStateFlags state)
     {
+        if (IsJump) IsJump = false;
+        
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Jump))
         {
             if (state.IsSlide)
@@ -306,11 +310,14 @@ public class NCharMovementHandler : NetworkBehaviour
         if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
             _stateLogic.StartSwitch(ref state);
+            SwitchCount++;
         }
     }
 
     public void StopSwitch()
     {
+        if (!Object.HasStateAuthority) return;
+        
         var s = StateFl;
         _stateLogic.StopSwitch(ref s);
         StateFl = s;

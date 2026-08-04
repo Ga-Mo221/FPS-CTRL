@@ -8,6 +8,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance {set; get;}
     public bool OnUI = false;
+    [SerializeField] private string _playerNickName;
     
     [SerializeField] private GamePlayMode _gamePlayMode = GamePlayMode.Team;
     [SerializeField] public FlashbangEffect FlashbangEffect;
@@ -20,6 +21,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int RedKill = 0;
     [SerializeField] private int BlueKill = 0;
     [SerializeField] private int AllKill = 0;
+    
+    public NetworkRunnerHandler NetworkRunnerHandler;
 
     private byte[] connectionToken;
 
@@ -74,6 +77,9 @@ public class GameManager : MonoBehaviour
     public byte[] GetConnectionToken() => connectionToken;
 
     public GamePlayMode GetGamePlayMode() => _gamePlayMode;
+    
+    public void SetGamePlayMode(GamePlayMode gamePlayMode) => _gamePlayMode = gamePlayMode;
+    public void SetPlayerNickName(string nickname) => _playerNickName = nickname;
 }
 
 public struct KillInfo

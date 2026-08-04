@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,35 +8,55 @@ using Fusion.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+[DefaultExecutionOrder(100)]
 public class NetworkRunnerHandler : MonoBehaviour
 {
     [SerializeField] private NetworkRunner _networkRunner_Prefab;
-    private NetworkRunner _networkRunner;
-
-    // ✅ Thời gian chờ (giây) sau khi host migration resume xong, để những player
-    // chưa kịp reconnect (đang trên đường kết nối lại) có cơ hội quay về đúng object cũ
-    // trước khi bị coi là "không quay lại" và bị dọn.
+    [ReadOnly]
+    [SerializeField] private NetworkRunner _networkRunner;
+    
     [SerializeField] private float _hostMigrationCleanupDelay = 5f;
+    private SceneRef _lastSceneRef = SceneRef.None;
 
+    private void Awake()
+    {
+        if (GameManager.instance.NetworkRunnerHandler != null) Destroy(gameObject);
+        else GameManager.instance.NetworkRunnerHandler = this;
+        
+        NetworkRunner networkRunnerInScene = FindAnyObjectByType<NetworkRunner>(FindObjectsInactive.Include);
+        
+        if (networkRunnerInScene != null)
+            _networkRunner = networkRunnerInScene;
+        
+        DontDestroyOnLoad(gameObject);
+    }
 
     private void Start()
     {
-        _networkRunner = Instantiate(_networkRunner_Prefab);
-        _networkRunner.name = "Network Runner";
+        if (_networkRunner == null)
+        {
+            _networkRunner = Instantiate(_networkRunner_Prefab);
+            _networkRunner.name = "Network Runner";
 
-        // lấy scene hiện tại rồi chuyển sang sceneref bằng convert của fusion.
-        Scene UnityScene = SceneManager.GetActiveScene();
-        SceneRef scene = SceneRef.FromIndex(UnityScene.buildIndex);
-        
-        var clientTask = InitializeNetworkRunner
-        (
-            _networkRunner, 
-            GameMode.AutoHostOrClient, 
-            GameManager.instance.GetConnectionToken(),
-            NetAddress.Any(), 
-            scene
-        );
-        Debug.Log("<color=orange>Network Runner Started.</color>");
+            if (SceneManager.GetActiveScene().name != "MainMenu_Test")
+            // lấy scene hiện tại rồi chuyển sang sceneref bằng convert của fusion.
+            {
+                Scene UnityScene = SceneManager.GetActiveScene();
+                SceneRef scene = SceneRef.FromIndex(UnityScene.buildIndex);
+
+                var clientTask = InitializeNetworkRunner
+                (
+                    _networkRunner,
+                    GameMode.AutoHostOrClient,
+                    "TestRoom",
+                    "OurLobbyID",
+                    GameManager.instance.GetConnectionToken(),
+                    NetAddress.Any(),
+                    scene
+                );
+            }
+            Debug.Log("<color=orange>Network Runner Started.</color>");
+        }
     }
 
     public void StartHostMigration(HostMigrationToken hostMigrationToken)
@@ -47,7 +68,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         Debug.Log("<color=orange>Host Migration Start.</color>");
     }
 
-    INetworkSceneManager GetSceneManager(NetworkRunner runner)
+    private INetworkSceneManager GetSceneManager(NetworkRunner runner)
     {
         var sceneManager = runner.GetComponents(typeof(MonoBehaviour)).OfType<INetworkSceneManager>().FirstOrDefault();
 
@@ -61,9 +82,12 @@ public class NetworkRunnerHandler : MonoBehaviour
     (
         NetworkRunner runner,
         GameMode gameMode,
+        string sessionName,
+        string lobbyName,
         byte[] connectionToken,
         NetAddress address,
-        SceneRef scene
+        SceneRef scene,
+        Dictionary<string, SessionProperty> sessionProperties = null
     )
     {
         var sceneManager = GetSceneManager(runner);
@@ -75,9 +99,11 @@ public class NetworkRunnerHandler : MonoBehaviour
             GameMode = gameMode,
             Address = address,
             Scene = scene,
-            SessionName = "TestRoom",
+            SessionName = sessionName,
+            CustomLobbyName = lobbyName, // có thể dùng để phân loại các chế độ chơi.
             SceneManager = sceneManager,
-            ConnectionToken = connectionToken
+            ConnectionToken = connectionToken,
+            SessionProperties = sessionProperties
         });
     }
     
@@ -96,7 +122,8 @@ public class NetworkRunnerHandler : MonoBehaviour
             SceneManager = sceneManager,
             HostMigrationToken = hostMigrationToken,
             HostMigrationResume = HostMigrationResume,
-            ConnectionToken = GameManager.instance.GetConnectionToken()
+            ConnectionToken = GameManager.instance.GetConnectionToken(),
+            Scene = _lastSceneRef
         });
     }
 
@@ -255,8 +282,11 @@ public class NetworkRunnerHandler : MonoBehaviour
         // ✅ Dọn những player không reconnect lại sau host migration (rời game hẳn giữa lúc
         // migration đang diễn ra) - tránh object của họ treo lại vĩnh viễn trong scene.
         // Chờ 1 khoảng trước khi dọn, để tránh dọn nhầm những player đang trên đường reconnect.
-        StartCoroutine(HostMigrationCleanUpCO(runner));
-        StartCoroutine(ResolveWeaponManagersAfterMigration(weaponManagersToResolve));
+        if (gameObject.activeInHierarchy)
+        {
+            StartCoroutine(HostMigrationCleanUpCO(runner));
+            StartCoroutine(ResolveWeaponManagersAfterMigration(weaponManagersToResolve));
+        }
     }
     
     private IEnumerator ResolveWeaponManagersAfterMigration(List<WeaponManager> managers)
@@ -286,5 +316,125 @@ public class NetworkRunnerHandler : MonoBehaviour
         {
             spawner.OnHostMigrationCleanUp();
         }
+    }
+
+    public void CreateGame(string sessionName, string lobbyName, string sceneName)
+    {
+        Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Create session {sessionName}" +
+                  $"in lobby {lobbyName} scene {sceneName}");
+        
+        int buildIndex = SceneUtility.GetBuildIndexByScenePath($"Assets/Scenes/Setup/{sceneName}.unity");
+        SceneRef sceneRef = SceneRef.FromIndex(buildIndex);
+        
+        var clientTask = InitializeNetworkRunner
+        (
+            _networkRunner,
+            GameMode.AutoHostOrClient,
+            sessionName,
+            lobbyName,
+            GameManager.instance.GetConnectionToken(),
+            NetAddress.Any(),
+            sceneRef
+        );
+    }
+
+    public void JoinGame(SessionInfo sessionInfo, string lobbyName)
+    {
+        Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Join Game {sessionInfo.Name}");
+        
+        //var sceneRef = SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex);
+
+        var clientTask = InitializeNetworkRunner
+        (
+            _networkRunner,
+            GameMode.AutoHostOrClient,
+            sessionInfo.Name,
+            lobbyName,
+            GameManager.instance.GetConnectionToken(),
+            NetAddress.Any(),
+            SceneRef.None
+        );
+    }
+    
+    public void SaveCurrentScene(SceneRef sceneRef)
+    {
+        _lastSceneRef = sceneRef;
+        Debug.Log($"<color=orange>[NetworkRunnerHandler]</color>  {_lastSceneRef}");
+    }
+    
+    public void LeaveRoom()
+    {
+        var task = LeaveRoomAsync();
+    }
+
+    private async Task LeaveRoomAsync()
+    {
+        Debug.Log("<color=orange>[NetworkRunnerHandler]</color> LeaveRoom started.");
+
+        if (_networkRunner == null)
+        {
+            Debug.LogWarning("<color=orange>[NetworkRunnerHandler]</color> NetworkRunner is null.");
+            return;
+        }
+
+        // ✅ Set flag trước khi shutdown
+        PlayerPrefs.SetInt("ReturnToSessionList", 1);
+        PlayerPrefs.Save();
+
+        await _networkRunner.Shutdown();
+
+        _networkRunner = Instantiate(_networkRunner_Prefab);
+        _networkRunner.name = "Network Runner";
+
+        SceneManager.LoadScene("MainMenu_Test");
+    }
+    
+    public void OnJoinLobby(string lobbyName)
+    {
+        var clientTask = JoinLobby(lobbyName);
+    }
+
+    private async Task JoinLobby(string lobbyName)
+    {
+        if (_networkRunner == null)
+        {
+            _networkRunner = Instantiate(_networkRunner_Prefab);
+            _networkRunner.name = "Network Runner";
+        }
+        
+        Debug.Log("<color=orange>[NetworkRunnerHandler]</color> JoinLobby started.");
+
+        var result = await _networkRunner.JoinSessionLobby(SessionLobby.Custom, lobbyName);
+        
+        if (!result.Ok)
+            Debug.LogError($"<color=orange>[NetworkRunnerHandler]</color> Unable to join lobby [{lobbyName}]: {result}");
+        else Debug.Log($"Joined lobby [{lobbyName}]");
+    }
+    
+    public void OnLeaveLobby()
+    {
+        var clientTask = LeaveLobby();
+    }
+
+    private async Task LeaveLobby()
+    {
+        Debug.Log("<color=orange>[NetworkRunnerHandler]</color> LeaveLobby started.");
+
+        if (_networkRunner == null)
+        {
+            Debug.LogWarning("<color=orange>[NetworkRunnerHandler]</color> NetworkRunner is null, cannot leave lobby.");
+            return;
+        }
+
+        await _networkRunner.Shutdown();
+        
+        // Load lại MainMenu để tránh state stale
+        SceneManager.LoadScene("MainMenu_Test");
+        
+        // Khởi tạo lại runner mới để sẵn sàng cho lần join sau
+        _networkRunner = Instantiate(_networkRunner_Prefab);
+        _networkRunner.name = "Network Runner";
+
+        Debug.Log("<color=orange>[NetworkRunnerHandler]</color> Left lobby successfully.");
     }
 }

@@ -1,24 +1,131 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class UIMainMenuHandler : MonoBehaviour
 {
-    [SerializeField] private TMP_InputField _inputField;
-
+    const string GamePlaySceneName = "SampleScene";
+    
+    
+    [SerializeField] private CanvasGroup _playerDetaisPanel;
+    [SerializeField] private CanvasGroup _sessionListPanel;
+    [SerializeField] private CanvasGroup _createSessionPanel;
+    [SerializeField] private GameObject _statusPanel;
+    
+    [SerializeField] private TMP_InputField _player_Name_InputField;
+    [SerializeField] private TMP_InputField _session_Name_InputField;
+    public GamePlayMode GameMode = GamePlayMode.Solo;
+    
     private void Start()
     {
         if (PlayerPrefs.HasKey("PlayerNickName"))
         {
-            _inputField.text = PlayerPrefs.GetString("PlayerNickName");
+            _player_Name_InputField.text = PlayerPrefs.GetString("PlayerNickName");
+        }
+        
+        if (PlayerPrefs.GetInt("ReturnToSessionList", 0) == 1)
+        {
+            PlayerPrefs.DeleteKey("ReturnToSessionList");
+            OnFindGameClicked(); // tự động join lobby và mở session list
         }
     }
 
-    public void OnJoinGameClicked()
+    private void HideAllPanels()
     {
-        PlayerPrefs.SetString("PlayerNickName", _inputField.text);
+        DisplayPanel(_playerDetaisPanel, 0);
+        DisplayPanel(_sessionListPanel,0);
+        DisplayPanel(_createSessionPanel,0);
+        _statusPanel?.SetActive(false);
+    }
+
+    private void DisplayPanel(CanvasGroup canvasGroup, int alpha)
+    {
+        if (canvasGroup == null) return;
+        canvasGroup.alpha = alpha;
+        canvasGroup.blocksRaycasts = alpha != 0;
+    }
+
+    public void OnFindGameClicked()
+    {
+        PlayerPrefs.SetString("PlayerNickName", _player_Name_InputField.text);
         PlayerPrefs.Save();
 
-        SceneManager.LoadScene("SampleScene");
+        GameManager.instance.SetPlayerNickName(_player_Name_InputField.text);
+        
+        NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
+        
+        if (NRunnerHandler != null)
+        {
+            NRunnerHandler.OnJoinLobby(GetLobbyName(GameMode));
+            HideAllPanels();
+            
+            DisplayPanel(_sessionListPanel, 1);
+            FindAnyObjectByType<UISessionListHandler>(FindObjectsInactive.Include).OnLookingForGameSessions();
+        }
+    }
+
+    public void OnCreateNewGameClicked()
+    {
+        HideAllPanels();
+        DisplayPanel(_createSessionPanel, 1);
+    }
+
+    public void SetGameMode(int modeindex)
+    {
+        if (modeindex == 0)
+            GameMode = GamePlayMode.Solo;
+        else if (modeindex == 1)
+            GameMode = GamePlayMode.Team;
+        GameManager.instance.SetGamePlayMode(GameMode);
+    }
+
+    public string GetLobbyName(GamePlayMode mode)
+    {
+        switch (mode)
+        {
+            case GamePlayMode.Solo:
+                return "Solo";
+            case GamePlayMode.Team:
+                return "Team";
+        }
+        return "Solo";
+    }
+    
+    public void OnStartNewSessionClicked()
+    {
+        NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
+
+        if (NRunnerHandler != null)
+        {
+            HideAllPanels();
+            
+            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), GamePlaySceneName);
+            
+            _statusPanel?.SetActive(true);
+        }
+    }
+
+    public void OnBackClicked(int index)
+    {
+        if (index == 0)
+        {
+            NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
+            if (NRunnerHandler != null)
+            {
+                NRunnerHandler.OnLeaveLobby();
+                HideAllPanels();
+                DisplayPanel(_playerDetaisPanel, 1);
+            }
+        }
+        if (index == 1)
+        {
+            HideAllPanels();
+            DisplayPanel(_sessionListPanel, 1);
+        }
+    }
+
+    public void OnJoiningServer()
+    {
+        HideAllPanels();
+        _statusPanel?.SetActive(true);
     }
 }

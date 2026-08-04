@@ -84,7 +84,7 @@ public class TurnInPlace : NetworkBehaviour
 
     private void ToggleTurn()
     {
-        MoveAndRotate.ToggleTurn(_flowerSetup_L, _flowerSetup_R, _root, ref _late_root_Rot_Y, _angle, ref _left);
+        MoveAndRotate.ToggleTurn(_flowerSetup_L, _flowerSetup_R, _root, ref _late_root_Rot_Y, _angle, ref _left, offset);
     }
 
     private bool Move(FlowerSetup flowerSetup)
@@ -98,7 +98,7 @@ public class TurnInPlace : NetworkBehaviour
         MoveAndRotate.StartMoving(_flowerSetup_R);
     }
 
-    public void TurnOff(float time = 0.1f)
+    private void TurnOff(float time = 0.1f)
     {
         _flowerSetup_L.IKconstraint.TurnOff(time);
         _flowerSetup_R.IKconstraint.TurnOff(time);
@@ -118,7 +118,7 @@ public class TurnInPlace : NetworkBehaviour
         _canTurn = false;
     }
 
-    public void TurnOn(float time = 0.1f)
+    private void TurnOn(float time = 0.1f)
     {
         MoveAndRotate.resetFree(_flowerSetup_L);
         MoveAndRotate.resetFree(_flowerSetup_R);

@@ -27,7 +27,6 @@ public class CharComponentManager : MonoBehaviour
     public UIInGameMessagesHandler UIInGameMessagesHandler;
     public NInGameMessagesHandler NInGameMessagesHandler;
     public UIWeapon UIWeapon;
-    public Transform CameraClippingPoint;
     public CameraShake CameraShake;
     public NetworkObject NetworkObject;
 

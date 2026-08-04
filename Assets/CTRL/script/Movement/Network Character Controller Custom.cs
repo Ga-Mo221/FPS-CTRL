@@ -252,6 +252,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 
         if (direction == default) {
             horizontalVel = Vector3.Lerp(horizontalVel, default, _data.Braking * deltaTime);
+            // Snap về 0 nếu magnitude quá nhỏ để tránh float precision drift
+            if (horizontalVel.sqrMagnitude < 0.0001f)
+                horizontalVel = Vector3.zero;
         } else {
             horizontalVel = Vector3.ClampMagnitude(horizontalVel + direction * acceleration * deltaTime, maxSpeed);
         }
@@ -261,7 +264,8 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 
         _controller.Move(moveVelocity * deltaTime);
 
-        Data.Velocity = (transform.position - previousPos) * Runner.TickRate;
+        //Data.Velocity = (transform.position - previousPos) * Runner.TickRate;
+        Data.Velocity = moveVelocity;
     }
     
     // Gizmo

@@ -24,8 +24,10 @@ public class FlowerSetup
     private Quaternion _startRot;
 
     // World transform đang được khóa
-    private Vector3 _freezePos;
-    private Quaternion _freezeRot;
+    [ReadOnly]
+    [SerializeField] private Vector3 _freezePos;
+    [ReadOnly]
+    [SerializeField] private Quaternion _freezeRot;
 
     public Transform UpperLeg => _upper_Leg;
     public Transform LowerLeg => _Lower_Leg;

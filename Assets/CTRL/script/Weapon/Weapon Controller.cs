@@ -496,6 +496,7 @@ public class WeaponController : NetworkBehaviour
     }
     
     public void IsJumping() => _anim.SetTrigger("IsJumping");
+    public void ResetJumping() => _anim.ResetTrigger("IsJumping");
 
     public void Move(Vector2 move)
     {

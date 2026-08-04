@@ -19,12 +19,16 @@ public class MotionCall : StateMachineBehaviour
     public void StopSwitch(Animator animator)
     {
         var controller = animator.GetComponentInParent<NCharMovementHandler>();
-        controller?.StopSwitch();
+        controller?.StopSwitch(); // Host tự gọi được, client bị guard bởi HasStateAuthority
+
+        // Client reset local animation state
+        var animHandler = animator.GetComponentInParent<NCharacterAnimationHandler>();
+        animHandler?.LocalStopSwitch();
     }
 
     public void ResetJump(Animator animator)
     {
-        animator.ResetTrigger("IsJumping");
+        //animator.ResetTrigger("IsJumping");
     }
 
     public void DisplayFrag(Animator animator)

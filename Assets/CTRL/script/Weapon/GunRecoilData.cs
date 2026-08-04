@@ -165,6 +165,55 @@ public class GunRecoilData : ScriptableObject
              "Tăng Z để cảm giác súng máy 'đẩy mạnh hơn' khi bắn liên thanh.")]
     public Vector3 extraLoc = new Vector3(1f, 1f, 1.3f);
 
+    [Header("Rotation Clamp — Target Accumulation")]
+    [Tooltip("Hệ số nhân lên giá trị kick tối đa để tính ngưỡng clamp tự động.\n\n" +
+             "Clamp được tính từ chính data hiện tại:\n" +
+             "  maxPitch = pitch.x (worst case) × multiplier\n" +
+             "  maxRoll  = roll.w  × extraRot.x × multiplier\n" +
+             "  maxYaw   = yaw.w   × extraRot.z × multiplier\n\n" +
+             "• 1.0 = chặn ngay tại mức kick tối đa lý thuyết (khá chặt)\n" +
+             "• 3–5 = cho phép cộng dồn vài phát trước khi chặn (khuyến nghị)\n" +
+             "• 0   = tắt clamp hoàn toàn\n\n" +
+             "Tăng lên nếu cảm thấy bị 'cứng' khi bắn; giảm xuống nếu vẫn bị xoay tròn.")]
+    [Range(0f, 20f)]
+    public float clampMultiplier = 5f;
+
+    // ── Computed clamp limits (tự suy từ data, không cần nhập tay) ──────────
+    /// <summary>Giới hạn Pitch (X) của _targetRot. Tự tính từ pitch + clampMultiplier.</summary>
+    public Vector2 MaxPitch
+    {
+        get
+        {
+            if (clampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
+            float worstKick = Mathf.Min(pitch.x, pitch.y); // pitch thường âm → min là cực âm nhất
+            float lo = worstKick * clampMultiplier;
+            float hi = Mathf.Abs(worstKick) * 0.5f;       // phía dương nhỏ hơn (hiếm khi pitch dương)
+            return new Vector2(lo, hi);
+        }
+    }
+
+    /// <summary>Giới hạn Roll (Z) của _targetRot. Tự tính từ roll + extraRot.x + clampMultiplier.</summary>
+    public Vector2 MaxRoll
+    {
+        get
+        {
+            if (clampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
+            float worstRoll = Mathf.Max(Mathf.Abs(roll.x), Mathf.Abs(roll.w)) * extraRot.x;
+            return new Vector2(-worstRoll * clampMultiplier, worstRoll * clampMultiplier);
+        }
+    }
+
+    /// <summary>Giới hạn Yaw (Y) của _targetRot. Tự tính từ yaw + extraRot.z + clampMultiplier.</summary>
+    public Vector2 MaxYaw
+    {
+        get
+        {
+            if (clampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
+            float worstYaw = Mathf.Max(Mathf.Abs(yaw.x), Mathf.Abs(yaw.w)) * extraRot.z;
+            return new Vector2(-worstYaw * clampMultiplier, worstYaw * clampMultiplier);
+        }
+    }
+
     // ─────────────────────────────────────────────
     //  NOISE LAYER
     // ─────────────────────────────────────────────

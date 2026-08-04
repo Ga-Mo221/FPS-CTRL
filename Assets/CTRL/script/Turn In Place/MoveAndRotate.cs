@@ -5,9 +5,32 @@ using UnityEngine;
 // instance hóa -> tránh hẳn lỗi quên "new" gây NullReferenceException.
 public static class MoveAndRotate
 {
-    public static void StartMoving(FlowerSetup flowerSetup)
+    // Ngưỡng khoảng cách & góc để xem Owner đã "đến nơi" Target chưa.
+    // Có thể điều chỉnh nếu cần độ nhạy khác.
+    private const float POS_THRESHOLD = 0.01f;   // mét
+    private const float ROT_THRESHOLD = 1f;       // độ
+
+    /// <summary>
+    /// Trả về true nếu Owner đã ở đúng vị trí/rotation của Target (tính cả offset).
+    /// Dùng để bỏ qua lần kích hoạt dư thừa khi owner đã khớp target rồi.
+    /// </summary>
+    public static bool IsAtTarget(FlowerSetup flowerSetup, float offset)
+    {
+        if (flowerSetup.Target == null || flowerSetup.Owner == null) return true;
+
+        Vector3 targetPos = flowerSetup.Target.position + Vector3.up * offset;
+        bool posMatch = Vector3.Distance(flowerSetup.Owner.position, targetPos) < POS_THRESHOLD;
+        bool rotMatch = Quaternion.Angle(flowerSetup.Owner.rotation, flowerSetup.Target.rotation) < ROT_THRESHOLD;
+        return posMatch && rotMatch;
+    }
+
+    public static void StartMoving(FlowerSetup flowerSetup, float offset = 0f)
     {
         if (flowerSetup.CanMove || flowerSetup.Target == null)
+            return;
+
+        // Nếu Owner đã ở đúng Target rồi → không cần animate, bỏ qua
+        if (IsAtTarget(flowerSetup, offset))
             return;
 
         // Snap về freeze để StartPosition không bị IK làm lệch
@@ -59,7 +82,8 @@ public static class MoveAndRotate
         Transform root,
         ref float lateRootRotY,
         float angle,
-        ref bool left
+        ref bool left,
+        float offset = 0f        // <-- thêm offset để IsAtTarget kiểm tra đúng
         )
     {
         // Nếu vẫn còn 1 bông hoa đang trong chu kỳ (CanMove == true, dù đang
@@ -80,15 +104,15 @@ public static class MoveAndRotate
         {
             lateRootRotY = root.rotation.eulerAngles.y;
             left = false;
-            StartMoving(flowerSetup_R);
-            StartMoving(flowerSetup_L);
+            StartMoving(flowerSetup_R, offset);
+            StartMoving(flowerSetup_L, offset);
         }
         else if (delta >= angle)
         {
             lateRootRotY = root.rotation.eulerAngles.y;
             left = true;
-            StartMoving(flowerSetup_L);
-            StartMoving(flowerSetup_R);
+            StartMoving(flowerSetup_L, offset);
+            StartMoving(flowerSetup_R, offset);
         }
         // Lưu ý: nếu root xoay quá nhanh trong 1 frame (delta có thể vượt nhiều
         // lần angle liên tiếp), logic này vẫn chỉ bắt được 1 lần "quẹo" mỗi

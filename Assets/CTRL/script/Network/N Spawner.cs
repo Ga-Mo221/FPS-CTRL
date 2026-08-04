@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Fusion;
 using Fusion.Sockets;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
@@ -21,11 +22,14 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
     
     public byte BlueCount = 0;
     public byte RedCount = 0;
+    
+    private UISessionListHandler _uiSessionListHandler;
 
     private void Awake()
     {
         Instance = this;
         mapTokenIDWithNPlayer = new Dictionary<int, NPlayer>();
+        _uiSessionListHandler = FindAnyObjectByType<UISessionListHandler>(FindObjectsInactive.Include);
     }
 
     public void SetConnectionTokenMapping(int token, NPlayer nPlayer)
@@ -206,7 +210,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log("<color=orange>[Spawner]</color> On Host Migration");
 
         await runner.Shutdown(shutdownReason: ShutdownReason.HostMigration);
-        FindAnyObjectByType<NetworkRunnerHandler>().StartHostMigration(hostMigrationToken);
+        FindAnyObjectByType<NetworkRunnerHandler>(FindObjectsInactive.Include).StartHostMigration(hostMigrationToken);
     }
     
     public void RecalculateTeamCounts()
@@ -228,16 +232,57 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log($"<color=orange>[Spawner]</color> RecalculateTeamCounts: Blue={BlueCount}, Red={RedCount}");
     }
     
+    public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
+    {
+        if (_uiSessionListHandler == null) return;
+
+        if (sessionList.Count == 0)
+        {
+            Debug.Log("[Spawner] Joined lobby no sessions found", this);
+            _uiSessionListHandler.OnNoSessionsFound();
+        }
+        else
+        {
+            _uiSessionListHandler.ClearList();
+            foreach (SessionInfo sessionInfo in sessionList)
+            {
+                _uiSessionListHandler.AddToList(sessionInfo, GameManager.instance.GetGamePlayMode());
+                Debug.Log($"[Spawner] Found session {sessionInfo.Name} player count ({sessionInfo.PlayerCount}/{sessionInfo.MaxPlayers})");
+            }
+        }
+    }
+
+    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
+    {
+        Debug.Log($"<color=orange>[Spawner]</color> Shutdown: {shutdownReason}", this);
+        mapTokenIDWithNPlayer.Clear();
+        BlueCount = 0;
+        RedCount = 0;
+    }
+
+    public void OnSceneLoadDone(NetworkRunner runner)
+    {
+        // ✅ Cả host lẫn client đều lưu scene ở đây
+        // Dùng SceneManager vì lúc này scene đã load xong hoàn toàn
+        Scene activeScene = SceneManager.GetActiveScene();
+    
+        if (activeScene.name != "MainMenu_Test") // bỏ qua MainMenu
+        {
+            int buildIndex = activeScene.buildIndex;
+            FindAnyObjectByType<NetworkRunnerHandler>(FindObjectsInactive.Include)
+                .SaveCurrentScene(SceneRef.FromIndex(buildIndex));
+            
+            Debug.Log($"<color=orange>[Spawner]</color> Scene saved on load done: {activeScene.name} (index {buildIndex})");
+        }
+    }
+    
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
-    public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
     public void OnConnectedToServer(NetworkRunner runner) { Debug.Log("<color=orange>[Spawner]</color> Connected to Server", this); }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { Debug.Log($"<color=orange>[Spawner]</color> Disconnected: {reason}", this); }
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { Debug.LogError($"<color=orange>[Spawner]</color> Connect Failed: {reason}", this); }
-    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { Debug.Log($"<color=orange>[Spawner]</color> Shutdown: {shutdownReason}", this); }
     public void OnSceneLoadStart(NetworkRunner runner) { }
-    public void OnSceneLoadDone(NetworkRunner runner) { }
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
