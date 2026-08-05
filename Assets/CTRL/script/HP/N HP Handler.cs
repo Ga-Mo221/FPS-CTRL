@@ -123,7 +123,7 @@ public class NHPHandler : NetworkBehaviour
         {
             _inGameMessagesHandler.SendInGameRPCMessage(damageCausedByPlayerNickName, $"<color=red>Killed</color> <b>{_nPlayer.Nickname.ToString()}</b>");
             IsDead = true;
-            StartServerRevive(7f);
+            StartServerRevive(GameManager.instance.RespawnTime);
             if (Object.Id == id) return false;
             return true;
         }
@@ -172,15 +172,8 @@ public class NHPHandler : NetworkBehaviour
     {
         if (!Object.HasStateAuthority) return;
         _revivePhase1Timer = TickTimer.CreateFromSeconds(Runner, timeRespawn / 2f);
+        
+        if (Runner.IsServer && SpawnManager.Instance != null)
+            SpawnManager.Instance.RecordDeath(transform.position, Runner.SimulationTime);
     }
-    
-    // IEnumerator ServerRevoveCO(float timeRespawn)
-    // {
-    //     if (!Object.HasStateAuthority) yield break;
-    //     
-    //     yield return new WaitForSeconds(timeRespawn/2);
-    //     _movementHandler.DisableCCC();
-    //     yield return new WaitForSeconds(timeRespawn/2);
-    //     _movementHandler.RequestRespawn();
-    // }
 }

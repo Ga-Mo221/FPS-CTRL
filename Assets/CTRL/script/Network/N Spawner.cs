@@ -23,7 +23,8 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
     public byte BlueCount = 0;
     public byte RedCount = 0;
     
-    private UISessionListHandler _uiSessionListHandler;
+    [ReadOnly]
+    [SerializeField] private UISessionListHandler _uiSessionListHandler;
 
     private void Awake()
     {
@@ -81,7 +82,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
         NPlayer newNplayer = runner.Spawn(
             _playerPrefab,
-            Utils.GetRandomSpawnPoint(),
+            Vector3.up * 200f,
             Quaternion.identity,
             player,
             onBeforeSpawned: (runner, obj) =>
@@ -94,6 +95,18 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
                 // Team mode: server gán team cân bằng
                 if (nPlayer.GamePlayMode == GamePlayMode.Team)
                     nPlayer.NetworkedTeam = AssignTeam();
+                
+                if (SpawnManager.Instance != null)
+                {
+                    NetworkRunner spawnRunner = FindAnyObjectByType<NetworkRunnerHandler>().GetNetworkRunner();
+                    SpawnResult spawnResult = SpawnManager.Instance.GetInitialSpawnPoint(spawnRunner, nPlayer);
+                    obj.transform.SetPositionAndRotation(spawnResult.Position, spawnResult.Rotation);
+                }
+                else
+                {
+                    Debug.LogWarning("[NSpawner] SpawnManager not found, using random fallback.");
+                    obj.transform.position = Utils.GetRandomSpawnPoint();
+                }
             }
         );
         
@@ -246,7 +259,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
             _uiSessionListHandler.ClearList();
             foreach (SessionInfo sessionInfo in sessionList)
             {
-                _uiSessionListHandler.AddToList(sessionInfo, GameManager.instance.GetGamePlayMode());
+                _uiSessionListHandler.AddToList(sessionInfo);
                 Debug.Log($"[Spawner] Found session {sessionInfo.Name} player count ({sessionInfo.PlayerCount}/{sessionInfo.MaxPlayers})");
             }
         }

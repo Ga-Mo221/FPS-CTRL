@@ -28,7 +28,7 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] private TickTimer _respawnInvincibleTimer { get; set; }
     [Networked] private float _currentSpeed { get; set; }
     [Networked] private float _acceleration { get; set; }
-    private bool _isRespawnRequested;
+    [Networked] private bool _isRespawnRequested { get; set; } = false;
     private CharacterState _stateLogic;
     [Networked] private NetworkButtons _previousButtons { get; set; }
     
@@ -38,6 +38,7 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public NetworkBool CanTakeDamage { get; set; } = true;
     
     [Networked] public int SwitchCount { get; private set; }
+    [Networked] private NetworkBool _newRound {get; set;} = false;
     
     private CharComponentManager _componentManager;
     private NetworkCharacterControllerCustom _ncc;
@@ -373,10 +374,10 @@ public class NCharMovementHandler : NetworkBehaviour
 
     
     #region Dead Status
-    public void RequestRespawn()
+    public void RequestRespawn(bool newRound = false)
     {
         if (!Object.HasStateAuthority) return;
-        
+        _newRound = newRound;
         StateFl = new PlayerStateFlags();
         _isRespawnRequested = true;
     }
@@ -400,7 +401,23 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         IsControllerEnabled = true;
         _ncc.Controller.enabled = true;
-        _ncc.Teleport(Utils.GetRandomSpawnPoint());
+        
+        // ── Lấy vị trí spawn thông minh thay cho random ──
+        var nPlayer = GetComponent<NPlayer>();
+        if (SpawnManager.Instance != null && nPlayer != null)
+        {
+            SpawnResult result = _newRound ? SpawnManager.Instance.GetInitialSpawnPoint(Runner, nPlayer) : 
+                SpawnManager.Instance.GetRespawnPoint(Runner, nPlayer);
+            _ncc.Teleport(result.Position);
+            // Áp rotation — xoay character về hướng spawn point chỉ định
+            transform.rotation = result.Rotation;
+        }
+        else
+        {
+            // Fallback nếu SpawnManager chưa có (không nên xảy ra mid-game)
+            _ncc.Teleport(Utils.GetRandomSpawnPoint());
+        }
+        
         _hpHandler.OnRespawn();
         _isRespawnRequested = false;
         if (_weaponManager != null) _weaponManager.Respawn();

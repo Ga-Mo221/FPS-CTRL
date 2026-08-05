@@ -25,10 +25,8 @@ public class UISessionListHandler : MonoBehaviour
         _status_text.gameObject.SetActive(false);
     }
 
-    public void AddToList(SessionInfo sessionInfo, GamePlayMode gamePlayMode)
+    public void AddToList(SessionInfo sessionInfo)
     {
-        if (gamePlayMode != GameManager.instance.GetGamePlayMode()) return;
-        
         UISessionInfoItem item = Instantiate(_sessionItemListPrefab, _verticalLayoutGroup.transform).GetComponent<UISessionInfoItem>();
         
         item.SetInformation(sessionInfo);

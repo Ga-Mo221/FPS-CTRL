@@ -23,6 +23,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int AllKill = 0;
     
     public NetworkRunnerHandler NetworkRunnerHandler;
+    
+    private float _respawnTime = 5f;
+    public float RespawnTime => _respawnTime;
 
     private byte[] connectionToken;
 

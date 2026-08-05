@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -25,7 +26,7 @@ public class UIMainMenuHandler : MonoBehaviour
         if (PlayerPrefs.GetInt("ReturnToSessionList", 0) == 1)
         {
             PlayerPrefs.DeleteKey("ReturnToSessionList");
-            OnFindGameClicked(); // tự động join lobby và mở session list
+            OnFindGameClicked(1f);
         }
     }
 
@@ -44,7 +45,7 @@ public class UIMainMenuHandler : MonoBehaviour
         canvasGroup.blocksRaycasts = alpha != 0;
     }
 
-    public void OnFindGameClicked()
+    public void OnFindGameClicked(float time = 0.5f)
     {
         PlayerPrefs.SetString("PlayerNickName", _player_Name_InputField.text);
         PlayerPrefs.Save();
@@ -55,12 +56,18 @@ public class UIMainMenuHandler : MonoBehaviour
         
         if (NRunnerHandler != null)
         {
-            NRunnerHandler.OnJoinLobby(GetLobbyName(GameMode));
             HideAllPanels();
-            
             DisplayPanel(_sessionListPanel, 1);
-            FindAnyObjectByType<UISessionListHandler>(FindObjectsInactive.Include).OnLookingForGameSessions();
+
+            if (gameObject.activeInHierarchy)
+                StartCoroutine(OnjoinLobbyRoutine(NRunnerHandler, time));
         }
+    }
+    private IEnumerator OnjoinLobbyRoutine(NetworkRunnerHandler runner, float time)
+    {
+        yield return new WaitForSeconds(time);
+        runner.OnJoinLobby(GetLobbyName(GameMode));
+        FindAnyObjectByType<UISessionListHandler>(FindObjectsInactive.Include).OnLookingForGameSessions();
     }
 
     public void OnCreateNewGameClicked()
