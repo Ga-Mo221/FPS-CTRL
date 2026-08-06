@@ -49,6 +49,9 @@ public static class SpawnEvaluator
     // Khoảng cách tối thiểu giữa 2 cluster team (world units)
     private const float INITIAL_TEAM_MIN_SEPARATION     = 30f;
 
+    // Số node tốt nhất để random chọn cuối cùng (tránh spawn y hệt nhau mỗi round)
+    private const int TOP_N_CANDIDATES = 3;
+
     // Wall LayerMask — gán trong Inspector qua SpawnManager, hoặc dùng "Default"
     // Chỉnh lại nếu wall layer của bạn có tên khác
     public static LayerMask WallMask = ~0; // default: tất cả layer chặn LoS
@@ -147,8 +150,8 @@ public static class SpawnEvaluator
         return ToResult(bestNode, spawnNodes);
     }
 
-    // Solo initial: chia đều các node cho 10 người, mỗi người một góc riêng.
-    // Thuật toán: sắp xếp node theo cluster spatial, assign lần lượt.
+    // Solo initial: tìm các node chưa bị player khác đứng, random trong top-N xa nhất.
+    // Đảm bảo không 2 player spawn cùng điểm, đồng thời có yếu tố ngẫu nhiên.
     private static SpawnResult EvaluateInitialSoloSpawn(
         NetworkRunner   runner,
         NPlayer         spawningPlayer,
@@ -157,19 +160,46 @@ public static class SpawnEvaluator
         if (spawnNodes.Count == 0)
             return new SpawnResult(new Vector3(0, 4, 0), Quaternion.identity);
 
-        int assignedCount = 0;
+        // Thu thập vị trí các player đã spawn (trừ chính mình)
+        var occupiedPositions = new List<Vector3>();
         foreach (var p in runner.ActivePlayers)
         {
             if (!runner.TryGetPlayerObject(p, out var obj)) continue;
-            // Bỏ qua chính player đang được spawn để không tính vào count
             var np = obj.GetComponent<NPlayer>();
-            if (np != null && np == spawningPlayer) continue;
-            assignedCount++;
+            if (np == null || np == spawningPlayer) continue;
+            occupiedPositions.Add(obj.transform.position);
         }
 
-        int idx  = assignedCount % spawnNodes.Count;
-        var node = spawnNodes[idx];
-        return new SpawnResult(node.position, node.rotation);
+        // Tính score cho mỗi node: càng xa tất cả player đã spawn càng tốt
+        var candidates = new List<(Transform node, float score)>();
+        foreach (var node in spawnNodes)
+        {
+            if (node == null) continue;
+
+            // Hard cut: node quá gần player đang đứng
+            if (IsOccupied(node.position, runner, spawningPlayer)) continue;
+
+            float minDist = float.MaxValue;
+            foreach (var pos in occupiedPositions)
+                minDist = Mathf.Min(minDist, Vector3.Distance(node.position, pos));
+
+            // Nếu chưa ai spawn thì mọi node đều hợp lệ với score 0
+            float score = occupiedPositions.Count == 0 ? 0f : minDist;
+            candidates.Add((node, score));
+        }
+
+        // Fallback nếu tất cả node đều bị chiếm
+        if (candidates.Count == 0)
+        {
+            var fallback = spawnNodes[Random.Range(0, spawnNodes.Count)];
+            return new SpawnResult(fallback.position, fallback.rotation);
+        }
+
+        // Sắp xếp giảm dần theo score, lấy top-N rồi random
+        candidates.Sort((a, b) => b.score.CompareTo(a.score));
+        int pickCount = Mathf.Min(TOP_N_CANDIDATES, candidates.Count);
+        var chosen = candidates[Random.Range(0, pickCount)].node;
+        return new SpawnResult(chosen.position, chosen.rotation);
     }
 
     // ── Team respawn ─────────────────────────────────────────────────────────
@@ -305,13 +335,45 @@ public static class SpawnEvaluator
         if (blueCluster.Count == 0) blueCluster.Add(spawnNodes[0]);
         if (redCluster.Count  == 0) redCluster.Add(spawnNodes[spawnNodes.Count - 1]);
 
-        // Bước 3: lấy node theo index, bỏ qua index 0 vì player đầu đã dùng anchor
+        // Bước 3: lấy node trong cluster của team, tránh node đang bị đứng,
+        // random trong top-N xa nhất so với đồng đội đã spawn.
         var cluster = isBlue ? blueCluster : redCluster;
-        
-        // teamSpawnedCount == 0 đã được xử lý ở trên (anchor),
-        // nên ở đây teamSpawnedCount >= 1, map sang cluster index bắt đầu từ 0
-        int idx = (teamSpawnedCount - 1) % cluster.Count;
-        var chosen = cluster[idx];
+
+        // Thu thập vị trí đồng đội đã spawn để chọn node tản ra
+        var teammatePositions = new List<Vector3>();
+        foreach (var p in runner.ActivePlayers)
+        {
+            if (!runner.TryGetPlayerObject(p, out var obj)) continue;
+            var np = obj.GetComponent<NPlayer>();
+            if (np == null || np == spawningPlayer) continue;
+            if (np.NetworkedTeam != spawningPlayer.NetworkedTeam) continue;
+            teammatePositions.Add(obj.transform.position);
+        }
+
+        var candidates = new List<(Transform node, float score)>();
+        foreach (var node in cluster)
+        {
+            if (node == null) continue;
+            if (IsOccupied(node.position, runner, spawningPlayer)) continue;
+
+            float minDist = float.MaxValue;
+            foreach (var pos in teammatePositions)
+                minDist = Mathf.Min(minDist, Vector3.Distance(node.position, pos));
+
+            float score = teammatePositions.Count == 0 ? 0f : minDist;
+            candidates.Add((node, score));
+        }
+
+        // Fallback nếu cluster bị chiếm hết
+        if (candidates.Count == 0)
+        {
+            var fallback = cluster[Random.Range(0, cluster.Count)];
+            return new SpawnResult(fallback.position, fallback.rotation);
+        }
+
+        candidates.Sort((a, b) => b.score.CompareTo(a.score));
+        int pickCount = Mathf.Min(TOP_N_CANDIDATES, candidates.Count);
+        var chosen = candidates[Random.Range(0, pickCount)].node;
         return new SpawnResult(chosen.position, chosen.rotation);
     }
 

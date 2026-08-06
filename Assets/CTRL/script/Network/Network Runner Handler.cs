@@ -263,7 +263,6 @@ public class NetworkRunnerHandler : MonoBehaviour
                     {
                         newWeaponCtrl.CopyStateFrom(oldWeaponCtrl);
                         newWeaponCtrl.OwnerCharacter = oldWeaponCtrl.OwnerCharacter;
-                        newWeaponCtrl.SkipRespawnBullet = true;
                         Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> {newWeaponCtrl.transform.name}");
                     }
                 });

@@ -72,7 +72,11 @@ public class WeaponManager : NetworkBehaviour
         }
         if (_weapon_One_CTRL == null || _weapon_Two_CTRL == null)
             if (!NeedsResolveAfterMigration)
+            {
                 ResolveWeaponControllers();
+                if (_weapon_One_CTRL != null) _weapon_One_CTRL.Respawn();
+                if (_weapon_Two_CTRL != null) _weapon_Two_CTRL.Respawn();
+            }
     }
     
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]

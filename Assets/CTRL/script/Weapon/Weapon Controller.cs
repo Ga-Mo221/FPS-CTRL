@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Fusion;
 using Sirenix.OdinInspector;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class WeaponController : NetworkBehaviour
@@ -15,9 +14,9 @@ public class WeaponController : NetworkBehaviour
     [Networked] public NetworkObject OwnerCharacter { get; set; }
     
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    public int _currentBulletvalue { get; set; }
+    private int _currentBulletvalue { get; set; }
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    public int _currentMaxBullet { get; set; }
+    private int _currentMaxBullet { get; set; }
     
     // ============================ LOCAL FILED =====================================
     
@@ -169,7 +168,6 @@ public class WeaponController : NetworkBehaviour
     public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
     public GunRecoilController GunRecoilCTRL => _gun_Recoil_CTRL;
     public WeaponType WeaponType => _type;
-    public bool SkipRespawnBullet;
     
     public override void Spawned()
     {
@@ -245,8 +243,6 @@ public class WeaponController : NetworkBehaviour
         _parrentBullet.parent = GameManager.instance.BulletParrent;
         
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
-        if (SkipRespawnBullet) return;
-        Respawn();
     }
 
     private void OnEnable()
