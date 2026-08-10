@@ -91,7 +91,8 @@ public class WeaponManager : NetworkBehaviour
     {
         if (!NeedsResolveAfterMigration)
         {
-            SwitchWeaponActive();
+            if (Object.HasStateAuthority)
+                SwitchWeaponActive(0);
             SwitchWeapon();
         }
     }
@@ -114,33 +115,52 @@ public class WeaponManager : NetworkBehaviour
             });
     }
 
-    public bool SwitchWeapon()
+    public void SwitchWeapon()
     {
         if (_weapon_One_CTRL == null && _weaponOneRef != null || _weapon_Two_CTRL == null && _weaponTwoRef != null)
-        {
             ResolveWeaponControllers();
-        }
         
         if (_weapon_Active == 1)
+            SwitchToWeaponOne();
+        if (_weapon_Active == 2)
+            SwitchToWeaponTwo();
+    }
+
+    public bool SwitchWeaponActive(int weaponId)
+    {
+        if (weaponId == 0)
         {
-            return SwitchToWeaponOne();
+            if (_weaponOneRef != null && _weapon_Active != 1)
+            {
+                _weapon_Active = 1;
+                return true;
+            }
+
+            if (_weaponTwoRef != null && _weapon_Active != 2)
+            {
+                _weapon_Active = 2;
+                return true;
+            }
+        }else if (weaponId == 1)
+        {
+            if (_weaponOneRef != null && _weapon_Active != 1)
+            {
+                _weapon_Active = 1;
+                return true;
+            }
         }
-        else if (_weapon_Active == 2)
+        else
         {
-            return SwitchToWeaponTwo();
+            if (_weaponTwoRef != null && _weapon_Active != 2)
+            {
+                _weapon_Active = 2;
+                return true;
+            }
         }
         return false;
     }
 
-    public void SwitchWeaponActive()
-    {
-        if (_weaponOneRef != null && _weapon_Active != 1)
-            _weapon_Active = 1;
-        else if (_weaponTwoRef != null && _weapon_Active != 2)
-            _weapon_Active = 2;
-    }
-
-    private bool SwitchToWeaponOne()
+    private void SwitchToWeaponOne()
     {
         if (_weaponOneRef != null)
         {
@@ -149,13 +169,10 @@ public class WeaponManager : NetworkBehaviour
             _weaponTwoRef?.gameObject.SetActive(false);
             _anim?.WeaponIndex(_weapon_One_CTRL.Data.Index);
             Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon One", this);
-            return true;
         }
-        
-        return false;
     }
 
-    private bool SwitchToWeaponTwo()
+    private void SwitchToWeaponTwo()
     {
         if (_weaponTwoRef != null)
         {
@@ -164,10 +181,7 @@ public class WeaponManager : NetworkBehaviour
             _weaponTwoRef?.gameObject.SetActive(true);
             _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
             Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
-            return  true;
         }
-
-        return false;
     }
     
     public void SetWeaponOnePrefab(GameObject prefab) => _weapon_One_Prefab = prefab;

@@ -311,7 +311,7 @@ public class NCharMovementHandler : NetworkBehaviour
         if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
             _stateLogic.StartSwitch(ref state);
-            _weaponManager.SwitchWeaponActive();
+            _weaponManager.SwitchWeaponActive(0);
             SwitchCount++;
         }
     }

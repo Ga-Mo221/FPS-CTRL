@@ -17,6 +17,7 @@ public class CharacterInputHandler : MonoBehaviour
     
     private CharComponentManager _componentManager;
     private NCharMovementHandler _movementHandler;
+    private NPlayer _player;
     private TISInputBridge _input;
     
     Vector2 _moveDirection;
@@ -31,6 +32,7 @@ public class CharacterInputHandler : MonoBehaviour
         _input = TISInputBridge.Instance;
         _componentManager = GetComponent<CharComponentManager>();
         _movementHandler = _componentManager.NCharMovementHandler;
+        _player = _componentManager.NPlayer;
     }
 
     private void Update()
@@ -103,9 +105,12 @@ public class CharacterInputHandler : MonoBehaviour
 
     private void OnUI()
     {
-        if (_input.GetSkillAction("ESC", TISButtonReadMode.PressDown))
+        if (!_player.IsLocalPlayer) return;
+        
+        if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
             GameManager.instance.OnUI = !GameManager.instance.OnUI;
+            Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.instance.OnUI}");
         }
     }
 }

@@ -39,6 +39,8 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     // Cache thẳng ở đây đảm bảo OnDestroy() luôn dọn được camera, bất kể _componentManager sống hay đã chết.
     private GameObject _detachedCameraRoot;
     
+    public bool IsLocalPlayer {get; private set;}
+    
     // ============================== Public Field =====================================
     
     public static NPlayer Local { get; private set; }
@@ -63,10 +65,10 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         _uiPlayerNickName = _componentManager.UIPlayerNickName;
         _shootHandler = _componentManager.NShootHandler;
         
-        bool isLocalPlayer = Object.HasInputAuthority 
-                             || (Runner.IsServer && Object.StateAuthority == Runner.LocalPlayer);
+        IsLocalPlayer = Object.HasInputAuthority 
+                        || (Runner.IsServer && Object.StateAuthority == Runner.LocalPlayer);
         
-        if (isLocalPlayer)
+        if (IsLocalPlayer)
         {
             Local = this;
             
