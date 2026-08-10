@@ -53,7 +53,7 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         {
             _lastSwitchCount = _movementHandler.SwitchCount;
             _localIsSwitching = true;
-            Debug.Log("switch");
+            Debug.Log("[NCharacterAnimationHandler] switch");
         }
         
         _playerMotionController.IsSwitching(_localIsSwitching);
@@ -72,6 +72,6 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     public void LocalStopSwitch()
     {
         _localIsSwitching = false;
-        Debug.Log("LocalStopSwitch");
+        Debug.Log("[NCharacterAnimationHandler] LocalStopSwitch");
     }
 }

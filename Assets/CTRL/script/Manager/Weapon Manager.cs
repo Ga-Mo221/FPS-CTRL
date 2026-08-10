@@ -83,14 +83,17 @@ public class WeaponManager : NetworkBehaviour
     public void Rpc_ResolveAfterMigration(RpcInfo info = default)
     {
         ResolveWeaponControllers();
-        SwitchWeapon(_weapon_Active);
+        SwitchWeapon();
         Debug.Log($"<color=green>[WeaponManager]</color> ResolveWeaponControllers after migration: {name}", this);
     }
 
     private void Start()
     {
         if (!NeedsResolveAfterMigration)
-            SwitchWeapon(_weapon_Active);
+        {
+            SwitchWeaponActive();
+            SwitchWeapon();
+        }
     }
 
     private void CreateWeapon(GameObject prefab, out NetworkObject instan)
@@ -111,34 +114,36 @@ public class WeaponManager : NetworkBehaviour
             });
     }
 
-    public bool SwitchWeapon(int index = 0)
+    public bool SwitchWeapon()
     {
         if (_weapon_One_CTRL == null && _weaponOneRef != null || _weapon_Two_CTRL == null && _weaponTwoRef != null)
         {
             ResolveWeaponControllers();
         }
         
-        if (index == 0)
-        {
-            if (_weapon_Active != 1) return SwitchToWeaponOne();
-            if (_weapon_Active != 2) return SwitchToWeaponTwo();
-        }
-        else if (index == 1)
+        if (_weapon_Active == 1)
         {
             return SwitchToWeaponOne();
         }
-        else if (index == 2)
+        else if (_weapon_Active == 2)
         {
             return SwitchToWeaponTwo();
         }
         return false;
     }
 
+    public void SwitchWeaponActive()
+    {
+        if (_weaponOneRef != null && _weapon_Active != 1)
+            _weapon_Active = 1;
+        else if (_weaponTwoRef != null && _weapon_Active != 2)
+            _weapon_Active = 2;
+    }
+
     private bool SwitchToWeaponOne()
     {
         if (_weaponOneRef != null)
         {
-            _weapon_Active = 1;
             _componentManager.ConstraintManager?.SwitchWeapon(_weapon_One_CTRL.Data.ID);
             _weaponOneRef?.gameObject.SetActive(true);
             _weaponTwoRef?.gameObject.SetActive(false);
@@ -154,7 +159,6 @@ public class WeaponManager : NetworkBehaviour
     {
         if (_weaponTwoRef != null)
         {
-            _weapon_Active = 2;
             _componentManager.ConstraintManager?.SwitchWeapon(_weapon_Two_CTRL.Data.ID);
             _weaponOneRef?.gameObject.SetActive(false);
             _weaponTwoRef?.gameObject.SetActive(true);
@@ -171,9 +175,9 @@ public class WeaponManager : NetworkBehaviour
 
     public WeaponController Weapon_Active()
     {
-        if (_weapon_Active == 1 && _weaponOneRef != null && _weapon_One_CTRL != null)
+        if (_weaponOneRef != null && _weapon_One_CTRL != null && _weapon_One_CTRL.gameObject.activeSelf)
             return _weapon_One_CTRL;
-        if (_weapon_Active == 2 && _weaponTwoRef != null && _weapon_Two_CTRL != null)
+        if (_weaponTwoRef != null && _weapon_Two_CTRL != null && _weapon_Two_CTRL.gameObject.activeSelf)
             return _weapon_Two_CTRL;
         Debug.Log("<color=red>[WeaponManager]</color> WeaponController not active.", this);
         return null;

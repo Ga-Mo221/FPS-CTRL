@@ -470,7 +470,11 @@ public class WeaponController : NetworkBehaviour
     }
     public void IsSliding(bool isSliding) => _anim.SetBool("IsSliding", isSliding); 
     public void IsThrow(bool isThrow) => _anim.SetBool("IsThrow", isThrow);
-    public void IsSwitching(bool isSwitching) => _anim.SetBool("IsSwitching", isSwitching);
+    public void IsSwitching(bool isSwitching) 
+    {
+        Debug.Log($"[WeaponController] {transform.name} IsSwitching: {isSwitching}");
+        _anim.SetBool("IsSwitching", isSwitching);
+    }
     public bool ADS(bool ads)
     {
         if (_type != WeaponType.Gun) return false;

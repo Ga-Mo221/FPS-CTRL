@@ -306,11 +306,12 @@ public class NCharMovementHandler : NetworkBehaviour
 
     private void SwitchWeaponHandler(NInputData input, ref PlayerStateFlags state)
     {
-        if (state.IsThrow) return;
+        if (state.IsThrow || state.IsSwitching) return;
 
         if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
             _stateLogic.StartSwitch(ref state);
+            _weaponManager.SwitchWeaponActive();
             SwitchCount++;
         }
     }
@@ -423,7 +424,7 @@ public class NCharMovementHandler : NetworkBehaviour
         if (_weaponManager != null) _weaponManager.Respawn();
         CanTakeDamage = false;
         _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, 2f);
-        _weaponManager.SwitchWeapon(1);
+        _weaponManager.SwitchWeapon();
         Flash = false;
         Frag = false;
     }
