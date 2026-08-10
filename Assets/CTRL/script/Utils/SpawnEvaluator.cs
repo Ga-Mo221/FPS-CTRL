@@ -49,8 +49,12 @@ public static class SpawnEvaluator
     // Khoảng cách tối thiểu giữa 2 cluster team (world units)
     private const float INITIAL_TEAM_MIN_SEPARATION     = 30f;
 
-    // Số node tốt nhất để random chọn cuối cùng (tránh spawn y hệt nhau mỗi round)
-    private const int TOP_N_CANDIDATES = 3;
+    // Độ "gắt" khi random giữa các candidate hợp lệ, dựa trên score (weighted random).
+    // 0f  = luôn chọn node có score cao nhất (gần như không random)
+    // 1f  = random gần như đều bất kể score cao/thấp (miễn hợp lệ)
+    // 0.4f–0.6f là vùng cân bằng: vẫn ưu tiên node tốt nhưng đủ đa dạng, tránh lặp y hệt mỗi round.
+    // Gán từ SpawnManager (Inspector) trong Awake() — không phải const để có thể chỉnh runtime.
+    public static float SpawnRandomness = 0.5f;
 
     // Wall LayerMask — gán trong Inspector qua SpawnManager, hoặc dùng "Default"
     // Chỉnh lại nếu wall layer của bạn có tên khác
@@ -107,8 +111,7 @@ public static class SpawnEvaluator
     {
         var enemies = GatherAliveEnemies(runner, spawningPlayer);
 
-        Transform bestNode  = null;
-        float     bestScore = float.MinValue;
+        var candidates = new List<(Transform node, float score)>();
 
         foreach (var node in spawnNodes)
         {
@@ -136,18 +139,21 @@ public static class SpawnEvaluator
                                          SOLO_DEATH_WINDOW_SEC,
                                          runner.SimulationTime);
 
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestNode  = node;
-            }
+            candidates.Add((node, score));
         }
 
-        // Fallback: xa địch nhất, bỏ qua LoS
-        if (bestNode == null)
-            bestNode = FallbackFarthestFromEnemies(spawnNodes, enemies);
+        // Không có candidate hợp lệ nào (mọi node đều bị occupy hoặc bị LoS)
+        // → fallback: xa địch nhất, bỏ qua LoS
+        if (candidates.Count == 0)
+        {
+            var fallbackNode = FallbackFarthestFromEnemies(spawnNodes, enemies);
+            return ToResult(fallbackNode, spawnNodes);
+        }
 
-        return ToResult(bestNode, spawnNodes);
+        // Weighted random trên toàn bộ candidate hợp lệ — tránh việc luôn hồi sinh
+        // đúng 1 node điểm cao nhất khi vị trí địch không đổi giữa các lần chết.
+        var chosen = WeightedRandomPick(candidates);
+        return ToResult(chosen, spawnNodes);
     }
 
     // Solo initial: tìm các node chưa bị player khác đứng, random trong top-N xa nhất.
@@ -192,14 +198,12 @@ public static class SpawnEvaluator
         if (candidates.Count == 0)
         {
             var fallback = spawnNodes[Random.Range(0, spawnNodes.Count)];
-            return new SpawnResult(fallback.position, fallback.rotation);
+            return ToResult(fallback, spawnNodes);
         }
 
-        // Sắp xếp giảm dần theo score, lấy top-N rồi random
-        candidates.Sort((a, b) => b.score.CompareTo(a.score));
-        int pickCount = Mathf.Min(TOP_N_CANDIDATES, candidates.Count);
-        var chosen = candidates[Random.Range(0, pickCount)].node;
-        return new SpawnResult(chosen.position, chosen.rotation);
+        // Weighted random trên toàn bộ candidate hợp lệ (không chỉ top-3 xa nhất)
+        var chosen = WeightedRandomPick(candidates);
+        return ToResult(chosen, spawnNodes);
     }
 
     // ── Team respawn ─────────────────────────────────────────────────────────
@@ -214,8 +218,7 @@ public static class SpawnEvaluator
         var enemies    = GatherAliveEnemies(runner, spawningPlayer);
         var teammates  = GatherAliveTeammates(runner, spawningPlayer);
 
-        Transform bestNode  = null;
-        float     bestScore = float.MinValue;
+        var candidates = new List<(Transform node, float score)>();
 
         foreach (var node in spawnNodes)
         {
@@ -247,17 +250,17 @@ public static class SpawnEvaluator
                                          TEAM_DEATH_WINDOW_SEC,
                                          runner.SimulationTime);
 
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestNode  = node;
-            }
+            candidates.Add((node, score));
         }
 
-        if (bestNode == null)
-            bestNode = FallbackFarthestFromEnemies(spawnNodes, enemies);
+        if (candidates.Count == 0)
+        {
+            var fallbackNode = FallbackFarthestFromEnemies(spawnNodes, enemies);
+            return ToResult(fallbackNode, spawnNodes);
+        }
 
-        return ToResult(bestNode, spawnNodes);
+        var chosen = WeightedRandomPick(candidates);
+        return ToResult(chosen, spawnNodes);
     }
 
     // Team initial: 2 team chia 2 cụm node cách xa nhau nhất có thể.
@@ -286,7 +289,7 @@ public static class SpawnEvaluator
             // Ưu tiên anchor được chỉ định trong Inspector
             Transform anchor = isBlue ? blueAnchor : redAnchor;
             if (anchor != null)
-                return new SpawnResult(anchor.position, anchor.rotation);
+                return ToResult(anchor, spawnNodes);
             
             // Nếu anchor chưa được gán → fallback tự tìm như cũ
             Debug.LogWarning($"[SpawnEvaluator] {(isBlue ? "Blue" : "Red")}Anchor chưa được gán trong Inspector, dùng fallback.");
@@ -368,16 +371,68 @@ public static class SpawnEvaluator
         if (candidates.Count == 0)
         {
             var fallback = cluster[Random.Range(0, cluster.Count)];
-            return new SpawnResult(fallback.position, fallback.rotation);
+            return ToResult(fallback, spawnNodes);
         }
 
-        candidates.Sort((a, b) => b.score.CompareTo(a.score));
-        int pickCount = Mathf.Min(TOP_N_CANDIDATES, candidates.Count);
-        var chosen = candidates[Random.Range(0, pickCount)].node;
-        return new SpawnResult(chosen.position, chosen.rotation);
+        var chosen = WeightedRandomPick(candidates);
+        return ToResult(chosen, spawnNodes);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Chọn ngẫu nhiên có trọng số trong toàn bộ candidate hợp lệ, thay vì
+    /// giới hạn cứng vào top-N theo 1 tiêu chí (ví dụ "xa nhất"). Trọng số tỉ lệ
+    /// theo score: node điểm cao hơn có xác suất được chọn cao hơn, nhưng mọi
+    /// node hợp lệ đều có cơ hội — tránh việc lặp lại vài điểm spawn quen thuộc
+    /// mỗi round. Điều chỉnh độ "gắt" qua SpawnRandomness (set từ SpawnManager Inspector).
+    /// </summary>
+    private static Transform WeightedRandomPick(List<(Transform node, float score)> candidates)
+    {
+        if (candidates.Count == 1) return candidates[0].node;
+
+        float minScore = float.MaxValue;
+        float maxScore = float.MinValue;
+        foreach (var c in candidates)
+        {
+            if (c.score < minScore) minScore = c.score;
+            if (c.score > maxScore) maxScore = c.score;
+        }
+
+        float range = maxScore - minScore;
+
+        // Tất cả candidate có score gần bằng nhau → không có lý do gì để thiên vị
+        // node nào, random đều cho nhanh.
+        if (range < 0.0001f)
+            return candidates[Random.Range(0, candidates.Count)].node;
+
+        // Temperature: SpawnRandomness càng cao → exponent càng nhỏ → các trọng số
+        // càng gần nhau → random càng đều. SpawnRandomness = 0 → exponent = 1
+        // (weighted thuần theo score, gần như luôn chọn node tốt nhất khi range lớn).
+        float exponent = Mathf.Max(0.01f, 1f - Mathf.Clamp01(SpawnRandomness));
+
+        float totalWeight = 0f;
+        var weights = new float[candidates.Count];
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            float normalized = (candidates[i].score - minScore) / range; // [0,1]
+            // +0.05f để node tệ nhất vẫn có trọng số > 0 (không bao giờ bị loại tuyệt đối)
+            float weight = Mathf.Pow(normalized + 0.05f, exponent);
+            weights[i] = weight;
+            totalWeight += weight;
+        }
+
+        float r = Random.Range(0f, totalWeight);
+        float cumulative = 0f;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            cumulative += weights[i];
+            if (r <= cumulative) return candidates[i].node;
+        }
+
+        // An toàn: sai số float, trả về phần tử cuối
+        return candidates[candidates.Count - 1].node;
+    }
 
     private static List<Transform> GatherAliveEnemies(NetworkRunner runner, NPlayer self)
     {
@@ -512,11 +567,27 @@ public static class SpawnEvaluator
     private static SpawnResult ToResult(Transform node, List<Transform> fallbackList)
     {
         if (node != null)
+        {
+            LogSpawnChoice(node, fallbackList);
             return new SpawnResult(node.position, node.rotation);
+        }
 
         // Không bao giờ nên chạy tới đây, nhưng để an toàn
         var fallback = fallbackList[Random.Range(0, fallbackList.Count)];
+        LogSpawnChoice(fallback, fallbackList);
         return new SpawnResult(fallback.position, fallback.rotation);
+    }
+
+    /// <summary>
+    /// In ra vị trí spawn cuối cùng, index của node trong list spawn gốc (spawnNodes)
+    /// và tên GameObject của node. Nếu node không nằm trong spawnNodes (ví dụ anchor
+    /// team được kéo riêng trong Inspector) thì index sẽ là -1.
+    /// </summary>
+    private static void LogSpawnChoice(Transform node, List<Transform> spawnNodes)
+    {
+        int index = spawnNodes != null ? spawnNodes.IndexOf(node) : -1;
+        Debug.Log($"<color=cyan>[SpawnEvaluator]</color> Spawn tại '{node.name}' " +
+                  $"(index {index} trong spawnNodes), position = {node.position}");
     }
 }
 

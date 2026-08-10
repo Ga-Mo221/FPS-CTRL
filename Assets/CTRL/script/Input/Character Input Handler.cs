@@ -103,7 +103,7 @@ public class CharacterInputHandler : MonoBehaviour
 
     private void OnUI()
     {
-        if (_input.GetSkillAction("ESC"))
+        if (_input.GetSkillAction("ESC", TISButtonReadMode.PressDown))
         {
             GameManager.instance.OnUI = !GameManager.instance.OnUI;
         }

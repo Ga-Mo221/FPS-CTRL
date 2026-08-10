@@ -100,7 +100,7 @@ public class UIMainMenuHandler : MonoBehaviour
     public void OnStartNewSessionClicked()
     {
         NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
-
+        GameManager.instance.NewGame();
         if (NRunnerHandler != null)
         {
             HideAllPanels();

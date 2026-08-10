@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
     
     public NetworkRunnerHandler NetworkRunnerHandler;
     
-    private float _respawnTime = 5f;
+    [SerializeField] private float _respawnTime = 5f;
     public float RespawnTime => _respawnTime;
 
     private byte[] connectionToken;
@@ -83,6 +83,16 @@ public class GameManager : MonoBehaviour
     
     public void SetGamePlayMode(GamePlayMode gamePlayMode) => _gamePlayMode = gamePlayMode;
     public void SetPlayerNickName(string nickname) => _playerNickName = nickname;
+
+    public void NewGame()
+    {
+        OnUI = false;
+        PlayerList = new List<NShootHandler>();
+        DictionaryKill = new Dictionary<NetworkId, KillInfo>();
+        RedKill = 0;
+        BlueKill = 0;
+        AllKill = 0;
+    }
 }
 
 public struct KillInfo

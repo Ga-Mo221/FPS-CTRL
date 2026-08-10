@@ -21,6 +21,7 @@ public class AudioManager : MonoBehaviour
 
     public void PlayClip(AudioSource source, AudioClip clip, float volume, float pitch, bool stop = true, float minDistance = 1, float maxDistance = 10)
     {
+        if (source.enabled == false) return;
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clip == null) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clip == null) return;
@@ -35,6 +36,7 @@ public class AudioManager : MonoBehaviour
     
     public void PlayClip(AudioSource source, AudioClip clip, float volume, bool stop = true, float minDistance = 1, float maxDistance = 10)
     {
+        if (source.enabled == false) return;
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clip == null) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clip == null) return;
@@ -49,6 +51,7 @@ public class AudioManager : MonoBehaviour
 
     public void PlayClip(AudioSource source, AudioClip[] clips, float volume, float pitch, bool stop = true, float minDistance = 1, float maxDistance = 10)
     {
+        if (source.enabled == false) return;
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips.Length == 0) return;
@@ -64,6 +67,7 @@ public class AudioManager : MonoBehaviour
     
     public void PlayClip(AudioSource source, AudioClip[] clips, float volume, bool stop = true, float minDistance = 1, float maxDistance = 10)
     {
+        if (source.enabled == false) return;
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips.Length == 0) return;
@@ -88,6 +92,7 @@ public class AudioManager : MonoBehaviour
         float minDistance = 1,
         float maxDistance = 10)
     {
+        if (source.enabled == false) return;
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips == null || clips.Length == 0) return;

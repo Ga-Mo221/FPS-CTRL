@@ -31,6 +31,13 @@ public class SpawnManager : MonoBehaviour
     [Header("Death heatmap — giữ tối đa N record gần nhất")]
     [SerializeField] private int _maxDeathRecords = 30;
 
+    [Header("Spawn Randomness — độ đa dạng khi random giữa các vị trí spawn hợp lệ")]
+    [Tooltip("0 = luôn chọn vị trí điểm cao nhất (gần như không random). " +
+             "1 = random gần như đều giữa mọi vị trí hợp lệ, bất kể điểm cao/thấp. " +
+             "0.4–0.6 là vùng cân bằng.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _spawnRandomness = 0.5f;
+
     // Server-only, không cần Networked
     private readonly List<DeathRecord> _recentDeaths = new();
 
@@ -38,7 +45,14 @@ public class SpawnManager : MonoBehaviour
     {
         Instance = this;
         SpawnEvaluator.WallMask = _wallMask;
+        SpawnEvaluator.SpawnRandomness = _spawnRandomness;
         Debug.Log($"<color=green>[SpawnManager]</color> Spawn Evaluator initialized!");
+    }
+
+    private void OnValidate()
+    {
+        // Cho phép chỉnh slider trong Play mode và thấy hiệu lực ngay, không cần restart.
+        SpawnEvaluator.SpawnRandomness = _spawnRandomness;
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
