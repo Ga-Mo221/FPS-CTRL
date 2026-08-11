@@ -244,8 +244,6 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Weapon Control
     private void ShootHandler(NInputData input, ref PlayerStateFlags state)
     {
-        // IsFiring là local bool, reset mỗi tick — không Networked, không tốn băng thông
-        IsFiring = false;
 
         if (state.IsSwitching || state.IsThrow)
             return;
@@ -255,12 +253,16 @@ public class NCharMovementHandler : NetworkBehaviour
             case GunRecoilController.FiringMode.Semi:
             case GunRecoilController.FiringMode.Melee:
             case GunRecoilController.FiringMode.Burst:
+                // IsFiring là local bool, reset mỗi tick — không Networked, không tốn băng thông
+                IsFiring = false;
                 if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
                     IsFiring = true;
                 break;
             case GunRecoilController.FiringMode.Auto:
                 if (input.Buttons.IsSet(InputButtons.Attack))
                     IsFiring = true;
+                if (input.Buttons.WasReleased(_previousButtons, InputButtons.Attack))
+                    IsFiring = false;
                 break;
         }
     }
@@ -310,9 +312,11 @@ public class NCharMovementHandler : NetworkBehaviour
 
         if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
-            _stateLogic.StartSwitch(ref state);
-            _weaponManager.SwitchWeaponActive(0);
-            SwitchCount++;
+            if (_weaponManager.SwitchWeaponActive(0))
+            {
+                _stateLogic.StartSwitch(ref state);
+                SwitchCount++;
+            }
         }
     }
 
@@ -421,6 +425,7 @@ public class NCharMovementHandler : NetworkBehaviour
         
         _hpHandler.OnRespawn();
         _isRespawnRequested = false;
+        IsFiring = false;
         if (_weaponManager != null) _weaponManager.Respawn();
         CanTakeDamage = false;
         _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, 2f);
