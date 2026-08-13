@@ -29,6 +29,7 @@ public class CharComponentManager : MonoBehaviour
     public UIWeapon UIWeapon;
     public CameraShake CameraShake;
     public NetworkObject NetworkObject;
+    public DissolvingController DissolvingController;
 
     [Button]
     public void Setup()
@@ -55,5 +56,6 @@ public class CharComponentManager : MonoBehaviour
         UIWeapon = GetComponentInChildren<UIWeapon>(true);
         CameraShake = GetComponentInChildren<CameraShake>(true);
         NetworkObject = GetComponent<NetworkObject>();
+        DissolvingController = GetComponentInChildren<DissolvingController>(true);
     }
 }
