@@ -50,6 +50,7 @@
         _DetailMapImpact("[]Detail Impact", Range(0, 1)) = 0.0
 
         _BumpMap ("Normal Map", 2D) = "bump" {}
+        _BumpScale ("Normal Strength", Range(0.0, 4.0)) = 1.0
 
         [Space(15)]
         [HideInInspector][HDR]_EmissionColor("Emission Color", Color) = (0,0,0)
@@ -189,7 +190,7 @@
             #pragma multi_compile _ DOTS_INSTANCING_ON	// Uncomment to enable DOTs instancing
             #endif
 
-            #define BUMP_SCALE_NOT_SUPPORTED 1
+            //#define BUMP_SCALE_NOT_SUPPORTED 1
             #define REQUIRES_WORLD_SPACE_TANGENT_INTERPOLATOR 1
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -394,7 +395,7 @@
             #pragma vertex LitPassVertexSimple
             #pragma fragment LitPassFragmentSimple
 
-            #define BUMP_SCALE_NOT_SUPPORTED 1
+            //#define BUMP_SCALE_NOT_SUPPORTED 1
 
             #include "LibraryUrp/StylizedInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/SimpleLitGBufferPass.hlsl"

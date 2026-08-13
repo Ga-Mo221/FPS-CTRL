@@ -1,4 +1,5 @@
 using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -121,6 +122,7 @@ public class GunRecoilController : MonoBehaviour
     //  PUBLIC API
     // ─────────────────────────────────────────────
     
+    [Button]
     public bool OnFire(float delay)
     {
         _time = Time.time;

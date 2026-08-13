@@ -177,7 +177,7 @@ public class SpineLayerBuilder : LayerBuilder
     {
         AddBoolTrans(adsState, nullS,   "IsDead",     true,  0.25f);
         AddBoolTrans(adsState, nullS,   "ADS",        false, 0.25f);
-        AddBoolTrans(adsState, nullS,   "IsGrouded",  false, 0.25f);
+        //AddBoolTrans(adsState, nullS,   "IsGrouded",  false, 0.25f);
         AddBoolTrans(adsState, nullS,   "IsSliding",  true,  0.25f);
         AddMoveOutTrans(adsState, nullS, 0.3f);
 

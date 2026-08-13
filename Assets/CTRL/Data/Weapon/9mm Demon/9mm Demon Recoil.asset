@@ -13,9 +13,8 @@ MonoBehaviour:
   m_Name: 9mm Demon Recoil
   m_EditorClassIdentifier: Assembly-CSharp::GunRecoilData
   allowedModes: 1
-  FireDelay: 0.134
   BurstCount: 3
-  pitch: {x: -5, y: -4}
+  pitch: {x: -20, y: -20}
   roll: {x: -4, y: -3, z: 3, w: 4}
   yaw: {x: -2, y: -1, z: 1, w: 2}
   kickback: {x: -0.03, y: -0.022}
@@ -27,6 +26,7 @@ MonoBehaviour:
   smoothLoc: {x: 1.1, y: 25, z: 55}
   extraRot: {x: 1.3, y: 3, z: 7}
   extraLoc: {x: 1, y: 1, z: 1.3}
+  clampMultiplier: 5
   noiseX: {x: -0.01, y: 0.01}
   noiseY: {x: -0.01, y: 0.01}
   noiseAccel: {x: 8, y: 12}
@@ -34,8 +34,8 @@ MonoBehaviour:
   noiseScalar: 1
   idleNoiseDecayTime: 0.5
   pushAmount: -0.05
-  pushAccel: 7
-  pushDamp: 7
+  pushAccel: 20
+  pushDamp: 20
   smoothRollEnabled: 1
   playRate: 3
   camRecoilX: -6
@@ -350,20 +350,29 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0
       value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
+      inSlope: 0.097152494
+      outSlope: 0.097152494
+      tangentMode: 34
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.65
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
+      time: 0.46384084
+      value: 0.045063294
+      inSlope: 0.005682919
+      outSlope: 0.005682919
+      tangentMode: 34
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.98913574
+      value: 0
+      inSlope: -0.085786656
+      outSlope: -0.085786656
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2

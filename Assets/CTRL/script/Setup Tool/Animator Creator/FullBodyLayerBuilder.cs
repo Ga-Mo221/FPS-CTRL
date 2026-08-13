@@ -209,7 +209,7 @@ public class FullBodyLayerBuilder : LayerBuilder
         {
             var t = sliding.AddTransition(slideOut);
             SetTrans(t, 0.25f, false);
-            t.AddCondition(AnimatorConditionMode.If, 0, "IsSliding");
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsSliding");
             t.AddCondition(AnimatorConditionMode.If, 0, "IsCrouching");
         }
         {
@@ -246,7 +246,7 @@ public class FullBodyLayerBuilder : LayerBuilder
         //AddBoolTrans(sliding,   slideOut,    "IsSliding",  false, 0.25f);
         //AddTriggerTrans(sliding, jumpUp,     "IsJumping",  0.25f);
         AddBoolTrans(sliding,   jumpAir,     "IsGrouded",  false, 0.25f);
-        AddExitTrans(slideOut,  crouchState, 0f, 0.333f);
+        AddExitTrans(slideOut,  crouchState, 0f, 0.25f);
     }
 
     // ─────────────────────────────────────────────────────────
