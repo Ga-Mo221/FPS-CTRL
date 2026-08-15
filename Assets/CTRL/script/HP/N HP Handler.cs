@@ -31,6 +31,7 @@ public class NHPHandler : NetworkBehaviour
     private HitboxRoot _hitboxRoot;
     private NInGameMessagesHandler _inGameMessagesHandler;
     private NPlayer _nPlayer;
+    private DissolvingController _dissolvingController;
 
     private float _lastDamageTime = float.MinValue;
     private float _nextRegenTime;
@@ -44,6 +45,7 @@ public class NHPHandler : NetworkBehaviour
         _hitboxRoot = _componentManager.HitboxRoot;
         _inGameMessagesHandler = _componentManager.NInGameMessagesHandler;
         _nPlayer = _componentManager.NPlayer;
+        _dissolvingController = _componentManager.DissolvingController;
     }
 
     private void Start()
@@ -151,6 +153,8 @@ public class NHPHandler : NetworkBehaviour
         _hitboxRoot.HitboxRootActive = !IsDead;
         if (IsDead)
             DeadCount++;
+        else    
+            _dissolvingController.ResetMaterials();
     }
 
     void OnDeadCountChanged()
