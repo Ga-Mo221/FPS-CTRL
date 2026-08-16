@@ -152,9 +152,17 @@ public class NHPHandler : NetworkBehaviour
         _uiHPPlayer.SetDead(IsDead);
         _hitboxRoot.HitboxRootActive = !IsDead;
         if (IsDead)
+        {
+            if (!_nPlayer.IsLocalPlayer)
+                _componentManager.UIPlayerNickName.gameObject.SetActive(false);
             DeadCount++;
-        else    
+        }
+        else
+        {
             _dissolvingController.ResetMaterials();
+            if (!_nPlayer.IsLocalPlayer)
+                _componentManager.UIPlayerNickName.gameObject.SetActive(true);
+        }
     }
 
     void OnDeadCountChanged()

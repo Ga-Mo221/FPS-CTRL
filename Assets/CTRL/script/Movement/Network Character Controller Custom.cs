@@ -252,7 +252,6 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 
         if (direction == default) {
             horizontalVel = Vector3.Lerp(horizontalVel, default, _data.Braking * deltaTime);
-            // Snap về 0 nếu magnitude quá nhỏ để tránh float precision drift
             if (horizontalVel.sqrMagnitude < 0.0001f)
                 horizontalVel = Vector3.zero;
         } else {
@@ -264,8 +263,18 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 
         _controller.Move(moveVelocity * deltaTime);
 
-        //Data.Velocity = (transform.position - previousPos) * Runner.TickRate;
-        Data.Velocity = moveVelocity;
+        // --- SỬA Ở ĐÂY ---
+        // Lấy displacement thực tế sau khi CharacterController xử lý va chạm/slide
+        Vector3 actualDisplacement = transform.position - previousPos;
+
+        // XZ: dùng displacement thực để phản ánh việc bị chặn/trượt tường
+        // Y:  dùng moveVelocity.y vì displacement Y bị ảnh hưởng bởi step/slope,
+        //     không phản ánh đúng vận tốc dọc cần giữ (trọng lực tích lũy)
+        Data.Velocity = new Vector3(
+            actualDisplacement.x / deltaTime,
+            moveVelocity.y,
+            actualDisplacement.z / deltaTime
+        );
     }
     
     // Gizmo

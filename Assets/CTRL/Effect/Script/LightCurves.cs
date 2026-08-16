@@ -17,7 +17,7 @@ public class LightCurves : MonoBehaviour
         lightSource.intensity = LightCurve.Evaluate(0);
     }
 
-    private void OnEnable()
+    public void Play()
     {
         startTime = Time.time;
         canUpdate = true;

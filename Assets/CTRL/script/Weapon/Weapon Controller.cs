@@ -39,8 +39,8 @@ public class WeaponController : NetworkBehaviour
     
     [BoxGroup("Weapon Controller/Weapon Data/Bullet")]
     [SerializeField] private GameObject _bullet_Prefab;
-    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row", width: 0.6f)]
-    [SerializeField] private GameObject _shoot_Effect;
+    [BoxGroup("Weapon Controller/Weapon Data/Bullet")]
+    [SerializeField] private ShootEffectController _shoot_Effect;
     
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private AudioSource _sound;
@@ -86,10 +86,6 @@ public class WeaponController : NetworkBehaviour
     // =========================== NAME ==============================
     
 #if UNITY_EDITOR
-    [HorizontalGroup("Weapon Controller/Weapon Data/Bullet/row")]
-    [HideLabel]
-    [SerializeField] private string _bullet_effect_name = "Shoot Effect";
-    
     [HorizontalGroup("Weapon Controller/Transform/Grenade List/grenade")]
     [HideLabel]
     [SerializeField] private string _grenade_Flash_Name = "RAW_Flash";
@@ -272,8 +268,7 @@ public class WeaponController : NetworkBehaviour
                 if (_bulletController != null)
                     _bulletController.Drop();
                     // reset effect
-                    _shoot_Effect.SetActive(false);
-                    _shoot_Effect.SetActive(true);
+                    _shoot_Effect.Play();
                 break;
             case WeaponType.Melee:
                 break;
@@ -530,6 +525,9 @@ public class WeaponController : NetworkBehaviour
         
         _bulletController = GetComponentInChildren<BulletCaseController>(true);
         if (_bulletController == null) Debug.LogError("BulletCaseController not found!");
+
+        _shoot_Effect = GetComponentInChildren<ShootEffectController>(true);
+        if (_shoot_Effect == null) Debug.LogError("ShootEffectController not found!");
         
         List<Transform> list_bone_hand = new List<Transform>();
         List<Transform> list_bone_grenade = new List<Transform>();
@@ -610,9 +608,6 @@ public class WeaponController : NetworkBehaviour
                 _ads_Shoot_Point = trans;
                 continue;
             }
-
-            if (trans.name.Equals(_bullet_effect_name))
-                _shoot_Effect = trans.gameObject;
         }
 
         _list_Bone_Body = new Transform[0];

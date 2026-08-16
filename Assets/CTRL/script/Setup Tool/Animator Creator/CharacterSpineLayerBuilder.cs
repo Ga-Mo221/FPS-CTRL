@@ -2,16 +2,18 @@
 //  CharacterSpineLayerBuilder.cs  —  Spine layer: Character mode
 //
 //  Khác với SpineLayerBuilder (weapon mode) ở chỗ:
-//    • RELOAD    → SSM "RELOAD"    — tạo RỖNG (không state, không transition)
+//    • RELOAD     → SSM "RELOAD"     — tạo RỖNG (không state, không transition)
 //    • SWITCH OUT → SSM "SWITCH OUT" — tạo RỖNG
 //    • SWITCH IN  → SSM "SWITCH IN"  — tạo RỖNG
+//    • ADS        → SSM "ADS"        — tạo RỖNG (sub-SSM inject bởi WeaponClipsTab)
 //
-//  State và transition bên trong 3 SSM trên được inject sau bởi
+//  State và transition bên trong 4 SSM trên được inject sau bởi
 //  WeaponClipsTab khi người dùng nhấn "Add Weapon Entry":
 //    RELOAD   W{n} : Entry(WeaponIndex==n) ; Exit(0.905,0.2)→NULL ;
 //                    IsDead/IsGrouded-false/IsSliding→NULL
 //    SWITCH OUT W{n} : Entry(WeaponIndex==n) ; Exit(1,0)→NULL ; IsDead→NULL
 //    SWITCH IN  W{n} : speed=-1 ; Entry(WeaponIndex==n) ; Exit(0.75,0.25)→NULL
+//    ADS → sub-SSM "ADS W{n}" : state "ADS" + "CROUCH ADS" với đầy đủ transition
 //
 //  Transition logic ở root:
 //    IsDead → SSM SWITCH IN  : IsDead==false  (hồi sinh)
@@ -51,11 +53,11 @@ public class CharacterSpineLayerBuilder : LayerBuilder
         root.AddStateMachine("SWITCH OUT", new Vector3(990,   30));
         root.AddStateMachine("SWITCH IN",  new Vector3(990,  -80));
 
-        // ── SSM: ADS ──────────────────────────────────────────
-        var adsSM    = root.AddStateMachine("ADS",     new Vector3(940, 220));
-        var adsState = AddStateAndAssignClip(adsSM, "ADS",        new Vector3(390,  30));
-        var crAds    = AddStateAndAssignClip(adsSM, "CROUCH ADS", new Vector3(390, 170));
-        adsSM.defaultState = adsState;
+        // ── SSM: ADS — tạo RỖNG ───────────────────────────────
+        // State và transition bên trong được inject sau bởi WeaponClipsTab
+        // khi người dùng nhấn "Add Weapon Entry":
+        //   ADS W{n}  : sub-SSM với state "ADS" và "CROUCH ADS" + đầy đủ transition
+        root.AddStateMachine("ADS", new Vector3(940, 220));
 
         // ── SSM: GRENADE ──────────────────────────────────────
         var gSM        = root.AddStateMachine("GRENADE", new Vector3(990, 310));
@@ -78,6 +80,7 @@ public class CharacterSpineLayerBuilder : LayerBuilder
         root.defaultState = isDead;
         
         // ── IsDead → NULL : IsDead==false && IsSwitching==false ──────
+        // (transition IsDead → ADS W{n} được inject bởi WeaponClipsTab)
         {
             var t = isDead.AddTransition(nullS);
             SetTrans(t, 0f, false);
@@ -88,48 +91,20 @@ public class CharacterSpineLayerBuilder : LayerBuilder
         // ── NULL → IsDead ─────────────────────────────────────
         AddBoolTrans(nullS, isDead, "IsDead", true, 0f);
 
-        // ── NULL → ADS / GRENADE ──────────────────────────────
-        // Transition vào SSM RELOAD / SWITCH OUT / SWITCH IN
-        // được inject sau bởi WeaponClipsTab, không tạo ở đây.
-        BuildNullTransitions(nullS, adsState, crAds, fragGet, flashGet);
-
-        // ── ADS ↔ CROUCH ADS ──────────────────────────────────
-        BuildAdsTransitions(adsState, nullS, crAds, fragGet, flashGet);
-        BuildCrouchAdsTransitions(crAds, nullS, adsState, fragGet, flashGet);
+        // ── NULL → GRENADE ────────────────────────────────────
+        // Transition vào SSM RELOAD / SWITCH OUT / SWITCH IN / ADS
+        // đều được inject sau bởi WeaponClipsTab, không tạo ở đây.
+        BuildNullToGrenadeTransitions(nullS, fragGet, flashGet);
     }
 
     // =========================================================
-    // NULL TRANSITIONS
+    // NULL → GRENADE TRANSITIONS
+    // (NULL → ADS W{n} được inject sau bởi WeaponClipsTab)
     // =========================================================
-    private void BuildNullTransitions(
+    private void BuildNullToGrenadeTransitions(
         AnimatorState nullS,
-        AnimatorState adsState, AnimatorState crAds,
         AnimatorState fragGet, AnimatorState flashGet)
     {
-        // → ADS (standing, idle)
-        {
-            var t = nullS.AddTransition(adsState);
-            SetTrans(t, 0.25f, false);
-            t.AddCondition(AnimatorConditionMode.If,      0,     "ADS");
-            t.AddCondition(AnimatorConditionMode.IfNot,   0,     "IsCrouching");
-            t.AddCondition(AnimatorConditionMode.IfNot,   0,     "IsSliding");
-            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveX");
-            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveX");
-            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveY");
-            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveY");
-        }
-        // → CROUCH ADS
-        {
-            var t = nullS.AddTransition(crAds);
-            SetTrans(t, 0.25f, false);
-            t.AddCondition(AnimatorConditionMode.If,      0,     "ADS");
-            t.AddCondition(AnimatorConditionMode.If,      0,     "IsCrouching");
-            t.AddCondition(AnimatorConditionMode.IfNot,   0,     "IsSliding");
-            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveX");
-            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveX");
-            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveY");
-            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveY");
-        }
         // → FRAG GET
         {
             var t = nullS.AddTransition(fragGet);
@@ -152,42 +127,6 @@ public class CharacterSpineLayerBuilder : LayerBuilder
             t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveY");
             t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveY");
         }
-    }
-
-    // =========================================================
-    // ADS TRANSITIONS
-    // =========================================================
-    private void BuildAdsTransitions(
-        AnimatorState adsState, AnimatorState nullS, AnimatorState crAds,
-        AnimatorState fragGet, AnimatorState flashGet)
-    {
-        AddBoolTrans(adsState, nullS,   "IsDead",    true,  0.25f);
-        AddBoolTrans(adsState, nullS,   "ADS",       false, 0.25f);
-        //AddBoolTrans(adsState, nullS,   "IsGrouded", false, 0.25f);
-        AddBoolTrans(adsState, nullS,   "IsSliding", true,  0.25f);
-        AddMoveOutTrans(adsState, nullS, 0.3f);
-        {
-            var t = adsState.AddTransition(crAds);
-            SetTrans(t, 0.25f, false);
-            t.AddCondition(AnimatorConditionMode.If, 0, "IsCrouching");
-        }
-        AddGrenadeTrans(adsState, fragGet, flashGet);
-    }
-
-    // =========================================================
-    // CROUCH ADS TRANSITIONS
-    // =========================================================
-    private void BuildCrouchAdsTransitions(
-        AnimatorState crAds, AnimatorState nullS, AnimatorState adsState,
-        AnimatorState fragGet, AnimatorState flashGet)
-    {
-        AddBoolTrans(crAds, nullS,    "IsDead",      true,  0.25f);
-        AddBoolTrans(crAds, adsState, "IsCrouching", false, 0.25f);
-        AddBoolTrans(crAds, nullS,    "ADS",         false, 0.25f);
-        AddBoolTrans(crAds, nullS,    "IsGrouded",   false, 0.25f);
-        AddBoolTrans(crAds, nullS,    "IsSliding",   true,  0.25f);
-        AddMoveOutTrans(crAds, nullS, 0.3f);
-        AddGrenadeTrans(crAds, fragGet, flashGet);
     }
 
     // =========================================================

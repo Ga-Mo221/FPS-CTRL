@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a6b5966644e5fd4cbfd7ced8e05b181, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkGameState
-  _startCountdownDuration: 10
+  _startCountdownDuration: 3
   _totalRounds: 1
   _roundDurationMinutes: 10
   _RoundElapsed: 0
@@ -55,6 +55,7 @@ MonoBehaviour:
   _RoundEnded:
     _value: 0
   _CurrentRound: 0
+  _statUpdateInterval: 0.5
 --- !u!114 &3260813411780172463
 MonoBehaviour:
   m_ObjectHideFlags: 0

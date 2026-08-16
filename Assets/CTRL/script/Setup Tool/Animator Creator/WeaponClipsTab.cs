@@ -4,10 +4,12 @@
 //  Kéo file .controller vào field "Target Controller".
 //  Nhấn "Add Weapon Entry" để:
 //    1. Tạo state trong SSM RELOAD / SWITCH OUT / SWITCH IN
-//    2. Nối đầy đủ transition vào/ra mỗi state (giống SpineLayerBuilder)
-//    3. Nối transition từ root (IsDead, NULL, ADS, CROUCH ADS) THẲNG
-//       vào state W{n} vừa tạo bên trong SSM (không nối vào SSM, không
-//       dùng Entry transition của SSM) — làm cho MỖI entry được add
+//    2. Tạo sub-SSM "ADS W{n}" bên trong SSM "ADS" với state "ADS" và
+//       "CROUCH ADS" + đầy đủ transition (inject theo từng weapon)
+//    3. Nối đầy đủ transition vào/ra mỗi state (giống SpineLayerBuilder)
+//    4. Nối transition từ root (IsDead, NULL) THẲNG vào state W{n} vừa
+//       tạo bên trong SSM (không nối vào SSM, không dùng Entry transition
+//       của SSM) — làm cho MỖI entry được add
 //
 //  Transition đầy đủ theo SpineLayerBuilder:
 //
@@ -52,10 +54,17 @@ using UnityEngine;
 [Serializable]
 public class WeaponEntry
 {
-    public int            weaponIndex = 0;
+    public int            weaponIndex  = 0;
+    public string         weaponName   = "";   // tên tùy chỉnh — dùng đặt tên state/SSM
     public AnimationClip  clipReload;
     public AnimationClip  clipSwitch;
-    public string         label => $"Weapon {weaponIndex}";
+    public AnimationClip  clipAds;
+    public AnimationClip  clipCrouchAds;
+
+    // Tên hiển thị trong UI; fallback về "W{index}" nếu chưa đặt tên
+    public string label       => string.IsNullOrWhiteSpace(weaponName) ? $"W{weaponIndex}" : weaponName;
+    // Tên dùng để đặt state/SSM trong animator
+    public string stateSuffix => label;
 }
 
 [Serializable]
@@ -68,9 +77,12 @@ public class WeaponClipsTab
     private AnimatorController targetController;
 
     // ── Pending entry ──────────────────────────────────────────
-    private int           pendingIndex  = 0;
+    private int           pendingIndex     = 0;
+    private string        pendingName      = "";
     private AnimationClip pendingReload;
     private AnimationClip pendingSwitch;
+    private AnimationClip pendingAds;
+    private AnimationClip pendingCrouchAds;
 
     private Vector2 scroll;
 
@@ -104,11 +116,13 @@ public class WeaponClipsTab
                 EditorGUILayout.HelpBox("Không tìm thấy layer 'Spine' trong controller này.", MessageType.Error);
             else
             {
-                bool hasReload = FindSSM(spineLayer.stateMachine, "RELOAD")    != null;
-                bool hasOut    = FindSSM(spineLayer.stateMachine, "SWITCH OUT") != null;
-                bool hasIn     = FindSSM(spineLayer.stateMachine, "SWITCH IN")  != null;
-                string status  = $"Spine layer:  RELOAD={Tick(hasReload)}  SWITCH OUT={Tick(hasOut)}  SWITCH IN={Tick(hasIn)}";
-                EditorGUILayout.HelpBox(status, hasReload && hasOut && hasIn ? MessageType.None : MessageType.Warning);
+                bool hasReload = FindSSM(spineLayer.stateMachine, "RELOAD")     != null;
+                bool hasOut    = FindSSM(spineLayer.stateMachine, "SWITCH OUT")  != null;
+                bool hasIn     = FindSSM(spineLayer.stateMachine, "SWITCH IN")   != null;
+                bool hasAds    = FindSSM(spineLayer.stateMachine, "ADS")         != null;
+                string status  = $"Spine layer:  RELOAD={Tick(hasReload)}  SWITCH OUT={Tick(hasOut)}  SWITCH IN={Tick(hasIn)}  ADS={Tick(hasAds)}";
+                bool allOk     = hasReload && hasOut && hasIn && hasAds;
+                EditorGUILayout.HelpBox(status, allOk ? MessageType.None : MessageType.Warning);
             }
         }
 
@@ -118,25 +132,33 @@ public class WeaponClipsTab
         EditorGUILayout.LabelField("Thêm Weapon Entry", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
         {
-            pendingIndex  = EditorGUILayout.IntField("Weapon Index", pendingIndex);
-            pendingReload = (AnimationClip)EditorGUILayout.ObjectField(
-                "Clip Reload", pendingReload, typeof(AnimationClip), false);
-            pendingSwitch = (AnimationClip)EditorGUILayout.ObjectField(
-                "Clip Switch", pendingSwitch, typeof(AnimationClip), false);
+            pendingIndex     = EditorGUILayout.IntField("Weapon Index", pendingIndex);
+            pendingName      = EditorGUILayout.TextField("Weapon Name",  pendingName);
+            pendingReload    = (AnimationClip)EditorGUILayout.ObjectField(
+                "Clip Reload",      pendingReload,    typeof(AnimationClip), false);
+            pendingSwitch    = (AnimationClip)EditorGUILayout.ObjectField(
+                "Clip Switch",      pendingSwitch,    typeof(AnimationClip), false);
+            pendingAds       = (AnimationClip)EditorGUILayout.ObjectField(
+                "Clip ADS",         pendingAds,       typeof(AnimationClip), false);
+            pendingCrouchAds = (AnimationClip)EditorGUILayout.ObjectField(
+                "Clip Crouch ADS",  pendingCrouchAds, typeof(AnimationClip), false);
 
             EditorGUILayout.Space(4);
-            bool canAdd = pendingReload != null || pendingSwitch != null;
+            bool canAdd = pendingReload != null || pendingSwitch != null || pendingAds != null || pendingCrouchAds != null;
             GUI.enabled = canAdd;
             if (GUILayout.Button("Add Weapon Entry", GUILayout.Height(28)))
             {
-                var entry = UpsertEntry(pendingIndex, pendingReload, pendingSwitch);
+                var entry = UpsertEntry(pendingIndex, pendingName, pendingReload, pendingSwitch, pendingAds, pendingCrouchAds);
 
                 if (targetController != null)
                     InjectEntryIntoController(targetController, entry);
 
-                pendingIndex  = 0;
-                pendingReload = null;
-                pendingSwitch = null;
+                pendingIndex     = 0;
+                pendingName      = "";
+                pendingReload    = null;
+                pendingSwitch    = null;
+                pendingAds       = null;
+                pendingCrouchAds = null;
                 GUI.FocusControl(null);
             }
             GUI.enabled = true;
@@ -161,21 +183,28 @@ public class WeaponClipsTab
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             {
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"Weapon {e.weaponIndex}", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(e.label, EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("✕", GUILayout.Width(22), GUILayout.Height(18)))
                     removeIdx = i;
                 EditorGUILayout.EndHorizontal();
 
-                e.weaponIndex = EditorGUILayout.IntField("  Weapon Index", e.weaponIndex);
-                e.clipReload  = (AnimationClip)EditorGUILayout.ObjectField(
-                    "  Clip Reload", e.clipReload, typeof(AnimationClip), false);
-                e.clipSwitch  = (AnimationClip)EditorGUILayout.ObjectField(
-                    "  Clip Switch", e.clipSwitch, typeof(AnimationClip), false);
+                e.weaponIndex   = EditorGUILayout.IntField("  Weapon Index", e.weaponIndex);
+                e.weaponName    = EditorGUILayout.TextField( "  Weapon Name",  e.weaponName);
+                e.clipReload    = (AnimationClip)EditorGUILayout.ObjectField(
+                    "  Clip Reload",     e.clipReload,    typeof(AnimationClip), false);
+                e.clipSwitch    = (AnimationClip)EditorGUILayout.ObjectField(
+                    "  Clip Switch",     e.clipSwitch,    typeof(AnimationClip), false);
+                e.clipAds       = (AnimationClip)EditorGUILayout.ObjectField(
+                    "  Clip ADS",        e.clipAds,       typeof(AnimationClip), false);
+                e.clipCrouchAds = (AnimationClip)EditorGUILayout.ObjectField(
+                    "  Clip Crouch ADS", e.clipCrouchAds, typeof(AnimationClip), false);
 
                 EditorGUILayout.BeginHorizontal();
-                DrawBadge("Reload", e.clipReload != null);
-                DrawBadge("Switch", e.clipSwitch != null);
+                DrawBadge("Reload",      e.clipReload    != null);
+                DrawBadge("Switch",      e.clipSwitch    != null);
+                DrawBadge("ADS",         e.clipAds       != null);
+                DrawBadge("Crouch ADS",  e.clipCrouchAds != null);
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndVertical();
@@ -189,16 +218,27 @@ public class WeaponClipsTab
     // ─────────────────────────────────────────────────────────
     // UPSERT ENTRY
     // ─────────────────────────────────────────────────────────
-    private WeaponEntry UpsertEntry(int index, AnimationClip reload, AnimationClip sw)
+    private WeaponEntry UpsertEntry(int index, string name, AnimationClip reload, AnimationClip sw, AnimationClip ads, AnimationClip crouchAds)
     {
         var existing = entries.Find(e => e.weaponIndex == index);
         if (existing != null)
         {
-            if (reload != null) existing.clipReload = reload;
-            if (sw     != null) existing.clipSwitch = sw;
+            if (!string.IsNullOrWhiteSpace(name)) existing.weaponName   = name.Trim();
+            if (reload    != null)                existing.clipReload    = reload;
+            if (sw        != null)                existing.clipSwitch    = sw;
+            if (ads       != null)                existing.clipAds       = ads;
+            if (crouchAds != null)                existing.clipCrouchAds = crouchAds;
             return existing;
         }
-        var entry = new WeaponEntry { weaponIndex = index, clipReload = reload, clipSwitch = sw };
+        var entry = new WeaponEntry
+        {
+            weaponIndex   = index,
+            weaponName    = name?.Trim() ?? "",
+            clipReload    = reload,
+            clipSwitch    = sw,
+            clipAds       = ads,
+            clipCrouchAds = crouchAds,
+        };
         entries.Add(entry);
         entries.Sort((a, b) => a.weaponIndex.CompareTo(b.weaponIndex));
         return entry;
@@ -209,7 +249,7 @@ public class WeaponClipsTab
     // ─────────────────────────────────────────────────────────
     private static void InjectEntryIntoController(AnimatorController ac, WeaponEntry entry)
     {
-        Undo.RecordObject(ac, $"Add Weapon Entry W{entry.weaponIndex}");
+        Undo.RecordObject(ac, $"Add Weapon Entry {entry.stateSuffix}");
 
         var spineLayer = FindSpineLayer(ac);
         if (spineLayer == null)
@@ -226,11 +266,7 @@ public class WeaponClipsTab
         var reloadSM    = FindSSM(root, "RELOAD");
         var switchOutSM = FindSSM(root, "SWITCH OUT");
         var switchInSM  = FindSSM(root, "SWITCH IN");
-
-        // ADS và CROUCH ADS nằm trong SSM "ADS"
-        var adsSM    = FindSSM(root, "ADS");
-        var adsState = adsSM != null ? FindStateInSSM(adsSM, "ADS")        : null;
-        var crAds    = adsSM != null ? FindStateInSSM(adsSM, "CROUCH ADS") : null;
+        var adsSM       = FindSSM(root, "ADS");
 
         // FRAG GET / FLASH GET nằm trong SSM "GRENADE"
         var grenadeSM = FindSSM(root, "GRENADE");
@@ -246,6 +282,12 @@ public class WeaponClipsTab
         // ── Tạo state + transition bên trong mỗi SSM ──────────
         // Mỗi hàm trả về state VỪA TẠO (null nếu state đã tồn tại từ trước,
         // tức entry này đang được edit lại, không tạo mới).
+
+        // ADS W{n}: inject sub-SSM vào SSM "ADS", lấy ra 2 state để dùng tiếp
+        AnimatorState adsState = null, crAds = null;
+        if (adsSM != null)
+            InjectAds(adsSM, nullS, fragGet, flashGet, entry, out adsState, out crAds);
+
         AnimatorState reloadState    = reloadSM    != null ? InjectReload   (reloadSM,    nullS, switchOutSM, adsState, crAds, fragGet, flashGet, entry) : null;
         AnimatorState switchOutState = switchOutSM != null ? InjectSwitchOut(switchOutSM, isDead, entry) : null;
         AnimatorState switchInState  = switchInSM  != null ? InjectSwitchIn (switchInSM,  nullS, entry) : null;
@@ -257,7 +299,90 @@ public class WeaponClipsTab
 
         EditorUtility.SetDirty(ac);
         AssetDatabase.SaveAssets();
-        Debug.Log($"[WeaponClipsTab] Injected W{entry.weaponIndex} vào controller '{ac.name}'.");
+        Debug.Log($"[WeaponClipsTab] Injected {entry.stateSuffix} vào controller '{ac.name}'.");
+    }
+
+    // =========================================================
+    // INJECT ADS W{n}
+    //
+    // Tạo sub-SSM "ADS W{n}" bên trong SSM "ADS" với 2 state và transition
+    // giống CharacterSpineLayerBuilder (trước khi refactor):
+    //
+    //   state "ADS"        : clipAds
+    //   state "CROUCH ADS" : clipCrouchAds
+    //
+    //   ADS → NULL         : IsDead / ADS==false / IsSliding / MoveOut±0.3 / Grenade
+    //   ADS → CROUCH ADS   : IsCrouching
+    //   CROUCH ADS → NULL  : IsDead / IsCrouching==false / ADS==false / IsGrouded==false / IsSliding / MoveOut±0.3 / Grenade
+    //   CROUCH ADS → ADS   : IsCrouching==false  (already covered above)
+    //
+    //   Entry → sub-SSM (root transitions) được inject bởi InjectEntryRootTransitions.
+    //   Exit từ mỗi state → NULL được tạo ở đây.
+    // =========================================================
+    private static void InjectAds(
+        AnimatorStateMachine adsSM,
+        AnimatorState nullS,
+        AnimatorState fragGet,
+        AnimatorState flashGet,
+        WeaponEntry entry,
+        out AnimatorState adsState,
+        out AnimatorState crAds)
+    {
+        string subName = $"ADS {entry.stateSuffix}";
+
+        // Kiểm tra sub-SSM đã tồn tại chưa
+        AnimatorStateMachine subSM = null;
+        foreach (var cs in adsSM.stateMachines)
+        {
+            if (cs.stateMachine.name == subName)
+            {
+                subSM = cs.stateMachine;
+                break;
+            }
+        }
+
+        if (subSM != null)
+        {
+            // Đã tồn tại — trả null để InjectEntryRootTransitions bỏ qua,
+            // tránh add transition trùng lặp (giống InjectReload/SwitchOut/SwitchIn)
+            adsState = null;
+            crAds    = null;
+            return;
+        }
+
+        // Tính vị trí theo số sub-SSM hiện có
+        int count = adsSM.stateMachines.Length;
+        subSM = adsSM.AddStateMachine(subName, new Vector3(390, count * 110f));
+
+        // ── 2 state ─────────────────────────────────────────────
+        adsState = subSM.AddState("ADS",        new Vector3(390,  30));
+        crAds    = subSM.AddState("CROUCH ADS", new Vector3(390, 170));
+        adsState.writeDefaultValues = false;
+        crAds.writeDefaultValues    = false;
+        if (entry.clipAds       != null) adsState.motion = entry.clipAds;
+        if (entry.clipCrouchAds != null) crAds.motion    = entry.clipCrouchAds;
+        subSM.defaultState = adsState;
+
+        // ── ADS → ───────────────────────────────────────────────
+        AddBoolTrans(adsState, nullS, "IsDead",    true,  0.25f);
+        AddBoolTrans(adsState, nullS, "ADS",       false, 0.25f);
+        AddBoolTrans(adsState, nullS, "IsSliding", true,  0.25f);
+        AddMoveOutTrans(adsState, nullS, 0.3f);
+        {   // → CROUCH ADS
+            var t = adsState.AddTransition(crAds);
+            SetTrans(t, 0.25f, false);
+            t.AddCondition(AnimatorConditionMode.If, 0, "IsCrouching");
+        }
+        AddGrenadeTrans(adsState, fragGet, flashGet);
+
+        // ── CROUCH ADS → ────────────────────────────────────────
+        AddBoolTrans(crAds, nullS,    "IsDead",      true,  0.25f);
+        AddBoolTrans(crAds, adsState, "IsCrouching", false, 0.25f);
+        AddBoolTrans(crAds, nullS,    "ADS",         false, 0.25f);
+        AddBoolTrans(crAds, nullS,    "IsGrouded",   false, 0.25f);
+        AddBoolTrans(crAds, nullS,    "IsSliding",   true,  0.25f);
+        AddMoveOutTrans(crAds, nullS, 0.3f);
+        AddGrenadeTrans(crAds, fragGet, flashGet);
     }
 
     // =========================================================
@@ -287,7 +412,7 @@ public class WeaponClipsTab
         AnimatorState flashGet,
         WeaponEntry entry)
     {
-        string stateName = $"RELOAD W{entry.weaponIndex}";
+        string stateName = $"RELOAD {entry.stateSuffix}";
         if (FindStateInSSM(sm, stateName) != null) return null; // đã có state này rồi -> root transition cũng đã nối, khỏi làm lại
 
         int count = sm.states.Length;
@@ -350,7 +475,7 @@ public class WeaponClipsTab
     // =========================================================
     private static AnimatorState InjectSwitchOut(AnimatorStateMachine sm, AnimatorState isDead, WeaponEntry entry)
     {
-        string stateName = $"SWITCH OUT W{entry.weaponIndex}";
+        string stateName = $"SWITCH OUT {entry.stateSuffix}";
         if (FindStateInSSM(sm, stateName) != null) return null;
 
         int count = sm.states.Length;
@@ -375,7 +500,7 @@ public class WeaponClipsTab
     // =========================================================
     private static AnimatorState InjectSwitchIn(AnimatorStateMachine sm, AnimatorState nullS, WeaponEntry entry)
     {
-        string stateName = $"SWITCH IN W{entry.weaponIndex}";
+        string stateName = $"SWITCH IN {entry.stateSuffix}";
         if (FindStateInSSM(sm, stateName) != null) return null;
 
         int count = sm.states.Length;
@@ -396,13 +521,15 @@ public class WeaponClipsTab
     // Không nối vào SSM. Nối trực tiếp vào state W{n} vừa tạo bên trong
     // SSM đó, kèm thêm điều kiện WeaponIndex==n để route đúng weapon.
     //
-    //   isDead  → SWITCH IN W{n}   : IsDead==false + WeaponIndex==n        (dur=0)
-    //   NULL    → RELOAD W{n}      : IsReloading + MoveX/Y±0.5 + WI==n     (dur=0)
-    //   NULL    → SWITCH OUT W{n}  : IsSwitching + WeaponIndex==n          (dur=0)
-    //   ADS     → RELOAD W{n}      : IsReloading + WeaponIndex==n          (dur=0.25)
-    //   ADS     → SWITCH OUT W{n}  : IsSwitching + WeaponIndex==n          (dur=0.25)
-    //   CRADS   → SWITCH OUT W{n}  : IsSwitching + WeaponIndex==n          (dur=0.25)
-    //   CRADS   → RELOAD W{n}      : IsReloading + WeaponIndex==n          (dur=0.25)
+    //   isDead  → SWITCH IN W{n}    : IsDead==false + WeaponIndex==n                    (dur=0)
+    //   NULL    → RELOAD W{n}       : IsReloading + MoveX/Y±0.5 + WI==n               (dur=0.25)
+    //   NULL    → SWITCH OUT W{n}   : IsSwitching + WeaponIndex==n                    (dur=0.25)
+    //   NULL    → ADS W{n}          : ADS+!Crouch+!Sliding+MoveX/Y±0.3 + WI==n       (dur=0.25)
+    //   NULL    → CROUCH ADS W{n}   : ADS+Crouch+!Sliding+MoveX/Y±0.3 + WI==n        (dur=0.25)
+    //   ADS     → RELOAD W{n}       : IsReloading + WeaponIndex==n                    (dur=0.25)
+    //   ADS     → SWITCH OUT W{n}   : IsSwitching + WeaponIndex==n                    (dur=0.25)
+    //   CRADS   → SWITCH OUT W{n}   : IsSwitching + WeaponIndex==n                    (dur=0.25)
+    //   CRADS   → RELOAD W{n}       : IsReloading + WeaponIndex==n                    (dur=0.25)
     //
     // reloadState/switchOutState/switchInState == null khi state đó vừa
     // bị bỏ qua vì đã tồn tại từ trước (entry được edit lại) -> khỏi nối
@@ -444,6 +571,36 @@ public class WeaponClipsTab
         // NULL → SWITCH OUT W{n} : IsSwitching + WeaponIndex==n
         if (switchOutState != null)
             AddBoolTransWithIndex(nullS, switchOutState, "IsSwitching", true, 0.25f, weaponIndex);
+
+        // NULL → ADS W{n}       : ADS + !IsCrouching + !IsSliding + MoveX/Y±0.3 + WeaponIndex==n
+        if (adsState != null)
+        {
+            var t = nullS.AddTransition(adsState);
+            SetTrans(t, 0.25f, false);
+            t.AddCondition(AnimatorConditionMode.If,      0,     "ADS");
+            t.AddCondition(AnimatorConditionMode.IfNot,   0,     "IsCrouching");
+            t.AddCondition(AnimatorConditionMode.IfNot,   0,     "IsSliding");
+            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveX");
+            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveX");
+            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveY");
+            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveY");
+            t.AddCondition(AnimatorConditionMode.Equals, weaponIndex, "WeaponIndex");
+        }
+
+        // NULL → CROUCH ADS W{n} : ADS + IsCrouching + !IsSliding + MoveX/Y±0.3 + WeaponIndex==n
+        if (crAds != null)
+        {
+            var t = nullS.AddTransition(crAds);
+            SetTrans(t, 0.25f, false);
+            t.AddCondition(AnimatorConditionMode.If,      0,     "ADS");
+            t.AddCondition(AnimatorConditionMode.If,      0,     "IsCrouching");
+            t.AddCondition(AnimatorConditionMode.IfNot,   0,     "IsSliding");
+            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveX");
+            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveX");
+            t.AddCondition(AnimatorConditionMode.Greater, -0.3f, "MoveY");
+            t.AddCondition(AnimatorConditionMode.Less,     0.3f, "MoveY");
+            t.AddCondition(AnimatorConditionMode.Equals, weaponIndex, "WeaponIndex");
+        }
 
         // ADS → RELOAD W{n} / SWITCH OUT W{n}
         if (adsState != null)
