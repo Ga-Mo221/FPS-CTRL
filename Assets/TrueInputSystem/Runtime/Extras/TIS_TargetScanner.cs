@@ -86,6 +86,8 @@ namespace TrueInputSystem
         /// <summary>Góc lệch (độ) giữa tâm màn hình và CurrentTarget. -1 nếu không có target.</summary>
         public float     CurrentAngle     { get; private set; } = -1f;
 
+        public float GetScanAngle() => _scanAngle;
+
         // ══════════════════════════════════════════════════════
         //  PRIVATE
         // ══════════════════════════════════════════════════════

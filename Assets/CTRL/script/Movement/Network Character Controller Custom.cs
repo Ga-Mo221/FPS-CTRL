@@ -27,6 +27,8 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     Tick                _initial;
     [SerializeField] private CharacterController _controller;
     [SerializeField] private Transform _groundCheckPoint;
+    
+    private float _currentAngularVelocity;
 
     /// <summary>
     /// Truy cập đến thành phần CharacterController gốc của Unity gắn trên Object này.
@@ -84,6 +86,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     {
         _movementHandler = GetComponent<NCharMovementHandler>();
         _initial = default;
+        _currentAngularVelocity = 0f;
         TryGetComponent(out _controller);
         _controller.enabled = false;
         _controller.enabled = true;
@@ -216,14 +219,25 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         return false;
     }
 
-    public void Rotate(float rotationY)
+    public void Rotate(float rotationY, float smoothing)
     {
-        var yamModel = _data.YawModel;
+        var yawModel = _data.YawModel;
         if (_movementHandler != null)
             if (_movementHandler.StateFl.IsADS || _movementHandler.StateFl.IsThrow)
-                yamModel *= _data.AdsLookSpeedMultiplier;
-        
-        transform.Rotate(0, rotationY * Runner.DeltaTime * yamModel, 0);
+                yawModel *= _data.AdsLookSpeedMultiplier;
+
+        float targetAngularVel = rotationY * yawModel;
+
+        _currentAngularVelocity = Mathf.Lerp(
+            _currentAngularVelocity,
+            targetAngularVel,
+            smoothing * Runner.DeltaTime
+        );
+
+        if (Mathf.Abs(_currentAngularVelocity) < 0.01f && Mathf.Approximately(rotationY, 0f))
+            _currentAngularVelocity = 0f;
+
+        transform.Rotate(0f, _currentAngularVelocity * Runner.DeltaTime, 0f);
     }
 
     /// <summary>

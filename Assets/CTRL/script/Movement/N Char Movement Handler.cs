@@ -133,7 +133,8 @@ public class NCharMovementHandler : NetworkBehaviour
 
             CCSetHeight();
             
-            _ncc.Rotate(inputdata.LookDelta.x);
+            // cần có setting riêng.
+            _ncc.Rotate(inputdata.LookDelta.x, 30f);
             
             Vector3 moveDirection = transform.forward * inputdata.MoveDirection.y + transform.right * inputdata.MoveDirection.x;
             moveDirection.Normalize();

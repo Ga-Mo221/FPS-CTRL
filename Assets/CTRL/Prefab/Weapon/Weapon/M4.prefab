@@ -227,6 +227,7 @@ MonoBehaviour:
   collisionMode: 1
   collisionPivot: {fileID: 0}
   animatedBone: {fileID: 4731044445802878706}
+  upperChest: {fileID: 7608732716604319700}
   weaponTipTransform: {fileID: 3916370583819310063}
   tipSphereRadius: 0.05
   tipLocalOffset: {x: 0, y: 0, z: 0.5}
@@ -237,13 +238,13 @@ MonoBehaviour:
   pushSpeed: 10
   returnSpeed: 20
   enableSliding: 1
-  slideMultiplier: {x: 0, y: 1, z: 1}
-  maxSlideDistance: 0.2
+  slideMultiplier: {x: 0, y: 4, z: 1}
+  maxSlideDistance: 0.47
   slideSpeed: 12
   slideReturnSpeed: 6
-  slideRaycastLength: 1
+  maxBoneDistanceFromChest: 0.27
   enableRotation: 1
-  maxRotationAngle: {x: 0, y: 50, z: -50}
+  maxRotationAngle: {x: -10, y: 50, z: -50}
   rotationSensitivity: 2
   rotateSpeed: 10
   rotateReturnSpeed: 6
@@ -253,6 +254,10 @@ MonoBehaviour:
   currentPushOffset: {x: 0, y: 0, z: 0}
   currentSlideOffset: {x: 0, y: 0, z: 0}
   currentRotationOffset: {x: 0, y: 0, z: 0}
+  debugChestRayEvaluated: 0
+  debugChestRayHit: 0
+  enableDebugLogs: 0
+  isEnabled: 1
 --- !u!1 &3351486452706217041
 GameObject:
   m_ObjectHideFlags: 0

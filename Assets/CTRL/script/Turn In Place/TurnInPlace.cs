@@ -1,9 +1,7 @@
-using System.Collections;
-using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class TurnInPlace : NetworkBehaviour
+public class TurnInPlace : MonoBehaviour
 {
     [TabGroup("Turn In Place", "Preference")]
     [SerializeField] private Transform _root;
@@ -36,7 +34,7 @@ public class TurnInPlace : NetworkBehaviour
     private NCharMovementHandler _movementHandler;
     private NHPHandler _hpHandler;
 
-    public override void Spawned()
+    private void Awake()
     {
         _componentManager = GetComponent<CharComponentManager>();
         _movementHandler = _componentManager.NCharMovementHandler;
@@ -44,7 +42,7 @@ public class TurnInPlace : NetworkBehaviour
         _late_root_Rot_Y = _root.rotation.eulerAngles.y;
     }
     
-    public override void Render()
+    private void Update()
     {
         if (_hpHandler.IsDead) { TurnOff(); return; }
 
@@ -118,7 +116,7 @@ public class TurnInPlace : NetworkBehaviour
         _canTurn = false;
     }
 
-    private void TurnOn(float time = 0.1f)
+    private void TurnOn(float time = 0.3f)
     {
         MoveAndRotate.resetFree(_flowerSetup_L);
         MoveAndRotate.resetFree(_flowerSetup_R);

@@ -26,11 +26,6 @@ public class MotionCall : StateMachineBehaviour
         animHandler?.LocalStopSwitch();
     }
 
-    public void ResetJump(Animator animator)
-    {
-        //animator.ResetTrigger("IsJumping");
-    }
-
     public void DisplayFrag(Animator animator)
     {
         var dis = animator.GetComponent<DisplayObject>();
@@ -117,5 +112,13 @@ public class MotionCall : StateMachineBehaviour
         AudioManager.Instance.PlayClip(controller.Sound, 
             controller.Data.SlideClip,
             controller.Data.Volume_Slide);
+    }
+    
+    // Gun
+    public void SetStateWeaponCollision(Animator animator, bool state)
+    {
+        var component = animator.GetComponentInParent<WeaponCollisionResolver>();
+        if (component == null) return;
+        component.SetState(state);
     }
 }
