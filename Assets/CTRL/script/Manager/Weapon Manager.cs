@@ -200,9 +200,16 @@ public class WeaponManager : NetworkBehaviour
     public void Respawn()
     {
         if (_weapon_One_CTRL != null)
+        {
+            _weapon_Active = 1;
             _weapon_One_CTRL.Respawn();
+        }
         if (_weapon_Two_CTRL != null)
+        {
+            if (_weapon_One_CTRL == null)
+                _weapon_Active = 2;
             _weapon_Two_CTRL.Respawn();
+        }
     }
 
     void OnWeaponRefsChanged()

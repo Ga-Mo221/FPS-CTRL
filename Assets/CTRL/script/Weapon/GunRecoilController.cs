@@ -125,33 +125,28 @@ public class GunRecoilController : MonoBehaviour
     [Button]
     public bool OnFire(float delay)
     {
-        _time = Time.time;
-
-        if (Time.time < _nextFireTime) return false;
+        // KHÔNG còn "_time = Time.time;" ở đây
+        if (_time < _nextFireTime) return false;
 
         switch (firingMode)
         {
             case FiringMode.Semi:
                 FireSemi();
-                _nextFireTime = Time.time + delay;
+                _nextFireTime = _time + delay;
                 break;
-
             case FiringMode.Auto:
                 FireAuto(delay);
-                _nextFireTime = Time.time + delay;
+                _nextFireTime = _time + delay;
                 break;
-
             case FiringMode.Burst:
                 TriggerBurst(delay);
-                // Cooldown = thời gian hoàn thành toàn bộ loạt
-                _nextFireTime = Time.time + burstCount * delay;
+                _nextFireTime = _time + burstCount * delay;
                 break;
             case FiringMode.Melee:
                 MelleOneShoot();
-                _nextFireTime = Time.time + delay;
+                _nextFireTime = _time + delay;
                 break;
         }
-
         return true;
     }
 

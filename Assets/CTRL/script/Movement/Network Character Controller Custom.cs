@@ -77,6 +77,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// </summary>
     /// <returns>Góc quay Quaternion trong không gian mạng.</returns>
     public Quaternion GetNetworkRotation() => Data.TRSPData.Rotation;
+
+    // ── LOCAL ONLY — không networked, không tốn bandwidth ──
+    private float _localVisualYaw;   // yaw visual đang hiển thị (smooth)
+    private float _localSmoothVel;   // SmoothDamp velocity ref
+    private bool  _visualYawInited;  // khởi tạo một lần
     
     /// <summary>
     /// Hàm callback của Photon Fusion chạy khi thực thể mạng được khởi tạo thành công (Spawned).
@@ -86,7 +91,8 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     {
         _movementHandler = GetComponent<NCharMovementHandler>();
         _initial = default;
-        _currentAngularVelocity = 0f;
+        _visualYawInited = false;  // ← reset flag
+        _localSmoothVel = 0f;
         TryGetComponent(out _controller);
         _controller.enabled = false;
         _controller.enabled = true;
@@ -96,9 +102,39 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// <summary>
     /// Hàm callback chạy mỗi khung hình Render (Update) của Unity để thực hiện nội suy (Interpolation), 
     /// giúp chuyển động của nhân vật mượt mà giữa các Tick mạng.
+    /// Render() — chạy mỗi frame Unity, KHÔNG phụ thuộc tick/ping.
+    /// Smooth visual yaw hoàn toàn local, không ảnh hưởng physics.
     /// </summary>
     public override void Render() {
+        // Bước 1: interpolate position từ network (giữ nguyên logic gốc)
         NetworkTRSP.Render(this, transform, false, false, false, ref _initial);
+
+        // Bước 2: khởi tạo visual yaw lần đầu để tránh snap khi spawn
+        if (!_visualYawInited)
+        {
+            _localVisualYaw = Data.TargetYaw;
+            _visualYawInited = true;
+        }
+
+        // Bước 3: smooth visual yaw local — frame rate độc lập với ping
+        // Dùng SmoothDampAngle để xử lý wrap-around 360→0 tự động
+        _localVisualYaw = Mathf.SmoothDampAngle(
+            _localVisualYaw,
+            Data.TargetYaw,
+            ref _localSmoothVel,
+            smoothTime: 0.04f,      // ~40ms: snappy nhưng không giật
+            maxSpeed: float.MaxValue,
+            deltaTime: Time.deltaTime
+        );
+
+        // Bước 4: apply lên visual transform
+        // Vì NetworkTRSP.Render() đã set position, chỉ cần override rotation
+        Quaternion currentRot = transform.rotation;
+        transform.rotation = Quaternion.Euler(
+            currentRot.eulerAngles.x,
+            _localVisualYaw,
+            currentRot.eulerAngles.z
+        );
     }
 
     /// <summary>
@@ -134,9 +170,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// <summary>
     /// Sao chép vị trí và vòng quay Transform hiện tại của Unity vào cấu trúc dữ liệu mạng TRSP để chuẩn bị đồng bộ.
     /// </summary>
+    // CopyToBuffer: CHỈ lưu position, KHÔNG lưu rotation vào TRSPData
+    // vì rotation giờ được quản lý riêng qua TargetYaw
     void CopyToBuffer() {
         Data.TRSPData.Position = transform.position;
-        Data.TRSPData.Rotation = transform.rotation;
+        // Data.TRSPData.Rotation = transform.rotation; ← BỎ DÒNG NÀY
     }
 
     /// <summary>
@@ -145,7 +183,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// </summary>
     void CopyToEngine() {
         _controller.enabled = false;
-        transform.SetPositionAndRotation(Data.TRSPData.Position, Data.TRSPData.Rotation);
+        transform.position = Data.TRSPData.Position;
+        // Dùng TargetYaw thay vì TRSPData.Rotation
+        transform.rotation = Quaternion.Euler(0f, Data.TargetYaw, 0f);
         _controller.enabled = true;
     }
     
@@ -219,25 +259,29 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         return false;
     }
 
-    public void Rotate(float rotationY, float smoothing)
+    /// <summary>
+    /// Gọi trong FixedUpdateNetwork: tích lũy raw yaw vào network state.
+    /// KHÔNG smooth — chỉ lưu authority value để resimulation đúng.
+    /// Physics collider dùng giá trị này ngay lập tức.
+    /// </summary>
+    public void AccumulateYaw(float rotationX)
     {
         var yawModel = _data.YawModel;
         if (_movementHandler != null)
             if (_movementHandler.StateFl.IsADS || _movementHandler.StateFl.IsThrow)
                 yawModel *= _data.AdsLookSpeedMultiplier;
 
-        float targetAngularVel = rotationY * yawModel;
+        // Tích lũy thẳng, không lerp
+        float delta = rotationX * yawModel * Runner.DeltaTime;
+        Data.TargetYaw += delta;
 
-        _currentAngularVelocity = Mathf.Lerp(
-            _currentAngularVelocity,
-            targetAngularVel,
-            smoothing * Runner.DeltaTime
-        );
+        // Giữ trong [-360, 360] tránh float overflow dài hạn
+        if (Data.TargetYaw > 360f)  Data.TargetYaw -= 360f;
+        if (Data.TargetYaw < -360f) Data.TargetYaw += 360f;
 
-        if (Mathf.Abs(_currentAngularVelocity) < 0.01f && Mathf.Approximately(rotationY, 0f))
-            _currentAngularVelocity = 0f;
-
-        transform.Rotate(0f, _currentAngularVelocity * Runner.DeltaTime, 0f);
+        // Snap physics collider ngay — không smooth
+        // CharacterController dùng hướng này để xác định moveDirection đúng
+        transform.rotation = Quaternion.Euler(0f, Data.TargetYaw, 0f);
     }
 
     /// <summary>
@@ -317,7 +361,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 [NetworkStructWeaved(WORDS + 4)]
 public struct NetworkCCData : INetworkStruct 
 {
-    public const int WORDS = NetworkTRSPData.WORDS + 4;
+    public const int WORDS = NetworkTRSPData.WORDS + 5; // +4 → +5
     public const int SIZE  = WORDS * 4;
 
     [FieldOffset(0)]
@@ -329,14 +373,22 @@ public struct NetworkCCData : INetworkStruct
     [FieldOffset((NetworkTRSPData.WORDS + 1) * Allocator.REPLICATE_WORD_SIZE)]
     Vector3Compressed _velocityData;
 
-    /// <summary>
-    /// Vận tốc hiện tại của nhân vật được nén để truyền tải qua mạng.
-    /// </summary>
+    // ← THÊM MỚI: raw yaw authority, không smooth
+    [FieldOffset((NetworkTRSPData.WORDS + 4) * Allocator.REPLICATE_WORD_SIZE)]
+    float _targetYaw;
+
     public Vector3 Velocity {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _velocityData;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => _velocityData = value;
+    }
+
+    public float TargetYaw {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _targetYaw;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => _targetYaw = value;
     }
 }
 

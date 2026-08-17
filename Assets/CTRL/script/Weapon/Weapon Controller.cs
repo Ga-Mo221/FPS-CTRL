@@ -372,6 +372,8 @@ public class WeaponController : NetworkBehaviour
 
     public bool OnFire()
     {
+        _gun_Recoil_CTRL.NetworkTick(Runner.SimulationTime);
+        
         switch (_type)
         {
             case WeaponType.Gun:

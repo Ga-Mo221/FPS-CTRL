@@ -22,8 +22,20 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public int   FireCount   { get; private set; }  // tăng mỗi phát bắn
     [Networked] public Vector3 AimForward { get; private set; }  // hướng bắn từ NInputData
     [Networked] public ShotInfo LastShotInfo { get; private set; } // kết quả raycast từ Host
+
+    // SHOOTING STATE
     // IsFiring chỉ dùng nội bộ trong frame FixedUpdateNetwork, không cần Networked
     public bool IsFiring { get; private set; }
+
+    // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
+    // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
+    [Networked] private TickTimer _fireHoldTimer { get; set; }
+
+    // Số tick buffer — đủ để che lấp jitter 1-2 tick mà không delay cảm giác
+    // Với tick rate 30: 3 tick = 100ms buffer
+    private const int FIRE_BUFFER_TICKS = 5;
+
+
     [Networked] private TickTimer _slideTimer { get; set; }
     [Networked] private TickTimer _respawnInvincibleTimer { get; set; }
     [Networked] private float _currentSpeed { get; set; }
@@ -88,6 +100,7 @@ public class NCharMovementHandler : NetworkBehaviour
             
             if (_hpHandler.IsDead)
             {
+                IsFiring = false;
                 if (_ncc.Controller.enabled)
                     _ncc.Move(Vector3.zero, 0, 0);
                 return;
@@ -134,7 +147,7 @@ public class NCharMovementHandler : NetworkBehaviour
             CCSetHeight();
             
             // cần có setting riêng.
-            _ncc.Rotate(inputdata.LookDelta.x, 30f);
+            _ncc.AccumulateYaw(inputdata.LookDelta.x);
             
             Vector3 moveDirection = transform.forward * inputdata.MoveDirection.y + transform.right * inputdata.MoveDirection.x;
             moveDirection.Normalize();
@@ -245,25 +258,44 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Weapon Control
     private void ShootHandler(NInputData input, ref PlayerStateFlags state)
     {
-
         if (state.IsSwitching || state.IsThrow)
+        {
+            IsFiring = false;
             return;
+        }
 
         switch (_playerMotionController.ActiveWeaponMode())
         {
             case GunRecoilController.FiringMode.Semi:
             case GunRecoilController.FiringMode.Melee:
             case GunRecoilController.FiringMode.Burst:
-                // IsFiring là local bool, reset mỗi tick — không Networked, không tốn băng thông
+                // Semi/Burst không bị ảnh hưởng bởi vấn đề này
+                // vì WasPressed chỉ cần 1 tick đúng là đủ
                 IsFiring = false;
                 if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
                     IsFiring = true;
                 break;
+
             case GunRecoilController.FiringMode.Auto:
                 if (input.Buttons.IsSet(InputButtons.Attack))
+                {
+                    // Nhận được Attack=true → gia hạn buffer timer
+                    if (_fireHoldTimer.ExpiredOrNotRunning(Runner))
+                        _fireHoldTimer = TickTimer.CreateFromTicks(Runner, FIRE_BUFFER_TICKS);
                     IsFiring = true;
-                if (input.Buttons.WasReleased(_previousButtons, InputButtons.Attack))
+                }
+                else if (input.Buttons.WasReleased(_previousButtons, InputButtons.Attack))
+                {
+                    // Xác nhận rõ ràng nút được thả → dừng ngay, không chờ timer
+                    _fireHoldTimer = default;
                     IsFiring = false;
+                }
+                else
+                {
+                    // Không có input packet trong tick này (jitter/packet chưa đến)
+                    // → dùng timer để quyết định còn firing không
+                    IsFiring = !_fireHoldTimer.ExpiredOrNotRunning(Runner);
+                }
                 break;
         }
     }
@@ -426,7 +458,6 @@ public class NCharMovementHandler : NetworkBehaviour
         
         _hpHandler.OnRespawn();
         _isRespawnRequested = false;
-        IsFiring = false;
         if (_weaponManager != null) _weaponManager.Respawn();
         CanTakeDamage = false;
         _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, 2f);
