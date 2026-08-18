@@ -50,7 +50,7 @@ public class NShootHandler : NetworkBehaviour
 
         // AimForward lấy trực tiếp từ NInputData — chính xác hơn camera local
         _aimForward = _movementHandler.AimForward;
-        Debug.Log($"IsFiring: {_movementHandler.IsFiring}");
+        //Debug.Log($"IsFiring: {_movementHandler.IsFiring}");
         if (_movementHandler.IsFiring)
         {
             // Gọi FireOnce() trên Host (animation + recoil)

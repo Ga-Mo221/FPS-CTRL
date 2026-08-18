@@ -35,17 +35,30 @@ public class WeaponSway : MonoBehaviour
     [Tooltip("Hệ số nhân lên toàn bộ bob/strafe/turn khi Weight = 1. 0 = tắt hoàn toàn, 1 = không thay đổi.")]
     [SerializeField] private float aimedBobReduction = 0.3f;
 
-    [TabGroup("Weapon Sway","Strafe")]
+    [TabGroup("Weapon Sway", "Strafe")]
+    [BoxGroup("Weapon Sway/Strafe/Hip-Fire Strafe")]
     [Tooltip("Góc nghiêng súng (độ) khi di chuyển ngang trái/phải. Giá trị cao = súng nghiêng nhiều hơn.")]
     [SerializeField] private float strafeTiltAngle = 5f;
 
-    [TabGroup("Weapon Sway","Strafe")]
+    [BoxGroup("Weapon Sway/Strafe/Hip-Fire Strafe")]
     [Tooltip("Độ dịch chuyển vị trí súng theo trục X khi di chuyển ngang. Tạo cảm giác trọng lượng.")]
     [SerializeField] private float strafeOffsetAmount = 0.015f;
 
-    [TabGroup("Weapon Sway","Strafe")]
+    [BoxGroup("Weapon Sway/Strafe/Hip-Fire Strafe")]
     [Tooltip("Tốc độ làm mượt hiệu ứng strafe. Giá trị cao = phản ứng nhanh, thấp = mượt và trễ hơn.")]
     [SerializeField] private float strafeSmoothness = 6f;
+
+    [BoxGroup("Weapon Sway/Strafe/Aimed Strafe (Weight = 1)")]
+    [Tooltip("Góc nghiêng súng (độ) khi di chuyển ngang, lúc Weight = 1 (aim). Thường nhỏ hơn hip-fire để súng ổn định hơn.")]
+    [SerializeField] private float aimedStrafeTiltAngle = 1.5f;
+
+    [BoxGroup("Weapon Sway/Strafe/Aimed Strafe (Weight = 1)")]
+    [Tooltip("Độ dịch chuyển vị trí súng theo trục X khi di chuyển ngang, lúc Weight = 1 (aim).")]
+    [SerializeField] private float aimedStrafeOffsetAmount = 0.005f;
+
+    [BoxGroup("Weapon Sway/Strafe/Aimed Strafe (Weight = 1)")]
+    [Tooltip("Tốc độ làm mượt hiệu ứng strafe khi Weight = 1 (aim).")]
+    [SerializeField] private float aimedStrafeSmoothness = 6f;
     
     [TabGroup("Weapon Sway","Turn")]
     [Tooltip("Góc nghiêng súng (độ) khi xoay camera nhanh sang trái/phải. Tạo cảm giác quán tính.")]
@@ -136,13 +149,16 @@ public class WeaponSway : MonoBehaviour
 
     private void ComputeStrafeLean()
     {
-        float h       = MoveDirection.x;
-        float reducer = Mathf.Lerp(1f, aimedBobReduction, Aim_Weight);
+        float h = MoveDirection.x;
 
-        float targetTilt = -h * strafeTiltAngle   * reducer;
-        float targetPosX = -h * strafeOffsetAmount * reducer;
+        float tiltAngle   = Mathf.Lerp(strafeTiltAngle,    aimedStrafeTiltAngle,    Aim_Weight);
+        float offsetAmount = Mathf.Lerp(strafeOffsetAmount, aimedStrafeOffsetAmount, Aim_Weight);
+        float smoothness   = Mathf.Lerp(strafeSmoothness,   aimedStrafeSmoothness,   Aim_Weight);
 
-        strafeTiltCurrent = Mathf.Lerp(strafeTiltCurrent, targetTilt, Time.deltaTime * strafeSmoothness);
+        float targetTilt = -h * tiltAngle;
+        float targetPosX = -h * offsetAmount;
+
+        strafeTiltCurrent = Mathf.Lerp(strafeTiltCurrent, targetTilt, Time.deltaTime * smoothness);
         strafeOffset      = new Vector3(targetPosX, 0f, 0f);
     }
 
@@ -170,7 +186,7 @@ public class WeaponSway : MonoBehaviour
 
         Vector3 finalRot =
             mouseTiltOffset
-            + new Vector3(0f, strafeTiltCurrent, 0f)
+            + new Vector3(0f, 0f, strafeTiltCurrent)
             + turnOffset;
 
         weaponTransform.localPosition = Vector3.Lerp(

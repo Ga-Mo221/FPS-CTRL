@@ -175,6 +175,7 @@ MonoBehaviour:
   maxSlideDistance: 0.2
   slideSpeed: 12
   slideReturnSpeed: 6
+  maxBoneDistanceFromChest: 0
   enableRotation: 1
   maxRotationAngle: {x: 0, y: 50, z: -50}
   rotationSensitivity: 2
@@ -186,6 +187,9 @@ MonoBehaviour:
   currentPushOffset: {x: 0, y: 0, z: 0}
   currentSlideOffset: {x: 0, y: 0, z: 0}
   currentRotationOffset: {x: 0, y: 0, z: 0}
+  debugChestRayEvaluated: 0
+  debugChestRayHit: 0
+  enableDebugLogs: 0
   isEnabled: 1
 --- !u!114 &8594484657986278972
 MonoBehaviour:
@@ -438,6 +442,9 @@ MonoBehaviour:
   strafeTiltAngle: 8
   strafeOffsetAmount: 0.015
   strafeSmoothness: 6
+  aimedStrafeTiltAngle: 10
+  aimedStrafeOffsetAmount: 0
+  aimedStrafeSmoothness: 10
   turnTiltAmount: 3
   turnTiltSmoothness: 5
   Aim_Weight: 0

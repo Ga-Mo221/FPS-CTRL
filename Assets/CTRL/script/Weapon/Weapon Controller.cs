@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Fusion;
 using Sirenix.OdinInspector;
+using TrueInputSystem;
 using UnityEngine;
 
 public class WeaponController : NetworkBehaviour
@@ -225,9 +226,12 @@ public class WeaponController : NetworkBehaviour
     }
     
     // ====================================== EVENT ONFIRE =========================
+    private TISInputBridge _bridge;
 
     void Start()
     {
+        _bridge = TISInputBridge.Instance;
+        
         if (_uiWeapon != null)
             _uiWeapon.SetBullet(_currentMaxBullet, _currentBulletvalue, _data);
         
@@ -273,6 +277,10 @@ public class WeaponController : NetworkBehaviour
             case WeaponType.Melee:
                 break;
         }
+        
+        if (Object.HasInputAuthority && _bridge != null)
+            _bridge.TryRumble(0.2f, 0.5f, 0.1f);
+        
         _anim.SetTrigger("IsShooting");
         if (_audio != null) _audio.PlayClip(_sound, Data.FireClip, Data.Volume_Fire);
     }

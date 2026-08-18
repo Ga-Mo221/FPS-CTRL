@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
@@ -26,7 +25,9 @@ public class GameManager : MonoBehaviour
     
     [SerializeField] private float _respawnTime = 5f;
     public float RespawnTime => _respawnTime;
-
+    
+    [SerializeField] private WeaponInfo[] _weapons;
+    
     private byte[] connectionToken;
 
     private void Awake()
@@ -92,6 +93,20 @@ public class GameManager : MonoBehaviour
         RedKill = 0;
         BlueKill = 0;
         AllKill = 0;
+
+        foreach (Transform chill in BulletParrent)
+            Destroy(chill.gameObject);
+        
+        foreach (Transform chill in BulletCaseParrent)
+            Destroy(chill.gameObject);
+    }
+
+    public GameObject GetWeapon(string name)
+    {
+        foreach (var weapon in _weapons)
+            if (weapon.Name.Contains(name))
+                return weapon.Weapon;
+        return null;
     }
 }
 
@@ -105,4 +120,14 @@ public struct KillInfo
         Team = team;
         Kills = kills;
     }
+}
+
+[System.Serializable]
+public struct WeaponInfo
+{
+    [SerializeField] private string _name;
+    [SerializeField] private GameObject _weapon_Prefab;
+    
+    public string Name => _name;
+    public GameObject Weapon => _weapon_Prefab;
 }

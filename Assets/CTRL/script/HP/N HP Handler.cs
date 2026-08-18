@@ -1,5 +1,6 @@
 using System.Collections;
 using Fusion;
+using TrueInputSystem;
 using UnityEngine;
 
 public class NHPHandler : NetworkBehaviour

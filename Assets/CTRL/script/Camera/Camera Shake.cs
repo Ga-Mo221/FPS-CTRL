@@ -1,5 +1,6 @@
 using System.Collections;
 using Sirenix.OdinInspector;
+using TrueInputSystem;
 using UnityEngine;
 
 /// <summary>
@@ -36,9 +37,12 @@ public class CameraShake : MonoBehaviour
     private float seedX;
     private float seedY;
     private float seedZ;
+    
+    private TISInputBridge _bridge;
 
     private void Awake()
     {
+        _bridge = TISInputBridge.Instance;
         // Lưu vị trí và góc xoay ban đầu
         initialLocalPosition = transform.localPosition;
         initialLocalRotation = transform.localRotation;
@@ -92,7 +96,9 @@ public class CameraShake : MonoBehaviour
     [Button]
     public void AddTrauma(float amount)
     {
-        Debug.Log("Camera shake");
+        if (_bridge != null)
+            _bridge.TryRumble(0.6f, 1f, amount);
+        //Debug.Log("Camera shake");
         trauma = Mathf.Clamp01(trauma + amount);
     }
 

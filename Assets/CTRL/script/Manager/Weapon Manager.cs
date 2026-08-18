@@ -63,6 +63,17 @@ public class WeaponManager : NetworkBehaviour
     
     public override void Spawned()
     {
+        InitWeapon();
+    }
+
+    public void SpawnWeapon(string weaponOne, string WeaponTwo)
+    {
+        _weapon_One_Prefab = GameManager.instance.GetWeapon(weaponOne);
+        _weapon_Two_Prefab = GameManager.instance.GetWeapon(WeaponTwo);
+    }
+
+    private void InitWeapon()
+    {
         if (Object.HasStateAuthority && !SkipWeaponSpawn)
         {
             CreateWeapon(_weapon_Two_Prefab, out var w2);
@@ -70,7 +81,8 @@ public class WeaponManager : NetworkBehaviour
             CreateWeapon(_weapon_One_Prefab, out var w1);
             _weaponOneRef = w1;
         }
-        if (_weapon_One_CTRL == null || _weapon_Two_CTRL == null)
+        if (_weapon_One_CTRL == null && _weapon_One_Prefab != null || 
+            _weapon_Two_CTRL == null && _weapon_Two_Prefab != null)
             if (!NeedsResolveAfterMigration)
             {
                 ResolveWeaponControllers();
@@ -183,9 +195,6 @@ public class WeaponManager : NetworkBehaviour
             Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
         }
     }
-    
-    public void SetWeaponOnePrefab(GameObject prefab) => _weapon_One_Prefab = prefab;
-    public void SetWeaponTwoPrefab(GameObject prefab) => _weapon_Two_Prefab = prefab;
 
     public WeaponController Weapon_Active()
     {

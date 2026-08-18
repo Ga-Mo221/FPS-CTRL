@@ -95,6 +95,11 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
                 // Team mode: server gán team cân bằng
                 if (nPlayer.GamePlayMode == GamePlayMode.Team)
                     nPlayer.NetworkedTeam = AssignTeam();
+
+                WeaponManager weaponManager = obj.GetComponent<WeaponManager>();
+
+                if (weaponManager != null)
+                    weaponManager.SpawnWeapon("9mm Demon", "M4");
                 
                 if (SpawnManager.Instance != null)
                 {
