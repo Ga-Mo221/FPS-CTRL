@@ -52,8 +52,8 @@ public class FlashbangEffect : MonoBehaviour
 
     private void Start()
     {
-        if (GameManager.instance != null)
-            GameManager.instance.FlashbangEffect = this;
+        if (GameManager.Instance != null)
+            GameManager.Instance.FlashbangEffect = this;
     }
 
     /// <summary>

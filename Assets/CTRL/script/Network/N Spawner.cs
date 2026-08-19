@@ -90,7 +90,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
                 // Chạy SAU khi object tạo, TRƯỚC khi Spawned() được gọi
                 // => InitPlayer() đọc gamePlayMode đã có giá trị đúng rồi
                 NPlayer nPlayer = obj.GetComponent<NPlayer>();
-                nPlayer.GamePlayMode = GameManager.instance.GetGamePlayMode();
+                nPlayer.GamePlayMode = GameManager.Instance.GetGamePlayMode();
 
                 // Team mode: server gán team cân bằng
                 if (nPlayer.GamePlayMode == GamePlayMode.Team)

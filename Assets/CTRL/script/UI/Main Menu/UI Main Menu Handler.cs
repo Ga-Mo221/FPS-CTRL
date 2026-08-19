@@ -50,7 +50,7 @@ public class UIMainMenuHandler : MonoBehaviour
         PlayerPrefs.SetString("PlayerNickName", _player_Name_InputField.text);
         PlayerPrefs.Save();
 
-        GameManager.instance.SetPlayerNickName(_player_Name_InputField.text);
+        GameManager.Instance.SetPlayerNickName(_player_Name_InputField.text);
         
         NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
         
@@ -82,7 +82,7 @@ public class UIMainMenuHandler : MonoBehaviour
             GameMode = GamePlayMode.Solo;
         else if (modeindex == 1)
             GameMode = GamePlayMode.Team;
-        GameManager.instance.SetGamePlayMode(GameMode);
+        GameManager.Instance.SetGamePlayMode(GameMode);
     }
 
     public string GetLobbyName(GamePlayMode mode)
@@ -100,7 +100,7 @@ public class UIMainMenuHandler : MonoBehaviour
     public void OnStartNewSessionClicked()
     {
         NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
-        GameManager.instance.NewGame();
+        GameManager.Instance.NewGame();
         if (NRunnerHandler != null)
         {
             HideAllPanels();

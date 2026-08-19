@@ -7,15 +7,22 @@ public class UIPlayerNickName : MonoBehaviour
     [SerializeField] private GameObject _red;
     
     [SerializeField] private TextMeshProUGUI _nickName;
+    [SerializeField] private PlayerTeam _team;
 
     public void SetNickName(string nickName)
     {
         _nickName.text = nickName;
     }
 
-    public void SetActive(PlayerTeam team)
+    public void SetPlayerTeam(PlayerTeam team)
     {
-        if (team == PlayerTeam.Blue)
+        _team = team;
+        SetActive(false);
+    }
+    
+    public void SetActive(bool active)
+    {
+        if (_team == PlayerTeam.Blue)
         {
             _blue.SetActive(true);
             _red.SetActive(false);
@@ -23,7 +30,7 @@ public class UIPlayerNickName : MonoBehaviour
         else
         {
             _blue.SetActive(false);
-            _red.SetActive(true);
+            _red.SetActive(active);
         }
     }
 }

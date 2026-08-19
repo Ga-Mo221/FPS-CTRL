@@ -37,7 +37,7 @@ public class FreeCameraController : MonoBehaviour
         _componentManager = GetComponent<CharComponentManager>();
         _movementHandler = _componentManager.NCharMovementHandler;
         _hpHandler = _componentManager.NHPHandler;
-        _gameManager = GameManager.instance;
+        _gameManager = GameManager.Instance;
 
         if (_cameraConstraint == null) return;
         _rootRotate = _cameraConstraint.transform;

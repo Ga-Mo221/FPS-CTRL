@@ -20,8 +20,8 @@ public class NetworkRunnerHandler : MonoBehaviour
 
     private void Awake()
     {
-        if (GameManager.instance.NetworkRunnerHandler != null) Destroy(gameObject);
-        else GameManager.instance.NetworkRunnerHandler = this;
+        if (GameManager.Instance.NetworkRunnerHandler != null) Destroy(gameObject);
+        else GameManager.Instance.NetworkRunnerHandler = this;
         
         NetworkRunner networkRunnerInScene = FindAnyObjectByType<NetworkRunner>(FindObjectsInactive.Include);
         
@@ -50,7 +50,7 @@ public class NetworkRunnerHandler : MonoBehaviour
                     GameMode.AutoHostOrClient,
                     "TestRoom",
                     "OurLobbyID",
-                    GameManager.instance.GetConnectionToken(),
+                    GameManager.Instance.GetConnectionToken(),
                     NetAddress.Any(),
                     scene
                 );
@@ -122,7 +122,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             SceneManager = sceneManager,
             HostMigrationToken = hostMigrationToken,
             HostMigrationResume = HostMigrationResume,
-            ConnectionToken = GameManager.instance.GetConnectionToken(),
+            ConnectionToken = GameManager.Instance.GetConnectionToken(),
             Scene = _lastSceneRef
         });
     }
@@ -215,7 +215,7 @@ public class NetworkRunnerHandler : MonoBehaviour
 
                                 if (hasData)
                                 {
-                                    GameManager.instance.SetConnectionToken(rawToken);
+                                    GameManager.Instance.SetConnectionToken(rawToken);
                                     Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Restored local player token from snapshot, hash: {NConnectionTokenUtils.HashToken(rawToken)}");
                                 }
                                 else
@@ -331,7 +331,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             GameMode.AutoHostOrClient,
             sessionName,
             lobbyName,
-            GameManager.instance.GetConnectionToken(),
+            GameManager.Instance.GetConnectionToken(),
             NetAddress.Any(),
             sceneRef
         );
@@ -349,7 +349,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             GameMode.AutoHostOrClient,
             sessionInfo.Name,
             lobbyName,
-            GameManager.instance.GetConnectionToken(),
+            GameManager.Instance.GetConnectionToken(),
             NetAddress.Any(),
             SceneRef.None
         );

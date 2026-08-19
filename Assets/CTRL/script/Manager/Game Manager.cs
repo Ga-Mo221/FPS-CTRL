@@ -1,39 +1,65 @@
 using System.Collections.Generic;
 using Fusion;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 [DefaultExecutionOrder(1)]
 public class GameManager : MonoBehaviour
 {
-    public static GameManager instance {set; get;}
-    public bool OnUI = false;
+    public static GameManager Instance {set; get;}
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Player Settings")]
     [SerializeField] private string _playerNickName;
     
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Player Settings")]
     [SerializeField] private GamePlayMode _gamePlayMode = GamePlayMode.Team;
-    [SerializeField] public FlashbangEffect FlashbangEffect;
-
-    public Transform BulletParrent;
-    public Transform BulletCaseParrent;
-
+    
+    [TabGroup("GameManager", "Player Settings")]
+    public FlashbangEffect FlashbangEffect;
+    
+    [TabGroup("GameManager", "Player Settings")]
+    [SerializeField] private float _respawnTime = 5f;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Player Settings")]
     public List<NShootHandler> PlayerList = new List<NShootHandler>();
     private Dictionary<NetworkId, KillInfo> DictionaryKill = new Dictionary<NetworkId, KillInfo>();
+
+    [TabGroup("GameManager", "Weapon")] 
+    public Transform BulletParrent;
+
+    [TabGroup("GameManager", "Weapon")] 
+    public Transform BulletCaseParrent;
+    
+    [TabGroup("GameManager", "Weapon")]
+    [SerializeField] private WeaponInfo[] _weapons;
+    
+    
+    [TabGroup("GameManager", "Runtime")]
+    [Header("KILL")]
+    [Sirenix.OdinInspector.ReadOnly]
     [SerializeField] private int RedKill = 0;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
     [SerializeField] private int BlueKill = 0;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
     [SerializeField] private int AllKill = 0;
     
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
     public NetworkRunnerHandler NetworkRunnerHandler;
-    
-    [SerializeField] private float _respawnTime = 5f;
-    public float RespawnTime => _respawnTime;
-    
-    [SerializeField] private WeaponInfo[] _weapons;
     
     private byte[] connectionToken;
 
     private void Awake()
     {
-        if (instance == null)
-            instance = this;
+        if (Instance == null)
+            Instance = this;
         else
         {
             Destroy(gameObject);
@@ -75,6 +101,11 @@ public class GameManager : MonoBehaviour
         BlueKill = blueKill;
         AllKill = RedKill + BlueKill;
     }
+    
+    // ======================== PUBLIC API ================================
+    public float RespawnTime => _respawnTime;
+    
+    public bool OnUI {set; get;} = false;
 
     public void SetConnectionToken(byte[] token) => connectionToken = token;
     
@@ -84,6 +115,7 @@ public class GameManager : MonoBehaviour
     
     public void SetGamePlayMode(GamePlayMode gamePlayMode) => _gamePlayMode = gamePlayMode;
     public void SetPlayerNickName(string nickname) => _playerNickName = nickname;
+    public string GetPlayerNickName() => _playerNickName;
 
     public void NewGame()
     {

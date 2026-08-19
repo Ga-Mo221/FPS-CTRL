@@ -32,6 +32,6 @@ public class UISessionInfoItem : MonoBehaviour
     public void OnClick()
     {
         OnJoinSession?.Invoke(_sessionInfo);
-        GameManager.instance.NewGame();
+        GameManager.Instance.NewGame();
     }
 }

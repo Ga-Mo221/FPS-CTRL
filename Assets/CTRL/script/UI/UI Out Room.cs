@@ -7,15 +7,15 @@ public class UIOutRoom : MonoBehaviour
     private bool _lastOnUI;
     private void Update()
     {
-        if (_lastOnUI != GameManager.instance.OnUI)
+        if (_lastOnUI != GameManager.Instance.OnUI)
         {
-            _lastOnUI = GameManager.instance.OnUI;
+            _lastOnUI = GameManager.Instance.OnUI;
             _outRoom.SetActive(_lastOnUI);
         }
     }
 
     public void LeaveRoom()
     {
-        GameManager.instance.NetworkRunnerHandler.LeaveRoom();
+        GameManager.Instance.NetworkRunnerHandler.LeaveRoom();
     }
 }

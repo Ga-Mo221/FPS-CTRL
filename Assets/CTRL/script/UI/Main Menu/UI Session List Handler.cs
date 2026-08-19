@@ -41,7 +41,7 @@ public class UISessionListHandler : MonoBehaviour
         if (networkRunnerHandler != null && uiMainMenuHandler != null)
         {
             networkRunnerHandler.JoinGame(sessionInfo,
-                uiMainMenuHandler.GetLobbyName(GameManager.instance.GetGamePlayMode()));
+                uiMainMenuHandler.GetLobbyName(GameManager.Instance.GetGamePlayMode()));
             uiMainMenuHandler.OnJoiningServer();
         }
     }

@@ -126,7 +126,7 @@ public class NHPHandler : NetworkBehaviour
         {
             _inGameMessagesHandler.SendInGameRPCMessage(damageCausedByPlayerNickName, $"<color=red>Killed</color> <b>{_nPlayer.Nickname.ToString()}</b>");
             IsDead = true;
-            StartServerRevive(GameManager.instance.RespawnTime);
+            StartServerRevive(GameManager.Instance.RespawnTime);
             if (Object.Id == id) return false;
             return true;
         }

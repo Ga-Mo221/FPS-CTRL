@@ -240,7 +240,7 @@ public class WeaponController : NetworkBehaviour
         if (_type != WeaponType.Gun) return;
         
         _parrentBullet.name = $"{_parrentBullet.name} for {transform.root.name} : {transform.name}";
-        _parrentBullet.parent = GameManager.instance.BulletParrent;
+        _parrentBullet.parent = GameManager.Instance.BulletParrent;
         
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
     }
@@ -392,6 +392,18 @@ public class WeaponController : NetworkBehaviour
             default:
                 return false;
         }
+    }
+
+    /// <summary>
+    /// Chỉ trigger camera recoil + gun recoil visual, không check cooldown.
+    /// Dùng cho remote client khi nhận FireCount từ Host — Host đã xác nhận
+    /// phát bắn hợp lệ, client chỉ cần phản chiếu hiệu ứng ngay lập tức.
+    /// </summary>
+    public void OnFireVisualOnly()
+    {
+        if (_type != WeaponType.Gun) return;
+        _cam_Recoil.OnFire();
+        _gun_Recoil_CTRL.TriggerRecoilVisual();
     }
 
     public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)

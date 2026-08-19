@@ -150,6 +150,32 @@ public class GunRecoilController : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Gọi trực tiếp từ remote client khi nhận FireCount thay đổi từ Host.
+    /// Bypass toàn bộ cooldown check — Host đã xác nhận phát bắn hợp lệ.
+    /// Chỉ apply recoil kick + trigger OnShotFired để WeaponController
+    /// phát sound/animation/muzzle flash. KHÔNG set _nextFireTime.
+    /// </summary>
+    public void TriggerRecoilVisual()
+    {
+        if (data == null) return;
+        switch (firingMode)
+        {
+            case FiringMode.Semi:
+                FireSemi();
+                break;
+            case FiringMode.Auto:
+                FireAuto(0f);
+                break;
+            case FiringMode.Burst:
+                FireBurstShot();
+                break;
+            case FiringMode.Melee:
+                MelleOneShoot();
+                break;
+        }
+    }
+
     /// <summary>Cập nhật trạng thái ADS.</summary>
     public void SetAiming(bool aiming) => _isAiming = aiming;
 

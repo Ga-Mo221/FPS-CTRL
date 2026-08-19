@@ -48,7 +48,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     public override void Spawned()
     {
         InitPlayer();
-        GameManager.instance.PlayerList.Add(_shootHandler);
+        GameManager.Instance.PlayerList.Add(_shootHandler);
     }
     
     public void OnHostMigrated()
@@ -86,12 +86,12 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             // ✅ Cache ngay sau khi reparent - đây là GameObject "mồ côi" cần tự Destroy() sau này.
             _detachedCameraRoot = parrentCamera;
             
-            Rpc_SetNickName(PlayerPrefs.GetString("PlayerNickName"));
+            Rpc_SetNickName(GameManager.Instance.GetPlayerNickName());
 
             // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
             // ConnectionToken ở transport-level (không đáng tin cậy qua Photon Relay).
             // Server sẽ dùng token này để nhận diện: player mới hay đang reconnect / resume sau host migration.
-            byte[] myToken = GameManager.instance.GetConnectionToken();
+            byte[] myToken = GameManager.Instance.GetConnectionToken();
             if (myToken != null && myToken.Length == 16)
             {
                 Rpc_RegisterToken(myToken);
@@ -135,7 +135,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         // Chờ đến khi Local được set (tối đa vài frame)
         yield return new WaitUntil(() => NPlayer.Local != null);
     
-        _uiPlayerNickName.SetActive(DisplayTeam);
+        _uiPlayerNickName.SetPlayerTeam(DisplayTeam);
     
         if (!string.IsNullOrEmpty(Nickname.ToString()))
             _uiPlayerNickName.SetNickName(Nickname.ToString());
@@ -247,7 +247,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
         if (hasData)
         {
-            GameManager.instance.SetConnectionToken(raw);
+            GameManager.Instance.SetConnectionToken(raw);
             Debug.Log($"<color=green>[NPlayer]</color> Rpc_SyncTokenToClient: token synced, hash = {NConnectionTokenUtils.HashToken(raw)}", this);
         }
         else

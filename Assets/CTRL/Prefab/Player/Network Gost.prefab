@@ -220,7 +220,8 @@ GameObject:
   m_Component:
   - component: {fileID: 6141168904397365263}
   - component: {fileID: 1148240071518259329}
-  m_Layer: 7
+  - component: {fileID: 4910293904733456977}
+  m_Layer: 0
   m_Name: Name
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -282,6 +283,22 @@ MonoBehaviour:
   gizmoColorX: {r: 1, g: 0, b: 0, a: 1}
   gizmoColorY: {r: 0, g: 1, b: 0, a: 1}
   gizmoColorZ: {r: 0, g: 0, b: 1, a: 1}
+--- !u!114 &4910293904733456977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 957512217742427093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df4197d2fe2581e4cb7f69dff70938cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIPlayerNickName
+  _blue: {fileID: 8751182523811649282}
+  _red: {fileID: 4913988188365606961}
+  _nickName: {fileID: 4214527685668510540}
+  _team: 0
 --- !u!1 &1466871909170247793
 GameObject:
   m_ObjectHideFlags: 0
@@ -1553,16 +1570,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4913988188365606961}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0.38268343, w: 0.92387956}
+  m_LocalPosition: {x: 0, y: 0, z: -6.6748315e-11}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8260297129461445424}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 45}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.000030517578}
   m_SizeDelta: {x: -360, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &294965946590579612
@@ -1585,8 +1602,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.09920767, b: 0, a: 1}
+  m_Material: {fileID: 2100000, guid: 3ff99822a5de6664984954c0b67e2383, type: 2}
+  m_Color: {r: 1, g: 0.098039225, b: 0, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2377,7 +2394,7 @@ MonoBehaviour:
   NHPHandler: {fileID: 1161707875268341237}
   UihpPlayer: {fileID: 5168350477965945118}
   HitboxRoot: {fileID: 4882823662986902394}
-  UIPlayerNickName: {fileID: 2827167236679798375}
+  UIPlayerNickName: {fileID: 4910293904733456977}
   UIInGameMessagesHandler: {fileID: 385086787422080560}
   NInGameMessagesHandler: {fileID: 7264252785649397550}
   UIWeapon: {fileID: 5032640219366054371}
@@ -2844,6 +2861,7 @@ GameObject:
   - component: {fileID: 3589250328435633672}
   - component: {fileID: 4223770439868331075}
   - component: {fileID: 4565470641237941560}
+  - component: {fileID: 2427058142488502770}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: Untagged
@@ -3015,6 +3033,31 @@ MonoBehaviour:
   _speedSnap: 8
   _assistWithoutInput: 1
   _returnSpeed: 3
+--- !u!114 &2427058142488502770
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7488422018330011511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a372a3166c9288489230cb63f95cf0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDetecTeam
+  checkDistance: 50
+  boxSize: {x: 5, y: 5}
+  wallLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  showScanBox: 0
+  noTargetColor: {r: 0, g: 0.85, b: 1, a: 0.6}
+  targetDetectedColor: {r: 1, g: 0.2, b: 0.2, a: 0.85}
+  showGizmo: 0
+  boxColor: {r: 0, g: 1, b: 0, a: 1}
+  detectedLineColor: {r: 0, g: 1, b: 1, a: 1}
+  blockedLineColor: {r: 1, g: 0, b: 0, a: 1}
+  detectedObjects: []
 --- !u!1 &7781828417992603394
 GameObject:
   m_ObjectHideFlags: 0
@@ -3279,7 +3322,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: 9a0be9b1be8ccf84fbab09d5e02e53a4, type: 2}
   m_Color: {r: 0.24292453, g: 0.4126473, b: 0.9716981, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -3342,7 +3385,6 @@ GameObject:
   - component: {fileID: 7315144051252333371}
   - component: {fileID: 4482701229216568833}
   - component: {fileID: 4614765068529289096}
-  - component: {fileID: 2827167236679798375}
   - component: {fileID: 5179980533437847842}
   m_Layer: 5
   m_Name: Word Space Canvas
@@ -3435,21 +3477,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 255
---- !u!114 &2827167236679798375
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9214027507992219850}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: df4197d2fe2581e4cb7f69dff70938cc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIPlayerNickName
-  _blue: {fileID: 8751182523811649282}
-  _red: {fileID: 4913988188365606961}
-  _nickName: {fileID: 4214527685668510540}
 --- !u!114 &5179980533437847842
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3714,6 +3741,10 @@ PrefabInstance:
     - target: {fileID: 9063187648056180451, guid: 1fa7eda29474c9240b4c69daf06709f7, type: 3}
       propertyPath: m_Name
       value: Player UI Canvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 9063187648056180451, guid: 1fa7eda29474c9240b4c69daf06709f7, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

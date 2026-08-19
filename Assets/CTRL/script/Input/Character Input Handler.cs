@@ -42,7 +42,7 @@ public class CharacterInputHandler : MonoBehaviour
         
         if (NetworkGameState.Instance != null && NetworkGameState.Instance.IsMatchOver()) return;
         
-        if (GameManager.instance.OnUI) return;
+        if (GameManager.Instance.OnUI) return;
         
         if (NetworkGameState.Instance != null && NetworkGameState.Instance.GameStarted)
         {
@@ -77,7 +77,7 @@ public class CharacterInputHandler : MonoBehaviour
     {
         NInputData nInputData = new NInputData();
         
-        if (!GameManager.instance.OnUI && NetworkGameState.Instance != null && !NetworkGameState.Instance.IsMatchOver())
+        if (!GameManager.Instance.OnUI && NetworkGameState.Instance != null && !NetworkGameState.Instance.IsMatchOver())
         {
             nInputData.MoveDirection = _moveDirection;
             nInputData.LookDelta = _lookDelta;
@@ -109,8 +109,8 @@ public class CharacterInputHandler : MonoBehaviour
         
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
-            GameManager.instance.OnUI = !GameManager.instance.OnUI;
-            Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.instance.OnUI}");
+            GameManager.Instance.OnUI = !GameManager.Instance.OnUI;
+            Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
         }
     }
 }

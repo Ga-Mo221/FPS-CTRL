@@ -83,11 +83,18 @@ public class NShootHandler : NetworkBehaviour
     // ── Được gọi trên TẤT CẢ máy khi FireCount thay đổi ──────────────────
     private void OnFireDetected()
     {
-        // Remote client gọi FireOnce() (Host đã gọi trong FixedUpdateNetwork)
         if (!Object.HasStateAuthority)
         {
-            _movementHandler.FireOnce();
+            // Remote client: KHÔNG gọi FireOnce() — vì FireOnce() chạy qua
+            // GunRecoilController.OnFire() với _time = Runner.SimulationTime của client,
+            // khác với SimulationTime của Host → _nextFireTime check fail → OnShotFired
+            // không invoke → không có sound/animation/muzzle flash.
+            //
+            // Host đã xác nhận phát bắn (FireCount tăng = bắn thật).
+            // Client chỉ cần trigger recoil + visual trực tiếp, bypass cooldown.
+            _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
         }
+        // Host: đã gọi FireOnce() trong FixedUpdateNetwork → không gọi lại ở đây.
 
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Gun)
         {

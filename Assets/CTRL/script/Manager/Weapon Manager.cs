@@ -68,8 +68,8 @@ public class WeaponManager : NetworkBehaviour
 
     public void SpawnWeapon(string weaponOne, string WeaponTwo)
     {
-        _weapon_One_Prefab = GameManager.instance.GetWeapon(weaponOne);
-        _weapon_Two_Prefab = GameManager.instance.GetWeapon(WeaponTwo);
+        _weapon_One_Prefab = GameManager.Instance.GetWeapon(weaponOne);
+        _weapon_Two_Prefab = GameManager.Instance.GetWeapon(WeaponTwo);
     }
 
     private void InitWeapon()
