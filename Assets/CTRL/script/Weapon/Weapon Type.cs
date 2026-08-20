@@ -1,6 +1,7 @@
 [System.Serializable]
 public enum WeaponType
 {
-    Gun,
+    Rifle,
+    Sniper,
     Melee
 }

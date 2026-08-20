@@ -268,8 +268,14 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     {
         var yawModel = _data.YawModel;
         if (_movementHandler != null)
+        {
             if (_movementHandler.StateFl.IsADS || _movementHandler.StateFl.IsThrow)
-                yawModel *= _data.AdsLookSpeedMultiplier;
+            {
+                yawModel *= _movementHandler.ADSLookSpeedMultiplier; 
+            }
+        }
+
+        yawModel *= _movementHandler.CameraSpeed;
 
         // Tích lũy thẳng, không lerp
         float delta = rotationX * yawModel * Runner.DeltaTime;

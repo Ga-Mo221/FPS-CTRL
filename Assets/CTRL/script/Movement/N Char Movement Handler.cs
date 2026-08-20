@@ -51,6 +51,10 @@ public class NCharMovementHandler : NetworkBehaviour
     
     [Networked] public int SwitchCount { get; private set; }
     [Networked] private NetworkBool _newRound {get; set;} = false;
+
+
+    [Networked] public float CameraSpeed { get; private set; } = 1.0f;
+    [Networked] public float ADSLookSpeedMultiplier { get; private set; } = 0.5f;
     
     private CharComponentManager _componentManager;
     private NetworkCharacterControllerCustom _ncc;
@@ -115,10 +119,10 @@ public class NCharMovementHandler : NetworkBehaviour
             // Tính pitch trực tiếp trên Host, lưu vào networked property
             float minPitch = _data.PitchMin;
             float maxPitch = _data.PitchMax;
-            var pitchCamera = _data.PitchCamera;
+            var pitchCamera = _data.PitchCamera * CameraSpeed;
             
             if (StateFl.IsADS || StateFl.IsThrow)
-                pitchCamera *= _data.AdsLookSpeedMultiplier;
+                pitchCamera *= ADSLookSpeedMultiplier;
             
             NetworkedPitch = Mathf.Clamp(
                 NetworkedPitch - inputdata.LookDelta.y * pitchCamera * Runner.DeltaTime,
@@ -318,10 +322,36 @@ public class NCharMovementHandler : NetworkBehaviour
             return;
         
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS))
+        {
             _stateLogic.EnterADS(ref state, _constraintManager);
-        
+            if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
+            {
+                // Sniper ADS → giảm tốc độ xoay camera
+                RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.SniperADSSensitivity);
+            }
+            else if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle)
+            {
+                // Rifle ADS → giảm tốc độ xoay camera
+                RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.RifleADSSensitivity);
+            }
+        }
+
         if (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
             _stateLogic.ExitADS(ref state);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_SetAdsMultiplier(float value)
+    {
+        // Chỉ chạy trên StateAuthority (Host)
+        ADSLookSpeedMultiplier = value; // [Networked] field
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_SetCameraSpeed(float value)
+    {
+        // Chỉ chạy trên StateAuthority (Host)
+        CameraSpeed = value; // [Networked] field
     }
 
     private void ReloadHandler(NInputData input, ref PlayerStateFlags state)

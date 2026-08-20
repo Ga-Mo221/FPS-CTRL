@@ -8,7 +8,7 @@ using UnityEngine;
 
 public class WeaponController : NetworkBehaviour
 {
-    [SerializeField] private WeaponType _type = WeaponType.Gun;
+    [SerializeField] private WeaponType _type = WeaponType.Rifle;
     
     // =========================== NETWORK ==========================================
     [TabGroup("Weapon Controller", "Runtime")]
@@ -172,7 +172,8 @@ public class WeaponController : NetworkBehaviour
         
         switch (_type)
         {
-            case WeaponType.Gun:
+            case WeaponType.Sniper:
+            case WeaponType.Rifle:
                 _cam_Recoil.SetCameraCTRL(_componentManager.WeaponManager.Camera_Recoil);
                 _camera_Zoom = _componentManager.WeaponManager.Camera;
                 break;
@@ -192,7 +193,8 @@ public class WeaponController : NetworkBehaviour
         
         switch (_type)
         {
-            case WeaponType.Gun:
+            case WeaponType.Sniper:
+            case WeaponType.Rifle:
                 _cam_Recoil?.LoadData(_data);
                 break;
             case WeaponType.Melee:
@@ -219,7 +221,7 @@ public class WeaponController : NetworkBehaviour
 
     public void Respawn()
     { 
-        if (_type != WeaponType.Gun) return;
+        if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return;
         
         _currentMaxBullet = _data.MaxBullet;
         _currentBulletvalue = _data.DefaultBullet;
@@ -237,7 +239,7 @@ public class WeaponController : NetworkBehaviour
         
         _audio = AudioManager.Instance;
         
-        if (_type != WeaponType.Gun) return;
+        if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return;
         
         _parrentBullet.name = $"{_parrentBullet.name} for {transform.root.name} : {transform.name}";
         _parrentBullet.parent = GameManager.Instance.BulletParrent;
@@ -267,7 +269,8 @@ public class WeaponController : NetworkBehaviour
     {
         switch (_type)
         {
-            case WeaponType.Gun:
+            case WeaponType.Rifle:
+            case WeaponType.Sniper:
                 _currentBulletvalue--;
                 if (_bulletController != null)
                     _bulletController.Drop();
@@ -289,7 +292,7 @@ public class WeaponController : NetworkBehaviour
     
     private void Update()
     {
-        if (_type != WeaponType.Gun) return;
+        if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return;
         ADSHandler();
     }
 
@@ -384,7 +387,8 @@ public class WeaponController : NetworkBehaviour
         
         switch (_type)
         {
-            case WeaponType.Gun:
+            case WeaponType.Rifle:
+            case WeaponType.Sniper:
                 if (_currentBulletvalue <= 0) return false;
                 return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
             case WeaponType.Melee:
@@ -401,7 +405,7 @@ public class WeaponController : NetworkBehaviour
     /// </summary>
     public void OnFireVisualOnly()
     {
-        if (_type != WeaponType.Gun) return;
+        if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return;
         _cam_Recoil.OnFire();
         _gun_Recoil_CTRL.TriggerRecoilVisual();
     }
@@ -436,7 +440,7 @@ public class WeaponController : NetworkBehaviour
     
     public void SwitchMode()
     {
-        if (_type != WeaponType.Gun) return;
+        if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return;
         
         var current_mode = _gun_Recoil_CTRL.GetFiringMode();
         switch (current_mode)
@@ -492,18 +496,20 @@ public class WeaponController : NetworkBehaviour
         //Debug.Log($"[WeaponController] {transform.name} IsSwitching: {isSwitching}");
         _anim.SetBool("IsSwitching", isSwitching);
     }
+    
     public bool ADS(bool ads)
     {
-        if (_type != WeaponType.Gun) return false;
+        if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return false;
         _ads = ads;
         _anim.SetBool("ADS", ads);
         return true;
     }
+
     public bool IsReloading(bool isReloading)
     {
         if (isReloading)
         {
-            if (_type != WeaponType.Gun)  return false;
+            if (_type != WeaponType.Rifle && _type != WeaponType.Sniper)  return false;
             if (_currentBulletvalue == _data.DefaultBullet) return false;
             if (_currentMaxBullet == 0)  return false;
         }

@@ -97,10 +97,10 @@ public class PlayerData : ScriptableObject
     [Tooltip("Góc nhìn lên tối đa (độ). Ví dụ 80.")]
     [SerializeField] private float _pitchMax = 80f;
 
-    [TabGroup("PlayerData", "Camera")]
-    [Tooltip("Hệ số nhân tốc độ xoay camera khi đang ADS. Giá trị thấp hơn giúp ngắm chính xác hơn (0.1 = chậm nhất, 0.9 = gần bình thường).")]
-    [Range(0.1f, 0.9f)]
-    [SerializeField] private float _adsLookSpeedMultiplier = 0.3f;
+    // [TabGroup("PlayerData", "Camera")]
+    // [Tooltip("Hệ số nhân tốc độ xoay camera khi đang ADS. Giá trị thấp hơn giúp ngắm chính xác hơn (0.1 = chậm nhất, 0.9 = gần bình thường).")]
+    // [Range(0.1f, 0.9f)]
+    // [SerializeField] private float _adsLookSpeedMultiplier = 0.3f;
 
 
     // ─────────────────────────────────────────────
@@ -217,7 +217,7 @@ public class PlayerData : ScriptableObject
     public float PitchCamera           => _pitchCamera;
     public float PitchMin              => _pitchMin;
     public float PitchMax              => _pitchMax;
-    public float AdsLookSpeedMultiplier => _adsLookSpeedMultiplier;
+    //public float AdsLookSpeedMultiplier => _adsLookSpeedMultiplier;
 
     // Ground Check
     public float     GroundCheckRadius => _groundCheckRadius;

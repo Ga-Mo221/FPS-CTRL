@@ -2492,6 +2492,8 @@ MonoBehaviour:
   _CanTakeDamage:
     _value: 1
   _SwitchCount: 0
+  _CameraSpeed: 1
+  _ADSLookSpeedMultiplier: 0.5
 --- !u!114 &6994213610445770504
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2517,6 +2519,7 @@ MonoBehaviour:
   - {fileID: 5726103497837161478}
   - {fileID: 1256299357920321498}
   - {fileID: 726189487040050740}
+  _movementHandler: {fileID: 0}
 --- !u!114 &4273547791336342583
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3029,7 +3032,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 616cb4cada546a046bcb54ea04e3b508, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraScanner
-  _enabledPlatforms: 3
+  _enabledPlatforms: 2
   _speedSnap: 8
   _assistWithoutInput: 1
   _returnSpeed: 3

@@ -15,7 +15,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     
     [Networked] public int Token { get; set; }
 
-    // ✅ Lưu raw 16 bytes của Guid token để có thể restore sau host migration
+    // Lưu raw 16 bytes của Guid token để có thể restore sau host migration
     [Networked, Capacity(16)] public NetworkArray<byte> RawToken => default;
     
     // ===================== Private Field ==================================
@@ -29,8 +29,9 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     private UIHPPlayer _uiLocalPlayer;
     private UIPlayerNickName _uiPlayerNickName;
     private NShootHandler _shootHandler;
+    public NCharMovementHandler _movementHandler;
 
-    // ✅ Cache TRỰC TIẾP GameObject camera đã bị reparent ra ngoài (transform.parent = null),
+    // Cache TRỰC TIẾP GameObject camera đã bị reparent ra ngoài (transform.parent = null),
     // thay vì đi qua _componentManager lúc OnDestroy(). Lý do: khi runner.Shutdown() (host migration)
     // phá hủy hàng loạt, Unity KHÔNG đảm bảo thứ tự OnDestroy giữa các component -
     // _componentManager có thể đã bị hủy trước khi NPlayer.OnDestroy() chạy, khiến
@@ -64,6 +65,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         _uiLocalPlayer = _componentManager.UihpPlayer;
         _uiPlayerNickName = _componentManager.UIPlayerNickName;
         _shootHandler = _componentManager.NShootHandler;
+        _movementHandler = _componentManager.NCharMovementHandler;
         
         IsLocalPlayer = Object.HasInputAuthority 
                         || (Runner.IsServer && Object.StateAuthority == Runner.LocalPlayer);
@@ -87,6 +89,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             _detachedCameraRoot = parrentCamera;
             
             Rpc_SetNickName(GameManager.Instance.GetPlayerNickName());
+            _movementHandler.RPC_SetCameraSpeed(SettingManager.Instance.SettingData.MouseSensitivity);
 
             // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
             // ConnectionToken ở transport-level (không đáng tin cậy qua Photon Relay).

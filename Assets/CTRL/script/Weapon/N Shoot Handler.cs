@@ -59,7 +59,8 @@ public class NShootHandler : NetworkBehaviour
                 // Tăng FireCount trên NCharMovementHandler → mọi máy detect qua Render()
                 _movementHandler.IncrementFireCount();
                 
-                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Gun)
+                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle || 
+                _weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
                 {
                     // Lưu kết quả raycast để sync visual đúng điểm chạm
                     var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(_aimForward);
@@ -96,7 +97,8 @@ public class NShootHandler : NetworkBehaviour
         }
         // Host: đã gọi FireOnce() trong FixedUpdateNetwork → không gọi lại ở đây.
 
-        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Gun)
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Rifle || 
+            _weaponManager.Weapon_Active()?.WeaponType == WeaponType.Sniper)
         {
             // Spawn visual thông qua WeaponController — mỗi súng dùng prefab đạn riêng
             var shotInfo = _movementHandler.LastShotInfo;
