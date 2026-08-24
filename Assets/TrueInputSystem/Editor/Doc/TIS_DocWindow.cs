@@ -581,7 +581,7 @@ namespace TrueInputSystem.Editor
                 alignment = TextAnchor.MiddleCenter,
             };
             float vw = 100;
-            GUI.Label(new Rect(x + w - vw - 10, (TopbarH - 20) / 2, vw, 20), "GaMo Tools v1.0.7", vSt);
+            GUI.Label(new Rect(x + w - vw - 10, (TopbarH - 20) / 2, vw, 20), "GaMo Tools v1.0.9", vSt);
         }
 
         // ══════════════════════════════════════════════════════

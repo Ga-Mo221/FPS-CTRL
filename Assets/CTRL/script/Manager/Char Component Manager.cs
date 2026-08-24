@@ -1,4 +1,5 @@
 using Fusion;
+using Game.UI;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -21,15 +22,23 @@ public class CharComponentManager : MonoBehaviour
     public NCharacterAnimationHandler NCharacterAnimationHandler;
     public NShootHandler NShootHandler;
     public NHPHandler NHPHandler;
-    public UIHPPlayer UihpPlayer;
     public HitboxRoot HitboxRoot;
     public UIPlayerNickName UIPlayerNickName;
-    public UIInGameMessagesHandler UIInGameMessagesHandler;
+    [SerializeField] private GameDMHudController GameDmHudController;
+    [SerializeField] private GameFFAHudController GameFFAHudController;
     public NInGameMessagesHandler NInGameMessagesHandler;
-    public UIWeapon UIWeapon;
     public CameraShake CameraShake;
     public NetworkObject NetworkObject;
     public DissolvingController DissolvingController;
+
+    public GameHudControllerBase GameHudController()
+    {
+        var Gamemanager = GameManager.Instance;
+        if (Gamemanager == null) return null;
+        if (Gamemanager.GetGamePlayMode() == GamePlayMode.Solo)
+            return GameFFAHudController;
+        else return GameDmHudController;
+    }
 
     [Button]
     public void Setup()
@@ -48,12 +57,11 @@ public class CharComponentManager : MonoBehaviour
         NCharacterAnimationHandler = GetComponentInChildren<NCharacterAnimationHandler>(true);
         NShootHandler = GetComponentInChildren<NShootHandler>(true);
         NHPHandler = GetComponentInChildren<NHPHandler>(true);
-        UihpPlayer = GetComponentInChildren<UIHPPlayer>(true);
         HitboxRoot = GetComponentInChildren<HitboxRoot>(true);
         UIPlayerNickName = GetComponentInChildren<UIPlayerNickName>(true);
-        UIInGameMessagesHandler = GetComponentInChildren<UIInGameMessagesHandler>(true);
+        GameDmHudController = GetComponentInChildren<GameDMHudController>(true);
+        GameFFAHudController = GetComponentInChildren<GameFFAHudController>(true);
         NInGameMessagesHandler = GetComponentInChildren<NInGameMessagesHandler>(true);
-        UIWeapon = GetComponentInChildren<UIWeapon>(true);
         CameraShake = GetComponentInChildren<CameraShake>(true);
         NetworkObject = GetComponent<NetworkObject>();
         DissolvingController = GetComponentInChildren<DissolvingController>(true);

@@ -24,6 +24,8 @@ public static class InputButtons
     public const int ThrowFrag  = 7;
     public const int ThrowFlash = 8;
     public const int Mode    = 9;
+    public const int Weapon1 = 10;
+    public const int Weapon2  = 11;
 }
 
 [System.Serializable]

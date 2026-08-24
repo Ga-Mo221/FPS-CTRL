@@ -1,3 +1,5 @@
+using System;
+using Game.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,7 +15,7 @@ public class UICountdownStartRound : MonoBehaviour
     [SerializeField] private float _textPunchScale = 1.4f;  // scale max khi số mới xuất hiện
     [SerializeField] private float _textPunchDuration = 0.25f; // thời gian phóng to rồi về 1
     
-    [SerializeField] private TextMeshProUGUI _roundTimerText; // thời gian đã chơi trong round hiện tại.
+    //[SerializeField] private TextMeshProUGUI _roundTimerText; // thời gian đã chơi trong round hiện tại.
     [SerializeField] private TextMeshProUGUI _roundCountText; // round hien tai.
     [SerializeField] private TextMeshProUGUI _timerText; // tong thoi gian da choi.
 
@@ -22,6 +24,18 @@ public class UICountdownStartRound : MonoBehaviour
     private int _lastDisplayedSecond = -1;
     private float _punchTimer = 0f;
     private bool _isPunching = false;
+    
+    private GameHudControllerBase _gameHud;
+
+    private void Awake()
+    {
+        _gameHud = GetComponent<GameHudControllerBase>();
+    }
+
+    private void Start()
+    {
+        _gameHud.SetKillTarget(NetworkGameState.Instance.GetKillTarget());
+    }
 
     private void Update()
     {
@@ -46,14 +60,27 @@ public class UICountdownStartRound : MonoBehaviour
     private void UpdateAlwaysOnUI()
     {
         var state = NetworkGameState.Instance;
+        var gamemanager = GameManager.Instance;
 
         // Round timer: thời gian đã chơi trong hiệp hiện tại
-        if (_roundTimerText != null)
+        if (_gameHud != null)
         {
-            float r = state.RoundElapsed;
-            int min = Mathf.FloorToInt(r / 60f);
-            int sec = Mathf.FloorToInt(r % 60f);
-            _roundTimerText.text = $"{min:00}:{sec:00}";
+            // round time
+            _gameHud.SetTimer(state.RoundElapsed);
+            
+            // rank
+            if (gamemanager != null)
+                _gameHud.SetRank(state.GetLeaderboardRank(gamemanager.GetPlayerID()));
+            
+            // set kill solo
+            if (state.KillLeaderboard.Count > 0)
+                _gameHud.SetKills(state.KillLeaderboard[0].Kills);
+            
+            _gameHud.SetTeam1("Alpha", state.RedKill);
+            
+            _gameHud.SetTeam2("Beta", state.BlueKill);
+            
+            //Debug.Log($" {state.RedKill} | {state.BlueKill}");
         }
 
         // Round count: hiệp hiện tại
@@ -76,6 +103,8 @@ public class UICountdownStartRound : MonoBehaviour
 
     private void Show(float remaining)
     {
+        if (_countdown_Background == null) return;
+        if (_countdownTimerText == null) return;
         if (!_isVisible)
         {
             _isVisible = true;
@@ -131,6 +160,8 @@ public class UICountdownStartRound : MonoBehaviour
 
     private void HideImmediate()
     {
+        if (_countdown_Background == null) return;
+        
         if (!_isVisible) return;
         _isVisible = false;
         _countdown_Background.gameObject.SetActive(false);
@@ -141,6 +172,8 @@ public class UICountdownStartRound : MonoBehaviour
 
     private void SetBackgroundAlpha(float alpha)
     {
+        if (_countdown_Background == null) return;
+        
         Color c = _countdown_Background.color;
         c.a = alpha;
         _countdown_Background.color = c;

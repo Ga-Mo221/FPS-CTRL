@@ -26,7 +26,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     
     public CharComponentManager _componentManager { get; private set; }
     private NInGameMessagesHandler _nInGameMessagesHandler;
-    private UIHPPlayer _uiLocalPlayer;
+    //private UIHPPlayer _uiLocalPlayer;
     private UIPlayerNickName _uiPlayerNickName;
     private NShootHandler _shootHandler;
     public NCharMovementHandler _movementHandler;
@@ -62,7 +62,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     {
         _componentManager = GetComponent<CharComponentManager>();
         _nInGameMessagesHandler = _componentManager.NInGameMessagesHandler;
-        _uiLocalPlayer = _componentManager.UihpPlayer;
+        //_uiLocalPlayer = _componentManager.UihpPlayer;
         _uiPlayerNickName = _componentManager.UIPlayerNickName;
         _shootHandler = _componentManager.NShootHandler;
         _movementHandler = _componentManager.NCharMovementHandler;
@@ -74,11 +74,13 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         {
             Local = this;
             
+            GameManager.Instance.setPlayerID(Object.Id);
+            
             Utils.SetRenderLayerInChildren(_hide_Mesh, LayerMask.NameToLayer("LocalPlayerModel"));
             
             Camera.main?.gameObject.SetActive(false);
             
-            _uiLocalPlayer?.gameObject.SetActive(true);
+            //_uiLocalPlayer?.gameObject.SetActive(true);
 
             var parrentCamera = _componentManager.Camera.transform.parent.gameObject;
             parrentCamera.SetActive(true);
@@ -108,7 +110,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         }
         else
         {
-            _uiLocalPlayer?.gameObject.SetActive(false);
+            //_uiLocalPlayer?.gameObject.SetActive(false);
             GameObject localCamera = _componentManager.Camera.transform.parent.gameObject;
             localCamera.SetActive(false);
             
@@ -170,8 +172,9 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             {
                 if (playerLeftNetworkObject == Object)
                 {
-                    Local.GetComponent<NInGameMessagesHandler>().SendInGameRPCMessage(
-                        playerLeftNetworkObject.GetComponent<NPlayer>().Nickname.ToString(), "Left");
+                    // sẽ chuyển thông báo join và left sang chat box
+                    // Local.GetComponent<NInGameMessagesHandler>().SendInGameRPCMessage(
+                    //     playerLeftNetworkObject.GetComponent<NPlayer>().Nickname.ToString(), "Left");
 
                     // ✅ Giảm count theo team ngay tại đây, lúc này object vẫn còn sống
                     if (NetworkedTeam == PlayerTeam.Blue)
@@ -200,7 +203,8 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
         if (!_isPublicJoinMessageSent)
         {
-            _nInGameMessagesHandler.SendInGameRPCMessage(nickName, "Joined");
+            // sẽ chuyển thông báo join và left sang chat box
+            //_nInGameMessagesHandler.SendInGameRPCMessage(nickName, "Joined");
             _isPublicJoinMessageSent = true;
         }
     }

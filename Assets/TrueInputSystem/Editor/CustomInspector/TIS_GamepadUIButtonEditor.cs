@@ -142,7 +142,9 @@ namespace TrueInputSystem
                     new GUIContent("First Selected",
                         "Khi bật, button này sẽ tự nhận EventSystem focus sau 1 frame khi GameObject được kích hoạt.\n" +
                         "Dùng để chỉ định button mặc định khi mở panel.\n\n" +
-                        "Chỉ hoạt động với Content layer."),
+                        "Chỉ hoạt động với Content layer.\n\n" +
+                        "Lưu ý: việc phát hiện mất selection và restore focus được quản lý\n" +
+                        "bởi UINavigationContext, không phải button này."),
                     isFirstSelectedProp.boolValue);
             }
 
@@ -391,8 +393,10 @@ namespace TrueInputSystem
                 EditorGUILayout.Space(5);
                 EditorGUILayout.PropertyField(onBecameActiveInLayerProp,
                     new GUIContent("On Became Active In Layer",
-                        "Fired khi button này trở thành active trong layer của nó qua global input.\n" +
-                        "UINavigationContext tự subscribe event này — bạn không cần assign thủ công."));
+                        "Fired khi button này trở thành active trong layer của nó.\n" +
+                        "UINavigationContext là nơi duy nhất quyết định khi nào event này được gọi\n" +
+                        "— thông qua ApplyActiveVisual() — bạn không cần assign thủ công.\n\n" +
+                        "Dùng để hook thêm logic bên ngoài khi Tab/SubTab thay đổi."));
             }
         }
     }

@@ -1,0 +1,58 @@
+﻿#pragma kernel SCAN KERNEL_SCAN
+
+// 32x32 = 1024 threads per group (max allowed on most hardware)
+#define THREAD_COUNT 32
+#define GROUP_SIZE (THREAD_COUNT * THREAD_COUNT)
+
+// I/O
+uint2 _Dims;                            // Screen Dimensions
+uint _NumGroupsX;                       // Number of thread groups along X, needed to linearize group id into the output buffer
+Texture2D _Source;                      // Screen Texture
+RWStructuredBuffer<float> _OutBuffer;   // Compute Group Output
+
+// Shared per-pixel values, one slot per thread in the group
+groupshared float shared_lum[GROUP_SIZE];
+groupshared uint shared_pixels[GROUP_SIZE];
+
+// Convert screen coordinates to the pixel's luminosity
+float get_screen_lum(uint x, uint y) {
+    return dot(_Source[uint2(x, y)].rgb, float3(0.21267291f, 0.7151522f, 0.0721750f));
+}
+
+// Each thread now corresponds to a single pixel (x, y) instead of a whole row
+[numthreads(THREAD_COUNT, THREAD_COUNT, 1)]
+void SCAN(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID, uint3 dispatchId : SV_DispatchThreadID) {
+    uint x = dispatchId.x;
+    uint y = dispatchId.y;
+    uint index = threadId.y * THREAD_COUNT + threadId.x;
+
+    // Fetch this thread's single pixel (0 contribution if out of bounds, e.g. last partial group)
+    float lum = 0;
+    uint valid = 0;
+    if (x < _Dims.x && y < _Dims.y) {
+        lum = get_screen_lum(x, y);
+        valid = 1;
+    }
+
+    shared_lum[index] = lum;
+    shared_pixels[index] = valid;
+    GroupMemoryBarrierWithGroupSync();
+
+    // Parallel tree reduction: GROUP_SIZE (1024) -> 1 in log2(1024) = 10 steps
+    // instead of a single thread looping through everything sequentially
+    [unroll]
+    for (uint stride = GROUP_SIZE / 2; stride > 0; stride >>= 1) {
+        if (index < stride) {
+            shared_lum[index] += shared_lum[index + stride];
+            shared_pixels[index] += shared_pixels[index + stride];
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    // Thread 0 writes this group's final result
+    if (index == 0) {
+        uint groupIndex = groupId.y * _NumGroupsX + groupId.x;
+        _OutBuffer[groupIndex * 2] = shared_lum[0];
+        _OutBuffer[groupIndex * 2 + 1] = shared_pixels[0];
+    }
+}

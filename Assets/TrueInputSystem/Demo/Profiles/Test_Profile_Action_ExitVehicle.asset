@@ -1,0 +1,161 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5ef2c4aa2cceca4f8c97042b0d2f083, type: 3}
+  m_Name: Test_Profile_Action_ExitVehicle
+  m_EditorClassIdentifier: TrueInputSystem.Runtime::TrueInputSystem.TISInputProfileConfig
+  profileName: ExitVehicle
+  description: 
+  enablePC: 1
+  enableGamepad: 1
+  enableMobile: 1
+  actionMaps:
+  - mapName: Movement
+    enabledByDefault: 1
+    actions:
+    - actionName: Move
+      actionType: 1
+      bindingPC: <Keyboard>/wasd
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/leftStick
+      bindingGamepadModifier: 
+      bindingMobile: TISVirtualJoystick
+      readMode: 1
+      isSinglePress: 0
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Jump
+      actionType: 0
+      bindingPC: <Keyboard>/space
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/buttonSouth
+      bindingGamepadModifier: 
+      bindingMobile: Button_1
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Run
+      actionType: 0
+      bindingPC: <Keyboard>/leftShift
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/leftShoulder
+      bindingGamepadModifier: 
+      bindingMobile: Button_0
+      readMode: 1
+      isSinglePress: 0
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  - mapName: Camera
+    enabledByDefault: 1
+    actions:
+    - actionName: Look
+      actionType: 1
+      bindingPC: <Mouse>/delta
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/rightStick
+      bindingGamepadModifier: 
+      bindingMobile: CameraZone
+      readMode: 1
+      isSinglePress: 0
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  - mapName: Skill
+    enabledByDefault: 1
+    actions:
+    - actionName: Attack
+      actionType: 0
+      bindingPC: <Mouse>/leftButton
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/buttonWest
+      bindingGamepadModifier: 
+      bindingMobile: Button_2
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Skill1
+      actionType: 0
+      bindingPC: <Keyboard>/q
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/leftShoulder
+      bindingGamepadModifier: 
+      bindingMobile: Button_3
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Skill2
+      actionType: 0
+      bindingPC: <Keyboard>/e
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/rightShoulder
+      bindingGamepadModifier: 
+      bindingMobile: Button_4
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Throttle
+      actionType: 0
+      bindingPC: <Keyboard>/a
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/buttonEast
+      bindingGamepadModifier: 
+      bindingMobile: Button_5
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Brake
+      actionType: 0
+      bindingPC: <Keyboard>/s
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/buttonNorth
+      bindingGamepadModifier: 
+      bindingMobile: Button_6
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: ExitVehicle
+      actionType: 0
+      bindingPC: <Keyboard>/b
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/dpad/up
+      bindingGamepadModifier: 
+      bindingMobile: Button_7
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  mobileSettings:
+    joystickRadius: 100
+    joystickDeadzone: 0.08
+    dynamicJoystick: 1
+    idleOpacity: 0.4
+    showSkillButtons: 1
+    skillButtonSize: 100
+    cameraZoneWidthRatio: 0.4
+    cameraZoneDebugOpacity: 0
+  cameraSettings:
+    mouseSensitivity: {x: 0.25, y: 0.25}
+    gamepadSensitivity: {x: 180, y: 180}
+    mobileSensitivity: {x: 0.12, y: 0.12}
+    invertY: 0
+    smoothing: 12
+    pitchMin: -80
+    pitchMax: 80
+  gamepadSettings:
+    leftStickDeadzone: 0.12
+    rightStickDeadzone: 0.1
+    stickCurve: 1.5
+    enableRumble: 1

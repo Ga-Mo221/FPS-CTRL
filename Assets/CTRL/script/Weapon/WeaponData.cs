@@ -5,19 +5,31 @@ using UnityEngine;
 public class WeaponData : ScriptableObject
 {
     [TabGroup("Weapon Data", "Info")]
+    [HorizontalGroup("Weapon Data/Info/Info", width: 0.2f)]
+    [PreviewField(50, ObjectFieldAlignment.Left)]
+    [HideLabel]
+    [SerializeField] private Sprite _icon;
+    
+    [HorizontalGroup("Weapon Data/Info/Info")]
+    [VerticalGroup("Weapon Data/Info/Info/Right")]
+    [Tooltip("dùng để switch weapon giữa có Constraint.")]
     [SerializeField] private string _iD;
-    [TabGroup("Weapon Data", "Info")]
+    [VerticalGroup("Weapon Data/Info/Info/Right")]
     [Tooltip("Index là thứ tự của súng trong Animator controller, dùng để phân biệt giữa các loại súng sử dụng khác một số animation như Switch và Reload")]
     [SerializeField] private int _index;
-    [TabGroup("Weapon Data", "Info")]
+    [VerticalGroup("Weapon Data/Info/Info/Right")]
     [SerializeField] private string _name;
+    
+    
+    
     [TabGroup("Weapon Data", "Info")]
     [Tooltip("Lượng đạn tối đa của súng sau khi thay đạn.")]
     [SerializeField] private int _defaultBullet = 9;
     [TabGroup("Weapon Data", "Info")]
     [Tooltip("lượng đạn tối đa có thể mang theo")]
     [SerializeField] private int _maxBullet = 27;
-    [TabGroup("Weapon Data", "Info")]
+    
+    [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Thời gian chờ (giây) giữa hai phát bắn.\n" +
              "Ví dụ: 0.5 → click nhanh cỡ nào cũng phải chờ 0.5s mới bắn được phát tiếp.")]
     [Min(0.01f)]
@@ -93,9 +105,10 @@ public class WeaponData : ScriptableObject
     /// <summary>True nếu WeaponData có đủ dữ liệu cần thiết để spawn/sử dụng.</summary>
     public bool HasRecoilData => _recoilData != null;
     
+    public Sprite Icon => _icon;
     public string ID => _iD;
     public int Index => _index;
-    public string Name => _name;
+    public string WeaponName => _name;
     public int DefaultBullet => _defaultBullet;
     public int MaxBullet => _maxBullet;
     public float FireDelay => _fireDelay;

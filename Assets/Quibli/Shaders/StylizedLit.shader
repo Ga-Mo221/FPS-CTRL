@@ -57,6 +57,9 @@
         [HideInInspector][NoScaleOffset]_EmissionMap("Emission Map", 2D) = "white" {}
 
         _LightContribution("[FOLDOUT(Lighting){12}]Light Color Impact", Range(0, 1)) = 1
+        
+        _LightInfluence("Light Influence", Range(0, 1)) = 1
+        
         [Space][ToggleOff] _ReceiveShadows("Receive Shadows", Float) = 0
         [Toggle(_UNITYSHADOW_OCCLUSION)]_UnityShadowOcclusion("[_RECEIVE_SHADOWS_OFF]Shadow Occlusion", Int) = 0
         [Toggle(DR_DECAL_PAINT_OVER)] _DecalPaintOver("Decals Paint Over Shading", Int) = 0

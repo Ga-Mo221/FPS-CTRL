@@ -1,17 +1,15 @@
+using Game.UI;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class UIADSPlayer : MonoBehaviour
 {
-    [SerializeField] private Image _aimImage;
-    
-    private CharComponentManager _componentManager;
     private NCharMovementHandler _nCharMovementHandler;
+    private GameHudControllerBase _gameHudController;
 
     private void Awake()
     {
-        _componentManager = GetComponentInParent<CharComponentManager>();
-        _nCharMovementHandler = _componentManager.NCharMovementHandler;
+        _nCharMovementHandler = GetComponentInParent<NCharMovementHandler>();
+        _gameHudController = GetComponent<GameHudControllerBase>();
     }
 
     private void Update()
@@ -20,12 +18,7 @@ public class UIADSPlayer : MonoBehaviour
             return;
         
         var _state = _nCharMovementHandler.StateFl;
-        Color defaultColor = _aimImage.color;
         
-        if (_state.IsADS)
-            defaultColor.a = 0;
-        else defaultColor.a = 1;
-        
-        _aimImage.color = defaultColor;
+        _gameHudController.SetCrosshairVisible(!_state.IsADS);
     }
 }

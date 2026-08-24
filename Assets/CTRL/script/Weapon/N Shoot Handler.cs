@@ -31,6 +31,7 @@ public class NShootHandler : NetworkBehaviour
     public NPlayer nPlayer;
     private AudioSource _hitSound;
     private PlayerData _playerData;
+    private NHPHandler _nHPHandler;
 
     public override void Spawned()
     {
@@ -41,7 +42,10 @@ public class NShootHandler : NetworkBehaviour
         nPlayer                 = _componentManager.NPlayer;
         _hitSound               = _componentManager.Audio_HitSound;
         _playerData             = _movementHandler.Data;
+        _nHPHandler             = _componentManager.NHPHandler;
     }
+
+    public int GetDeathCount() => _nHPHandler.DeadCount;
 
     // ── Simulation (chỉ chạy trên StateAuthority = Host) ───────────────────
     public override void FixedUpdateNetwork()
@@ -187,8 +191,9 @@ public class NShootHandler : NetworkBehaviour
             case BodyParts.Body:
                 break;
         }
-        
-        if (HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), Object.Id))
+
+        var weaponIcon = _weaponManager?.Weapon_Active().Data.WeaponName;
+        if (HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), weaponIcon, Object.Id))
             _kill++;
         
         RPC_ApplyAudio();
@@ -198,6 +203,10 @@ public class NShootHandler : NetworkBehaviour
     private void RPC_ApplyAudio()
     {
         AudioManager.Instance.PlayClip(_hitSound, _playerData.TakeDamageClips, _playerData.Volume_TakeDamage, true, 0.5f, 1f);
+        
+        var HUD = _componentManager.GameHudController();
+        if (HUD != null)
+            HUD.CrosshairHit();
     }
 
     public void ThrowFrag()
@@ -208,7 +217,13 @@ public class NShootHandler : NetworkBehaviour
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
         {
-            spawnedGrenade.GetComponent<GrenadeHandler>().Throw(_aimForward * _fore, Object.InputAuthority, nPlayer.Nickname.ToString(), _hitMask, Object.Id, this);
+            spawnedGrenade.GetComponent<GrenadeHandler>().Throw(
+                _aimForward * _fore, 
+                Object.InputAuthority, 
+                nPlayer.Nickname.ToString(),
+                _hitMask, 
+                Object.Id, 
+                this);
         });
     }
     
@@ -220,7 +235,13 @@ public class NShootHandler : NetworkBehaviour
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
             {
-                spawnedGrenade.GetComponent<GrenadeHandler>().Throw(_aimForward * _fore, Object.InputAuthority, nPlayer.Nickname.ToString(), _hitMask, Object.Id, this);
+                spawnedGrenade.GetComponent<GrenadeHandler>().Throw(
+                    _aimForward * _fore, 
+                    Object.InputAuthority, 
+                    nPlayer.Nickname.ToString(), 
+                    _hitMask, 
+                    Object.Id, 
+                    this);
             });
     }
 

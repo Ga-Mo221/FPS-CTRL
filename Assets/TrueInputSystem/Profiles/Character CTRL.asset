@@ -16,7 +16,7 @@ MonoBehaviour:
   description: 
   enablePC: 1
   enableGamepad: 1
-  enableMobile: 0
+  enableMobile: 1
   actionMaps:
   - mapName: Movement
     enabledByDefault: 1
@@ -36,7 +36,7 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/space
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/buttonNorth
+      bindingGamepad: <Gamepad>/buttonSouth
       bindingGamepadModifier: 
       bindingMobile: Button_1
       readMode: 0
@@ -58,9 +58,9 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/c
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/buttonSouth
+      bindingGamepad: <Gamepad>/buttonEast
       bindingGamepadModifier: 
-      bindingMobile: 
+      bindingMobile: Button_11
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
@@ -83,9 +83,9 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/escape
       bindingPCModifier: 
-      bindingGamepad: 
+      bindingGamepad: <Gamepad>/select
       bindingGamepadModifier: 
-      bindingMobile: 
+      bindingMobile: Button_10
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
@@ -121,7 +121,7 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/dpad/down
       bindingGamepadModifier: 
-      bindingMobile: Button_4
+      bindingMobile: 
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
@@ -130,9 +130,9 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/r
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/buttonWest
+      bindingGamepad: <Gamepad>/buttonNorth
       bindingGamepadModifier: 
-      bindingMobile: 
+      bindingMobile: Button_4
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
@@ -141,9 +141,9 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/q
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/dpad/left
+      bindingGamepad: <Gamepad>/leftShoulder
       bindingGamepadModifier: 
-      bindingMobile: 
+      bindingMobile: Button_5
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
@@ -152,9 +152,9 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/e
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/dpad/right
+      bindingGamepad: <Gamepad>/rightShoulder
       bindingGamepadModifier: 
-      bindingMobile: 
+      bindingMobile: Button_6
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
@@ -163,9 +163,31 @@ MonoBehaviour:
       actionType: 0
       bindingPC: 
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/buttonEast
+      bindingGamepad: <Gamepad>/buttonWest
       bindingGamepadModifier: 
-      bindingMobile: 
+      bindingMobile: Button_7
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Weapon1
+      actionType: 0
+      bindingPC: <Keyboard>/1
+      bindingPCModifier: 
+      bindingGamepad: 
+      bindingGamepadModifier: 
+      bindingMobile: Button_8
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Weapon2
+      actionType: 0
+      bindingPC: <Keyboard>/2
+      bindingPCModifier: 
+      bindingGamepad: 
+      bindingGamepadModifier: 
+      bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1

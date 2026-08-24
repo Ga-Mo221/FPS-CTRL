@@ -698,6 +698,8 @@ namespace TrueInputSystem
         /// <returns>Tổng góc xoay Delta (Độ) cuối cùng để áp dụng vào Camera</returns>
         public Vector2 AimAssistProcess(AimAssistSettings settings, Transform cameraTransform, Vector3 target, Vector2 playerLookDelta, float intensity = 0.3f)
             => _aimAssist.AimAssistProcess(settings, cameraTransform, target, playerLookDelta, intensity);
+        
+        public void UpdateActivePlatform() => _aimAssist.UpdateActivePlatform();
 
         // ============================================================
         //  API DEADZONE

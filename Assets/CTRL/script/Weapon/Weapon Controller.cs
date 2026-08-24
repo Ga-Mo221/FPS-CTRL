@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Fusion;
+using Game.UI;
 using Sirenix.OdinInspector;
 using TrueInputSystem;
 using UnityEngine;
@@ -15,9 +16,9 @@ public class WeaponController : NetworkBehaviour
     [Networked] public NetworkObject OwnerCharacter { get; set; }
     
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    private int _currentBulletvalue { get; set; }
+    public int CurrentBulletvalue { get; private set; }
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    private int _currentMaxBullet { get; set; }
+    public int CurrentMaxBullet { get; private set; }
     
     // ============================ LOCAL FILED =====================================
     
@@ -132,8 +133,8 @@ public class WeaponController : NetworkBehaviour
     [TabGroup("Weapon Controller", "Runtime")]
     [SerializeField] private CharComponentManager _componentManager;
 
-    [TabGroup("Weapon Controller", "Runtime")] 
-    [SerializeField] private UIWeapon _uiWeapon;
+    [TabGroup("Weapon Controller", "Runtime")] [SerializeField]
+    private GameHudControllerBase _gameHudController;
     
     [TabGroup("Weapon Controller", "Runtime")]
     [SerializeField] private Camera _camera_Zoom;
@@ -211,7 +212,7 @@ public class WeaponController : NetworkBehaviour
         _componentManager = OwnerCharacter.GetComponent<CharComponentManager>();
         if (_componentManager == null) return;
 
-        _uiWeapon = _componentManager.UIWeapon;
+        _gameHudController = _componentManager.GameHudController();
 
         Transform socket = _componentManager.WeaponManager.WeaponParent;
         transform.SetParent(socket, worldPositionStays: false);
@@ -223,8 +224,8 @@ public class WeaponController : NetworkBehaviour
     { 
         if (_type != WeaponType.Rifle && _type != WeaponType.Sniper) return;
         
-        _currentMaxBullet = _data.MaxBullet;
-        _currentBulletvalue = _data.DefaultBullet;
+        CurrentMaxBullet = _data.MaxBullet;
+        CurrentBulletvalue = _data.DefaultBullet;
     }
     
     // ====================================== EVENT ONFIRE =========================
@@ -234,8 +235,8 @@ public class WeaponController : NetworkBehaviour
     {
         _bridge = TISInputBridge.Instance;
         
-        if (_uiWeapon != null)
-            _uiWeapon.SetBullet(_currentMaxBullet, _currentBulletvalue, _data);
+        if (_gameHudController != null)
+            _gameHudController.SetBullet(CurrentMaxBullet, CurrentBulletvalue);
         
         _audio = AudioManager.Instance;
         
@@ -245,12 +246,6 @@ public class WeaponController : NetworkBehaviour
         _parrentBullet.parent = GameManager.Instance.BulletParrent;
         
         _gun_Recoil_CTRL.OnShotFired += HandleShot;
-    }
-
-    private void OnEnable()
-    {
-        if (_uiWeapon != null)
-            _uiWeapon.SetBullet(_currentMaxBullet, _currentBulletvalue, _data);
     }
 
     void OnDestroy()
@@ -271,7 +266,7 @@ public class WeaponController : NetworkBehaviour
         {
             case WeaponType.Rifle:
             case WeaponType.Sniper:
-                _currentBulletvalue--;
+                CurrentBulletvalue--;
                 if (_bulletController != null)
                     _bulletController.Drop();
                     // reset effect
@@ -361,22 +356,22 @@ public class WeaponController : NetworkBehaviour
 
     public void Reload()
     {
-        if (_currentMaxBullet >= _data.DefaultBullet)
+        if (CurrentMaxBullet >= _data.DefaultBullet)
         {
-            _currentMaxBullet -= _data.DefaultBullet - _currentBulletvalue;
-            _currentBulletvalue = _data.DefaultBullet;
-        }else if (_currentMaxBullet > 0)
+            CurrentMaxBullet -= _data.DefaultBullet - CurrentBulletvalue;
+            CurrentBulletvalue = _data.DefaultBullet;
+        }else if (CurrentMaxBullet > 0)
         {
-            int thieu = _data.DefaultBullet - _currentBulletvalue;
-            if (thieu <= _currentMaxBullet)
+            int thieu = _data.DefaultBullet - CurrentBulletvalue;
+            if (thieu <= CurrentMaxBullet)
             {
-                _currentBulletvalue = _data.DefaultBullet;
-                _currentMaxBullet -= thieu;
+                CurrentBulletvalue = _data.DefaultBullet;
+                CurrentMaxBullet -= thieu;
             }
             else
             {
-                _currentBulletvalue += _currentMaxBullet;
-                _currentMaxBullet = 0;
+                CurrentBulletvalue += CurrentMaxBullet;
+                CurrentMaxBullet = 0;
             }
         }
     }
@@ -389,7 +384,7 @@ public class WeaponController : NetworkBehaviour
         {
             case WeaponType.Rifle:
             case WeaponType.Sniper:
-                if (_currentBulletvalue <= 0) return false;
+                if (CurrentBulletvalue <= 0) return false;
                 return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
             case WeaponType.Melee:
                 return _gun_Recoil_CTRL.OnFire(_data.FireDelay);
@@ -458,7 +453,11 @@ public class WeaponController : NetworkBehaviour
                     TrySetMode(GunRecoilController.FiringMode.Auto);
                 break;
         }
+        if (_gameHudController != null)
+            _gameHudController.SetWeaponMode(GetMode());
     }
+    
+    public GunRecoilController.FiringMode GetMode() => _gun_Recoil_CTRL.GetFiringMode();
     
     /// <summary>
     /// Gọi SetFiringMode trên controller — controller tự từ chối nếu không được phép.
@@ -477,7 +476,8 @@ public class WeaponController : NetworkBehaviour
     // Cập nhật UI khi số lượng đạn thay đổi.
     void OnBulletCountChange()
     {
-        _uiWeapon.SetBullet(_currentBulletvalue, _currentMaxBullet, _data);
+        if (_gameHudController != null)
+            _gameHudController.SetBullet(CurrentBulletvalue, CurrentMaxBullet);
     }
     
     // ============================================ ANIMATOR =================================================
@@ -510,8 +510,8 @@ public class WeaponController : NetworkBehaviour
         if (isReloading)
         {
             if (_type != WeaponType.Rifle && _type != WeaponType.Sniper)  return false;
-            if (_currentBulletvalue == _data.DefaultBullet) return false;
-            if (_currentMaxBullet == 0)  return false;
+            if (CurrentBulletvalue == _data.DefaultBullet) return false;
+            if (CurrentMaxBullet == 0)  return false;
         }
         
         _anim.SetBool("IsReloading", isReloading);

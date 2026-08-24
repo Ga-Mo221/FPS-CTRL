@@ -586,6 +586,32 @@ namespace TrueInputSystem
                 return slash >= 0 ? path.Substring(slash + 1) : path;
             }
         }
+        
+        public static string GetShortDisplayName(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return "—";
+    
+            string full = GetDisplayName(path);
+    
+            return full switch
+            {
+                "Right Trigger"       => "RT",
+                "Left Trigger"        => "LT",
+                "Right Shoulder"      => "RB",
+                "Left Shoulder"       => "LB",
+                "Left Stick Press"    => "L3",
+                "Right Stick Press"   => "R3",
+                "Button South"        => "A",
+                "Button North"        => "Y",
+                "Button East"         => "B",
+                "Button West"         => "X",
+                "D-Pad/Up"            => "D↑",
+                "D-Pad/Down"          => "D↓",
+                "D-Pad/Left"          => "D←",
+                "D-Pad/Right"         => "D→",
+                _                     => full,
+            };
+        }
 
         /// <summary>
         /// Trả về đường dẫn đầy đủ của file JSON override.

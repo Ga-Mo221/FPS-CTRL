@@ -50,18 +50,12 @@ namespace TrueInputSystem
         /// <summary>
         /// Bật/tắt button này khỏi hệ thống navigation gamepad.
         /// Khi false: button không xử lý input, không nhận focus, không di chuyển sang button khác.
-        /// Dùng để "đóng băng" một nhóm button khi panel khác đang active.
         /// </summary>
         [SerializeField] private bool isNavigationEnabled = true;
 
-        // ── Multi-layer Active Registry ───────────────────────────────────────
-        // Mỗi layer giữ đúng 1 "virtual selected" button.
-        // Content layer KHÔNG dùng registry này — nó dùng EventSystem thật.
-        private static readonly Dictionary<NavigationLayer, TISGamepadUIButton>
-            s_ActiveButtons = new Dictionary<NavigationLayer, TISGamepadUIButton>();
-
-        // Hold delay dùng chung, tránh race condition giữa các layer
-        private static readonly Dictionary<NavigationLayer, float>
+        // ── Hold-delay per layer (static, shared) ─────────────────────────────
+        // Button chỉ đọc/ghi cooldown, KHÔNG giữ active state — Context giữ.
+        internal static readonly Dictionary<NavigationLayer, float>
             s_NextMoveTime = new Dictionary<NavigationLayer, float>
             {
                 { NavigationLayer.Tab,     0f },
@@ -76,9 +70,8 @@ namespace TrueInputSystem
         [HideInInspector] public SelectEvent onDeselect;
 
         /// <summary>
-        /// Fired khi button này trở thành "active" trong layer của nó thông qua
-        /// global layer input (tức là Tab/SubTab đổi trong khi focus đang ở nơi khác).
-        /// UINavigationContext lắng nghe event này để redirect focus về content đầu tiên.
+        /// Fired khi button này trở thành "active" trong layer của nó.
+        /// UINavigationContext lắng nghe event này để redirect focus.
         /// </summary>
         [System.Serializable] public class LayerChangedEvent : UnityEngine.Events.UnityEvent<TISGamepadUIButton> { }
         [HideInInspector] public LayerChangedEvent onBecameActiveInLayer;
@@ -96,11 +89,34 @@ namespace TrueInputSystem
             navigation = new Navigation { mode = Navigation.Mode.None };
         }
 
+        protected override void Start()
+        {
+            base.Start();
+            // Đăng ký với Context để Context biết button này tồn tại
+            if (TISUINavigationContext.Instance != null)
+                TISUINavigationContext.Instance.RegisterButton(this);
+        }
+
         protected override void OnEnable()
         {
             base.OnEnable();
             if (isFirstSelected && layer == NavigationLayer.Content)
                 StartCoroutine(SelectNextFrame());
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            // Báo Context biết button này đang disable để Context cập nhật state
+            if (TISUINavigationContext.Instance != null)
+                TISUINavigationContext.Instance.OnButtonDisabled(this);
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            if (TISUINavigationContext.Instance != null)
+                TISUINavigationContext.Instance.UnregisterButton(this);
         }
 
         private System.Collections.IEnumerator SelectNextFrame()
@@ -114,17 +130,8 @@ namespace TrueInputSystem
             }
             else
             {
-                Debug.LogWarning("[GamepadUIButton] Không tìm thấy EventSystem trong Scene! " +
-                                 "Vui lòng tạo một cái (GameObject → UI → Event System).");
+                Debug.LogWarning("[GamepadUIButton] Không tìm thấy EventSystem trong Scene!");
             }
-        }
-
-        protected override void OnDestroy()
-        {
-            base.OnDestroy();
-            // Dọn registry khi button bị destroy
-            if (s_ActiveButtons.TryGetValue(layer, out var current) && current == this)
-                s_ActiveButtons.Remove(layer);
         }
 
         // ── Select / Deselect ─────────────────────────────────────────────────
@@ -135,18 +142,17 @@ namespace TrueInputSystem
             onSelect?.Invoke();
             SnapToScrollView();
 
-            if (alwaysActive)
-                s_ActiveButtons[layer] = this;
+            // Báo Context: button này vừa được select (qua EventSystem thật)
+            if (TISUINavigationContext.Instance != null)
+                TISUINavigationContext.Instance.NotifyButtonSelected(this);
         }
 
         public override void OnDeselect(BaseEventData eventData)
         {
             if (alwaysActive)
             {
-                // Giữ visual Highlighted thay vì trả về Normal
                 DoStateTransition(SelectionState.Highlighted, false);
                 onDeselect?.Invoke();
-                // KHÔNG gọi base để tránh reset visual
                 return;
             }
 
@@ -158,7 +164,6 @@ namespace TrueInputSystem
 
         private void Update()
         {
-            // Nếu navigation bị tắt → bỏ qua toàn bộ input xử lý
             if (!isNavigationEnabled) return;
 
             bool isFocused = EventSystem.current != null
@@ -166,20 +171,21 @@ namespace TrueInputSystem
 
             if (isFocused)
             {
-                // Button này đang có real focus → xử lý navigation của chính nó
-                HandleGamepadNavigation();
+                // Button đang có real focus → đọc input, gửi lên Context xử lý
+                HandleContentInput();
             }
             else if (alwaysActive)
             {
-                // Chỉ button nào là "active" trong layer của nó mới được xử lý input
-                if (s_ActiveButtons.TryGetValue(layer, out var active) && active == this)
-                    HandleGlobalLayerInput();
+                // Tab/SubTab: chỉ button đang active trong layer mới đọc input
+                if (TISUINavigationContext.Instance != null
+                    && TISUINavigationContext.Instance.IsActiveInLayer(this))
+                    HandleLayerInput();
             }
         }
 
-        // ── Navigation khi đang có real focus ─────────────────────────────────
+        // ── Content layer input ───────────────────────────────────────────────
 
-        private void HandleGamepadNavigation()
+        private void HandleContentInput()
         {
             if (Time.unscaledTime < s_NextMoveTime[NavigationLayer.Content]) return;
 
@@ -191,16 +197,21 @@ namespace TrueInputSystem
             if (inputDir == Vector2.zero) return;
 
             TISGamepadUIButton target = ResolveTarget(inputDir);
-            if (target != null && target.gameObject.activeInHierarchy)
+
+            // Delegate lên Context: Context kiểm tra state rồi quyết định có move không
+            if (TISUINavigationContext.Instance != null)
+                TISUINavigationContext.Instance.RequestContentMove(this, target);
+            else if (target != null && target.gameObject.activeInHierarchy)
             {
+                // Không có Context → tự navigate như cũ
                 EventSystem.current.SetSelectedGameObject(target.gameObject);
                 s_NextMoveTime[NavigationLayer.Content] = Time.unscaledTime + holdDelay;
             }
         }
 
-        // ── Global layer input: Tab / SubTab xử lý input khi không có real focus
+        // ── Tab / SubTab layer input ──────────────────────────────────────────
 
-        private void HandleGlobalLayerInput()
+        private void HandleLayerInput()
         {
             if (Time.unscaledTime < s_NextMoveTime[layer]) return;
 
@@ -211,33 +222,51 @@ namespace TrueInputSystem
             if (axis > 0f) target = (navigationMode == NavMode.Vertical) ? navDown  : navRight;
             else           target = (navigationMode == NavMode.Vertical) ? navUp    : navLeft;
 
-            if (target != null && target.gameObject.activeInHierarchy)
-            {
-                // Lấy button đang active trong layer này (có thể là this, hoặc button khác)
-                s_ActiveButtons.TryGetValue(layer, out var current);
-
-                // Deselect button cũ
-                if (current != null && current != target)
-                {
-                    current.DoStateTransition(SelectionState.Normal, false);
-                    current.onDeselect?.Invoke();
-                }
-
-                // Đăng ký button mới
-                s_ActiveButtons[layer] = target;
-
-                // Select button mới
-                target.DoStateTransition(SelectionState.Highlighted, false);
-                target.onSelect?.Invoke();
-
-                // Notify UINavigationContext để redirect Content focus
-                target.onBecameActiveInLayer?.Invoke(target);
-
-                s_NextMoveTime[layer] = Time.unscaledTime + holdDelay;
-            }
+            // Delegate lên Context: Context kiểm tra state rồi quyết định có move không
+            if (TISUINavigationContext.Instance != null)
+                TISUINavigationContext.Instance.RequestLayerMove(this, target);
         }
 
-        // ── Đọc input direction (dùng cho Content layer) ──────────────────────
+        // ── Public API (gọi từ Context) ───────────────────────────────────────
+
+        /// <summary>
+        /// Context gọi hàm này để set button thành active trong layer (Tab/SubTab).
+        /// Button chỉ lo visual và fire event — KHÔNG tự ghi state vào dictionary.
+        /// </summary>
+        public void ApplyActiveVisual()
+        {
+            DoStateTransition(SelectionState.Highlighted, false);
+            onSelect?.Invoke();
+            onBecameActiveInLayer?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Context gọi hàm này để clear active visual của button (Tab/SubTab).
+        /// </summary>
+        public void ClearActiveVisual()
+        {
+            DoStateTransition(SelectionState.Normal, false);
+            onDeselect?.Invoke();
+        }
+
+        /// <summary>
+        /// Tắt navigation — button sẽ không nhận input hay di chuyển focus sang button khác.
+        /// </summary>
+        public void DisableNavigation()
+        {
+            isNavigationEnabled = false;
+            DoStateTransition(SelectionState.Normal, false);
+        }
+
+        /// <summary>
+        /// Bật lại navigation — button có thể nhận input trở lại.
+        /// </summary>
+        public void EnableNavigation()
+        {
+            isNavigationEnabled = true;
+        }
+
+        // ── Input readers ─────────────────────────────────────────────────────
 
         private Vector2 ReadInputDirection()
         {
@@ -264,7 +293,6 @@ namespace TrueInputSystem
                 }
             }
 
-            // Keyboard fallback
             if (inputDir == Vector2.zero && Keyboard.current != null)
             {
                 if (inputSource == InputSource.Default)
@@ -279,10 +307,6 @@ namespace TrueInputSystem
             return inputDir;
         }
 
-        /// <summary>
-        /// Đọc trục "tab" tương ứng với layer này — dùng cho global layer input.
-        /// Trả về +1, -1 hoặc 0.
-        /// </summary>
         private float ReadLayerAxis()
         {
             Gamepad gamepad = Gamepad.current;
@@ -301,7 +325,6 @@ namespace TrueInputSystem
                 }
             }
 
-            // Keyboard fallback (Q/E cho Tab, Z/C cho SubTab — tuỳ chỉnh nếu cần)
             if (Keyboard.current != null)
             {
                 if (layer == NavigationLayer.Tab)
@@ -338,54 +361,6 @@ namespace TrueInputSystem
             }
 
             return target;
-        }
-
-        // ── Public API: đăng ký button như là "active" trong layer của nó ─────
-        // Gọi từ UINavigationContext khi khởi tạo hoặc reset scene.
-
-        /// <summary>
-        /// Đăng ký button này là "active" trong layer — dùng khi khởi tạo scene.
-        /// Tự động deselect button cũ và fire đủ onDeselect / onSelect.
-        /// </summary>
-        public void SetAsActiveInLayer()
-        {
-            // Deselect button cũ trong cùng layer (nếu có và khác this)
-            if (s_ActiveButtons.TryGetValue(layer, out var prev) && prev != this && prev != null)
-            {
-                prev.DoStateTransition(SelectionState.Normal, false);
-                prev.onDeselect?.Invoke();
-            }
-
-            s_ActiveButtons[layer] = this;
-            DoStateTransition(SelectionState.Highlighted, false);
-            onSelect?.Invoke();
-        }
-
-        /// <summary>
-        /// Tắt navigation — button sẽ không nhận input hay di chuyển focus sang button khác.
-        /// Gọi khi mở panel mới đè lên nhóm button này.
-        /// </summary>
-        public void DisableNavigation()
-        {
-            isNavigationEnabled = false;
-
-            // Reset visual về Normal để tránh button "đứng im" nhưng vẫn sáng
-            DoStateTransition(SelectionState.Normal, false);
-        }
-
-        /// <summary>
-        /// Bật lại navigation — button có thể nhận input trở lại.
-        /// Gọi khi panel mới đóng lại.
-        /// </summary>
-        public void EnableNavigation()
-        {
-            isNavigationEnabled = true;
-        }
-
-        public static TISGamepadUIButton GetActiveInLayer(NavigationLayer navLayer)
-        {
-            s_ActiveButtons.TryGetValue(navLayer, out var btn);
-            return btn;
         }
 
         // ── Snap to ScrollView ────────────────────────────────────────────────

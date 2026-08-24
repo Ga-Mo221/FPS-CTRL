@@ -170,14 +170,44 @@ namespace TrueInputSystem
 
             EditorGUILayout.EndVertical();
 
+            // ── Runtime State (chỉ hiện khi đang Play) ───────────────────────────
+            if (Application.isPlaying && TISUINavigationContext.Instance != null)
+            {
+                EditorGUILayout.Space(8);
+                SectionLabel("RUNTIME STATE  —  button đang active theo từng layer");
+                EditorGUILayout.BeginVertical(_boxStyle);
+
+                DrawRuntimeLayerRow(
+                    "Tab",
+                    TISUINavigationContext.Instance.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.Tab),
+                    ColTab);
+
+                DrawRuntimeLayerRow(
+                    "SubTab",
+                    TISUINavigationContext.Instance.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.SubTab),
+                    ColSubTab);
+
+                DrawRuntimeLayerRow(
+                    "Content",
+                    TISUINavigationContext.Instance.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.Content),
+                    new Color(0.20f, 0.50f, 0.80f, 1f));
+
+                EditorGUILayout.EndVertical();
+
+                // Force repaint để giữ runtime state luôn cập nhật
+                Repaint();
+            }
+
             EditorGUILayout.Space(8);
             SectionLabel("MẶC ĐỊNH (INITIAL SELECTION)");
             EditorGUILayout.BeginVertical(_boxStyle);
-            EditorGUILayout.PropertyField(_defaultTab, new GUIContent("Default Tab", "Tab được chọn khi scene start."));
+            EditorGUILayout.PropertyField(_defaultTab, new GUIContent("Default Tab", "Tab được chọn khi scene start hoặc khi GameObject được enable lại."));
             EditorGUILayout.PropertyField(_defaultSubTab,
-                new GUIContent("Default SubTab", "SubTab được chọn khi scene start."));
+                new GUIContent("Default SubTab", "SubTab được chọn khi scene start hoặc khi GameObject được enable lại."));
             EditorGUILayout.PropertyField(_defaultContent,
-                new GUIContent("Default Content", "Content button được focus khi scene start."));
+                new GUIContent("Default Content",
+                    "Content button được focus khi scene start hoặc khi GameObject được enable lại.\n\n" +
+                    "Cũng là fallback khi toàn bộ Content selection bị mất trong lúc chơi."));
             EditorGUILayout.EndVertical();
 
             // EditorGUILayout.Space(8);
@@ -196,6 +226,36 @@ namespace TrueInputSystem
                 EditorGUILayout.Space(4);
                 DrawIssueBox();
             }
+        }
+
+        private void DrawRuntimeLayerRow(string layerName, TISGamepadUIButton btn, Color layerColor)
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            // Layer badge nhỏ
+            var badgeStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                normal = { textColor = layerColor, background = null },
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 60f
+            };
+            GUILayout.Label(layerName, badgeStyle, GUILayout.Width(60));
+
+            // Tên button đang active
+            string btnName = btn != null ? btn.gameObject.name : "—  (none)";
+            Color textColor = btn != null ? Color.white : new Color(0.5f, 0.5f, 0.5f);
+            var prev = GUI.color;
+            GUI.color = textColor;
+            GUILayout.Label(btnName, EditorStyles.label);
+            GUI.color = prev;
+
+            GUILayout.FlexibleSpace();
+
+            // Ping button trong hierarchy khi click
+            if (btn != null && GUILayout.Button("Ping", EditorStyles.miniButton, GUILayout.Width(38)))
+                EditorGUIUtility.PingObject(btn.gameObject);
+
+            EditorGUILayout.EndHorizontal();
         }
 
         private void DrawStatRow(string label, string value, Color valueColor)

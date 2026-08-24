@@ -1,4 +1,5 @@
 using System.Collections;
+using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,23 +7,30 @@ using UnityEngine.UI;
 public class UIHPPlayer : MonoBehaviour
 {
     private int _hp;
-    private int _maxHP;
-    
-    [SerializeField] private TextMeshProUGUI _hpText;
-    
+    [TabGroup("UI","Hit Damage")]
     [SerializeField] private Image _uiOnHitImage;
+    [TabGroup("UI","Hit Damage")]
     [SerializeField] private int _helpHP = 30;
+    [TabGroup("UI","Hit Damage")]
     [SerializeField] private float _hitImageAlpha = 80f;
 
+    [TabGroup("UI", "Dead")]
     [SerializeField] private Image _uiDead_BlackImage;
+    [TabGroup("UI", "Dead")]
+    [SerializeField] private TextMeshProUGUI _deadStatus_Text;
+    [TabGroup("UI", "Dead")]
+    [SerializeField] private TextMeshProUGUI _recoverTime_Text;
     
-    [Header("Grenade Flash")]
+    [TabGroup("UI","Flash")]
     [SerializeField] private Image _uiFlash_WhiteImage;
+    [TabGroup("UI","Flash")]
     [SerializeField] private float _flashbangDuration = 5f;
 
-    [Header("HP Flash Settings")]
+    [TabGroup("UI","Flash")]
     [SerializeField] private float _fadeInDuration  = 0.1f;   // Thời gian fade sáng lên
+    [TabGroup("UI","Flash")]
     [SerializeField] private float _fadeOutDuration = 0.4f;   // Thời gian fade tối xuống
+    [TabGroup("UI","Flash")]
     [SerializeField] private float _lowHPPauseDuration = 0.3f; // Khoảng nghỉ giữa 2 lần nhấp nháy liên tục
 
     private Coroutine _lowHPFlashCoroutine;
@@ -34,28 +42,22 @@ public class UIHPPlayer : MonoBehaviour
     private void Start()
     {
         SetImageAlpha(_uiOnHitImage, 0f);
-        SetImageAlpha(_uiDead_BlackImage, 0f);
         SetImageAlpha(_uiFlash_WhiteImage, 0f);
     }
 
     public void Init(int HP, PlayerData data,  CharComponentManager componentManager)
     {
         _hp = HP;
-        _maxHP = HP;
         _data = data;
         _componentManager = componentManager;
     }
 
-    public void SetHP(int newHP, int maxHP)
+    public void SetHP(int newHP)
     {
         if (!gameObject.activeSelf) return;
         
         int previousHP = _hp;
         _hp = newHP;
-        _maxHP = maxHP;
-        
-        if (_hpText != null)
-            _hpText.text = $"{newHP} / {_maxHP}";
 
         // Máu giảm → nhấp nháy 1 lần
         if (_hp < previousHP)
@@ -193,8 +195,43 @@ public class UIHPPlayer : MonoBehaviour
     public void SetDead(bool isDead)
     {
         if (!gameObject.activeSelf) return;
+        var group = _uiDead_BlackImage.GetComponent<CanvasGroup>();
+        if (isDead)
+        {
+            StartCoroutine(FadeToCanvasGroup(group, 0.9f, 2.5f));
+        }
+        else
+        {
+            if (group != null) group.alpha = 0f;
+        }
+    }
+    
+    private IEnumerator FadeToCanvasGroup(CanvasGroup canvasGroup, float targetAlpha, float duration)
+    {
+        float startAlpha = canvasGroup != null ? canvasGroup.alpha : 0f;
+        float _canvasAlphaTime = 0f;
         
-        if (isDead) StartCoroutine(FadeTo(_uiDead_BlackImage, 1, 2.5f));
-        else SetImageAlpha(_uiDead_BlackImage, 0f);
+        while (_canvasAlphaTime < duration)
+        {
+            _canvasAlphaTime += Time.deltaTime;
+            float t = Mathf.Clamp01(_canvasAlphaTime / duration);
+            // EaseInOut để mượt hơn
+            float smoothT = t * t * (3f - 2f * t);
+            canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, smoothT);
+            yield return null;
+        }
+        
+        canvasGroup.alpha = targetAlpha;
+    }
+
+    public void SetDeadStatus(string killer, string weaponname)
+    {
+        string text = $"BỊ TIÊU DIỆT BỞI {killer} · {weaponname}";
+        _deadStatus_Text.text = text;
+    }
+
+    public void SetRecoverTime(int time)
+    {
+        _recoverTime_Text.text = time.ToString();
     }
 }

@@ -75,6 +75,7 @@ public class TurnInPlace : MonoBehaviour
     }
 
     [Button]
+    
     public void Setup()
     {
         TurnInPlaceSetup.Setup(transform, ref _flowerSetup_L, ref _flowerSetup_R);

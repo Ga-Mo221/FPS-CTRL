@@ -14,6 +14,8 @@ public class CharacterInputHandler : MonoBehaviour
     private const string JUMP = "Jump";
     private const string SWITCH_MODE = "Mode";
     private const string RUN = "Run";
+    private const string SWITCH_WEAPON_1 = "Weapon1";
+    private const string SWITCH_WEAPON_2 = "Weapon2";
     
     private CharComponentManager _componentManager;
     private NCharMovementHandler _movementHandler;
@@ -71,6 +73,12 @@ public class CharacterInputHandler : MonoBehaviour
         
         if (_input.GetSkillAction(RUN))
             _buttons.Set(InputButtons.Run, true);
+        
+        if (_input.GetSkillAction(SWITCH_WEAPON_1, TISButtonReadMode.PressDown))
+            _buttons.Set(InputButtons.Weapon1, true);
+        
+        if (_input.GetSkillAction(SWITCH_WEAPON_2, TISButtonReadMode.PressDown))
+            _buttons.Set(InputButtons.Weapon2, true);
     }
 
     public NInputData GetNetworkInput()
@@ -110,7 +118,7 @@ public class CharacterInputHandler : MonoBehaviour
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
             GameManager.Instance.OnUI = !GameManager.Instance.OnUI;
-            Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
+            //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
         }
     }
 }

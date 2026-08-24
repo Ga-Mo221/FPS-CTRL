@@ -33,7 +33,8 @@ public class CameraScanner : MonoBehaviour
 
     private void Update()
     {
-        if (!SettingManager.Instance.SettingData.Platform.HasFlag(_enabledPlatforms)) return;
+        _input.UpdateActivePlatform();
+        //if (!SettingManager.Instance.SettingData.Platform.HasFlag(_enabledPlatforms)) return;
         
         if (_input.GestureIsTwoFingerPanning) return;
         _aimsetting = new AimAssistSettings(

@@ -52,6 +52,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
   _type: 0
   _OwnerCharacter: {fileID: 0}
+  _CurrentBulletvalue: 0
+  _CurrentMaxBullet: 0
   _data: {fileID: 11400000, guid: 8d6f5de50716fd042bee86703c9de869, type: 2}
   _anim: {fileID: 8568537579501252276}
   _ads_Pivot: {fileID: 7497521178151277096}
@@ -127,7 +129,7 @@ MonoBehaviour:
   _ads_Shoot_Point_Name: Shoot Point
   _parrentBullet_name: Parrent Bullet
   _componentManager: {fileID: 0}
-  _uiWeapon: {fileID: 0}
+  _gameHudController: {fileID: 0}
   _camera_Zoom: {fileID: 0}
 --- !u!114 &5706975618576766857
 MonoBehaviour:

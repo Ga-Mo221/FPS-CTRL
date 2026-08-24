@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 public class SettingManager : MonoBehaviour
@@ -24,6 +25,7 @@ public class SettingManager : MonoBehaviour
     // save or load setting data to file
     
 
+    [Button]
     private void UpdateMouseSensitivity()
     {
         if (_settingData == null) return;

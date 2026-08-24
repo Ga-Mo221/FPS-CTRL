@@ -14,6 +14,10 @@ public class GameManager : MonoBehaviour
     
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Player Settings")]
+    [SerializeField] private NetworkId _playerId;
+    
+    //[Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Player Settings")]
     [SerializeField] private GamePlayMode _gamePlayMode = GamePlayMode.Team;
     
     [TabGroup("GameManager", "Player Settings")]
@@ -25,13 +29,15 @@ public class GameManager : MonoBehaviour
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Player Settings")]
     public List<NShootHandler> PlayerList = new List<NShootHandler>();
-    private Dictionary<NetworkId, KillInfo> DictionaryKill = new Dictionary<NetworkId, KillInfo>();
 
     [TabGroup("GameManager", "Weapon")] 
     public Transform BulletParrent;
 
     [TabGroup("GameManager", "Weapon")] 
     public Transform BulletCaseParrent;
+    
+    [TabGroup("GameManager", "Weapon")] 
+    [SerializeField] private Sprite _fragSprite;
     
     [TabGroup("GameManager", "Weapon")]
     [SerializeField] private WeaponInfo[] _weapons;
@@ -46,9 +52,9 @@ public class GameManager : MonoBehaviour
     [TabGroup("GameManager", "Runtime")]
     [SerializeField] private int BlueKill = 0;
     
-    [Sirenix.OdinInspector.ReadOnly]
-    [TabGroup("GameManager", "Runtime")]
-    [SerializeField] private int AllKill = 0;
+    // [Sirenix.OdinInspector.ReadOnly]
+    // [TabGroup("GameManager", "Runtime")]
+    // [SerializeField] private int AllKill = 0;
     
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Runtime")]
@@ -79,30 +85,22 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        foreach (var player in PlayerList)
-        {
-            if (player == null) continue;
-            if (player.nPlayer.Object == null || !player.nPlayer.Object.IsValid)
-                continue;
-            PlayerTeam team = player.nPlayer.NetworkedTeam;
-            DictionaryKill[player.Object.Id] = new KillInfo(team, player._kill);
-        }
-        
-        int redKill = 0;
-        int blueKill = 0;
-        foreach (KillInfo killinfo in DictionaryKill.Values)
-        {
-            if (killinfo.Team == PlayerTeam.Red)
-                redKill+= killinfo.Kills;
-            if (killinfo.Team == PlayerTeam.Blue)
-                blueKill+= killinfo.Kills;
-        }
-        RedKill = redKill;
-        BlueKill = blueKill;
-        AllKill = RedKill + BlueKill;
+        // Kill count giờ được tính bởi host trong NetworkGameState và đồng bộ
+        // xuống mọi client qua [Networked] properties. Ở đây chỉ đọc lại để
+        // hiển thị trong Odin Inspector cho tiện debug.
+        if (NetworkGameState.Instance == null) return;
+
+        RedKill  = NetworkGameState.Instance.RedKill;
+        BlueKill = NetworkGameState.Instance.BlueKill;
+        //AllKill  = NetworkGameState.Instance.AllKill;
     }
     
     // ======================== PUBLIC API ================================
+    
+    public void setPlayerID(NetworkId playerId) => _playerId = playerId;
+    
+    public NetworkId GetPlayerID() => _playerId;
+    
     public float RespawnTime => _respawnTime;
     
     public bool OnUI {set; get;} = false;
@@ -121,10 +119,9 @@ public class GameManager : MonoBehaviour
     {
         OnUI = false;
         PlayerList = new List<NShootHandler>();
-        DictionaryKill = new Dictionary<NetworkId, KillInfo>();
         RedKill = 0;
         BlueKill = 0;
-        AllKill = 0;
+        //AllKill = 0;
 
         foreach (Transform chill in BulletParrent)
             Destroy(chill.gameObject);
@@ -136,30 +133,64 @@ public class GameManager : MonoBehaviour
     public GameObject GetWeapon(string name)
     {
         foreach (var weapon in _weapons)
-            if (weapon.Name.Contains(name))
+            if (weapon.Name().Contains(name))
                 return weapon.Weapon;
+        return null;
+    }
+
+    public Sprite GetWeaponIcon(string name)
+    {
+        if (name == "Frag")
+            return _fragSprite;
+        
+        foreach (var weapon in _weapons)
+        {
+            Debug.Log($"{name} : {weapon.Name()}");
+            if (weapon.Name().Contains(name))
+            {
+                Debug.Log("tra ve icon " + weapon.Icon());
+                return weapon.Icon();
+            }
+        }
+        
         return null;
     }
 }
 
 public struct KillInfo
 {
+    public NetworkId PlayerId { get; set; }
     public PlayerTeam Team { get; set; }
     public int Kills { get; set; }
+    
+    public int Deaths { get; set; }
 
-    public KillInfo(PlayerTeam team, int kills)
+    public KillInfo(NetworkId playerId, PlayerTeam team, int kills, int deaths)
     {
+        PlayerId = playerId;
         Team = team;
         Kills = kills;
+        Deaths = deaths;
     }
 }
 
 [System.Serializable]
 public struct WeaponInfo
 {
-    [SerializeField] private string _name;
     [SerializeField] private GameObject _weapon_Prefab;
-    
-    public string Name => _name;
     public GameObject Weapon => _weapon_Prefab;
+
+    public string Name()
+    {
+        var ctrl = _weapon_Prefab.GetComponent<WeaponController>();
+        var data = ctrl.Data;
+        return data.WeaponName;
+    }
+
+    public Sprite Icon()
+    {
+        var ctrl = _weapon_Prefab.GetComponent<WeaponController>();
+        var data = ctrl.Data;
+        return data.Icon;
+    }
 }

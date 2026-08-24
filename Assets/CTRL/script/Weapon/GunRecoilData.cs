@@ -26,6 +26,7 @@ public class GunRecoilData : ScriptableObject
         Semi  = 1 << 0,   // 1
         Auto  = 1 << 1,   // 2
         Burst = 1 << 2,   // 4
+        Melee = 1 << 3,
     }
 
     [Header("Firing Mode Permissions")]

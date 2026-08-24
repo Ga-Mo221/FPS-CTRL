@@ -46,23 +46,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 845d38c174e20a94e9879aff42bb4072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  OnUI: 0
   _playerNickName: 
   _gamePlayMode: 1
   FlashbangEffect: {fileID: 0}
+  _respawnTime: 5
+  PlayerList: []
   BulletParrent: {fileID: 6422889730410951229}
   BulletCaseParrent: {fileID: 7197346575917051144}
-  PlayerList: []
+  _fragSprite: {fileID: 21300000, guid: f7aa56ea8894eea49b1b94d714ef09e4, type: 3}
+  _weapons:
+  - _weapon_Prefab: {fileID: 315522073390347134, guid: 1b57bc58da8b83e42a5ac63241df1816, type: 3}
+  - _weapon_Prefab: {fileID: 1140873525885738155, guid: 22e79a94fa9fee5459c06239f10e82c6, type: 3}
   RedKill: 0
   BlueKill: 0
   AllKill: 0
   NetworkRunnerHandler: {fileID: 0}
-  _respawnTime: 5
-  _weapons:
-  - _name: 9mm Demon
-    _weapon_Prefab: {fileID: 315522073390347134, guid: 1b57bc58da8b83e42a5ac63241df1816, type: 3}
-  - _name: M4
-    _weapon_Prefab: {fileID: 1140873525885738155, guid: 22e79a94fa9fee5459c06239f10e82c6, type: 3}
 --- !u!1 &7688674044103331393
 GameObject:
   m_ObjectHideFlags: 0

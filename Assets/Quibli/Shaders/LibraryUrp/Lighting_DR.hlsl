@@ -20,7 +20,7 @@ half3 LightingPhysicallyBased_DSTRM(Light light, InputData inputData) {
     // If all light in the scene is baked, we use custom light direction for the cel shading.
     light.direction = lerp(light.direction, _LightmapDirection, _OverrideLightmapDir);
 
-    const half NdotLTPrimary = NdotLTransitionPrimary(inputData.normalWS, light.direction);
+    const half NdotLTPrimary = lerp(1.0, NdotLTransitionPrimary(inputData.normalWS, light.direction), _LightInfluence);
     const half2 gradient_uv = half2(NdotLTPrimary, 0.5);
     half4 c = SAMPLE_TEXTURE2D(_GradientRamp, sampler_GradientRamp, gradient_uv);
 
@@ -60,7 +60,7 @@ half3 LightingPhysicallyBased_DSTRM(Light light, InputData inputData) {
     light.distanceAttenuation *= occludedAttenuation;
 #endif
 
-    float shadowAttenuation = light.shadowAttenuation * light.distanceAttenuation;
+    float shadowAttenuation = lerp(1.0, light.shadowAttenuation * light.distanceAttenuation, _LightInfluence);
 #if defined(DR_LIGHT_ATTENUATION)
     shadowAttenuation = RangeRemap(_LightAttenuation.x, _LightAttenuation.y, shadowAttenuation);
     const half3 unityShaded = c.rgb * shadowAttenuation;
@@ -71,7 +71,7 @@ half3 LightingPhysicallyBased_DSTRM(Light light, InputData inputData) {
     c.rgb *= shadowAttenuation;
 #endif
 
-    c.rgb *= light.color;
+    c.rgb *= lerp(half3(1, 1, 1), light.color, _LightInfluence);
     return c.rgb;
 }
 

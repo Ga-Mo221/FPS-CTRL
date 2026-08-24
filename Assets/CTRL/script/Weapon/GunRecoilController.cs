@@ -328,6 +328,7 @@ public class GunRecoilController : MonoBehaviour
         FiringMode.Semi  => GunRecoilData.AllowedModes.Semi,
         FiringMode.Auto  => GunRecoilData.AllowedModes.Auto,
         FiringMode.Burst => GunRecoilData.AllowedModes.Burst,
+        FiringMode.Melee => GunRecoilData.AllowedModes.Melee,
         _                => GunRecoilData.AllowedModes.Semi,
     };
 
@@ -356,6 +357,16 @@ public class GunRecoilController : MonoBehaviour
         _autoTimer  = 0f;
 
         OnShotFired?.Invoke(FiringMode.Semi);
+    }
+    
+    private void MelleOneShoot()
+    {
+        _lastFireTime = Time.time;
+        _semiTimer  = 0f;
+        _semiActive = true;
+        _autoActive = false;        // dừng auto curve nếu đang chạy
+        _autoTimer  = 0f;
+        OnShotFired?.Invoke(FiringMode.Melee);
     }
 
     private void FireAuto(float fireRateDelay)
@@ -410,17 +421,6 @@ public class GunRecoilController : MonoBehaviour
         // _autoActive giữ nguyên trạng thái hiện tại
 
         OnShotFired?.Invoke(FiringMode.Burst);
-    }
-    
-    private void MelleOneShoot()
-    {
-        _lastFireTime = Time.time;
-        _semiTimer  = 0f;
-        _semiActive = true;
-        _autoActive = false;        // dừng auto curve nếu đang chạy
-        _autoTimer  = 0f;
-
-        OnShotFired?.Invoke(FiringMode.Semi);
     }
 
     // ─────────────────────────────────────────────

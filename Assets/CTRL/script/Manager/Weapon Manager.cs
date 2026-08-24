@@ -133,9 +133,21 @@ public class WeaponManager : NetworkBehaviour
             ResolveWeaponControllers();
         
         if (_weapon_Active == 1)
+        {
             SwitchToWeaponOne();
+            _componentManager.GameHudController().SwitchWeaponUI(_weapon_One_CTRL);
+        }
         if (_weapon_Active == 2)
+        {
             SwitchToWeaponTwo();
+            _componentManager.GameHudController().SwitchWeaponUI(_weapon_Two_CTRL);
+        }
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void Rpc_SwitchWeapon(RpcInfo info = default)
+    {
+        SwitchWeapon();
     }
 
     public bool SwitchWeaponActive(int weaponId)

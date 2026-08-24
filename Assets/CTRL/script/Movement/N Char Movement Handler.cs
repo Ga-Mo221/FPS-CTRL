@@ -107,6 +107,15 @@ public class NCharMovementHandler : NetworkBehaviour
                 IsFiring = false;
                 if (_ncc.Controller.enabled)
                     _ncc.Move(Vector3.zero, 0, 0);
+
+                // ── Nhấn Jump để hồi sinh sớm ──
+                if (GetInput(out NInputData inputdata1))
+                {
+                    if (inputdata1.Buttons.WasPressed(_previousButtons, InputButtons.Jump))
+                        _hpHandler.RequestEarlyRevive();
+                    _previousButtons = inputdata1.Buttons; // giữ state buttons
+                }
+
                 return;
             }
         }
@@ -327,12 +336,14 @@ public class NCharMovementHandler : NetworkBehaviour
             if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
             {
                 // Sniper ADS → giảm tốc độ xoay camera
-                RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.SniperADSSensitivity);
+                if (Object.HasInputAuthority)
+                    RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.SniperADSSensitivity);
             }
             else if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle)
             {
                 // Rifle ADS → giảm tốc độ xoay camera
-                RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.RifleADSSensitivity);
+                if (Object.HasInputAuthority)
+                    RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.RifleADSSensitivity);
             }
         }
 
@@ -376,6 +387,24 @@ public class NCharMovementHandler : NetworkBehaviour
         if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
             if (_weaponManager.SwitchWeaponActive(0))
+            {
+                _stateLogic.StartSwitch(ref state);
+                SwitchCount++;
+            }
+        }
+
+        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Weapon1))
+        {
+            if (_weaponManager.SwitchWeaponActive(1))
+            {
+                _stateLogic.StartSwitch(ref state);
+                SwitchCount++;
+            }
+        }
+        
+        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Weapon2))
+        {
+            if (_weaponManager.SwitchWeaponActive(2))
             {
                 _stateLogic.StartSwitch(ref state);
                 SwitchCount++;
@@ -441,7 +470,7 @@ public class NCharMovementHandler : NetworkBehaviour
     #endregion
 
     
-    #region Dead Status
+#region Dead Status
     public void RequestRespawn(bool newRound = false)
     {
         if (!Object.HasStateAuthority) return;
@@ -455,14 +484,14 @@ public class NCharMovementHandler : NetworkBehaviour
         if (!HasStateAuthority) return;
         IsControllerEnabled = false;
         CanTakeDamage = false;
-        Debug.Log("<color=gray>[NCharMovementHandler]</color> Dead");
+        Debug.Log("<color=green>[NCharMovementHandler]</color> Dead");
     }
     
     void OnControllerEnabledChanged()
     {
         // Chạy trên MỌI máy khi IsControllerEnabled thay đổi
         _ncc.Controller.enabled = IsControllerEnabled;
-        Debug.Log($"<color=gray>[NCharMovementHandler]</color> {transform.name}: {IsControllerEnabled}");
+        Debug.Log($"<color=green>[NCharMovementHandler]</color> {transform.name}: {IsControllerEnabled}");
     }
 
     private void Respawn()
@@ -491,9 +520,9 @@ public class NCharMovementHandler : NetworkBehaviour
         if (_weaponManager != null) _weaponManager.Respawn();
         CanTakeDamage = false;
         _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, 2f);
-        _weaponManager.SwitchWeapon();
+        _weaponManager.Rpc_SwitchWeapon();
         Flash = false;
         Frag = false;
     }
-    #endregion
+#endregion
 }

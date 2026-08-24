@@ -119,19 +119,19 @@ public class GrenadeHandler : NetworkBehaviour
                                 float distance = Vector3.Distance(transform.position, _hits[i].Hitbox.transform.position);
                                 if (distance <= _radius * 0.7f)
                                 {
-                                    if (hpHandler.OnTakeDamage(100, _throwByPlayerName, _throwByPlayerID, 1))
+                                    if (hpHandler.OnTakeDamage(100, _throwByPlayerName, "Frag", _throwByPlayerID, 1))
                                         if (_nshootHandler != null)
                                             _nshootHandler._kill++;
                                 }
                                 else if (distance <= _radius * 0.85f)
                                 {
-                                    if (hpHandler.OnTakeDamage(70, _throwByPlayerName, _throwByPlayerID, 0.7f))
+                                    if (hpHandler.OnTakeDamage(70, _throwByPlayerName, "Frag", _throwByPlayerID, 0.7f))
                                         if (_nshootHandler != null)
                                             _nshootHandler._kill++;
                                 }
                                 else
                                 {
-                                    if (hpHandler.OnTakeDamage(30, _throwByPlayerName, _throwByPlayerID, 0.4f))
+                                    if (hpHandler.OnTakeDamage(30, _throwByPlayerName, "Frag", _throwByPlayerID, 0.4f))
                                         if (_nshootHandler != null)
                                             _nshootHandler._kill++;
                                 }
@@ -202,7 +202,7 @@ public class GrenadeHandler : NetworkBehaviour
         if (componentManager == null) return;
     
         componentManager.CameraShake.AddTrauma(0.2f);
-        componentManager.UihpPlayer.Flash(distance, _radius);
+        componentManager.GameHudController().Flash(distance, _radius);
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)

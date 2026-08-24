@@ -19,6 +19,7 @@ namespace TrueInputSystem
     
     public class TISAimAssist
     {
+        private AimAssistPlatform _currentPlatform = AimAssistPlatform.PC;
         // -------------------------------------------------------
         // API CHÍNH
         // -------------------------------------------------------
@@ -83,24 +84,52 @@ namespace TrueInputSystem
             return playerLookDelta + assistDelta;
         }
         
+        /// <summary>Gọi mỗi frame trong Update() để cập nhật thiết bị đang dùng.</summary>
+        public void UpdateActivePlatform()
+        {
+            var gamepad = UnityEngine.InputSystem.Gamepad.current;
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+
+            bool gamepadHasInput = false;
+            if (gamepad != null)
+            {
+                gamepadHasInput = gamepad.leftStick.ReadValue().sqrMagnitude > 0.01f
+                                  || gamepad.rightStick.ReadValue().sqrMagnitude > 0.01f
+                                  || gamepad.buttonSouth.wasPressedThisFrame
+                                  || gamepad.buttonNorth.wasPressedThisFrame
+                                  || gamepad.buttonEast.wasPressedThisFrame
+                                  || gamepad.buttonWest.wasPressedThisFrame
+                                  || gamepad.leftTrigger.ReadValue() > 0.01f
+                                  || gamepad.rightTrigger.ReadValue() > 0.01f
+                                  || gamepad.leftShoulder.wasPressedThisFrame
+                                  || gamepad.rightShoulder.wasPressedThisFrame
+                                  || gamepad.dpad.ReadValue().sqrMagnitude > 0.01f;
+            }
+
+            bool pcHasInput = (keyboard != null && keyboard.anyKey.wasPressedThisFrame)
+                              || (mouse != null && (mouse.delta.ReadValue() != Vector2.zero
+                                                    || mouse.leftButton.wasPressedThisFrame
+                                                    || mouse.rightButton.wasPressedThisFrame));
+
+            if (pcHasInput)
+                _currentPlatform = AimAssistPlatform.PC;
+            else if (gamepadHasInput)
+                _currentPlatform = AimAssistPlatform.Gamepad;
+
+            //Debug.Log($"Gamepad detected: {gamepad?.name ?? "null"} | HasInput: {gamepadHasInput} | Platform: {_currentPlatform}");
+        }
+        
         /// <summary>Kiểm tra nền tảng runtime hiện tại có nằm trong EnabledPlatforms không.</summary>
         private bool IsPlatformEnabled(AimAssistPlatform enabledPlatforms)
         {
             if (enabledPlatforms == AimAssistPlatform.None) return false;
             if (enabledPlatforms == AimAssistPlatform.All)  return true;
 
-            // Phát hiện gamepad đang dùng
-            bool gamepadActive = UnityEngine.InputSystem.Gamepad.current != null
-                                 && UnityEngine.InputSystem.Gamepad.current.wasUpdatedThisFrame;
-
             if (Application.isMobilePlatform)
                 return (enabledPlatforms & AimAssistPlatform.Mobile) != 0;
 
-            if (gamepadActive)
-                return (enabledPlatforms & AimAssistPlatform.Gamepad) != 0;
-
-            // Còn lại là PC (keyboard/mouse)
-            return (enabledPlatforms & AimAssistPlatform.PC) != 0;
+            return (enabledPlatforms & _currentPlatform) != 0;
         }
     }
     

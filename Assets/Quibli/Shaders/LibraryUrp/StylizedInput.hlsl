@@ -45,6 +45,7 @@ half _TextureImpact;
 
 half _SelfShadingSize;
 half _LightContribution;
+half _LightInfluence;
 
 half _OverrideLightmapDir;
 half3 _LightmapDirection;

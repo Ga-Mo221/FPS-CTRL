@@ -49,7 +49,11 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         // Chỉ spawn mới khi chưa có (lần đầu, không phải migration)
         if (_networkGameState == null && NetworkGameState.Instance == null)
         {
-            _networkGameState = runner.Spawn(_networkGameStatePrefab);
+            _networkGameState = runner.Spawn(_networkGameStatePrefab, onBeforeSpawned: (runner, obj) =>
+            {
+                var state = obj.GetComponent<NetworkGameState>();
+                state.SetKillTarget(3);
+            });
         }
         else if (_networkGameState == null && NetworkGameState.Instance != null)
         {
