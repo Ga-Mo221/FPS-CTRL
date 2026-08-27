@@ -15,20 +15,37 @@ public class TIS_Demo_GetSingleObject_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách lấy GameObject bị single-tap trúng trong frame\n" +
+            "  hiện tại, kèm hệ thống highlight đơn giản: tap trúng object → đổi material,\n" +
+            "  tap vào vùng trống → bỏ chọn và khôi phục material gốc.\n" +
+            "  Dùng cho: chọn unit, di chuyển đến điểm, inspect object.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
+
             "SETUP\n" +
             "1. Trong TISInputBridge Inspector:\n" +
             "   ✓ Enable Object Tracker = true\n" +
             "   ✓ Assign Camera (hoặc để trống → Camera.main)\n" +
             "   ✓ Layer Mask = layer chứa các object cần tap\n" +
-            "2. Gán script này lên SelectionController / GameManager.\n\n" +
+            "2. Gán script này lên SelectionController / GameManager.\n" +
+            "3. Assign 'Selected Material' để highlight object khi được chọn.\n" +
+            "   Để trống → vẫn hoạt động nhưng không có hiệu ứng highlight.\n\n" +
+
+            "LUỒNG HOẠT ĐỘNG\n" +
+            "  1. Mỗi frame gọi ToucherGetSingleObject() → nhận GameObject hoặc null.\n" +
+            "  2. Nếu có object → SelectObject(): lưu material gốc, đổi sang selectedMaterial.\n" +
+            "  3. Nếu null + đang có object được chọn + có touch → DeselectObject(): khôi phục material.\n\n" +
+
             "API\n" +
             "  bridge.ToucherGetSingleObject()  →  GameObject (null nếu không trúng)\n" +
             "  bridge.ToucherIsSingleTouch()    →  bool (có tap vào màn hình không)\n\n" +
+
             "GHI CHÚ\n" +
-            "  GetSingleObject() chỉ có giá trị 1 frame ngay sau khi tap.\n" +
-            "  Khác ToucherGetLastID(): hàm này reset mỗi frame, không tích lũy.\n" +
-            "  Dùng cho: chọn unit, di chuyển đến điểm, inspect object.",
+            "  – Kết quả chỉ hợp lệ đúng 1 frame ngay sau khi tap — kiểm tra trong Update.\n" +
+            "  – Khác ToucherGetLastID(): hàm này reset mỗi frame, không tích lũy.\n" +
+            "  – Object phải có Collider để Raycast trúng.\n" +
+            "  – Object phải có Renderer nếu muốn dùng tính năng highlight material.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

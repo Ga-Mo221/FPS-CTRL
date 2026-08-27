@@ -15,19 +15,39 @@ public class TIS_Demo_SetObjTracker_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách bật/tắt Object Tracker lúc runtime để\n" +
+            "  tiết kiệm tài nguyên. Tracker thực hiện Raycast mỗi frame nên nên\n" +
+            "  được tắt khi không cần thiết: vào cutscene, mở menu, hoặc pause.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
+
             "SETUP\n" +
             "1. Trong TISInputBridge Inspector:\n" +
             "   ✓ Enable Object Tracker = true (bật mặc định)\n" +
             "2. Gán script này lên GameStateManager / UIController.\n" +
             "3. Gọi Enable/Disable qua UnityEvent hoặc từ code.\n\n" +
+
+            "CHẾ ĐỘ HOẠT ĐỘNG\n" +
+            "  [Gameplay]\n" +
+            "    Tracker BẬT — Raycast mỗi frame, ToucherWorldPosition() hoạt động.\n\n" +
+            "  [Cutscene / PauseMenu]\n" +
+            "    Tracker TẮT — không Raycast, tiết kiệm CPU.\n" +
+            "    ToucherCount, DoubleTap, GetSingleObject trả về giá trị mặc định\n" +
+            "    (0 / false / null) — không gây lỗi.\n\n" +
+            "  [UnityEvent / Timeline]\n" +
+            "    Gọi EnableTracker() / DisableTracker() trực tiếp từ Button,\n" +
+            "    Timeline Signal, hoặc AnimationEvent mà không cần reference code.\n\n" +
+
             "API\n" +
             "  bridge.SetObjectTrackerEnabled(true)   → bật tracker\n" +
-            "  bridge.SetObjectTrackerEnabled(false)  → tắt tracker\n\n" +
+            "  bridge.SetObjectTrackerEnabled(false)  → tắt tracker\n" +
+            "  EnableTracker()   → public, gọi được từ UnityEvent\n" +
+            "  DisableTracker()  → public, gọi được từ UnityEvent\n\n" +
+
             "GHI CHÚ\n" +
-            "  Khi tắt: ToucherCount, DoubleTap, GetSingleObject đều trả về\n" +
-            "  giá trị mặc định (0 / false / null) — không gây lỗi.\n" +
-            "  Tắt tracker khi không cần thiết để giảm Raycast overhead.",
+            "  Đổi 'currentState' trong Inspector lúc Play Mode để test nhanh.\n" +
+            "  Tắt tracker khi không cần thiết để giảm Raycast overhead mỗi frame.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

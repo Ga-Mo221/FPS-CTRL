@@ -14,13 +14,35 @@ public class TIS_Demo_DirectionalSkill_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng TIS API để thực hiện kỹ năng có hướng\n" +
+            "  (directional skill): người chơi kéo joystick/swipe để chọn hướng,\n" +
+            "  khi thả tay sẽ spawn projectile bay theo hướng đó trên mặt phẳng XZ.\n\n" +
+
+            "PLATFORM: Mobile (iOS / Android)\n\n" +
+
             "SETUP\n" +
             "1. Tạo Prefab projectile (Rigidbody + Collider), gán vào 'Projectile Prefab'.\n" +
             "2. 'Launch Point' là Transform spawn projectile. Để trống = transform của script.\n" +
-            "3. Đảm bảo scene có TISInputBridge.\n\n" +
+            "3. Điền 'Skill Name' khớp với tên action Button trong TIS profile.\n" +
+            "4. Điền 'Direction Action Name' khớp với tên action Vector2 trong TIS profile.\n" +
+            "5. Đảm bảo scene có TISInputBridge.\n\n" +
+
+            "LUỒNG HOẠT ĐỘNG\n" +
+            "  1. Người chơi giữ và kéo để chọn hướng (Vector2 từ directionActionName).\n" +
+            "  2. Khi thả (IsSkillReleased) → đọc hướng đã kéo → spawn projectile.\n" +
+            "  3. Projectile bay thẳng theo worldDir với tốc độ projectileSpeed.\n" +
+            "  4. Tự destroy sau projectileLifetime giây.\n\n" +
+
+            "API\n" +
+            "  bridge.IsSkillReleased(skillName)        →  bool (kích hoạt khi thả)\n" +
+            "  bridge.GetVector2Action(directionAction)  →  Vector2 (hướng kéo)\n\n" +
+
             "GHI CHÚ\n" +
             "  – CastDirection = Vector2.zero khi người chơi tap nhanh → bỏ qua, không cast.\n" +
-            "  – Projectile bay trên mặt phẳng XZ; Y của hướng UI được map sang Z world.",
+            "  – Projectile bay trên mặt phẳng XZ; Y của hướng UI được map sang Z world.\n" +
+            "  – spawnOffset giúp tránh self-hit khi projectile vừa được spawn.\n" +
+            "  – Bật 'Draw Debug Ray' để thấy hướng cast trong Scene view lúc play.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

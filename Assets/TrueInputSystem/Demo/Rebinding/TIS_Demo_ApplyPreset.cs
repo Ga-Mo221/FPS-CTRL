@@ -17,6 +17,15 @@ public class TIS_Demo_ApplyPreset_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH :\n" +
+            "   Test apply nhiều binding cùng lúc từ Dictionary, bao gồm xử lý conflict.\n \n" +
+            "===================================\n \n"+
+            "CÁCH TEST :\n" +
+            "   1.Nhấn Preset A → 3 binding được apply (Jump=Space, Attack=F, Run=LeftShift), LblResult hiện Applied: 3/3.\n"+
+            "   2.Nhấn Preset B → đổi sang layout thay thế (Jump=G, Attack=H, Run=C), verify Applied: 3/3.\n"+
+            "   3.Nhấn Conflict → Preset này có Jump=J và Attack=J cùng phím. Kết quả chỉ apply được 1/2, LblResult hiện thông tin conflict action nào với action nào.\n"+
+            "   4.Điểm quan trọng cần verify: bridge chỉ rebuild một lần dù preset có nhiều binding.\n \n"+
+            "===================================\n \n"+
             "SETUP\n" +
             "1. Gán script này lên bất kỳ GameObject nào trong scene.\n" +
             "2. Đảm bảo scene có TISInputBridge (singleton).\n" +

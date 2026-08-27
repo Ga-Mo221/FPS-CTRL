@@ -15,6 +15,13 @@ public class TIS_Demo_ToucherClear_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng các API dọn dẹp trạng thái của\n" +
+            "  Object Tracker trong TIS. Dùng để reset danh sách object đã chạm,\n" +
+            "  bộ đếm touch, hoặc toàn bộ trạng thái tracker khi chuyển wave,\n" +
+            "  reset puzzle, hay chuyển scene — tránh tình trạng ID cũ còn sót\n" +
+            "  lại gây sai lệch logic gameplay.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
             "SETUP\n" +
             "1. Trong TISInputBridge Inspector → bật 'Enable Object Tracker'.\n" +

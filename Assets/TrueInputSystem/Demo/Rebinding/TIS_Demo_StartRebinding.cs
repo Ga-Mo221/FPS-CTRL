@@ -16,6 +16,15 @@ public class TIS_Demo_StartRebinding_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH :\n" +
+            "   Test luồng rebinding tương tác cơ bản — người dùng tự nhấn phím để đổi binding.\n \n" +
+            "===================================\n \n"+
+            "CÁCH TEST :\n" +
+            "   1.Nhấn Rebind → LblStatus chuyển sang \"Đang lắng nghe...\", LblState hiện State: Listening.\n"+
+            "   2.Nhấn bất kỳ phím nào (ví dụ G) → binding được lưu, LblStatus hiện kết quả thành công.\n"+
+            "   3.Quan sát LblState cập nhật mỗi frame qua TISRebindingSystem.State.\n \n"+
+            "Event cần verify: OnRebindStarted và OnRebindCompleted đều được gọi đúng thời điểm.\n \n" +
+            "===================================\n \n"+
             "SETUP\n" +
             "1. Gán script này lên bất kỳ GameObject nào trong scene.\n" +
             "2. Đảm bảo scene có TISInputBridge (singleton).\n" +

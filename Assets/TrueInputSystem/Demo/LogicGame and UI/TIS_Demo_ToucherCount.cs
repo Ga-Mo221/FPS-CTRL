@@ -15,6 +15,12 @@ public class TIS_Demo_ToucherCount_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách đọc số lượng GameObject đã bị touch\n" +
+            "  trúng (tích lũy từ lần reset cuối) thông qua API ToucherCount.\n" +
+            "  Dùng cho minigame dạng 'chạm đủ X vật thể', combo system, hoặc\n" +
+            "  theo dõi tiến độ người chơi đã tương tác với bao nhiêu object.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
             "SETUP\n" +
             "1. Trong TISInputBridge Inspector → bật 'Enable Object Tracker'.\n" +

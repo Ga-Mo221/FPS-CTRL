@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5ef2c4aa2cceca4f8c97042b0d2f083, type: 3}
+  m_Script: {fileID: 11500000, guid: 8c9baaa990132464c9f1066f1283ddfd, type: 3}
   m_Name: Test_Profile_Action_EnterVehicle
   m_EditorClassIdentifier: TrueInputSystem.Runtime::TrueInputSystem.TISInputProfileConfig
   profileName: EnterVehicle
@@ -47,7 +47,7 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/leftShift
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/leftTrigger
+      bindingGamepad: <Gamepad>/leftStickPress
       bindingGamepadModifier: 
       bindingMobile: Button_0
       readMode: 1
@@ -113,7 +113,7 @@ MonoBehaviour:
       bindingMobile: Button_5
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
     - actionName: Brake
       actionType: 0
@@ -124,7 +124,7 @@ MonoBehaviour:
       bindingMobile: Button_6
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
     - actionName: EnterVehicle
       actionType: 0
@@ -135,7 +135,7 @@ MonoBehaviour:
       bindingMobile: Button_7
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
     - actionName: Menu
       actionType: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
       bindingMobile: Button_8
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
     - actionName: Direction
       actionType: 1
@@ -157,7 +157,7 @@ MonoBehaviour:
       bindingMobile: 
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
   - mapName: Gameplay
     enabledByDefault: 1
@@ -171,7 +171,7 @@ MonoBehaviour:
       bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
   - mapName: UI
     enabledByDefault: 0
@@ -185,7 +185,7 @@ MonoBehaviour:
       bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 1
+      _readModeMigrated: 0
       overrideDeadzone: 0
   mobileSettings:
     joystickRadius: 100
@@ -205,7 +205,7 @@ MonoBehaviour:
     pitchMin: -80
     pitchMax: 80
   gamepadSettings:
-    leftStickDeadzone: 0.14903846
-    rightStickDeadzone: 0.016346155
+    leftStickDeadzone: 0.12
+    rightStickDeadzone: 0.1
     stickCurve: 1.5
     enableRumble: 1

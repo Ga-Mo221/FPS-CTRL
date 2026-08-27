@@ -16,6 +16,15 @@ public class TIS_Demo_ResetBindings_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH :\n" +
+            "   Test reset binding về default, cả reset đơn lẻ lẫn reset toàn bộ profile.\n \n" +
+            "===================================\n \n"+
+            "CÁCH TEST :\n" +
+            "   1.Nhấn Setup Override → ForceApply <Keyboard>/g cho \"Jump\", LblBefore hiện binding hiện tại.\n"+
+            "   2.Nhấn Reset One → chỉ reset action \"Jump\", LblAfter hiện binding trở về default của profile. Kiểm tra JSON file để xác nhận entry bị xoá.\n"+
+            "   3.Nhấn Setup Override lại, rồi nhấn Reset All → toàn bộ override của profile bị xoá, JSON file bị delete hoàn toàn.\n"+
+            "   4.Edge case quan trọng: Tắt Play, vào lại Play Mode (domain reload), nhấn Reset One mà không Setup trước — hệ thống vẫn phải tìm và xoá entry trong JSON file (FIX đã được implement trong RemoveFromJson).\n \n"+
+            "===================================\n \n"+
             "SETUP\n" +
             "1. Gán script này lên bất kỳ GameObject nào trong scene.\n" +
             "2. Đảm bảo scene có TISInputBridge (singleton).\n" +

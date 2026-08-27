@@ -40,6 +40,24 @@ public class CharComponentManager : MonoBehaviour
         else return GameDmHudController;
     }
 
+    public void DisplayUI()
+    {
+        if (GameManager.Instance != null)
+        {
+            if (GameManager.Instance.GetGamePlayMode() == GamePlayMode.Team)
+            {
+                GameDmHudController.gameObject.SetActive(true);
+                GameFFAHudController.gameObject.SetActive(false);
+            }
+            else
+            {
+                GameDmHudController.gameObject.SetActive(false);
+                GameFFAHudController.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    #if UNITY_EDITOR
     [Button]
     public void Setup()
     {
@@ -66,4 +84,5 @@ public class CharComponentManager : MonoBehaviour
         NetworkObject = GetComponent<NetworkObject>();
         DissolvingController = GetComponentInChildren<DissolvingController>(true);
     }
+    #endif
 }

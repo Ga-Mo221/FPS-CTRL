@@ -88,7 +88,8 @@ public class GameManager : MonoBehaviour
         // Kill count giờ được tính bởi host trong NetworkGameState và đồng bộ
         // xuống mọi client qua [Networked] properties. Ở đây chỉ đọc lại để
         // hiển thị trong Odin Inspector cho tiện debug.
-        if (NetworkGameState.Instance == null) return;
+        var gs = NetworkGameState.Instance;
+        if (gs == null || gs.Object == null || !gs.Object.IsValid) return;
 
         RedKill  = NetworkGameState.Instance.RedKill;
         BlueKill = NetworkGameState.Instance.BlueKill;
@@ -160,14 +161,16 @@ public class GameManager : MonoBehaviour
 public struct KillInfo
 {
     public NetworkId PlayerId { get; set; }
+    public string PlayerName { get; set; }
     public PlayerTeam Team { get; set; }
     public int Kills { get; set; }
     
     public int Deaths { get; set; }
 
-    public KillInfo(NetworkId playerId, PlayerTeam team, int kills, int deaths)
+    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths)
     {
         PlayerId = playerId;
+        PlayerName = name;
         Team = team;
         Kills = kills;
         Deaths = deaths;

@@ -26,6 +26,7 @@ namespace TrueInputSystem
         private bool _enabled = false;
         private bool _isLeftButtonPressed = false;
         private TISInputBridge _input;
+        private InputActionAsset _originalActionsAsset;
 
         private void Awake()
         {
@@ -53,7 +54,9 @@ namespace TrueInputSystem
             uiInputModule = FindFirstObjectByType<InputSystemUIInputModule>();
             if (uiInputModule != null)
             {
+                _originalActionsAsset = uiInputModule.actionsAsset; // lưu lại để khôi phục sau
                 uiInputModule.actionsAsset = null;
+                uiInputModule.AssignDefaultActions();
             }
 
             _isLeftButtonPressed = false;
@@ -63,6 +66,12 @@ namespace TrueInputSystem
 
         void OnDisable()
         {
+            if (uiInputModule != null && _originalActionsAsset != null)
+            {
+                uiInputModule.actionsAsset = _originalActionsAsset;
+                // Unity sẽ tự resolve lại point/leftClick... theo asset gốc khi actionsAsset được set lại
+            }
+            
             // Gỡ bỏ chuột ảo khi tắt script để tránh rác bộ nhớ
             if (virtualMouse != null && virtualMouse.added)
             {

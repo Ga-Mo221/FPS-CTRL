@@ -15,6 +15,13 @@ public class TIS_Demo_TryRumble_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách kích hoạt rumble/haptic feedback trên\n" +
+            "  gamepad thông qua API TryRumble(). Hỗ trợ 2 kiểu: rumble có thời\n" +
+            "  lượng cố định (khi hit/attack) và rumble liên tục khi giữ phím\n" +
+            "  (tự dừng khi nhả). Tự động bỏ qua nếu enableRumble=false trong\n" +
+            "  Profile hoặc không có Gamepad kết nối.\n\n" +
+
             "PLATFORM: Gamepad (Xbox / PlayStation / Switch Pro)\n\n" +
             "SETUP\n" +
             "1. Trong TISInputProfileConfig → GamepadSettings:\n" +

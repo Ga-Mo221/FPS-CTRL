@@ -16,6 +16,15 @@ public class TIS_Demo_QueryAPIs_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH :\n" +
+            "   Test nhóm API truy vấn — dùng để populate Settings UI và kiểm tra conflict trước khi lưu.\n \n" +
+            "===================================\n \n"+
+            "CÁCH TEST :\n" +
+            "   1.Nhấn Check Active Path → LblActivePath hiện cả raw path lẫn display name thân thiện (VD: <Keyboard>/space → \"Space\").\n"+
+            "   2.Nhấn Check Conflict No → kiểm tra pathNoConflict (mặc định <Keyboard>/g), nếu chưa ai dùng → [OK] Không conflict.\n"+
+            "   3.Nhấn Check Conflict Yes → kiểm tra pathWithConflict, kết quả hiện [X] CONFLICT — Dùng bởi: \"Jump\" hoặc tên action đang chiếm phím đó.\n"+
+            "   4.Chạy cùng với demo ForceApply để thay đổi binding rồi query lại — xác nhận GetActivePath trả về override, không phải default.\n \n"+
+            "===================================\n \n"+
             "SETUP\n" +
             "1. Gán script này lên bất kỳ GameObject nào trong scene.\n" +
             "2. Đảm bảo scene có TISInputBridge (singleton).\n" +

@@ -76,9 +76,9 @@ public class UICountdownStartRound : MonoBehaviour
             if (state.KillLeaderboard.Count > 0)
                 _gameHud.SetKills(state.KillLeaderboard[0].Kills);
             
-            _gameHud.SetTeam1("Alpha", state.RedKill);
+            _gameHud.SetTeam1("Alpha", state.BlueKill);
             
-            _gameHud.SetTeam2("Beta", state.BlueKill);
+            _gameHud.SetTeam2("Beta", state.RedKill);
             
             //Debug.Log($" {state.RedKill} | {state.BlueKill}");
         }

@@ -16,6 +16,16 @@ public class TIS_Demo_LoadAndApply_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH :\n" +
+            "   Test đọc override từ JSON file và apply lên bridge khi khởi động — đây là cách dùng chuẩn trong project thực.\n \n" +
+            "===================================\n \n"+
+            "CÁCH TEST :\n" +
+            "   1.Vào Play Mode → Awake() tự động gọi LoadAndApply(), Console hiện log xác nhận.\n"+
+            "   2.Nhấn Show Path → LblResult hiện binding đang active. Nếu có JSON thì hiện override, nếu không có thì hiện default.\n"+
+            "   3.Nhấn Load (nút reload thủ công) → LoadAndApply() chạy lại, hữu ích để verify giữa chừng mà không cần restart.\n"+
+            "   4.Luồng test đầy đủ: Chạy ForceApply → ghi nhớ path mới → thoát Play → vào lại Play → kiểm tra LblResult xem override có được load lại không.\n"+
+            "   5.Test case không có file: Xoá JSON file từ persistentDataPath, vào Play → LoadAndApply() không lỗi, hiện \"dùng default binding\".\n \n"+
+            "===================================\n \n"+
             "SETUP\n" +
             "1. Gán script này lên bất kỳ GameObject nào trong scene.\n" +
             "2. Đảm bảo scene có TISInputBridge (singleton).\n" +

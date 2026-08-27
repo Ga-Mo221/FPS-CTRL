@@ -15,6 +15,12 @@ public class TIS_Demo_ToucherGetLastID_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách lấy InstanceID của GameObject bị touch\n" +
+            "  trúng gần nhất thông qua API ToucherGetLastID(). Dùng để xác định\n" +
+            "  chính xác vật thể nào người chơi vừa chạm vào, phục vụ các logic\n" +
+            "  như chọn object, highlight, hoặc trigger sự kiện theo target.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
             "SETUP\n" +
             "1. Trong TISInputBridge Inspector → bật 'Enable Object Tracker'.\n" +

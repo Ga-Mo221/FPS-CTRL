@@ -19,7 +19,7 @@ public class CharacterInputHandler : MonoBehaviour
     
     private CharComponentManager _componentManager;
     private NCharMovementHandler _movementHandler;
-    private NPlayer _player;
+    //private NPlayer _player;
     private TISInputBridge _input;
     
     Vector2 _moveDirection;
@@ -34,12 +34,11 @@ public class CharacterInputHandler : MonoBehaviour
         _input = TISInputBridge.Instance;
         _componentManager = GetComponent<CharComponentManager>();
         _movementHandler = _componentManager.NCharMovementHandler;
-        _player = _componentManager.NPlayer;
+        //_player = _componentManager.NPlayer;
     }
 
     private void Update()
     {
-        OnUI();
         if (!_movementHandler.Object.HasInputAuthority) return;
         
         if (NetworkGameState.Instance != null && NetworkGameState.Instance.IsMatchOver()) return;
@@ -109,16 +108,5 @@ public class CharacterInputHandler : MonoBehaviour
     public void ResetButton()
     {
         _buttons = default;
-    }
-
-    private void OnUI()
-    {
-        if (!_player.IsLocalPlayer) return;
-        
-        if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
-        {
-            GameManager.Instance.OnUI = !GameManager.Instance.OnUI;
-            //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
-        }
     }
 }

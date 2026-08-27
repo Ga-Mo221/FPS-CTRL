@@ -16,20 +16,41 @@ public class TIS_Demo_GetAxisAction_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách đọc giá trị float liên tục (Axis) từ TIS profile\n" +
+            "  để mô phỏng hệ thống Throttle / Brake đơn giản cho xe hoặc phương tiện.\n" +
+            "  Axis trả về float [0..1], tự động áp dụng stickCurve nếu là analog trigger.\n" +
+            "  Dùng cho: Racing (Throttle/Brake), Flight Sim, hay bất kỳ giá trị float 1 chiều.\n\n" +
+
             "PLATFORM: PC · Gamepad\n\n" +
+
             "SETUP\n" +
             "1. Đảm bảo scene có TISInputBridge với Profile đã assign.\n" +
-            "2. Tạo action tên 'Throttle' với type = Axis trong Profile.\n" +
-            "   Binding ví dụ:\n" +
+            "2. Tạo 2 action type = Axis trong Profile:\n" +
+            "   [Throttle]\n" +
             "   • Gamepad: <Gamepad>/rightTrigger  (0..1)\n" +
             "   • PC:      <Keyboard>/w             (0 hoặc 1)\n" +
-            "3. Điền 'actionName' trong Inspector.\n\n" +
+            "   [Brake]\n" +
+            "   • Gamepad: <Gamepad>/leftTrigger   (0..1)\n" +
+            "   • PC:      <Keyboard>/s             (0 hoặc 1)\n" +
+            "3. Điền 'Throttle Action' và 'Brake Action' trong Inspector khớp tên Profile.\n" +
+            "4. Chỉnh 'Max Speed' và 'Brake Force' phù hợp với phương tiện.\n\n" +
+
+            "LUỒNG HOẠT ĐỘNG\n" +
+            "  1. Đọc throttle và brake mỗi frame qua GetAxisAction().\n" +
+            "  2. Cộng throttle × maxSpeed vào tốc độ hiện tại.\n" +
+            "  3. Trừ brake × brakeForce khỏi tốc độ hiện tại.\n" +
+            "  4. Clamp tốc độ trong [0, maxSpeed].\n\n" +
+
             "API\n" +
             "  bridge.GetAxisAction(\"Throttle\")  →  float [0..1]\n" +
+            "  bridge.GetAxisAction(\"Brake\")     →  float [0..1]\n" +
             "  Tự áp dụng stickCurve từ GamepadSettings nếu là analog trigger.\n\n" +
+
             "GHI CHÚ\n" +
-            "  Dùng cho Racing (Throttle/Brake), Flight Sim, hay bất kỳ\n" +
-            "  giá trị float liên tục 1 chiều.",
+            "  – _currentSpeed, throttle, brake là ReadOnly — chỉ để quan sát trong Inspector.\n" +
+            "  – Axis khác Button: trả về float liên tục, không phải bool pressed/released.\n" +
+            "  – stickCurve áp dụng tự động cho analog trigger gamepad, không cần cấu hình thêm.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

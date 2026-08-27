@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
@@ -31,15 +32,15 @@ namespace Game.UI
         [FoldoutGroup("Base/Solo/Nội dung scoreboard")]
         [SerializeField] private Sprite _youSprite;      // nền teal cho dòng của mình
 
-        private void Start()
-        {
-            if (GameManager.Instance != null)
-                if (GameManager.Instance.GetGamePlayMode() != GamePlayMode.Solo)
-                    gameObject.SetActive(false);
-            
-            if (nPlayer != null && !nPlayer.IsLocalPlayer)
-                gameObject.SetActive(false);
-        }
+        // private void Start()
+        // {
+        //     if (GameManager.Instance != null)
+        //         if (GameManager.Instance.GetGamePlayMode() != GamePlayMode.Solo)
+        //             gameObject.SetActive(false);
+        //     
+        //     if (nPlayer != null && !nPlayer.IsLocalPlayer)
+        //         gameObject.SetActive(false);
+        // }
 
         // Đặt hạng cá nhân (kèm tiền tố, ví dụ "#2").
         public override void SetRank(int rank)

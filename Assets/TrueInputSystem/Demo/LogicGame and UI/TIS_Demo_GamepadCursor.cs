@@ -15,13 +15,34 @@ public class TIS_Demo_GamepadCursor_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách bật/tắt Gamepad Cursor thông qua TIS API.\n" +
+            "  Mỗi frame khi TISInputBridge đang chạy, script tự động toggle trạng thái\n" +
+            "  cursor gamepad (enable → disable → enable...). Dùng làm ví dụ tham khảo\n" +
+            "  cách gọi SetActiveGamepadCursor() trong logic game thực tế.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
+
             "SETUP\n" +
             "1. Scene cần có TISInputBridge + TISMobileInputSetup.\n" +
-            "2. Gán script này GameObject trong scene.\n" +
+            "2. Gán script này lên bất kỳ GameObject trong scene.\n" +
+            "3. Trong game thực tế, thay logic toggle bằng điều kiện cụ thể\n" +
+            "   (vd: chỉ bật cursor khi mở menu, tắt khi vào gameplay).\n\n" +
+
+            "LUỒNG HOẠT ĐỘNG\n" +
+            "  1. Kiểm tra TISInputBridge.IsRunning trước khi gọi API.\n" +
+            "  2. Đọc trạng thái hiện tại qua GetGamepadCursorEnable().\n" +
+            "  3. Đảo ngược trạng thái bằng SetActiveGamepadCursor(!current).\n\n" +
+
             "API\n" +
-            "  bridge.SetActiveGamepadCursor(bool) \n" +
-            "  bridge.GetGamepadCursorEnable() →  (bool) enable\n",
+            "  bridge.IsRunning                        →  bool (TIS đã khởi động)\n" +
+            "  bridge.GetGamepadCursorEnable()         →  bool (cursor đang bật?)\n" +
+            "  bridge.SetActiveGamepadCursor(bool)     →  void (bật/tắt cursor)\n\n" +
+
+            "GHI CHÚ\n" +
+            "  – Script hiện toggle mỗi frame — trong thực tế nên gọi có điều kiện.\n" +
+            "  – Luôn kiểm tra IsRunning trước khi gọi bất kỳ API nào của TIS.\n" +
+            "  – Gamepad Cursor cần được cấu hình sẵn trong TISMobileInputSetup.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

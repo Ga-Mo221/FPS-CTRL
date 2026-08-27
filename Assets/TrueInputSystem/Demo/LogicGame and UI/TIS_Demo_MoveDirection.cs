@@ -13,6 +13,14 @@ public class TIS_Demo_MoveDirection_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách đọc Vector2 di chuyển thống nhất từ\n" +
+            "  nhiều nguồn input khác nhau (WASD trên PC, Gamepad LeftStick,\n" +
+            "  hoặc Virtual Joystick trên mobile) thông qua một API duy nhất\n" +
+            "  MoveDirection — giúp code di chuyển nhân vật không cần quan tâm\n" +
+            "  người chơi đang dùng thiết bị input nào.\n\n" +
+
+            "PLATFORM: PC · Mobile · Gamepad\n\n" +
             "SETUP\n" +
             "1. Gán script này lên bất kỳ GameObject nào (thường là Player).\n" +
             "2. Đảm bảo scene có TISInputBridge (singleton).\n" +

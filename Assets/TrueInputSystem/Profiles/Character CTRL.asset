@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c9baaa990132464c9f1066f1283ddfd, type: 3}
   m_Name: Character CTRL
   m_EditorClassIdentifier: TrueInputSystem.Runtime::TrueInputSystem.TISInputProfileConfig
-  profileName: New Profile
+  profileName: Character Controller
   description: 
   enablePC: 1
   enableGamepad: 1
@@ -83,7 +83,7 @@ MonoBehaviour:
       actionType: 0
       bindingPC: <Keyboard>/escape
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/select
+      bindingGamepad: <Gamepad>/start
       bindingGamepadModifier: 
       bindingMobile: Button_10
       readMode: 0
@@ -190,6 +190,17 @@ MonoBehaviour:
       bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Tab
+      actionType: 0
+      bindingPC: <Keyboard>/tab
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/select
+      bindingGamepadModifier: 
+      bindingMobile: 
+      readMode: 1
+      isSinglePress: 0
       _readModeMigrated: 1
       overrideDeadzone: 0
   mobileSettings:

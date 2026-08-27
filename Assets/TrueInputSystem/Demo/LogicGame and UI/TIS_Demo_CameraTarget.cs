@@ -15,20 +15,41 @@ public class TIS_Demo_CameraTarget_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng TIS API để điều khiển camera/pivot\n" +
+            "  tự động xoay về điểm ngón tay chạm trên màn hình mobile (look-at-touch).\n" +
+            "  Hỗ trợ 2 chế độ: theo dõi object được touch (ObjectTracker) hoặc\n" +
+            "  theo tâm đa ngón tay kết hợp Raycast (MultiFingerGestureDetector).\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
+
             "SETUP\n" +
             "1. Scene cần có TISInputBridge + TISMobileInputSetup.\n" +
             "2. Gán script này lên Camera hoặc Camera Rig.\n" +
             "3. Assign 'targetCamera' — để trống = Camera.main.\n" +
-            "4. Để script hoạt động song song TIS_Demo_LookDelta:\n" +
+            "4. Assign 'pivotTransform' — để trống = transform của GameObject này.\n" +
+            "5. Chọn 'ModeTouch' phù hợp với use case.\n" +
+            "6. Để script hoạt động song song TIS_Demo_LookDelta:\n" +
             "   chỉ bật 1 trong 2 script tại một thời điểm.\n\n" +
+
+            "CHẾ ĐỘ HOẠT ĐỘNG\n" +
+            "  [ObjectTracker]\n" +
+            "    Dùng ToucherWorldPosition() để lấy vị trí world 3D của điểm touch.\n" +
+            "    Pivot xoay về object/điểm được chạm trực tiếp.\n\n" +
+            "  [MultiFingerGestureDetector]\n" +
+            "    Dùng GestureCentroidPosition (tâm các ngón) → Raycast xuống scene.\n" +
+            "    Pivot xoay về điểm Raycast trúng trên LayerMask groundLayer.\n\n" +
+
             "API\n" +
-            "  bridge.GestureCentroidPosition   →  Vector2 (screen px, tâm các ngón)\n" +
-            "  bridge.GestureGetFingerPosition(i) →  Vector2 (ngón thứ i)\n" +
-            "  bridge.GestureActiveFingers       →  int\n\n" +
+            "  bridge.ToucherWorldPosition()        →  Vector3 (world pos của touch)\n" +
+            "  bridge.GestureCentroidPosition       →  Vector2 (screen px, tâm các ngón)\n" +
+            "  bridge.GestureGetFingerPosition(i)   →  Vector2 (ngón thứ i)\n" +
+            "  bridge.GestureActiveFingers          →  int (số ngón đang chạm)\n\n" +
+
             "GHI CHÚ\n" +
-            "  Dùng để Raycast từ vị trí ngón tay → target point trong world,\n" +
-            "  sau đó LookAt target point để camera/nhân vật hướng về đó.",
+            "  smoothSpeed   : tốc độ Lerp xoay pivot (càng cao càng nhanh).\n" +
+            "  raycastDistance: độ dài tia Raycast (chỉ dùng ở MultiFingerGestureDetector).\n" +
+            "  groundLayer   : layer mà Raycast sẽ kiểm tra va chạm.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

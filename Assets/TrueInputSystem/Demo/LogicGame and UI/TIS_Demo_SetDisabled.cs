@@ -12,23 +12,44 @@ using TrueInputSystem;
 [UnityEditor.CustomEditor(typeof(TIS_Demo_SetDisabled))]
 public class TIS_Demo_SetDisabled_Editor : UnityEditor.Editor
 {
-    public override void OnInspectorGUI()
+        public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách tắt/bật tạm thời on-screen skill button\n" +
+            "  theo điều kiện gameplay như mana, cooldown, hoặc trạng thái stunned.\n" +
+            "  Khác với Interactable: SetDisabled chỉ khóa input tạm thời và tự\n" +
+            "  ForceRelease nếu button đang được nhấn, không ẩn button khỏi UI.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
+
             "SETUP\n" +
             "1. Tạo Canvas → thêm TISMobileSkillButton lên Image.\n" +
             "2. Assign TISMobileSkillButton vào field 'skillButton'.\n" +
             "3. Gán script này lên AbilityManager / StanceController.\n\n" +
+
+            "CHẾ ĐỘ HOẠT ĐỘNG\n" +
+            "  [Đủ mana]\n" +
+            "    Button enabled — nhận input bình thường, visual sáng.\n" +
+            "    Khi GetSkillAction() trả về true → trừ mana, kiểm tra lại ngưỡng.\n\n" +
+            "  [Không đủ mana]\n" +
+            "    SetDisabled(true) → chặn input, hiện visual disabled.\n" +
+            "    Mana tự regen theo thời gian; khi vượt manaCost → tự enable lại.\n" +
+            "    SetDisabled chỉ được gọi khi trạng thái thay đổi, không gọi mỗi frame.\n\n" +
+
             "API  (gọi trên TISMobileSkillButton)\n" +
             "  button.SetDisabled(true)   → chặn input, hiện visual disabled\n" +
             "  button.SetDisabled(false)  → mở input, trở về normal visual\n\n" +
-            "SO SÁNH:\n" +
+
+            "SO SÁNH\n" +
             "  SetDisabled(true)    = tạm khóa (cooldown, hết mana, đang stunned)\n" +
-            "  Interactable = false = khóa vĩnh viễn (chưa unlock, không đủ level)\n\n" +
+            "  Interactable = false = khóa vĩnh viễn (chưa unlock, không đủ level)\n" +
+            "  SetCooldownFill()    = tạm khóa kèm fill bar đếm ngược trực quan\n\n" +
+
             "GHI CHÚ\n" +
-            "  SetDisabled(true) sẽ tự ForceRelease nếu button đang được nhấn.\n" +
-            "  Dùng SetCooldownFill() thay SetDisabled() nếu cần hiện fill bar.",
+            "  SetDisabled(true) tự ForceRelease nếu button đang được nhấn.\n" +
+            "  Dùng SetCooldownFill() thay SetDisabled() nếu cần hiện fill bar.\n" +
+            "  Chỉ gọi SetDisabled() khi trạng thái thay đổi để tránh overhead.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

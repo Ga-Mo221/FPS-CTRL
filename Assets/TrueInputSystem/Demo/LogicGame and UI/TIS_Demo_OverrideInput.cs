@@ -15,11 +15,27 @@ public class TIS_Demo_OverrideInput_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách inject giá trị input giả vào TISInputBridge,\n" +
+            "  thay thế hoàn toàn input thật từ người dùng. Dùng cho các tình huống\n" +
+            "  cần điều khiển nhân vật/camera từ code mà không cần tương tác thủ công:\n" +
+            "  AI controller, cutscene tự động, replay system, hoặc auto-pilot.\n\n" +
+
             "PLATFORM: PC · Gamepad · Mobile\n\n" +
+
             "SETUP\n" +
             "1. Scene cần có TISInputBridge.\n" +
             "2. Gán script này lên CutsceneController / AIController.\n" +
             "3. Bật 'enableAutoPilot' trong Inspector để test.\n\n" +
+
+            "CHẾ ĐỘ HOẠT ĐỘNG\n" +
+            "  [Auto-pilot]\n" +
+            "    Bật 'enableAutoPilot' → override cả Move lẫn Look mỗi frame.\n" +
+            "    Tắt → tự động Clear cả hai, trả lại quyền điều khiển cho input thật.\n\n" +
+            "  [Cutscene Zoom]\n" +
+            "    Bật 'autoZoomIn' → override ZoomDelta bằng 'autoZoomDelta' mỗi frame.\n" +
+            "    Có thể dùng độc lập hoặc kết hợp cùng Auto-pilot.\n\n" +
+
             "API\n" +
             "  bridge.OverrideMoveInput(Vector2)   → MoveDirection trả về value này\n" +
             "  bridge.ClearMoveOverride()          → trở về đọc input thật\n" +
@@ -27,9 +43,10 @@ public class TIS_Demo_OverrideInput_Editor : UnityEditor.Editor
             "  bridge.ClearLookOverride()\n" +
             "  bridge.OverrideZoomInput(float)     → ZoomDelta trả về value này\n" +
             "  bridge.ClearZoomOverride()\n\n" +
+
             "GHI CHÚ\n" +
             "  Override ưu tiên hơn input thật — gọi Clear*() để phục hồi.\n" +
-            "  Luôn Clear trong OnDisable() để tránh stuck override.",
+            "  Luôn Clear trong OnDisable() để tránh stuck override khi script bị tắt.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

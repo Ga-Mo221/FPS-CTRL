@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
@@ -49,15 +50,17 @@ namespace Game.UI
         [FoldoutGroup("Base/Team/Scoreboard - Bravo (Đội 2)")]
         [SerializeField] private ScoreRow[] _sbBravoRows;
         
-        private void Start()
-        {
-            if (GameManager.Instance != null)
-                if (GameManager.Instance.GetGamePlayMode() != GamePlayMode.Team)
-                    gameObject.SetActive(false);
-            
-            if (nPlayer != null && !nPlayer.IsLocalPlayer)
-                gameObject.SetActive(false);
-        }
+        // private void Start()
+        // {
+        //     if (GameManager.Instance != null)
+        //         if (GameManager.Instance.GetGamePlayMode() != GamePlayMode.Team)
+        //             gameObject.SetActive(false);
+        //     
+        //     if (nPlayer != null && !nPlayer.IsLocalPlayer)
+        //     {
+        //         gameObject.SetActive(false);
+        //     }
+        // }
 
         // Đặt mục tiêu số mạng cần đạt và cập nhật dòng mục tiêu trên HUD.
         public override void SetKillTarget(int target)

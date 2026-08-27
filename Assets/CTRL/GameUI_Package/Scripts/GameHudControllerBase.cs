@@ -31,14 +31,14 @@ namespace Game.UI
         [SerializeField] private KillFeedView _killFeed;
 
         [FoldoutGroup("Base/Base/Scoreboard (giữ phím để xem)")]
-        [SerializeField] private GameObject _scoreboard;              // cả bảng xếp hạng
+        [SerializeField] private UIScoreBoard _scoreboard;              // cả bảng xếp hạng
 
-        public NPlayer nPlayer;
-
-        private void Awake()
-        {
-            nPlayer = GetComponentInParent<NPlayer>();
-        }
+        // public NPlayer nPlayer;
+        //
+        // private void Awake()
+        // {
+        //     nPlayer = GetComponentInParent<NPlayer>();
+        // }
 
         // ---- Các setter dùng chung ----
         
@@ -119,7 +119,7 @@ namespace Game.UI
         // Bật/tắt scoreboard thủ công (ví dụ để test hoặc gọi từ menu).
         public void SetScoreboardVisible(bool visible)
         {
-            if (_scoreboard != null) _scoreboard.SetActive(visible);
+            if (_scoreboard != null) _scoreboard.gameObject.SetActive(visible);
         }
         
         // ============================ ALL ======================================

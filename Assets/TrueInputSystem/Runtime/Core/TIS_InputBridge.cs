@@ -383,7 +383,10 @@ namespace TrueInputSystem
             => _gamepadVirtualCursor?.SetActiveCursor(active);
 
         public bool GetGamepadCursorEnable()
-            => _gamepadVirtualCursor.GetEnabled();
+        {
+            if (_gamepadVirtualCursor == null) return false;
+            return _gamepadVirtualCursor.GetEnabled();
+        }
 
         // ══════════════════════════════════════════════════════
         //  ITISInputBridge — GESTURE PROXY

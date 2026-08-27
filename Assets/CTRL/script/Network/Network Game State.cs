@@ -203,7 +203,7 @@ public class NetworkGameState : NetworkBehaviour
 
             PlayerTeam team = player.nPlayer.NetworkedTeam;
             int deathcount = player.GetDeathCount();
-            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, team, player._kill, deathcount);
+            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.Nickname.ToString(), team, player._kill, deathcount);
         }
 
         // ── Build leaderboard đã sort giảm dần theo kill ────────────────────────
@@ -333,5 +333,11 @@ public class NetworkGameState : NetworkBehaviour
         if (Runner == null) return -1;
         double rtt = Runner.GetPlayerRtt(player);
         return Mathf.RoundToInt((float)(rtt * 500.0)); // one-way, đồng nhất với Update()
+    }
+    
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (Instance == this)
+            Instance = null;
     }
 }

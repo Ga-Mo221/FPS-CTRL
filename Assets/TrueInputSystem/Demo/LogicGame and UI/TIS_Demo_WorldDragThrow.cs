@@ -16,6 +16,22 @@ public class TIS_Demo_WorldDragThrow_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng GetPointerWorldPosition() để kéo\n" +
+            "  và vứt (drag & throw) một GameObject trong world 3D. Tap vào\n" +
+            "  object để bắt đầu kéo, giữ ngón tay/chuột để di chuyển theo\n" +
+            "  depth cố định, thả ra để object rơi tự do theo vật lý — nếu nhả\n" +
+            "  khi đang kéo nhanh thì velocity sẽ được áp vào Rigidbody để tạo\n" +
+            "  hiệu ứng vứt mạnh (throw).\n\n" +
+
+            "KHÁC BIỆT SO VỚI UIDragDrop\n" +
+            "  UIDragDrop   : kéo thả phẳng trên Canvas (screen space), dùng\n" +
+            "                 GetPointerScreenPosition(), không có vật lý,\n" +
+            "                 mặc định bounce về vị trí gốc khi thả.\n" +
+            "  WorldDragThrow: kéo thả trong world 3D thực (world space), dùng\n" +
+            "                 GetPointerWorldPosition(depth), có Rigidbody +\n" +
+            "                 vật lý thật, áp velocity để ném object khi thả.\n\n" +
+
             "PLATFORM: PC · Mobile\n\n" +
             "SETUP\n" +
             "1. Gắn script này vào GameObject có Collider (Box, Sphere, Mesh...).\n" +

@@ -16,6 +16,21 @@ public class TIS_Demo_UIDragDrop_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng GetPointerScreenPosition() để kéo\n" +
+            "  thả (drag & drop) một Image/RectTransform trong Canvas UI theo\n" +
+            "  ngón tay hoặc chuột. Hỗ trợ tùy chỉnh tốc độ bám theo pointer và\n" +
+            "  tự động trả về vị trí gốc khi thả ra — phù hợp cho inventory UI,\n" +
+            "  drag item, hoặc kéo thả icon trong menu.\n\n" +
+            
+            "KHÁC BIỆT SO VỚI UIDragDrop\n" +
+            "  UIDragDrop   : kéo thả phẳng trên Canvas (screen space), dùng\n" +
+            "                 GetPointerScreenPosition(), không có vật lý,\n" +
+            "                 mặc định bounce về vị trí gốc khi thả.\n" +
+            "  WorldDragThrow: kéo thả trong world 3D thực (world space), dùng\n" +
+            "                 GetPointerWorldPosition(depth), có Rigidbody +\n" +
+            "                 vật lý thật, áp velocity để ném object khi thả.\n\n" +
+
             "PLATFORM: PC · Mobile\n\n" +
             "SETUP\n" +
             "1. Tạo Canvas (Screen Space — Overlay).\n" +

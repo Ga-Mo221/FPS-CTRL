@@ -16,21 +16,40 @@ public class TIS_Demo_SkillReadModes_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa 3 shortcut đọc trạng thái skill button theo\n" +
+            "  từng pha nhấn: nhấn xuống, đang giữ, và thả ra. Thay thế cho\n" +
+            "  GetSkillAction(name, mode) để giảm boilerplate trong code gameplay.\n\n" +
+
             "PLATFORM: PC · Gamepad · Mobile\n\n" +
+
             "SETUP\n" +
             "1. Đảm bảo scene có TISInputBridge với Profile đã assign.\n" +
-            "2. Tạo 3 action Button trong Profile:\n" +
-            "   • 'Jump'   – PC: <Keyboard>/space\n" +
-            "   • 'Sprint' – PC: <Keyboard>/leftShift\n" +
-            "   • 'Aim'    – PC: <Mouse>/rightButton\n" +
-            "3. Gán script này lên Player.\n\n" +
+            "2. Tạo action Button trong Profile và điền tên vào field bên dưới.\n" +
+            "   Ví dụ mặc định: 'Attack' — PC: <Mouse>/rightButton.\n" +
+            "3. Gán script này lên Player / AbilityController.\n\n" +
+
+            "CHẾ ĐỘ HOẠT ĐỘNG\n" +
+            "  [IsSkillDown]\n" +
+            "    Trả về true đúng 1 frame khi button vừa được nhấn xuống.\n" +
+            "    Dùng cho: nhảy, tấn công, kích hoạt skill một lần.\n\n" +
+            "  [IsSkillHeld]\n" +
+            "    Trả về true suốt trong khi button đang được giữ.\n" +
+            "    Dùng cho: sprint, charge, ngắm liên tục, giữ để sạc.\n\n" +
+            "  [IsSkillReleased]\n" +
+            "    Trả về true đúng 1 frame khi button vừa được thả ra.\n" +
+            "    Dùng cho: release charge, kết thúc aim, drop item.\n\n" +
+
             "API\n" +
             "  bridge.IsSkillDown(name)     → PressDown (1 frame khi nhấn)\n" +
             "  bridge.IsSkillHeld(name)     → Hold (suốt khi giữ)\n" +
             "  bridge.IsSkillReleased(name) → PressUp (1 frame khi nhả)\n\n" +
+
             "GHI CHÚ\n" +
-            "  Đây là shortcut của GetSkillAction(name, mode).\n" +
-            "  Không cần viết TISButtonReadMode.PressDown mỗi lần.",
+            "  Đây là shortcut của GetSkillAction(name, TISButtonReadMode.*).\n" +
+            "  Tên action phải khớp chính xác với actionName trong Profile.\n" +
+            "  IsSkillDown và IsSkillReleased chỉ true đúng 1 frame — không dùng\n" +
+            "  trong coroutine hoặc callback bất đồng bộ.",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

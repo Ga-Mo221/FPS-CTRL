@@ -14,18 +14,42 @@ public class TIS_Demo_LookDelta_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng TIS API để điều khiển xoay camera\n" +
+            "  theo input delta từ nhiều nguồn: Mouse, Gamepad RightStick hoặc kéo\n" +
+            "  ngón tay trên mobile. Hỗ trợ Aim Assist tự động kéo ngắm về target\n" +
+            "  gần nhất khi có AimAssistScanner trong scene.\n\n" +
+
+            "PLATFORM: PC (Mouse / Gamepad) · Mobile (Touch Drag)\n\n" +
+
             "SETUP\n" +
-            "1. Gán script này lên GameObject Camera (hoặc Camera Rig).\n" +
-            "2. Đảm bảo scene có TISInputBridge.\n" +
-            "3. Field 'CameraPivot' là Transform sẽ xoay theo pitch (up/down).\n" +
-            "   Để trống → script tự xoay chính transform của nó.\n\n" +
+            "1. Scene cần có TISInputBridge (và TISMobileInputSetup nếu dùng mobile).\n" +
+            "2. Gán script này lên GameObject Camera hoặc Camera Rig.\n" +
+            "3. Field '_camera' là Transform sẽ xoay theo cả yaw lẫn pitch.\n" +
+            "   Để trống → script tự dùng chính transform của nó.\n" +
+            "4. Để tách yaw/pitch (rig 2 tầng): bỏ comment dòng\n" +
+            "   transform.localRotation trong Update và gán _camera là pivot con.\n\n" +
+
+            "CHẾ ĐỘ HOẠT ĐỘNG\n" +
+            "  [Không có AimAssistTarget]\n" +
+            "    LookDelta được áp trực tiếp — xoay tự do theo input.\n\n" +
+            "  [Có AimAssistTarget]\n" +
+            "    Gọi AimAssistProcess() để kéo ngắm về phía target.\n" +
+            "    Cần AimAssistScanner trong scene để detect target.\n\n" +
+
             "API\n" +
-            "  TISInputBridge.Instance.LookDelta  →  Vector2\n" +
-            "  • x = yaw  (trái/phải)\n" +
-            "  • y = pitch (lên/xuống, âm = nhìn xuống)\n\n" +
+            "  bridge.LookDelta                →  Vector2 (delta per-frame)\n" +
+            "    • x = yaw  (trái / phải)\n" +
+            "    • y = pitch (lên / xuống, âm = nhìn xuống)\n" +
+            "  bridge.AimAssistTarget          →  Transform (target gần nhất, hoặc null)\n" +
+            "  bridge.AimAssistProcess(...)    →  Vector2 (look đã được điều chỉnh)\n" +
+            "  bridge.GestureIsTwoFingerPanning →  bool (bỏ qua look khi đang pan 2 ngón)\n\n" +
+
             "GHI CHÚ\n" +
-            "  – LookDelta là delta per-frame, đã nhân sensitivity trong profile.\n" +
-            "  – Clamp pitch trong [-80, 80] để tránh lật đầu.",
+            "  – LookDelta là delta per-frame, đã nhân sensitivity trong TIS profile.\n" +
+            "  – Pitch bị clamp trong [pitchMin, pitchMax] để tránh lật đầu camera.\n" +
+            "  – snapRadius trong AimAssistSettings phải >= scanAngle của Scanner.\n" +
+            "  – Trên PC, Cursor sẽ bị Lock tự động khi Start (trừ khi SimulateMobile).",
             UnityEditor.MessageType.Info);
         base.OnInspectorGUI();
     }

@@ -14,6 +14,14 @@ public class TIS_Demo_ZoomDelta_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách đọc giá trị zoom từ Mouse ScrollWheel\n" +
+            "  (PC) hoặc Pinch gesture (mobile) thông qua API ZoomDelta, dùng\n" +
+            "  để zoom camera vào/ra dựa trên khoảng cách clamp trong khoảng\n" +
+            "  [minDistance, maxDistance]. Tự động bỏ qua zoom khi đang thực\n" +
+            "  hiện two-finger pan để tránh xung đột gesture.\n\n" +
+
+            "PLATFORM: PC · Mobile\n\n" +
             "SETUP\n" +
             "1. Gán script này lên Camera hoặc Camera Rig.\n" +
             "2. Đảm bảo scene có TISInputBridge.\n" +

@@ -308,7 +308,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4100329e4588497eb2079d472550f955, type: 3}
   m_Name: AutoExposure
   m_EditorClassIdentifier: Assembly-CSharp::Lepsima.Shaders.AutoExposure.AutoExposure
-  active: 1
+  active: 0
   framesPerCompute:
     m_OverrideState: 1
     m_Value: 5
@@ -618,7 +618,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 221518ef91623a7438a71fef23660601, type: 3}
   m_Name: WhiteBalance
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   temperature:
     m_OverrideState: 1
     m_Value: 0
@@ -873,10 +873,10 @@ MonoBehaviour:
   active: 1
   postExposure:
     m_OverrideState: 1
-    m_Value: 1.2
+    m_Value: 0
   contrast:
     m_OverrideState: 1
-    m_Value: 20
+    m_Value: 1
   colorFilter:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}

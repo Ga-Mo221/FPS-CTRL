@@ -15,6 +15,13 @@ public class TIS_Demo_ToucherStateCheck_Editor : UnityEditor.Editor
     public override void OnInspectorGUI()
     {
         UnityEditor.EditorGUILayout.HelpBox(
+            "MỤC ĐÍCH\n" +
+            "  Script demo minh họa cách dùng các API kiểm tra trạng thái touch\n" +
+            "  helper (ToucherWasTouched / ToucherHasNoObjects / ToucherIsSingleTouch)\n" +
+            "  cho các logic game chỉ cần biết 'đã chạm chưa' mà không cần quan tâm\n" +
+            "  object cụ thể nào, ví dụ: gợi ý người chơi tương tác, kiểm tra lịch sử\n" +
+            "  touch của một object, hoặc phát hiện có touch trong frame hiện tại.\n\n" +
+
             "PLATFORM: Mobile (iOS / Android)\n\n" +
             "SETUP\n" +
             "1. Trong TISInputBridge Inspector → bật 'Enable Object Tracker'.\n" +

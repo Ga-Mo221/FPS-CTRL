@@ -74,6 +74,8 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         {
             Local = this;
             
+            _componentManager.DisplayUI();
+            
             GameManager.Instance.setPlayerID(Object.Id);
             
             Utils.SetRenderLayerInChildren(_hide_Mesh, LayerMask.NameToLayer("LocalPlayerModel"));
