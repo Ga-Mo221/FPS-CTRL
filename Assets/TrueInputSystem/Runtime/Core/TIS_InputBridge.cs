@@ -40,6 +40,11 @@ namespace TrueInputSystem
         [Tooltip("Bật để log chi tiết trong Console khi khởi tạo.")]
         [SerializeField] private bool _verboseLog = false;
 
+        [Tooltip("Bật để giữ GameObject này tồn tại khi chuyển scene (DontDestroyOnLoad).\n" +
+                 "Khi ON: TISInputBridge sẽ không bị hủy khi load scene mới.\n" +
+                 "Khi OFF (mặc định): hành vi bình thường theo scene lifecycle.")]
+        [SerializeField] private bool _dontDestroyOnLoad = false;
+
         [Tooltip("Bật để test TISMobileSkillButton trong Editor.\n" +
                  "Khi ON: GetSkillAction() đọc TISMobileButtonRegistry thay vì keyboard.\n" +
                  "Khi OFF (mặc định): keyboard/mouse hoạt động bình thường.")]
@@ -143,6 +148,9 @@ namespace TrueInputSystem
                 return;
             }
             Instance = this;
+            if (_dontDestroyOnLoad)
+                DontDestroyOnLoad(gameObject);
+            
             SceneManager.sceneUnloaded += OnSceneUnloaded;
 
             if (_profile == null)
@@ -741,7 +749,9 @@ namespace TrueInputSystem
                 _reader.MoveAction,
                 _reader.LookAction,
                 _reader.LookActionIsMouseDelta,
-                _isMobileMode);
+                _isMobileMode,
+                _activeProfile.cameraSettings,
+                () => _activeDevice);
 
             EnableDefaultMaps();
 

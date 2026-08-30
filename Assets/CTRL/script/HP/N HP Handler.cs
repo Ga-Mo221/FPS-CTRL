@@ -161,7 +161,7 @@ public class NHPHandler : NetworkBehaviour
 
         if (HP <= 0)
         {
-            _inGameMessagesHandler.SendInGameRPCMessage(
+            _inGameMessagesHandler.SendInGameRPCKill(
                 damageCausedByPlayerNickName, weaponName,  _nPlayer != null ? _nPlayer.Nickname.ToString() : "Player Test"
                 );
             IsDead = true;
@@ -208,6 +208,9 @@ public class NHPHandler : NetworkBehaviour
             if (_nPlayer != null && _componentManager != null && !_nPlayer.IsLocalPlayer)
                 _componentManager.UIPlayerNickName.gameObject.SetActive(false);
             DeadCount++;
+            
+            if (GameManager.Instance != null && Object.HasInputAuthority)
+                GameManager.Instance.ResetStreak();
         }
         else
         {

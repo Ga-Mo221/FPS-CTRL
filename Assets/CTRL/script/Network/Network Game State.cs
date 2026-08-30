@@ -6,9 +6,6 @@ public class NetworkGameState : NetworkBehaviour
 {
     public static NetworkGameState Instance { get; private set; }
 
-    [Header("Countdown Settings")]
-    [SerializeField] private float _startCountdownDuration = 10f;
-
     [Header("Match Settings")]
     [SerializeField] private int _totalRounds = 1;
     public int TotalRounds => _totalRounds;
@@ -264,6 +261,11 @@ public class NetworkGameState : NetworkBehaviour
 
     private void StartCountdown()
     {
+        var _startCountdownDuration = 5f;
+
+        if (GameManager.Instance != null)
+            _startCountdownDuration = GameManager.Instance.StartGameDuration;
+        
         _countdownTimer = TickTimer.CreateFromSeconds(Runner, _startCountdownDuration);
     }
 

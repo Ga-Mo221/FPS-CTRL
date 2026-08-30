@@ -256,7 +256,15 @@ namespace TrueInputSystem
         {
             if (!tabLookup.TryGetValue(tabBtn, out var entry)) return;
 
-            // Redirect SubTab highlight
+            // Clear toàn bộ SubTab buttons (không chỉ button đang track trong activeButtons),
+            // vì button cũ có thể vẫn giữ visual Highlighted mà không được track đúng.
+            foreach (var subTabBtn in registeredByLayer[TISGamepadUIButton.NavigationLayer.SubTab])
+            {
+                if (subTabBtn != null)
+                    subTabBtn.ClearActiveVisual();
+            }
+            activeButtons.Remove(TISGamepadUIButton.NavigationLayer.SubTab);
+
             if (entry.firstSubTab != null)
                 ActivateButtonInLayer(entry.firstSubTab);
 

@@ -84,6 +84,11 @@ namespace TrueInputSystem
             var propVerbose = serializedObject.FindProperty("_verboseLog");
             EditorGUILayout.PropertyField(propVerbose, new GUIContent("Verbose Log"));
 
+            var propDDOL = serializedObject.FindProperty("_dontDestroyOnLoad");
+            EditorGUILayout.PropertyField(propDDOL, new GUIContent("Don't Destroy On Load"));
+            if (propDDOL.boolValue)
+                EditorGUILayout.HelpBox("DontDestroyOnLoad đang BẬT — TISInputBridge sẽ tồn tại xuyên scene. Đảm bảo chỉ có một instance trong toàn bộ game.", MessageType.Info);
+
             var propSimMobile = serializedObject.FindProperty("_simulateMobileInEditor");
             EditorGUILayout.PropertyField(propSimMobile, new GUIContent("Simulate Mobile In Editor"));
             if (propSimMobile.boolValue)

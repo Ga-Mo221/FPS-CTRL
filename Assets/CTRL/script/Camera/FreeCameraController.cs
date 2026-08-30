@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 public class FreeCameraController : MonoBehaviour
@@ -31,6 +30,7 @@ public class FreeCameraController : MonoBehaviour
     private Transform _rootRotate;
     private bool _lastOnUI;
     private GameManager _gameManager;
+    private NetworkGameState _gamestate;
 
     private void Awake()
     {
@@ -38,6 +38,7 @@ public class FreeCameraController : MonoBehaviour
         _movementHandler = _componentManager.NCharMovementHandler;
         _hpHandler = _componentManager.NHPHandler;
         _gameManager = GameManager.Instance;
+        _gamestate = NetworkGameState.Instance;
 
         if (_cameraConstraint == null) return;
         _rootRotate = _cameraConstraint.transform;
@@ -51,7 +52,14 @@ public class FreeCameraController : MonoBehaviour
 
     private void Update()
     {
-        bool onUI = _gameManager.OnUI;
+        if (_gamestate != null && _gamestate.IsMatchOver())
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            return;
+        }
+        
+        bool onUI = _gameManager.OnUIOption();
         if (onUI != _lastOnUI)
         {
             _lastOnUI = onUI;

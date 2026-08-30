@@ -195,16 +195,23 @@ namespace TrueInputSystem.Editor
             yield return Item("Left Stick Press (L3)", "<Gamepad>/leftStickPress");
             yield return Item("Left Stick Up",         "<Gamepad>/leftStick/up");
             yield return Item("Left Stick Down",       "<Gamepad>/leftStick/down");
+            yield return Item("Left Stick Left",       "<Gamepad>/leftStick/left");
+            yield return Item("Left Stick Right",      "<Gamepad>/leftStick/right");
 
             yield return Header("Right Stick");
             yield return Item("Right Stick (Vector2)", "<Gamepad>/rightStick");
             yield return Item("Right Stick Press (R3)","<Gamepad>/rightStickPress");
+            yield return Item("Right Stick Up",        "<Gamepad>/rightStick/up");
+            yield return Item("Right Stick Down",      "<Gamepad>/rightStick/down");
+            yield return Item("Right Stick Left",      "<Gamepad>/rightStick/left");
+            yield return Item("Right Stick Right",     "<Gamepad>/rightStick/right");
 
             yield return Header("D-Pad");
-            yield return Item("D-Pad Up",    "<Gamepad>/dpad/up");
-            yield return Item("D-Pad Down",  "<Gamepad>/dpad/down");
-            yield return Item("D-Pad Left",  "<Gamepad>/dpad/left");
-            yield return Item("D-Pad Right", "<Gamepad>/dpad/right");
+            yield return Item("D-Pad (Vector2)",  "<Gamepad>/dpad");
+            yield return Item("D-Pad Up",         "<Gamepad>/dpad/up");
+            yield return Item("D-Pad Down",        "<Gamepad>/dpad/down");
+            yield return Item("D-Pad Left",        "<Gamepad>/dpad/left");
+            yield return Item("D-Pad Right",       "<Gamepad>/dpad/right");
 
             yield return Header("System");
             yield return Item("Start",  "<Gamepad>/start");
@@ -239,6 +246,7 @@ namespace TrueInputSystem.Editor
 
             if (path.EndsWith("/leftStick",  System.StringComparison.OrdinalIgnoreCase) ||
                 path.EndsWith("/rightStick", System.StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith("/dpad",       System.StringComparison.OrdinalIgnoreCase) ||
                 path.IndexOf("/wasd",        System.StringComparison.OrdinalIgnoreCase) >= 0 ||
                 path.IndexOf("/ijkl",        System.StringComparison.OrdinalIgnoreCase) >= 0 ||
                 path.IndexOf("/arrowKeys",   System.StringComparison.OrdinalIgnoreCase) >= 0 ||

@@ -247,6 +247,7 @@ public class NShootHandler : NetworkBehaviour
 
     void OnKillChange()
     {
-        //Debug.Log($"Ban Da tieu diet {_kill} ke dich");
+        if (GameManager.Instance != null && Object.HasInputAuthority)
+            GameManager.Instance.SetBestStreak();
     }
 }

@@ -25,7 +25,7 @@ MonoBehaviour:
       actionType: 1
       bindingPC: <Keyboard>/wasd
       bindingPCModifier: 
-      bindingGamepad: <Gamepad>/leftStick
+      bindingGamepad: <Gamepad>/dpad
       bindingGamepadModifier: 
       bindingMobile: TISVirtualJoystick
       readMode: 1
@@ -113,7 +113,7 @@ MonoBehaviour:
       bindingMobile: Button_5
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
     - actionName: Brake
       actionType: 0
@@ -124,7 +124,7 @@ MonoBehaviour:
       bindingMobile: Button_6
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
     - actionName: EnterVehicle
       actionType: 0
@@ -135,7 +135,7 @@ MonoBehaviour:
       bindingMobile: Button_7
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
     - actionName: Menu
       actionType: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
       bindingMobile: Button_8
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
     - actionName: Direction
       actionType: 1
@@ -157,7 +157,7 @@ MonoBehaviour:
       bindingMobile: 
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
   - mapName: Gameplay
     enabledByDefault: 1
@@ -171,7 +171,7 @@ MonoBehaviour:
       bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
   - mapName: UI
     enabledByDefault: 0
@@ -185,27 +185,27 @@ MonoBehaviour:
       bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
-      _readModeMigrated: 0
+      _readModeMigrated: 1
       overrideDeadzone: 0
   mobileSettings:
     joystickRadius: 100
     joystickDeadzone: 0.08
     dynamicJoystick: 1
-    idleOpacity: 0.4
+    idleOpacity: 0.22115384
     showSkillButtons: 1
     skillButtonSize: 100
     cameraZoneWidthRatio: 0.4
     cameraZoneDebugOpacity: 0
   cameraSettings:
-    mouseSensitivity: {x: 0.25, y: 0.25}
-    gamepadSensitivity: {x: 180, y: 180}
+    mouseSensitivity: {x: 1.5, y: 1.5}
+    gamepadSensitivity: {x: 0.25, y: 0.25}
     mobileSensitivity: {x: 0.12, y: 0.12}
     invertY: 0
     smoothing: 12
     pitchMin: -80
     pitchMax: 80
   gamepadSettings:
-    leftStickDeadzone: 0.12
-    rightStickDeadzone: 0.1
+    leftStickDeadzone: 0.14903846
+    rightStickDeadzone: 0.09711538
     stickCurve: 1.5
     enableRumble: 1

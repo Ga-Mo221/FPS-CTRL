@@ -21,8 +21,8 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 	private ExposureRenderPass _renderPass;	// Applies the average exposure to the screen
     private Material _material;				// Auto-generated material using the render shader
 	
-    private static float _targetExposure = 0.1f;	// Latest computed average exposure
-    private static float _currentExposure = 0.1f;	// The actual exposure, always approaching the target exposure
+    private static float _targetExposure = -1f;	// Latest computed average exposure. -1 = uninitialized
+    private static float _currentExposure = -1f;	// The actual exposure, always approaching the target exposure. -1 = uninitialized
     private static float _lastTime = 0;			// The timestamp of the last compute pass
     private static int _computeCounter = 0;		// The amount of skipped compute passes, resets on every compute pass
     private static bool _readbackPending = false;	// Prevents queueing a new AsyncGPUReadback while one is still in flight
@@ -47,9 +47,12 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 		_computePass = new AverageComputePass(computeShader, renderPassEvent);
 		_renderPass = new ExposureRenderPass(_material, renderPassEvent);
 
-		// Set defaults
-		_targetExposure = 0.1f;
-		_currentExposure = 0.1f;
+		// Only reset exposure on first initialization, NOT on subsequent Create() calls
+		// (Create is called again on recompile/scene reload, resetting exposure causes a flash)
+		if (_targetExposure < 0f) _targetExposure = 0.18f;
+		if (_currentExposure < 0f) _currentExposure = 0.18f;
+		
+		// Always reset stateful counters/flags — these must be clean after a rebuild
 		_computeCounter = 0;
 		_lastTime = Time.time;
 		_readbackPending = false;
@@ -106,9 +109,10 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 		float decay = diff > 0 ? _autoExposure.increaseSpeed.value : _autoExposure.decreaseSpeed.value;
 		_currentExposure = ExpDecay(_currentExposure, _targetExposure, decay, deltaTime);
 
-		if (float.IsNaN(_currentExposure)) {
-			_currentExposure = 0.1f;
+		if (float.IsNaN(_currentExposure) || _currentExposure < 0f) {
+			_currentExposure = 0.18f;
 		}
+		_currentExposure = Mathf.Max(_currentExposure, 0.001f);
 	}
 
 	protected override void Dispose(bool disposing) {
@@ -116,9 +120,11 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 	}
 
 	// Set the target exposure, 0 is full Black, 1 is full White and >1 is very bright White
+	// Clamp to a safe minimum so the shader divisor (9.6 * _Exposure) never approaches zero
 	private static void SetExposure(float avg) {
 		if (!_autoExposure) return;
-		_targetExposure = avg;
+		if (float.IsNaN(avg) || float.IsInfinity(avg) || avg < 0f) return;
+		_targetExposure = Mathf.Max(avg, 0.001f);
 	}
 
 	// FrameRate independent lerp, Source -> https://www.youtube.com/watch?v=LSNQuFEDOyQ
@@ -134,6 +140,7 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 		private static readonly int NumGroupsX = Shader.PropertyToID("_NumGroupsX");
 		private static readonly int Source = Shader.PropertyToID("_Source");
         private static readonly int TempOut = Shader.PropertyToID("_OutBuffer");
+        private static readonly int BrightnessLimitId = Shader.PropertyToID("_BrightnessLimit");
         
         // Compute shader reference
         // Must match THREAD_COUNT in AverageExposureCS.compute (32x32 threads per group)
@@ -151,6 +158,7 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 	        public Vector2Int Size;				// Size of the screen
 	        public Vector2Int GroupCount;		// Number of thread groups dispatched along X and Y
             public BufferHandle Output;			// Output buffer
+            public float BrightnessLimit;		// Max luminance a pixel may contribute (mirrors _MaxBrightness in the render shader)
         }
         
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData) {
@@ -186,6 +194,8 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
             passData.Output = outputHandle;
             passData.Size = size;
             passData.GroupCount = groupCount;
+            // Read from volume here (record phase, main thread) — ExecutePass runs on render thread
+            passData.BrightnessLimit = _autoExposure ? _autoExposure.brightnessLimit.value : 15f;
             
             builder.AllowPassCulling(false); // The output buffer is detected as unused by default, this isn't true
             builder.UseTexture(resourceData.activeColorTexture);
@@ -199,6 +209,7 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 	        // Set compute parameters and dispatch
 	        cmd.SetComputeIntParams(data.ComputeShader, Dims, data.Size.x, data.Size.y);
 	        cmd.SetComputeIntParam(data.ComputeShader, NumGroupsX, data.GroupCount.x);
+	        cmd.SetComputeFloatParam(data.ComputeShader, BrightnessLimitId, data.BrightnessLimit);
 	        cmd.SetComputeTextureParam(data.ComputeShader,0, Source, data.Texture);
             cmd.SetComputeBufferParam(data.ComputeShader,0, TempOut, data.Output);
 
@@ -215,20 +226,26 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 	        _pendingFrameCount = 0;
 	        if (request.hasError || !_autoExposure) return;
 	        
-	        // Get Compute result
-	        float[] groupValues = request.GetData<float>().ToArray();
+	        // Use NativeArray directly — no ToArray() copy, no managed heap allocation
+	        Unity.Collections.NativeArray<float> groupValues = request.GetData<float>();
 	        
-	        // Add up all the workgroup's results
-	        double pixelLumTotal = 0;
+	        // Sum all workgroup results. The compute shader already stores log(luminance),
+	        // so we sum logs and exponentiate once at the end → geometric mean luminance.
+	        // Geometric mean matches human eye perception far better than arithmetic mean
+	        // (e.g. avoids a few bright highlights dominating the average).
+	        double logLumTotal = 0;
 	        uint pixels = 0;
-	        for (int i = 0; i < groupValues.Length / 2; i++) {
-		        pixelLumTotal += groupValues[i * 2];
-		        pixels += (uint)Mathf.CeilToInt(groupValues[i * 2 + 1]);
+	        int groupCount = groupValues.Length / 2;
+	        for (int i = 0; i < groupCount; i++) {
+		        logLumTotal += groupValues[i * 2];
+		        // shared_pixels only ever accumulates 0/1 integers — cast is exact, no rounding needed
+		        pixels += (uint)groupValues[i * 2 + 1];
 	        }
 	        
-	        // Average the results and set as the target exposure
+	        // exp(average of log(L)) = geometric mean of luminance
 	        if (pixels > 0) {
-		        SetExposure((float)(pixelLumTotal / pixels));
+		        float geometricMeanLum = Mathf.Exp((float)(logLumTotal / pixels));
+		        SetExposure(geometricMeanLum);
 	        }
         }
 	}
@@ -245,12 +262,12 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 		private readonly Material _material;
 		
 		private class PassData {
-			public TextureHandle Source;// Screen texture
-			public float Exposure;		// Current exposure
-			public Vector2 Range;		// Exposure range
-			public float MaxBrightness; // Maximum pixel brightness
-			public float WhitePoint;	// Variable for tonemapping
-			public Material Material;	// Material reference
+			public TextureHandle Source;	// Screen texture
+			public float Exposure;			// Current exposure
+			public Vector2 Range;			// Exposure range
+			public float MaxBrightness;		// Maximum pixel brightness
+			public float WhitePointSq;		// White point squared (precomputed, passed directly to shader)
+			public Material Material;		// Material reference
 		}
 		
 		public ExposureRenderPass(Material material, RenderPassEvent renderPassEvent) {
@@ -282,7 +299,9 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 				passData.Exposure = GetExposure();
 				passData.MaxBrightness = _autoExposure.brightnessLimit.value;
 				passData.Range = _autoExposure.exposureRange.value;
-				passData.WhitePoint = _autoExposure.whitePoint.value;
+				// Square on CPU once per frame here, not inside ExecutePass which runs per-pass
+				float wp = _autoExposure.whitePoint.value;
+				passData.WhitePointSq = wp * wp;
 				
 				builder.SetRenderFunc((PassData data, RasterGraphContext graphContext) => ExecutePass(data, graphContext));
 			}
@@ -306,7 +325,7 @@ public class AutoExposureRendererFeature : ScriptableRendererFeature {
 			if (passData.Material) {
 				passData.Material.SetFloat(ScreenExposureProp, passData.Exposure);
 				passData.Material.SetVector(ExposureRangeProp, passData.Range);
-				passData.Material.SetFloat(WhitePointSqProp, passData.WhitePoint * passData.WhitePoint);
+				passData.Material.SetFloat(WhitePointSqProp, passData.WhitePointSq); // already squared at record time
 				passData.Material.SetFloat(MaxBrightness, passData.MaxBrightness);
 				Blitter.BlitTexture(cmd, passData.Source, new Vector4(1, 1, 0, 0), passData.Material, 0);
 			}

@@ -8,6 +8,7 @@ public class LocalInputController : MonoBehaviour
     private CharComponentManager _componentManager;
     private NPlayer _player;
     private GameHudControllerBase _gameHudController;
+    private NInGameMessagesHandler _messageHandler;
 
     private void Awake()
     {
@@ -15,6 +16,7 @@ public class LocalInputController : MonoBehaviour
         _componentManager = GetComponent<CharComponentManager>();
         _player = _componentManager.NPlayer;
         _gameHudController = _componentManager.GameHudController();
+        _messageHandler = _componentManager.NInGameMessagesHandler;
     }
 
     private void Update()
@@ -27,6 +29,8 @@ public class LocalInputController : MonoBehaviour
         
         OnUI();
         OnTabScoreBoader();
+
+        OnUIChatBox();
     }
     
     private void OnUI()
@@ -34,7 +38,7 @@ public class LocalInputController : MonoBehaviour
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
             if (GameManager.Instance != null)
-                GameManager.Instance.OnUI = !GameManager.Instance.OnUI;
+                GameManager.Instance.SetOnUIOptions(!GameManager.Instance.OnUIOption());
             //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
         }
     }
@@ -42,6 +46,24 @@ public class LocalInputController : MonoBehaviour
     private void OnTabScoreBoader()
     {
         if (_gameHudController != null)
-            _gameHudController.SetScoreboardVisible(_input.GetSkillAction("Tab", TISButtonReadMode.Hold));
+            _gameHudController.SetScoreboardVisible(_input.GetSkillAction("TAB", TISButtonReadMode.Hold));
+    }
+
+    private void OnUIChatBox()
+    {
+        if (_input.GetSkillAction("ENTER"))
+        {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.SetOnUIChatBox(!GameManager.Instance.OnUIChatBox());
+                
+                var lastactive = _gameHudController.SendMessageVisible(GameManager.Instance.OnUIChatBox());
+
+                if (!GameManager.Instance.OnUIChatBox() && lastactive)
+                {
+                    _messageHandler.SendInGameRPCMessage();
+                }
+            }
+        }
     }
 }

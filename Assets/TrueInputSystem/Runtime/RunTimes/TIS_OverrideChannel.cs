@@ -13,6 +13,7 @@
 //  TISInputBridge.LateUpdate() gọi ResetFrameFlags() để clear consumed flag.
 // ============================================================
 
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -50,6 +51,9 @@ namespace TrueInputSystem
         private InputAction _moveAction;
         private InputAction _lookAction;
         private bool        _lookActionIsMouseDelta;
+        
+        private TISCameraSettings _cameraSettings;
+        private Func<TISActiveDevice> _getActiveDevice;
 
         // ══════════════════════════════════════════════════════
         //  SETUP
@@ -62,12 +66,16 @@ namespace TrueInputSystem
             InputAction moveAction,
             InputAction lookAction,
             bool lookActionIsMouseDelta,
-            bool isMobileMode)
+            bool isMobileMode,
+            TISCameraSettings cameraSettings,
+            Func<TISActiveDevice> getActiveDevice)
         {
             _moveAction            = moveAction;
             _lookAction            = lookAction;
             _lookActionIsMouseDelta = lookActionIsMouseDelta;
             _isMobileMode          = isMobileMode;
+            _cameraSettings         = cameraSettings;
+            _getActiveDevice        = getActiveDevice;
 
             // Reset override state khi đổi profile
             ClearAll();
@@ -110,11 +118,14 @@ namespace TrueInputSystem
         /// Trên mobile: override từ TISTouchCameraZone.
         /// Trên PC: đọc từ Mouse/delta hoặc right stick.
         /// </summary>
+        // Sửa LookDelta getter
         public Vector2 LookDelta
         {
             get
             {
-                if (_useLookOverride) return _lookOverride;
+                if (_useLookOverride)
+                    return _lookOverride * _cameraSettings.mobileSensitivity;
+
                 if (_lookAction == null) return Vector2.zero;
 
                 var raw = _lookAction.ReadValue<Vector2>();
@@ -124,7 +135,20 @@ namespace TrueInputSystem
                     (_lookAction.activeControl == null && _lookActionIsMouseDelta);
 
                 if (isMouse)
+                {
                     raw /= TISConstants.MouseDeltaNormalizeFactor;
+                    raw *= _cameraSettings.mouseSensitivity;
+                }
+                else if (_isMobileMode)
+                {
+                    // Mobile đọc từ action (không phải override) — ví dụ virtual joystick look
+                    raw *= _cameraSettings.mobileSensitivity;
+                }
+                else
+                {
+                    // Gamepad right stick
+                    raw *= _cameraSettings.gamepadSensitivity;
+                }
 
                 return raw;
             }

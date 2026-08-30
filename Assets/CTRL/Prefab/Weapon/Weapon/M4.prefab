@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GunRecoilController
   data: {fileID: 0}
-  firingMode: 0
+  firingMode: 1
   burstCount: 3
 --- !u!1 &1140873525885738155
 GameObject:
@@ -100,6 +100,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
   _type: 0
   _OwnerCharacter: {fileID: 0}
+  _CurrentBulletvalue: 0
+  _CurrentMaxBullet: 0
   _data: {fileID: 11400000, guid: 14b257ca8e5a0574c895afcd46230619, type: 2}
   _anim: {fileID: 97223929395780616}
   _ads_Pivot: {fileID: 88861942976322340}
@@ -175,7 +177,7 @@ MonoBehaviour:
   _ads_Shoot_Point_Name: Shoot Point
   _parrentBullet_name: Parrent Bullet
   _componentManager: {fileID: 0}
-  _uiWeapon: {fileID: 0}
+  _gameHudController: {fileID: 0}
   _camera_Zoom: {fileID: 0}
 --- !u!114 &2617089555171110263
 MonoBehaviour:

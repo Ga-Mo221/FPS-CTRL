@@ -519,7 +519,12 @@ public class NCharMovementHandler : NetworkBehaviour
         _isRespawnRequested = false;
         if (_weaponManager != null) _weaponManager.Respawn();
         CanTakeDamage = false;
-        _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, 2f);
+        
+        var cantakedamageTime = 3f;
+        if (GameManager.Instance != null)
+            cantakedamageTime = GameManager.Instance.CanTakeDamageTime;
+        
+        _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, cantakedamageTime);
         _weaponManager.Rpc_SwitchWeapon();
         Flash = false;
         Frag = false;

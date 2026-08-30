@@ -43,7 +43,7 @@ public class CharacterInputHandler : MonoBehaviour
         
         if (NetworkGameState.Instance != null && NetworkGameState.Instance.IsMatchOver()) return;
         
-        if (GameManager.Instance.OnUI) return;
+        if (GameManager.Instance.OnUI()) return;
         
         if (NetworkGameState.Instance != null && NetworkGameState.Instance.GameStarted)
         {
@@ -84,7 +84,10 @@ public class CharacterInputHandler : MonoBehaviour
     {
         NInputData nInputData = new NInputData();
         
-        if (!GameManager.Instance.OnUI && NetworkGameState.Instance != null && !NetworkGameState.Instance.IsMatchOver())
+        if (GameManager.Instance != null && 
+            !GameManager.Instance.OnUI() && 
+            NetworkGameState.Instance != null && 
+            !NetworkGameState.Instance.IsMatchOver())
         {
             nInputData.MoveDirection = _moveDirection;
             nInputData.LookDelta = _lookDelta;

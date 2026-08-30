@@ -101,6 +101,34 @@ namespace TrueInputSystem
         [SerializeField] public Color _mauKnobHienThi = new Color(1f, 1f, 1f, 0.60f);
 
         // ══════════════════════════════════════════════════════════════════════
+        //  TAB: JOYSTICK — NÂNG CAO (Override)
+        //
+        //  Các thông số này ghi đè lên TISVirtualJoystick / TISMobileSettings
+        //  (profile). Bật _tuyChinhJoystickNangCao để áp dụng; tắt → dùng giá
+        //  trị mặc định từ prefab / profile như trước.
+        // ══════════════════════════════════════════════════════════════════════
+
+        [Tooltip("Bật → ghi đè các thông số bên dưới lên TISVirtualJoystick / TISMobileSettings.\n" +
+                 "Tắt → dùng giá trị mặc định từ prefab hoặc từ profile hiện tại.")]
+        [SerializeField] public bool _tuyChinhJoystickNangCao = false;
+
+        [Tooltip("Vị trí neo (anchoredPosition) mặc định của joystick, tính từ tâm Canvas.\n" +
+                 "Dùng cho vị trí ban đầu (Dynamic mode) hoặc vị trí cố định (Fixed mode).")]
+        [SerializeField] public Vector2 _joystickAnchoredOrigin = new Vector2(-800f, -300f);
+
+        [Range(0f, 1f)]
+        [Tooltip("Opacity của joystick khi đang được chạm/kéo (active).")]
+        [SerializeField] public float _joystickActiveOpacity = 0.85f;
+
+        [Tooltip("Ghi đè dynamicJoystick của TISMobileSettings (profile).\n" +
+                 "true = joystick hiện tại điểm chạm (PUBG/Liên Quân style) · false = cố định vị trí.")]
+        [SerializeField] public bool _dynamicJoystickOverride = true;
+
+        [Range(0f, 1f)]
+        [Tooltip("Ghi đè idleOpacity của TISMobileSettings (profile) — opacity khi joystick không được chạm.")]
+        [SerializeField] public float _idleOpacityOverride = 0.4f;
+
+        // ══════════════════════════════════════════════════════════════════════
         //  TAB: PHÂN VÙNG
         // ══════════════════════════════════════════════════════════════════════
 
@@ -186,6 +214,11 @@ namespace TrueInputSystem
         }
 
         public void _onCameraChanged() { if (Application.isPlaying) ApDungCaiDatCamera(); }
+
+        public void _onJoystickAdvancedChanged()
+        {
+            if (Application.isPlaying) ApDungJoystickNangCao();
+        }
 
         public void TimBridgeTuDong()
         {
@@ -303,6 +336,7 @@ namespace TrueInputSystem
             }
 
             _joystick?.InjectDependencies(_inputBridge);
+            ApDungJoystickNangCao();
             _cameraZone?.InjectDependencies(_inputBridge, _joystick);
 
             _gestureDetector = TaoGestureDetectorMacDinh();
@@ -488,6 +522,22 @@ namespace TrueInputSystem
             _cameraZone.SetInertiaDecay(_quanTinhXoay);
         }
 
+        /// <summary>
+        /// Ghi đè activeOpacity/anchoredOrigin (TISVirtualJoystick) và
+        /// dynamicJoystick/idleOpacity (TISMobileSettings) lên joystick hiện tại,
+        /// nếu _tuyChinhJoystickNangCao được bật. Gọi sau khi joystick được tạo/inject
+        /// và sau mỗi lần đổi profile để override không bị mất.
+        /// </summary>
+        public void ApDungJoystickNangCao()
+        {
+            if (_joystick == null || !_tuyChinhJoystickNangCao) return;
+
+            _joystick.SetAnchoredOrigin(_joystickAnchoredOrigin);
+            _joystick.SetActiveOpacity(_joystickActiveOpacity);
+            _joystick.SetDynamicMode(_dynamicJoystickOverride);
+            _joystick.SetIdleOpacity(_idleOpacityOverride);
+        }
+
         private void LamMoiSkillButton()
         {
             var settings = _inputBridge?.TISMobileSettings;
@@ -565,6 +615,7 @@ namespace TrueInputSystem
         private void KhiDoiProfile(TISInputProfileConfig profileMoi)
         {
             _joystick?.ApplyProfileSettings();
+            ApDungJoystickNangCao();
             _cameraZone?.SyncProfileSettings();
             _gestureDetector?.SyncZone();
             ApDungCaiDatCamera();

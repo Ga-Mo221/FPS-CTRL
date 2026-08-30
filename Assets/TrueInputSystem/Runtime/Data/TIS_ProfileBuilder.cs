@@ -161,8 +161,12 @@ namespace TrueInputSystem
 
                 if (!hasModifier)
                 {
-                    if (isVector2Path && IsStickPath(def.bindingGamepad))
+                    bool isDpad = def.bindingGamepad.EndsWith(
+                        "/dpad", StringComparison.OrdinalIgnoreCase);
+
+                    if (isVector2Path && IsStickPath(def.bindingGamepad) && !isDpad)
                     {
+                        // Analog stick: apply deadzone processor để tránh drift
                         float stickDeadzone = def.bindingGamepad.EndsWith(
                             "/rightStick", StringComparison.OrdinalIgnoreCase)
                             ? (profile.gamepadSettings.rightStickDeadzone)
@@ -173,6 +177,7 @@ namespace TrueInputSystem
                     }
                     else
                     {
+                        // D-Pad (digital, không drift) hoặc các path khác: bind thẳng
                         action.AddBinding(def.bindingGamepad);
                     }
                 }
@@ -199,7 +204,8 @@ namespace TrueInputSystem
         {
             if (string.IsNullOrEmpty(path)) return false;
             return path.EndsWith("/leftStick",  StringComparison.OrdinalIgnoreCase) ||
-                   path.EndsWith("/rightStick", StringComparison.OrdinalIgnoreCase);
+                   path.EndsWith("/rightStick", StringComparison.OrdinalIgnoreCase) ||
+                   path.EndsWith("/dpad",       StringComparison.OrdinalIgnoreCase);
         }
 
         internal static bool IsTriggerAnalogPath(string path)

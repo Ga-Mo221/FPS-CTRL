@@ -14,6 +14,7 @@ public class UIMainMenuHandler : MonoBehaviour
     
     [SerializeField] private TMP_InputField _player_Name_InputField;
     [SerializeField] private TMP_InputField _session_Name_InputField;
+    [SerializeField] private TMP_InputField _killTarget_InputField;
     public GamePlayMode GameMode = GamePlayMode.Solo;
     
     private void Start()
@@ -74,6 +75,8 @@ public class UIMainMenuHandler : MonoBehaviour
     {
         HideAllPanels();
         DisplayPanel(_createSessionPanel, 1);
+        if (GameManager.Instance != null && _killTarget_InputField != null)
+            _killTarget_InputField.text = GameManager.Instance.KillTarget.ToString();
     }
 
     public void SetGameMode(int modeindex)
@@ -99,6 +102,14 @@ public class UIMainMenuHandler : MonoBehaviour
     
     public void OnStartNewSessionClicked()
     {
+        if (GameManager.Instance != null && _killTarget_InputField != null)
+        {
+            if (int.TryParse(_killTarget_InputField.text, out int killTarget))
+            {
+                GameManager.Instance.SetKillTarget(killTarget);
+            }
+        }
+        
         NetworkRunnerHandler NRunnerHandler = FindAnyObjectByType<NetworkRunnerHandler>();
         GameManager.Instance.NewGame();
         if (NRunnerHandler != null)

@@ -7,6 +7,7 @@ namespace TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/Virtual Joystick")]
     [RequireComponent(typeof(Image))]
+    [RequireComponent(typeof(CanvasGroup))]
     public class TISVirtualJoystick : MonoBehaviour,
         IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
@@ -43,16 +44,18 @@ namespace TrueInputSystem
 
         private RectTransform _bgRect;
         private RectTransform _canvasRect;
-        private CanvasGroup   _canvasGroup;
-        private Canvas        _canvas;
+        [SerializeField] private CanvasGroup   _canvasGroup;
+        [SerializeField] private Canvas        _canvas;
         private Image         _bgImage;
         private Image         _knobImage;
-        private Vector2       _anchoredOrigin;
+        [SerializeField] private Vector2       _anchoredOrigin;
         private float         _radius;
 
         private int   _touchId    = -1;
         private bool  _isDragging = false;
         private bool  _radiusSetExternally = false; // true khi SetRadius() được gọi từ TISMobileInputSetup
+        private bool  _dynamicModeSetExternally = false; // true khi SetDynamicMode() được gọi từ TISMobileInputSetup
+        private bool  _idleOpacitySetExternally = false; // true khi SetIdleOpacity() được gọi từ TISMobileInputSetup
         // FIX M4: Camera cache — GetEventCamera() kết quả không đổi trong runtime
         // (renderMode và worldCamera ổn định sau Awake). Cache 1 lần tránh gọi mỗi drag frame.
         private Camera _cachedEventCamera;
@@ -103,7 +106,8 @@ namespace TrueInputSystem
             // ──────────────────────────────────────────────────────────────
 
             // Snapshot origin SAU KHI đã fix anchor
-            _anchoredOrigin = _bgRect.anchoredPosition;
+            _anchoredOrigin = new Vector2(-800f, -300f);
+            _bgRect.anchoredPosition = _anchoredOrigin;
 
             // FIX M4: cache event camera ngay trong Awake — renderMode và worldCamera
             // không thay đổi sau khi canvas được setup.
@@ -126,20 +130,21 @@ namespace TrueInputSystem
                 _inputBridge = TISInputBridge.Instance;
 
             ApplyProfileSettings();
-            SetVisible(false);
+            SetIdle();
         }
 
         private void OnDisable() => ResetJoystick();
 
-        private void Update()
-        {
-            // Safety check đã được xử lý qua ForceRelease() / OnPointerUp().
-            // Không cần poll EnhancedTouch mỗi frame — tránh overhead trên low-end mobile.
-        }
-
         // ══════════════════════════════════════════════════════════════════════
         //  UGUI POINTER EVENTS  (fixed mode)
         // ══════════════════════════════════════════════════════════════════════
+        
+        public void SetAnchoredOrigin(Vector2 origin)
+        {
+            _anchoredOrigin = origin;
+            if (_bgRect != null)
+                _bgRect.anchoredPosition = _anchoredOrigin;
+        }
 
         public void OnPointerDown(PointerEventData e)
         {
@@ -204,6 +209,11 @@ namespace TrueInputSystem
         {
             _touchId    = pointerId;
             _isDragging = true;
+
+            // ← THÊM: fixed mode cần set activeOpacity khi bắt đầu kéo
+            if (!_dynamicMode && _canvasGroup)
+                _canvasGroup.alpha = _activeOpacity;
+
             ProcessDragFromScreen(screenPos);
         }
 
@@ -266,15 +276,10 @@ namespace TrueInputSystem
             if (_knob != null)
                 _knob.anchoredPosition = Vector2.zero;
 
-            if (_dynamicMode)
-            {
-                SetVisible(false);
+            if (_bgRect != null)
                 _bgRect.anchoredPosition = _anchoredOrigin;
-            }
-            else
-            {
-                if (_canvasGroup) _canvasGroup.alpha = _idleOpacity;
-            }
+            
+            SetIdle();
 
             _inputBridge?.ClearMoveOverride();
             OnReleased?.Invoke();
@@ -318,12 +323,44 @@ namespace TrueInputSystem
         //  VISIBILITY
         // ══════════════════════════════════════════════════════════════════════
 
+        // SetVisible chỉ dùng cho Dynamic mode khi đang drag
         private void SetVisible(bool visible)
         {
-            if (_bgImage)   _bgImage.enabled  = visible;
-            if (_knobImage) _knobImage.enabled = visible;
+            if (_bgImage)   _bgImage.enabled   = visible;
+            if (_knobImage) _knobImage.enabled  = visible;
             if (_canvasGroup)
-                _canvasGroup.alpha = visible ? _activeOpacity : 0f;
+            {
+                _canvasGroup.alpha          = visible ? _activeOpacity : _idleOpacity;
+                _canvasGroup.blocksRaycasts = visible;
+            }
+        }
+        
+        // trạng thái idle đúng cho cả 2 mode
+        private void SetIdle()
+        {
+            if (_dynamicMode)
+            {
+                // Dynamic: ẩn hoàn toàn, chờ touch mới hiện
+                if (_bgImage)   _bgImage.enabled   = true;
+                if (_knobImage) _knobImage.enabled  = true;
+                if (_canvasGroup)
+                {
+                    _canvasGroup.alpha          = _idleOpacity;
+                    _canvasGroup.blocksRaycasts = false;
+                }
+            }
+            else
+            {
+                // Fixed: luôn hiện image, chỉ dùng idleOpacity
+                if (_bgImage)   _bgImage.enabled   = true;
+                if (_knobImage) _knobImage.enabled  = true;
+                _bgRect.anchoredPosition = _anchoredOrigin;
+                if (_canvasGroup)
+                {
+                    _canvasGroup.alpha          = _idleOpacity;
+                    _canvasGroup.blocksRaycasts = true;
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -372,8 +409,15 @@ namespace TrueInputSystem
                     _bgRect.sizeDelta = new Vector2(_radius * 2f, _radius * 2f);
             }
 
-            _idleOpacity    = s.idleOpacity;
-            _dynamicMode    = s.dynamicJoystick;
+            // Chỉ đọc idleOpacity / dynamicJoystick từ profile khi chưa bị TISMobileInputSetup
+            // ghi đè bằng SetIdleOpacity() / SetDynamicMode(). Nếu đã set externally →
+            // giữ nguyên giá trị custom, không để profile-swap ghi đè mất.
+            if (!_idleOpacitySetExternally)
+                _idleOpacity = s.idleOpacity;
+
+            if (!_dynamicModeSetExternally)
+                _dynamicMode = s.dynamicJoystick;
+
             // FIX #9: cache deadzone một lần tại đây — ProcessDragFromScreen() đọc _cachedDeadzone
             // thay vì gọi nullable chain _inputBridge?.TISMobileSettings?.joystickDeadzone mỗi frame.
             _cachedDeadzone = s.joystickDeadzone;
@@ -391,6 +435,34 @@ namespace TrueInputSystem
 
         // P2 FIX #12: Public setter thay thế reflection DatField("_activationZoneWidthRatio").
         public void SetActivationZoneWidthRatio(float ratio) => _activationZoneWidthRatio = ratio;
+
+        /// <summary>
+        /// Ghi đè opacity khi joystick đang active (đang được chạm/kéo).
+        /// Field này không nằm trong TISMobileSettings (profile) nên không có
+        /// vấn đề bị profile-swap ghi đè — có thể set trực tiếp bất kỳ lúc nào.
+        /// </summary>
+        public void SetActiveOpacity(float opacity) => _activeOpacity = Mathf.Clamp01(opacity);
+
+        /// <summary>
+        /// Ghi đè dynamicJoystick (true = hiện tại điểm chạm, false = cố định vị trí).
+        /// Đánh dấu externally-set để ApplyProfileSettings() (gọi khi Start hoặc khi
+        /// profile đổi) không ghi đè lại giá trị custom này bằng giá trị từ profile.
+        /// </summary>
+        public void SetDynamicMode(bool dynamic)
+        {
+            _dynamicMode = dynamic;
+            _dynamicModeSetExternally = true;
+        }
+
+        /// <summary>
+        /// Ghi đè idleOpacity (opacity khi joystick không được chạm).
+        /// Đánh dấu externally-set — xem SetDynamicMode().
+        /// </summary>
+        public void SetIdleOpacity(float opacity)
+        {
+            _idleOpacity = Mathf.Clamp01(opacity);
+            _idleOpacitySetExternally = true;
+        }
 
         // Setter dùng bởi Editor DLL qua delegate — không cần #if UNITY_EDITOR
         public void SetKnobSizeRatioDebug(float ratio) => _knobSizeRatioDebug = ratio;

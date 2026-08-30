@@ -175,8 +175,8 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
                 if (playerLeftNetworkObject == Object)
                 {
                     // sẽ chuyển thông báo join và left sang chat box
-                    // Local.GetComponent<NInGameMessagesHandler>().SendInGameRPCMessage(
-                    //     playerLeftNetworkObject.GetComponent<NPlayer>().Nickname.ToString(), "Left");
+                    Local.GetComponent<NInGameMessagesHandler>().SenManagerMessage(
+                        $"{playerLeftNetworkObject.GetComponent<NPlayer>().Nickname.ToString()} da thoat");
 
                     // ✅ Giảm count theo team ngay tại đây, lúc này object vẫn còn sống
                     if (NetworkedTeam == PlayerTeam.Blue)
@@ -206,7 +206,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         if (!_isPublicJoinMessageSent)
         {
             // sẽ chuyển thông báo join và left sang chat box
-            //_nInGameMessagesHandler.SendInGameRPCMessage(nickName, "Joined");
+            _nInGameMessagesHandler.SenManagerMessage($"{nickName} da vao phong.");
             _isPublicJoinMessageSent = true;
         }
     }

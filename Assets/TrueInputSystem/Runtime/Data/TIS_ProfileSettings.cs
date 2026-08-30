@@ -62,11 +62,11 @@ namespace TrueInputSystem
     {
         [Header("PC — Mouse Sensitivity")]
         [Tooltip("Độ nhạy chuột theo trục X (ngang) và Y (dọc).")]
-        public Vector2 mouseSensitivity = new Vector2(0.25f, 0.25f);
+        public Vector2 mouseSensitivity = new Vector2(1.5f, 1.5f);
 
         [Header("Gamepad — Right Stick")]
         [Tooltip("Độ nhạy right stick. Thường cần lớn hơn mouse nhiều.")]
-        public Vector2 gamepadSensitivity = new Vector2(180f, 180f);
+        public Vector2 gamepadSensitivity = new Vector2(0.25f, 0.25f);
 
         [Header("Mobile — Touch Drag")]
         [Tooltip("Độ nhạy kéo ngón tay trên mobile.")]

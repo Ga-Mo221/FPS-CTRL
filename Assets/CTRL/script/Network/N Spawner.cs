@@ -52,7 +52,13 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
             _networkGameState = runner.Spawn(_networkGameStatePrefab, onBeforeSpawned: (runner, obj) =>
             {
                 var state = obj.GetComponent<NetworkGameState>();
-                state.SetKillTarget(3);
+
+                int killTarget = 10;
+
+                if (GameManager.Instance != null)
+                    killTarget = GameManager.Instance.KillTarget;
+                
+                state.SetKillTarget(killTarget);
             });
         }
         else if (_networkGameState == null && NetworkGameState.Instance != null)

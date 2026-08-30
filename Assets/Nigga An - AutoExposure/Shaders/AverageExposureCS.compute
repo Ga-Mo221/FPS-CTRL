@@ -4,9 +4,16 @@
 #define THREAD_COUNT 32
 #define GROUP_SIZE (THREAD_COUNT * THREAD_COUNT)
 
+// Pixels below this luminance are considered "black" and excluded from the average.
+// Avoids dark letterboxes / skyboxes dragging exposure up unnecessarily.
+#define MIN_LUM 0.005f
+
 // I/O
 uint2 _Dims;                            // Screen Dimensions
 uint _NumGroupsX;                       // Number of thread groups along X, needed to linearize group id into the output buffer
+float _BrightnessLimit;                 // Max luminance a pixel may contribute — mirrors _MaxBrightness in the render shader.
+                                        // Prevents specular highlights, sun discs, and emissive surfaces from skewing
+                                        // the geometric mean and causing the scene to underexpose.
 Texture2D _Source;                      // Screen Texture
 RWStructuredBuffer<float> _OutBuffer;   // Compute Group Output
 
@@ -14,7 +21,7 @@ RWStructuredBuffer<float> _OutBuffer;   // Compute Group Output
 groupshared float shared_lum[GROUP_SIZE];
 groupshared uint shared_pixels[GROUP_SIZE];
 
-// Convert screen coordinates to the pixel's luminosity
+// Convert screen coordinates to the pixel's luminosity (BT.709 coefficients)
 float get_screen_lum(uint x, uint y) {
     return dot(_Source[uint2(x, y)].rgb, float3(0.21267291f, 0.7151522f, 0.0721750f));
 }
@@ -26,12 +33,27 @@ void SCAN(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID, uint3 d
     uint y = dispatchId.y;
     uint index = threadId.y * THREAD_COUNT + threadId.x;
 
-    // Fetch this thread's single pixel (0 contribution if out of bounds, e.g. last partial group)
+    // Fetch this thread's single pixel; exclude out-of-bounds and near-black pixels.
+    // Near-black exclusion prevents large dark regions (skybox, letterbox, unlit areas)
+    // from pulling the average luminance down and causing overexposure.
     float lum = 0;
     uint valid = 0;
     if (x < _Dims.x && y < _Dims.y) {
-        lum = get_screen_lum(x, y);
-        valid = 1;
+        float raw = get_screen_lum(x, y);
+        if (raw > MIN_LUM) {
+            // Clamp before log: specular highlights, sun discs, and bloom-inflated pixels
+            // can have luminance 10–1000x above mid-grey. Without this clamp they pull the
+            // geometric mean up even in log-space, causing the rest of the scene to underexpose.
+            // _BrightnessLimit is set by the volume and mirrors _MaxBrightness in the render shader,
+            // so the exposure measurement is consistent with what the render pass actually displays.
+            float clamped = min(raw, _BrightnessLimit);
+            
+            // Log-space average: matches how the human eye perceives brightness.
+            // log(L) averages stops (EV) rather than raw linear values, so a pixel at
+            // luminance 0.01 and one at 1.0 average to ~0.1 instead of 0.505.
+            lum = log(clamped);
+            valid = 1;
+        }
     }
 
     shared_lum[index] = lum;
@@ -49,10 +71,11 @@ void SCAN(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID, uint3 d
         GroupMemoryBarrierWithGroupSync();
     }
 
-    // Thread 0 writes this group's final result
+    // Thread 0 writes this group's summed log-luminance and pixel count.
+    // The CPU side will compute: exp(sum_log_lum / pixel_count) = geometric mean luminance.
     if (index == 0) {
         uint groupIndex = groupId.y * _NumGroupsX + groupId.x;
-        _OutBuffer[groupIndex * 2] = shared_lum[0];
-        _OutBuffer[groupIndex * 2 + 1] = shared_pixels[0];
+        _OutBuffer[groupIndex * 2]     = shared_lum[0];
+        _OutBuffer[groupIndex * 2 + 1] = (float)shared_pixels[0];
     }
 }

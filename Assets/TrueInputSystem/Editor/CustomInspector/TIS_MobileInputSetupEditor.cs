@@ -34,6 +34,13 @@ namespace TrueInputSystem
         SerializedProperty _batCamera;
         SerializedProperty _tyLeJoystick;
         // Camera
+        // Joystick — Nâng cao
+        SerializedProperty _tuyChinhJoystickNangCao;
+        SerializedProperty _joystickAnchoredOrigin;
+        SerializedProperty _joystickActiveOpacity;
+        SerializedProperty _dynamicJoystickOverride;
+        SerializedProperty _idleOpacityOverride;
+
         SerializedProperty _batXoayCamera;
         SerializedProperty _tocDoMuotXoay;
         SerializedProperty _quanTinhXoay;
@@ -67,6 +74,12 @@ namespace TrueInputSystem
             _batJoystick         = serializedObject.FindProperty("_batJoystick");
             _batCamera           = serializedObject.FindProperty("_batCamera");
             _tyLeJoystick        = serializedObject.FindProperty("_tyLeJoystick");
+
+            _tuyChinhJoystickNangCao  = serializedObject.FindProperty("_tuyChinhJoystickNangCao");
+            _joystickAnchoredOrigin   = serializedObject.FindProperty("_joystickAnchoredOrigin");
+            _joystickActiveOpacity    = serializedObject.FindProperty("_joystickActiveOpacity");
+            _dynamicJoystickOverride  = serializedObject.FindProperty("_dynamicJoystickOverride");
+            _idleOpacityOverride      = serializedObject.FindProperty("_idleOpacityOverride");
 
             _batXoayCamera       = serializedObject.FindProperty("_batXoayCamera");
             _tocDoMuotXoay       = serializedObject.FindProperty("_tocDoMuotXoay");
@@ -361,6 +374,43 @@ namespace TrueInputSystem
                 EditorGUILayout.PropertyField(_mauNen,         new GUIContent("Màu Nền"));
                 EditorGUILayout.PropertyField(_mauKnobHienThi, new GUIContent("Màu Knob"));
             }
+
+            EditorGUILayout.Space(8);
+            SectionTitle("Joystick — Nâng Cao");
+
+            EditorGUI.BeginChangeCheck();
+            _tuyChinhJoystickNangCao.boolValue = EditorGUILayout.ToggleLeft(
+                "Bật Tuỳ Chỉnh Nâng Cao", _tuyChinhJoystickNangCao.boolValue);
+            if (EditorGUI.EndChangeCheck())
+            {
+                serializedObject.ApplyModifiedProperties();
+                setup._onJoystickAdvancedChanged();
+            }
+
+            using (new EditorGUI.DisabledScope(!_tuyChinhJoystickNangCao.boolValue))
+            {
+                EditorGUI.BeginChangeCheck();
+
+                EditorGUILayout.PropertyField(_joystickAnchoredOrigin,
+                    new GUIContent("Vị Trí Joystick (Anchored)", "Toạ độ anchoredPosition của joystick so với canvas."));
+                EditorGUILayout.Slider(_joystickActiveOpacity,  0f, 1f,
+                    new GUIContent("Active Opacity",  "Độ mờ khi đang chạm joystick."));
+                _dynamicJoystickOverride.boolValue = EditorGUILayout.ToggleLeft(
+                    "Dynamic Mode", _dynamicJoystickOverride.boolValue);
+                EditorGUILayout.Slider(_idleOpacityOverride, 0f, 1f,
+                    new GUIContent("Idle Opacity", "Độ mờ khi không chạm joystick."));
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    serializedObject.ApplyModifiedProperties();
+                    setup._onJoystickAdvancedChanged();
+                }
+            }
+
+            if (!_tuyChinhJoystickNangCao.boolValue)
+                EditorGUILayout.HelpBox(
+                    "Bật \"Tuỳ Chỉnh Nâng Cao\" để ghi đè vị trí, opacity và dynamic mode của joystick.",
+                    MessageType.None);
 
             if (prefabOn)
                 HelpBoxWarning("Đang dùng Joystick Prefab — các cài đặt trên bị bỏ qua.");
