@@ -31,6 +31,7 @@ namespace Game.UI
         [SerializeField] private Sprite _rank1Sprite;    // nền vàng cho hạng 1
         [FoldoutGroup("Base/Solo/Nội dung scoreboard")]
         [SerializeField] private Sprite _youSprite;      // nền teal cho dòng của mình
+        
 
         // private void Start()
         // {

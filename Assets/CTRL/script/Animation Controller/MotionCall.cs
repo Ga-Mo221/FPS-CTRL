@@ -73,9 +73,11 @@ public class MotionCall : StateMachineBehaviour
     public void DeadVFX(Animator animator)
     {
         var Disso = animator.GetComponent<DissolvingController>();
+        var weaponManager = animator.GetComponentInParent<WeaponManager>();
         
         if (Disso == null) return;
         Disso.Dissolve();
+        weaponManager?.HideWeaponActive();
     }
 
     public void ResetDeadVFX(Animator animator)

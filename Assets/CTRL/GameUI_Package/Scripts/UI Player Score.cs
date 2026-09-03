@@ -22,9 +22,11 @@ public class UIPlayerScore : MonoBehaviour
     [SerializeField] private UIPlayerScoreData _kills_text;
     [TabGroup("UI", "Player")] 
     [SerializeField] private UIPlayerScoreData _deadcount_text;
+    [TabGroup("UI", "Player")] 
+    [SerializeField] private UIPlayerScoreData _assist_text;
 
     [Button]
-    public void SetPlayer(int rank, string name, int kills, int deadcount, bool isLocalPlayer)
+    public void SetPlayer(int rank, string name, int kills, int deadcount, int assist, bool isLocalPlayer)
     {
         if (rank == 0)
         {
@@ -33,12 +35,14 @@ public class UIPlayerScore : MonoBehaviour
             _name_text.Text.text = "";
             _kills_text.Text.text = "";
             _deadcount_text.Text.text = "";
+            _assist_text.Text.text = "";
             return;
         }
         _rank_text.Text.text = rank.ToString();
         _name_text.Text.text = name;
         _kills_text.Text.text = kills.ToString();
         _deadcount_text.Text.text = deadcount.ToString();
+        _assist_text.Text.text = assist.ToString();
         
         if (GameManager.Instance != null && GameManager.Instance.GetGamePlayMode() == GamePlayMode.Solo)
         {
@@ -79,6 +83,7 @@ public class UIPlayerScore : MonoBehaviour
         _name_text.SetColor(tag);
         _kills_text.SetColor(tag);
         _deadcount_text.SetColor(tag);
+        _assist_text.SetColor(tag);
     }
 }
 

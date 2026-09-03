@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using TrueInputSystem;
 
@@ -48,6 +47,8 @@ namespace Game.UI
         [FoldoutGroup("Stats")]
         [SerializeField] private TMP_Text _deathsLabel;
         [FoldoutGroup("Stats")]
+        [SerializeField] private TMP_Text _assistsLabel;
+        [FoldoutGroup("Stats")]
         [SerializeField] private TMP_Text _kdLabel;
         [FoldoutGroup("Stats")]
         [SerializeField] private TMP_Text _streakLabel;
@@ -61,7 +62,10 @@ namespace Game.UI
         {
             _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup != null)
+            {
                 _canvasGroup.alpha = 0;
+                _canvasGroup.blocksRaycasts = false;
+            }
             
             if (_playAgainButton != null) _playAgainButton.gameObject.SetActive(false);
         }
@@ -94,16 +98,26 @@ namespace Game.UI
         private IEnumerator DisplayButton()
         {
             yield return new WaitForSeconds(3f);
-            _playAgainButton.gameObject.SetActive(true);
+            _playAgainButton?.gameObject.SetActive(true);
+            if (_canvasGroup != null)
+                _canvasGroup.blocksRaycasts = true;
         }
 
         // ---- Public setters ----
         public void SetResult(MatchResult result)
         {
-            if (_resultTitleLabel != null) _resultTitleLabel.text = result.localPlayerWon ? _victoryText : _defeatText;
-            if (_winnerNameLabel != null) _winnerNameLabel.text = result.winnerTeamName;
-            if (_winScoreLabel != null) _winScoreLabel.text = result.winningScore.ToString();
-            if (_loseScoreLabel != null) _loseScoreLabel.text = result.losingScore.ToString();
+            if (_resultTitleLabel != null)
+            {
+                if (result.LocalPlayerWon == 1)
+                    _resultTitleLabel.text = _victoryText;
+                else if (result.LocalPlayerWon == 0)
+                    _resultTitleLabel.text = _defeatText;
+                else if (result.LocalPlayerWon == 2)
+                    _resultTitleLabel.text = "trận đấu đã kết thúc";
+            }
+            if (_winnerNameLabel != null) _winnerNameLabel.text = result.WinnerTeamName;
+            if (_winScoreLabel != null) _winScoreLabel.text = result.WinningScore;
+            if (_loseScoreLabel != null) _loseScoreLabel.text = result.LosingScore.ToString();
         }
 
         public void SetMvp(KillInfo killInfo)
@@ -114,49 +128,94 @@ namespace Game.UI
 
         public void SetRewards(RewardInfo reward)
         {
-            if (_expLabel != null) _expLabel.text = reward.experience.ToString("N0");
-            if (_creditLabel != null) _creditLabel.text = reward.credits.ToString("N0");
-            if (_levelLabel != null) _levelLabel.text = reward.level.ToString();
-            if (_xpForNextLabel != null) _xpForNextLabel.text = reward.xpForNextLevel.ToString("N0");
-            if (_xpGainedLabel != null) _xpGainedLabel.text = $"+{reward.xpGainedThisMatch:N0}";
-            if (_levelProgressBar != null) _levelProgressBar.SetValue(reward.currentLevelXp, reward.xpForNextLevel);
+            if (_expLabel != null)
+                _expLabel.text = $"+{reward.Experience:N0}";
+                    
+            if (_creditLabel != null) 
+                _creditLabel.text = $"+{reward.Credits:N0}";
+            
+            if (_levelLabel != null) 
+                _levelLabel.text = $"{reward.Level} / {reward.Level + 1}";
+            
+            if (_xpForNextLabel != null) 
+                _xpForNextLabel.text = $"{reward.CurrentLevelXp:N0} / {reward.XpForNextLevel:NO}";
+            
+            if (_xpGainedLabel != null) 
+                _xpGainedLabel.text = $"+{reward.Experience:N0} trận này";
+            
+            if (_levelProgressBar != null) 
+                _levelProgressBar.SetValue(reward.CurrentLevelXp, reward.XpForNextLevel);
         }
 
         public void SetStats(PlayerMatchStats stats)
         {
-            if (_killsLabel != null) _killsLabel.text = stats.kills.ToString();
-            if (_deathsLabel != null) _deathsLabel.text = stats.deaths.ToString();
-            if (_kdLabel != null) _kdLabel.text = stats.killDeathRatio.ToString("0.00");
-            if (_streakLabel != null) _streakLabel.text = stats.bestStreak.ToString();
+            if (_killsLabel != null) _killsLabel.text = stats.Kills.ToString();
+            if (_deathsLabel != null) _deathsLabel.text = stats.Deaths.ToString();
+            if (_assistsLabel != null)  _assistsLabel.text = stats.Assist.ToString();
+            if (_kdLabel != null) _kdLabel.text = stats.KillDeathRatio.ToString("0.00");
+            if (_streakLabel != null) _streakLabel.text = stats.BestStreak.ToString();
         }
     }
     
     [Serializable]
     public struct MatchResult
     {
-        public string winnerTeamName;
-        public int winningScore;
-        public int losingScore;
-        public bool localPlayerWon;
+        public string WinnerTeamName { get; private set; }
+        public string WinningScore { get; private set; }
+        public int LosingScore { get; private set; }
+        public int LocalPlayerWon { get; private set; }
+
+        /// <summary>
+        /// localPlayerWon = 1 là team(true), = 0 là team(false), = 2 là solo
+        /// </summary>
+        /// <param name="winnerTeamName"></param>
+        /// <param name="winningScore"></param>
+        /// <param name="losingScore"></param>
+        /// <param name="localPlayerWon"></param>
+        public MatchResult(string winnerTeamName, string winningScore, int losingScore, int localPlayerWon)
+        {
+            WinnerTeamName = winnerTeamName;
+            WinningScore = winningScore;
+            LosingScore = losingScore;
+            LocalPlayerWon = localPlayerWon;
+        }
     }
 
     [Serializable]
     public struct RewardInfo
     {
-        public int experience;
-        public int credits;
-        public int level;
-        public int currentLevelXp;   // xp into the current level
-        public int xpForNextLevel;   // xp needed to reach next level
-        public int xpGainedThisMatch;
+        public int Experience { get; private set; }
+        public int Credits { get; private set; }
+        public int Level { get; private set; }
+        public int CurrentLevelXp { get; private set; }
+        public int XpForNextLevel { get; private set; }
+
+        public RewardInfo(int experience, int credits, int level, int currentLevelXp, int xpForNextLevel)
+        {
+            Experience = experience;
+            Credits = credits;
+            Level = level;
+            CurrentLevelXp = currentLevelXp;
+            XpForNextLevel = xpForNextLevel;
+        }
     }
 
     [Serializable]
     public struct PlayerMatchStats
     {
-        public int kills;
-        public int deaths;
-        public float killDeathRatio;
-        public int bestStreak;
+        public int Kills { get; private set; }
+        public int Deaths { get; private set; }
+        public int Assist { get; private set; }
+        public float KillDeathRatio { get; private set; }
+        public int BestStreak { get; private set; }
+
+        public PlayerMatchStats(int kills, int deaths, int assist, float killDeathRatio, int bestStreak)
+        {
+            Kills = kills;
+            Deaths = deaths;
+            Assist = assist;
+            KillDeathRatio = killDeathRatio;
+            BestStreak = bestStreak;
+        }
     }
 }

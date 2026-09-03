@@ -34,6 +34,9 @@ namespace TrueInputSystem
         [HideInInspector] public TISGamepadUIButton navDown;
         [HideInInspector] public TISGamepadUIButton navLeft;
         [HideInInspector] public TISGamepadUIButton navRight;
+        
+        // Assigned by TISUINavigationContext.ScanChildButtons() or manually.
+        [HideInInspector] public TISUINavigationContext context;
 
         /// <summary>
         /// Khi bật, button này duy trì visual "Selected" dù EventSystem focus ở nơi khác.
@@ -93,8 +96,8 @@ namespace TrueInputSystem
         {
             base.Start();
             // Đăng ký với Context để Context biết button này tồn tại
-            if (TISUINavigationContext.Instance != null)
-                TISUINavigationContext.Instance.RegisterButton(this);
+            if (context)
+                context.RegisterButton(this);
         }
 
         protected override void OnEnable()
@@ -108,15 +111,15 @@ namespace TrueInputSystem
         {
             base.OnDisable();
             // Báo Context biết button này đang disable để Context cập nhật state
-            if (TISUINavigationContext.Instance != null)
-                TISUINavigationContext.Instance.OnButtonDisabled(this);
+            if (context != null)
+                context.OnButtonDisabled(this);
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            if (TISUINavigationContext.Instance != null)
-                TISUINavigationContext.Instance.UnregisterButton(this);
+            if (context != null)
+                context.UnregisterButton(this);
         }
 
         private System.Collections.IEnumerator SelectNextFrame()
@@ -143,8 +146,8 @@ namespace TrueInputSystem
             SnapToScrollView();
 
             // Báo Context: button này vừa được select (qua EventSystem thật)
-            if (TISUINavigationContext.Instance != null)
-                TISUINavigationContext.Instance.NotifyButtonSelected(this);
+            if (context != null)
+                context.NotifyButtonSelected(this);
         }
 
         public override void OnDeselect(BaseEventData eventData)
@@ -177,8 +180,8 @@ namespace TrueInputSystem
             else if (alwaysActive)
             {
                 // Tab/SubTab: chỉ button đang active trong layer mới đọc input
-                if (TISUINavigationContext.Instance != null
-                    && TISUINavigationContext.Instance.IsActiveInLayer(this))
+                if (context != null
+                    && context.IsActiveInLayer(this))
                     HandleLayerInput();
             }
         }
@@ -199,8 +202,8 @@ namespace TrueInputSystem
             TISGamepadUIButton target = ResolveTarget(inputDir);
 
             // Delegate lên Context: Context kiểm tra state rồi quyết định có move không
-            if (TISUINavigationContext.Instance != null)
-                TISUINavigationContext.Instance.RequestContentMove(this, target);
+            if (context != null)
+                context.RequestContentMove(this, target);
             else if (target != null && target.gameObject.activeInHierarchy)
             {
                 // Không có Context → tự navigate như cũ
@@ -223,11 +226,17 @@ namespace TrueInputSystem
             else           target = (navigationMode == NavMode.Vertical) ? navUp    : navLeft;
 
             // Delegate lên Context: Context kiểm tra state rồi quyết định có move không
-            if (TISUINavigationContext.Instance != null)
-                TISUINavigationContext.Instance.RequestLayerMove(this, target);
+            if (context != null)
+                context.RequestLayerMove(this, target);
         }
 
         // ── Public API (gọi từ Context) ───────────────────────────────────────
+        
+        /// <summary>
+        /// Called by TISUINavigationContext.ScanChildButtons() to wire this button
+        /// to its owning context. Can also be set manually in the inspector.
+        /// </summary>
+        public void SetContext(TISUINavigationContext ctx) => context = ctx;
 
         /// <summary>
         /// Context gọi hàm này để set button thành active trong layer (Tab/SubTab).

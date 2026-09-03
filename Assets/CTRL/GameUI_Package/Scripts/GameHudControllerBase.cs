@@ -39,6 +39,12 @@ namespace Game.UI
 
         [FoldoutGroup("Base/Base/UI Win Lose")] 
         [SerializeField] private UIResultViewController _winlose;
+        
+        [FoldoutGroup("Base/Base/UI Loadout")] 
+        [SerializeField] private SelectLoadoutController _loadout;
+        
+        [FoldoutGroup("Base/Base/UI Drag Item")] 
+        [SerializeField] private GameObject _dragItemImage;
 
         private Coroutine _endGame;
 
@@ -56,56 +62,71 @@ namespace Game.UI
             
             if (GameManager.Instance == null) return;
 
-            if (gs.IsMatchOver() && GameManager.Instance.GetGamePlayMode() == GamePlayMode.Team)
+            if (gs.IsMatchOver())
             {
-                // Set State
-                KillInfo killInfo = new KillInfo();
-                gs.TryGetKillInfo(GameManager.Instance.GetPlayerID(), out killInfo);
-
-                PlayerMatchStats playerMatchStats = new PlayerMatchStats();
-                playerMatchStats.kills = killInfo.Kills;
-                playerMatchStats.deaths = killInfo.Deaths;
-                playerMatchStats.bestStreak = GameManager.Instance.GetBestStreak();
-                playerMatchStats.killDeathRatio =
-                    killInfo.Deaths == 0
-                        ? killInfo.Kills
-                        : (float)killInfo.Kills / killInfo.Deaths;
-                
-                _winlose?.SetStats(playerMatchStats);
-                
                 // Set Mvp
                 KillInfo mvpPlayer = new KillInfo();
                 if (gs.KillLeaderboard.Count > 0)
                     mvpPlayer = gs.KillLeaderboard[0];
                 _winlose?.SetMvp(mvpPlayer);
                 
-                // Set Result
-                MatchResult matchResult = new MatchResult();
-                if (gs.BlueKill > gs.RedKill)
-                {
-                    matchResult.winnerTeamName = "Alpha";
-                    matchResult.winningScore = gs.BlueKill;
-                    matchResult.losingScore = gs.RedKill;
-                    matchResult.localPlayerWon = NPlayer.Local.NetworkedTeam == PlayerTeam.Blue;
-                    if (matchResult.localPlayerWon)
-                        matchResult.winnerTeamName = "Alpha";
-                    else matchResult.winnerTeamName = "Belta";
-                }
-                else
-                {
-                    matchResult.winningScore = gs.RedKill;
-                    matchResult.losingScore = gs.BlueKill;
-                    matchResult.localPlayerWon = NPlayer.Local.NetworkedTeam == PlayerTeam.Red;
-                    if (matchResult.localPlayerWon)
-                        matchResult.winnerTeamName = "Belta";
-                    else matchResult.winnerTeamName = "Alpha";
-                }
+                // Set State
+                KillInfo killInfo = new KillInfo();
+                gs.TryGetKillInfo(GameManager.Instance.GetPlayerID(), out killInfo);
                 
-                _winlose?.SetResult(matchResult);
-
+                float ratio = killInfo.Deaths == 0
+                    ? killInfo.Kills + killInfo.Assist
+                    : (float)(killInfo.Kills + killInfo.Assist) / killInfo.Deaths;
+                
+                PlayerMatchStats playerMatchStats = new PlayerMatchStats(killInfo.Kills, killInfo.Deaths, killInfo.Assist, ratio, GameManager.Instance.GetBestStreak());
+                
+                _winlose?.SetStats(playerMatchStats);
+                
+                // Set Result
+                if (GameManager.Instance.GetGamePlayMode() == GamePlayMode.Team)
+                    Team(gs);
+                else Solo(gs);
+                
                 if (_endGame == null && gameObject.activeInHierarchy)
                     _endGame = StartCoroutine(DisplayResult(3f));
             }
+        }
+
+        private void Team(NetworkGameState gs)
+        {
+            MatchResult matchResult = new MatchResult();
+            if (gs.BlueKill > gs.RedKill)
+            {
+                bool LocalPlayerWon = NPlayer.Local.NetworkedTeam == PlayerTeam.Blue;
+
+                string name = LocalPlayerWon ? "Alpha" : "Beta";
+
+                matchResult = new MatchResult(name, gs.BlueKill.ToString(), gs.RedKill,
+                    LocalPlayerWon ? 1 : 0);
+            }
+            else
+            {
+                bool LocalPlayerWon = NPlayer.Local.NetworkedTeam == PlayerTeam.Red;
+
+                string name = LocalPlayerWon ? "Beta" : "Alpha";
+
+                matchResult = new MatchResult(name, gs.RedKill.ToString(), gs.BlueKill,
+                    LocalPlayerWon ? 1 : 0);
+            }
+                
+            _winlose?.SetResult(matchResult);
+        }
+
+        private void Solo(NetworkGameState gs)
+        {
+            KillInfo killInfo = new KillInfo();
+            gs.TryGetKillInfo(GameManager.Instance.GetPlayerID(), out killInfo);
+            int rank = gs.GetLeaderboardRank(GameManager.Instance.GetPlayerID());
+            
+            MatchResult matchResult = new MatchResult(killInfo.PlayerName, $"#{rank}", killInfo.Kills, 2);
+            
+            _winlose?.SetResult(matchResult);
+            
         }
 
         private IEnumerator DisplayResult(float time)
@@ -212,6 +233,15 @@ namespace Game.UI
             return false;
         }
         
+        public void SetBaloOne(string weapponOne, string weapponTwo)
+            => _loadout.SetBaloOne(weapponOne, weapponTwo);
+        
+        public void SetBaloTwo(string weapponOne, string weapponTwo)
+            => _loadout.SetBaloTwo(weapponOne, weapponTwo);
+        
+        public void SetBaloThree(string weapponOne, string weapponTwo)
+            => _loadout.SetBaloThree(weapponOne, weapponTwo);
+        
         // ============================ ALL ======================================
         
         // Đặt mục tiêu số mạng cần đạt để thắng.
@@ -219,6 +249,15 @@ namespace Game.UI
         
         // Đặt tiêu đề scoreboard (tên chế độ).
         public virtual void SetScoreboardTitle(string title) { }
+
+        public void SetDragItemVisible(bool visible, DropItemWeapon item)
+        {
+            _dragItemImage?.gameObject.SetActive(visible);
+            var gm = GameManager.Instance;
+            if (gm == null) return;
+            gm.SetCanDragItem(visible);
+            gm.SetDropItemWeapon(item);
+        }
         
         // =========================== SOLO ======================================
         

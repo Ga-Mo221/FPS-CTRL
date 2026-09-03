@@ -170,8 +170,34 @@ namespace TrueInputSystem
 
             EditorGUILayout.EndVertical();
 
+            EditorGUILayout.Space(6);
+            SectionLabel("THIẾT LẬP NHANH");
+            EditorGUILayout.BeginVertical(_boxStyle);
+
+            EditorGUILayout.HelpBox(
+                "Nhấn nút bên dưới để tự động tìm toàn bộ TISGamepadUIButton " +
+                "là con của GameObject này và đăng ký vào context.",
+                MessageType.Info);
+
+            EditorGUILayout.Space(4);
+
+            var prevBg = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.20f, 0.55f, 0.85f, 1f);   // blue
+
+            if (GUILayout.Button("Scan Child Buttons", GUILayout.Height(28)))
+            {
+                var scanCtx = (TISUINavigationContext)target;
+                Undo.RecordObject(scanCtx, "Scan Child Buttons");
+                scanCtx.ScanChildButtons();
+                EditorUtility.SetDirty(scanCtx);
+            }
+
+            GUI.backgroundColor = prevBg;
+            EditorGUILayout.EndVertical();
+
             // ── Runtime State (chỉ hiện khi đang Play) ───────────────────────────
-            if (Application.isPlaying && TISUINavigationContext.Instance != null)
+            var ctx = (TISUINavigationContext)target;
+            if (Application.isPlaying && ctx != null)
             {
                 EditorGUILayout.Space(8);
                 SectionLabel("RUNTIME STATE  —  button đang active theo từng layer");
@@ -179,17 +205,17 @@ namespace TrueInputSystem
 
                 DrawRuntimeLayerRow(
                     "Tab",
-                    TISUINavigationContext.Instance.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.Tab),
+                    ctx.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.Tab),
                     ColTab);
 
                 DrawRuntimeLayerRow(
                     "SubTab",
-                    TISUINavigationContext.Instance.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.SubTab),
+                    ctx.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.SubTab),
                     ColSubTab);
 
                 DrawRuntimeLayerRow(
                     "Content",
-                    TISUINavigationContext.Instance.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.Content),
+                    ctx.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.Content),
                     new Color(0.20f, 0.50f, 0.80f, 1f));
 
                 EditorGUILayout.EndVertical();

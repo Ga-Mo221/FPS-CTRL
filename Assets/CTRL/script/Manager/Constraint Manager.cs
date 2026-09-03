@@ -34,7 +34,7 @@ public class ConstraintManager : MonoBehaviour
     [TabGroup("Constraint Manager", "IK")]
     [SerializeField] private IKConstraint _IK_hand_right;
 
-    public void AddNewWeapon(WeaponController ctrl, float weight = 0)
+    public void AddNewWeapon(WeaponController ctrl, string ID, float weight = 0)
     {
         foreach (var body in _list_Bone_Body)
         {
@@ -42,7 +42,7 @@ public class ConstraintManager : MonoBehaviour
             {
                 if (body.transform.name.Contains(trans.name))
                 {
-                    body.AddTarget(ctrl.Data.ID, trans, weight);
+                    body.AddTarget(ID, trans, weight);
                     break;
                 }
             }
@@ -53,17 +53,17 @@ public class ConstraintManager : MonoBehaviour
             foreach (var trans in ctrl.List_Bone_Grenade)
                 if (grenade.transform.name.Contains(trans.name))
                 {
-                    grenade.AddTarget(ctrl.Data.ID, trans, weight);
+                    grenade.AddTarget(ID, trans, weight);
                     break;
                 }
         }
         
-        _camera_Shake.AddTarget(ctrl.Data.ID, ctrl.Camera_Shake, weight);
-        ctrl.ADS_Pivot.AddTarget(ctrl.Data.ID, _ads_Pivot);
+        _camera_Shake.AddTarget(ID, ctrl.Camera_Shake, weight);
+        ctrl.ADS_Pivot.AddTarget(ID, _ads_Pivot);
         ctrl.SetAdsPivotTransform(_ads_Pivot);
         
-        _IK_hand_left?.AddPair(ctrl.Data.ID, ctrl.Hand_Left, ctrl.Pole_Left, weight);
-        _IK_hand_right?.AddPair(ctrl.Data.ID, ctrl.Hand_Right, ctrl.Pole_Right, weight);
+        _IK_hand_left?.AddPair(ID, ctrl.Hand_Left, ctrl.Pole_Left, weight);
+        _IK_hand_right?.AddPair(ID, ctrl.Hand_Right, ctrl.Pole_Right, weight);
     }
 
     public void RemoveWeapon(string id)

@@ -52,6 +52,15 @@ public class FreeCameraController : MonoBehaviour
 
     private void Update()
     {
+        if (!_movementHandler.Object.HasInputAuthority) return;
+        
+        if (_gameManager != null && _gameManager.OnUILoadout())
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            return;
+        }
+        
         if (_gamestate != null && _gamestate.IsMatchOver())
         {
             Cursor.lockState = CursorLockMode.None;

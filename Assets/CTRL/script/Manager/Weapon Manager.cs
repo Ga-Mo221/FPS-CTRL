@@ -1,6 +1,8 @@
 using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using WebSocketSharp;
+using System.Threading.Tasks;
 
 public class WeaponManager : NetworkBehaviour
 {
@@ -9,6 +11,9 @@ public class WeaponManager : NetworkBehaviour
     [TabGroup("Weapon Manager", "Weapon")]
     [SerializeField] private GameObject _weapon_Two_Prefab;
     
+    [TabGroup("Weapon Manager", "Weapon")]
+    [SerializeField] private LayerMask _groundLayer;
+    
     [HorizontalGroup("Weapon Manager/Weapon/Parent", width: 0.6f)]
     [SerializeField] private Transform _weapon_Parrent;
     
@@ -16,11 +21,13 @@ public class WeaponManager : NetworkBehaviour
     // Weapon One
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponOneRef { get; set; }
+    [Networked] public NetworkString<_16> _weaponOneID { get; set; }
     public WeaponController _weapon_One_CTRL;
     
     // Weapon Two
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponTwoRef { get; set; }
+    [Networked] public NetworkString<_16> _weaponTwoID { get; set; }
     public WeaponController _weapon_Two_CTRL;
     
     // Active Weapon
@@ -66,12 +73,56 @@ public class WeaponManager : NetworkBehaviour
         InitWeapon();
     }
 
+    #region Get Prefab weapon Local
+
+    /// <summary>
+    /// lấy prefab từ library theo tên và vị trí cần thay thế
+    /// </summary>
+    /// <param name="weaponOne"></param>
+    /// <param name="WeaponTwo"></param>
+    /// <param name="index"> == 0 là đổi balo, == 1 là thay thế vị trí 1. == 2 là thay thế vị trí 2</param>
     public void SpawnWeapon(string weaponOne, string WeaponTwo)
     {
-        _weapon_One_Prefab = GameManager.Instance.GetWeapon(weaponOne);
-        _weapon_Two_Prefab = GameManager.Instance.GetWeapon(WeaponTwo);
+        SpawnWeaponOne(weaponOne);
+        SpawnWeaponTwo(WeaponTwo);
     }
 
+    private void SpawnWeapon(string weaponName)
+    {
+        if (_weapon_Active == 1)
+            SpawnWeaponOne(weaponName);
+        else if (_weapon_Active == 2)
+            SpawnWeaponTwo(weaponName);
+    }
+
+    private void SpawnWeaponOne(string weaponOne)
+    {
+        if (_weapon_One_CTRL != null)
+        {
+            Runner.Despawn(_weaponOneRef);
+            _weapon_One_CTRL = null;
+            _weaponOneRef = null;
+        }
+        
+        _weapon_One_Prefab = GameManager.Instance.GetWeapon(weaponOne);
+    }
+
+    private void SpawnWeaponTwo(string weaponTwo)
+    {
+        if (_weapon_Two_CTRL != null)
+        {
+            Runner.Despawn(_weaponTwoRef);
+            _weapon_Two_CTRL = null;
+            _weaponTwoRef = null;
+        }
+        
+        _weapon_Two_Prefab = GameManager.Instance.GetWeapon(weaponTwo);
+    }
+    
+    #endregion
+
+    #region Khởi tạo Weapon Local
+    
     private void InitWeapon()
     {
         if (Object.HasStateAuthority && !SkipWeaponSpawn)
@@ -90,25 +141,38 @@ public class WeaponManager : NetworkBehaviour
                 if (_weapon_Two_CTRL != null) _weapon_Two_CTRL.Respawn();
             }
     }
-    
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    public void Rpc_ResolveAfterMigration(RpcInfo info = default)
+
+    private void EquipNewWeapon(int index = 0)
     {
-        ResolveWeaponControllers();
-        SwitchWeapon();
-        Debug.Log($"<color=green>[WeaponManager]</color> ResolveWeaponControllers after migration: {name}", this);
+        if (index == 0)
+        {
+            EquipWeaponTwo();
+            EquipWeaponOne();
+        }
+        else if (index == 1)
+            EquipWeaponOne();
+        else if (index == 2)
+            EquipWeaponTwo();
     }
 
-    private void Start()
+    private void EquipWeaponOne()
     {
-        if (!NeedsResolveAfterMigration)
+        if (Object.HasStateAuthority)
         {
-            if (Object.HasStateAuthority)
-                SwitchWeaponActive(0);
-            SwitchWeapon();
+            CreateWeapon(_weapon_One_Prefab, out var w1);
+            _weaponOneRef = w1;
         }
     }
 
+    private void EquipWeaponTwo()
+    {
+        if (Object.HasStateAuthority)
+        {
+            CreateWeapon(_weapon_Two_Prefab, out var w2);
+            _weaponTwoRef = w2;
+        }
+    }
+    
     private void CreateWeapon(GameObject prefab, out NetworkObject instan)
     {
         instan = null;
@@ -126,7 +190,83 @@ public class WeaponManager : NetworkBehaviour
                 obj.GetComponent<WeaponController>().OwnerCharacter = Object;
             });
     }
+    
+    #endregion
 
+    #region RPC
+    
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void Rpc_ResolveAfterMigration(RpcInfo info = default)
+    {
+        ResolveWeaponControllers();
+        SwitchWeapon();
+        Debug.Log($"<color=green>[WeaponManager]</color> ResolveWeaponControllers after migration: {name}", this);
+    }
+    
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void Rpc_SwitchWeapon(RpcInfo info = default)
+    {
+        SwitchWeapon();
+    }
+    
+    // WeaponManager.cs
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void Rpc_RequestChangeWeapon(string weaponOneName, string weaponTwoName, RpcInfo info = default)
+    {
+        SpawnWeapon(weaponOneName, weaponTwoName);
+        EquipNewWeapon();
+        SwitchWeaponActive(1);
+    }
+    
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public async void Rpc_RequestChangeWeapon(string weaponName, int currentBullet, int maxBullet, RpcInfo info = default)
+    {
+        SpawnWeapon(weaponName);
+        EquipNewWeapon(_weapon_Active);
+
+        if (_weapon_Active == 1)
+        {
+            await WaitUntilReady(() => _weapon_One_CTRL != null && _weapon_One_CTRL.Object != null && _weapon_One_CTRL.Object.IsValid);
+            _weapon_One_CTRL.SetBullet(currentBullet, maxBullet);
+        }
+        else if (_weapon_Active == 2)
+        {
+            await WaitUntilReady(() => _weapon_Two_CTRL != null && _weapon_Two_CTRL.Object != null && _weapon_Two_CTRL.Object.IsValid);
+            _weapon_Two_CTRL.SetBullet(currentBullet, maxBullet);
+        }
+    }
+
+    private async Task WaitUntilReady(System.Func<bool> condition)
+    {
+        while (!condition())
+            await Task.Yield();
+    }
+    
+    // ✅ RPC từ client gửi position thật lên host để spawn
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void Rpc_RequestDropWeapon(Vector3 dropPosition, byte weaponSlot)
+    {
+        WeaponController ctrl = weaponSlot == 1 ? _weapon_One_CTRL : _weapon_Two_CTRL;
+        if (ctrl == null) return;
+
+        SpawnDropItem(ctrl, dropPosition);
+    }
+    
+    #endregion
+
+    private void Start()
+    {
+        if (!NeedsResolveAfterMigration)
+        {
+            if (Object.HasStateAuthority)
+                SwitchWeaponActive(0);
+            SwitchWeapon();
+        }
+    }
+
+    #region Switch Weapon
+    
     public void SwitchWeapon()
     {
         if (_weapon_One_CTRL == null && _weaponOneRef != null || _weapon_Two_CTRL == null && _weaponTwoRef != null)
@@ -134,20 +274,25 @@ public class WeaponManager : NetworkBehaviour
         
         if (_weapon_Active == 1)
         {
+            if (_weapon_One_CTRL == null || !IsWeaponReady(_weapon_One_CTRL)) return;
+            
             SwitchToWeaponOne();
             _componentManager.GameHudController().SwitchWeaponUI(_weapon_One_CTRL);
         }
         if (_weapon_Active == 2)
         {
+            if (_weapon_Two_CTRL == null || !IsWeaponReady(_weapon_Two_CTRL)) return;
+            
             SwitchToWeaponTwo();
             _componentManager.GameHudController().SwitchWeaponUI(_weapon_Two_CTRL);
         }
     }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    public void Rpc_SwitchWeapon(RpcInfo info = default)
+    
+    private bool IsWeaponReady(WeaponController ctrl)
     {
-        SwitchWeapon();
+        return ctrl != null 
+               && ctrl.Object != null 
+               && ctrl.Object.IsValid;
     }
 
     public bool SwitchWeaponActive(int weaponId)
@@ -188,11 +333,11 @@ public class WeaponManager : NetworkBehaviour
     {
         if (_weaponOneRef != null)
         {
-            _componentManager.ConstraintManager?.SwitchWeapon(_weapon_One_CTRL.Data.ID);
+            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon One", this);
+            _componentManager.ConstraintManager?.SwitchWeapon(_weaponOneID.ToString());
             _weaponOneRef?.gameObject.SetActive(true);
             _weaponTwoRef?.gameObject.SetActive(false);
             _anim?.WeaponIndex(_weapon_One_CTRL.Data.Index);
-            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon One", this);
         }
     }
 
@@ -200,13 +345,80 @@ public class WeaponManager : NetworkBehaviour
     {
         if (_weaponTwoRef != null)
         {
-            _componentManager.ConstraintManager?.SwitchWeapon(_weapon_Two_CTRL.Data.ID);
+            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
+            _componentManager.ConstraintManager?.SwitchWeapon(_weaponTwoID.ToString());
             _weaponOneRef?.gameObject.SetActive(false);
             _weaponTwoRef?.gameObject.SetActive(true);
             _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
-            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
         }
     }
+
+    public void HideWeaponActive()
+    {
+        if (_weapon_Active == 1)
+        {
+            _weaponOneRef?.gameObject.SetActive(false);
+
+            if (Object.HasStateAuthority)
+            {
+                SpawnDropItem(_weapon_One_CTRL);
+            }
+            else if (Object.HasInputAuthority) // ✅ Chỉ client sở hữu mới gửi RPC
+            {
+                Vector3 pos = transform.position;
+                pos.y = 0.5f;
+                Rpc_RequestDropWeapon(pos, _weapon_Active);
+            }
+            // Client khác (proxy) không làm gì cả — host lo việc spawn
+        }
+        else if (_weapon_Active == 2)
+        {
+            _weaponTwoRef?.gameObject.SetActive(false);
+
+            if (Object.HasStateAuthority)
+            {
+                SpawnDropItem(_weapon_Two_CTRL);
+            }
+            else if (Object.HasInputAuthority) // ✅
+            {
+                Vector3 pos = transform.position;
+                pos.y = 0.5f;
+                Rpc_RequestDropWeapon(pos, _weapon_Active);
+            }
+        }
+    }
+
+    private void SpawnDropItem(WeaponController ctrl, Vector3? overridePos = null)
+    {
+        Vector3 pos = overridePos ?? transform.position;
+    
+        // ✅ Raycast xuống tìm mặt đất
+        if (Physics.Raycast(pos, Vector3.down, out RaycastHit hit, 10f, _groundLayer))
+        {
+            pos = hit.point;
+            pos.y += 0.1f; // offset nhỏ để không bị clip xuống đất
+        }
+        else
+        {
+            pos.y = 0.5f; // fallback nếu không tìm thấy ground
+        }
+
+        Runner.Spawn(ctrl.Data.DropItemPrefab, pos, onBeforeSpawned:
+            (runner, obj) =>
+            {
+                DropItemWeapon item = obj.GetComponent<DropItemWeapon>();
+                if (item != null)
+                {
+                    item.SetBullet(
+                        ctrl.CurrentBulletvalue,
+                        ctrl.CurrentMaxBullet,
+                        ctrl.Data.WeaponName,
+                        _componentManager.GameHudController());
+                }
+            });
+    }
+    
+    #endregion
 
     public WeaponController Weapon_Active()
     {
@@ -235,10 +447,24 @@ public class WeaponManager : NetworkBehaviour
 
     void OnWeaponRefsChanged()
     {
-        if (_weaponOneRef != null)
-            _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
-        if (_weaponTwoRef != null)
-            _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
+        // Weapon One bị despawn → remove khỏi ConstraintManager
+        var idOne = _weaponOneID.ToString();
+        if (_weaponOneRef != null && !idOne.IsNullOrEmpty())
+        {
+            _componentManager.ConstraintManager.RemoveWeapon(idOne);
+            _weapon_One_CTRL = null;
+        }
+        // Weapon Two bị despawn → remove khỏi ConstraintManager 
+        var idTwo = _weaponTwoID.ToString();
+        if (_weaponTwoRef != null && !idTwo.IsNullOrEmpty())
+        {
+            _componentManager.ConstraintManager.RemoveWeapon(idTwo);
+            _weapon_Two_CTRL = null;
+        }
+        
+        ResolveWeaponControllers();
+
+        SwitchWeapon();
     }
     
     private void ResolveWeaponControllers()
@@ -246,12 +472,16 @@ public class WeaponManager : NetworkBehaviour
         if (_weaponOneRef != null && _weapon_One_CTRL == null)
         {
             _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
-            _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL);
+            if (_weapon_One_CTRL != null) _weapon_One_CTRL.Respawn();
+            _weaponOneID = new NetworkString<_16>(_weapon_One_CTRL.Data.ID + "_STTWP1");
+            _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL, _weaponOneID.ToString());
         } 
         if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
         {
             _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
-            _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL);
+            if (_weapon_Two_CTRL != null) _weapon_Two_CTRL.Respawn();
+            _weaponTwoID = new NetworkString<_16>(_weapon_Two_CTRL.Data.ID + "_STTWP2");
+            _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL, _weaponTwoID.ToString());
         }
     }
     

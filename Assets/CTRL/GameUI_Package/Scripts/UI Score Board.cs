@@ -44,9 +44,9 @@ public class UIScoreBoard : MonoBehaviour
         {
             KillInfo killInfo = _networkGameState.KillLeaderboard[i];
             bool isLocalPlayer = GameManager.Instance != null && GameManager.Instance.GetPlayerID() == killInfo.PlayerId;
-            _playerScores[i].SetPlayer(i + 1, killInfo.PlayerName, killInfo.Kills, killInfo.Deaths, isLocalPlayer);
+            _playerScores[i].SetPlayer(i + 1, killInfo.PlayerName, killInfo.Kills, killInfo.Deaths, killInfo.Assist, isLocalPlayer);
         }
-        else _playerScores[i].SetPlayer(0, "", 0, 0, false);
+        else _playerScores[i].SetPlayer(0, "", 0, 0, 0, false);
     }
 
     private void TeameMode(int i)
@@ -67,9 +67,9 @@ public class UIScoreBoard : MonoBehaviour
             {
                 KillInfo killInfo = BlueList[i];
                 bool isLocalPlayer = GameManager.Instance != null && GameManager.Instance.GetPlayerID() == killInfo.PlayerId;
-                _playerScores[i].SetPlayer(i + 1, killInfo.PlayerName, killInfo.Kills, killInfo.Deaths, isLocalPlayer);
+                _playerScores[i].SetPlayer(i + 1, killInfo.PlayerName, killInfo.Kills, killInfo.Deaths, killInfo.Assist, isLocalPlayer);
             }
-            else _playerScores[i].SetPlayer(0, "", 0, 0, false);
+            else _playerScores[i].SetPlayer(0, "", 0, 0, 0, false);
         }
         else
         {
@@ -78,9 +78,9 @@ public class UIScoreBoard : MonoBehaviour
             {
                 KillInfo killInfo = RedList[index];
                 bool isLocalPlayer = GameManager.Instance != null && GameManager.Instance.GetPlayerID() == killInfo.PlayerId;
-                _playerScores[i].SetPlayer(index+1, killInfo.PlayerName, killInfo.Kills, killInfo.Deaths, isLocalPlayer);
+                _playerScores[i].SetPlayer(index+1, killInfo.PlayerName, killInfo.Kills, killInfo.Deaths, killInfo.Assist, isLocalPlayer);
             }
-            else _playerScores[i].SetPlayer(0, "", 0, 0, false);
+            else _playerScores[i].SetPlayer(0, "", 0, 0, 0, false);
         }
     }
 }

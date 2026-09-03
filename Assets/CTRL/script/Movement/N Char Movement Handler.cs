@@ -215,7 +215,7 @@ public class NCharMovementHandler : NetworkBehaviour
 
             if (state.IsSprint) return;
 
-            if (state.IsRun)
+            if (state.IsRun && _weaponManager.Weapon_Active().WeaponType != WeaponType.Sniper)
             {
                 _stateLogic.StartSprint(ref state, _constraintManager);
                 return;
@@ -506,8 +506,7 @@ public class NCharMovementHandler : NetworkBehaviour
             SpawnResult result = _newRound ? SpawnManager.Instance.GetInitialSpawnPoint(Runner, nPlayer) : 
                 SpawnManager.Instance.GetRespawnPoint(Runner, nPlayer);
             _ncc.Teleport(result.Position);
-            // Áp rotation — xoay character về hướng spawn point chỉ định
-            transform.rotation = result.Rotation;
+            _ncc.SetYaw(result.Rotation.eulerAngles.y);  // ← ĐÚNG: ghi thẳng vào TargetYaw
         }
         else
         {

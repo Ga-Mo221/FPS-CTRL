@@ -20,8 +20,6 @@ namespace TrueInputSystem
     [DefaultExecutionOrder(-60)]
     public class TISUINavigationContext : MonoBehaviour
     {
-        public static TISUINavigationContext Instance { get; private set; }
-
         // ── Tab / SubTab mapping ──────────────────────────────────────────────
 
         [System.Serializable]
@@ -82,12 +80,15 @@ namespace TrueInputSystem
 
         private void Awake()
         {
-            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-            Instance = this;
+            RebuildLookups();
+        }
 
+        private void RebuildLookups()
+        {
+            tabLookup.Clear();
+            subTabLookup.Clear();
             foreach (var entry in tabs)
                 if (entry.tabButton != null) tabLookup[entry.tabButton] = entry;
-
             foreach (var entry in subTabs)
                 if (entry.subTabButton != null) subTabLookup[entry.subTabButton] = entry;
         }
@@ -125,6 +126,32 @@ namespace TrueInputSystem
             {
                 RestoreContentSelection();
             }
+        }
+        
+        /// <summary>
+        /// Scans all TISGamepadUIButton components that are children of this GameObject
+        /// and registers them with this context. Safe to call at runtime or from the editor.
+        /// </summary>
+        public void ScanChildButtons()
+        {
+            // Clear existing registrations
+            foreach (var list in registeredByLayer.Values)
+                list.Clear();
+
+            var buttonvalue = 0;
+            var buttons = GetComponentsInChildren<TISGamepadUIButton>(includeInactive: true);
+            foreach (var btn in buttons)
+            {
+                buttonvalue++;
+                btn.SetContext(this);          // wire the button back to this context
+                var list = registeredByLayer[btn.layer];
+                if (!list.Contains(btn))
+                    list.Add(btn);
+            }
+            
+            Debug.Log($"Đẫ quét thành công {buttonvalue} con bên trong {transform.name}");
+
+            RebuildLookups();
         }
 
         // ── Registration API (gọi từ Button.Start / OnDisable / OnDestroy) ───

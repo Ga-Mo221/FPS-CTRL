@@ -109,13 +109,19 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
                 WeaponManager weaponManager = obj.GetComponent<WeaponManager>();
 
                 if (weaponManager != null)
-                    weaponManager.SpawnWeapon("9mm Demon", "M4");
+                    weaponManager.SpawnWeapon(WeaponName._M4, WeaponName._9MM_DEMON);
                 
                 if (SpawnManager.Instance != null)
                 {
                     NetworkRunner spawnRunner = FindAnyObjectByType<NetworkRunnerHandler>().GetNetworkRunner();
                     SpawnResult spawnResult = SpawnManager.Instance.GetInitialSpawnPoint(spawnRunner, nPlayer);
-                    obj.transform.SetPositionAndRotation(spawnResult.Position, spawnResult.Rotation);
+                    
+                    var ncc = obj.GetComponent<NetworkCharacterControllerCustom>();
+                    
+                    if (ncc != null)
+                        ncc.Teleport(spawnResult.Position, spawnResult.Rotation);
+                    else
+                        obj.transform.SetPositionAndRotation(spawnResult.Position, spawnResult.Rotation);
                 }
                 else
                 {

@@ -20,14 +20,23 @@ public class WeaponData : ScriptableObject
     [VerticalGroup("Weapon Data/Info/Info/Right")]
     [SerializeField] private string _name;
     
-    
-    
     [TabGroup("Weapon Data", "Info")]
+    [Tooltip("Bộ tham số recoil (GunRecoilData) gắn với khẩu súng này.\n" +
+             "GunRecoilController sẽ đọc trực tiếp từ đây thay vì được assign riêng lẻ,\n" +
+             "đảm bảo mỗi WeaponData luôn đi kèm đúng 1 bộ recoil của chính nó.")]
+    [SerializeField] private GunRecoilData _recoilData;
+
+    [TabGroup("Weapon Data", "Info")] 
+    [SerializeField] private GameObject _dropItemPrefab;
+    
+    
+    
+    [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Lượng đạn tối đa của súng sau khi thay đạn.")]
-    [SerializeField] private int _defaultBullet = 9;
-    [TabGroup("Weapon Data", "Info")]
+    [SerializeField] private byte _defaultBullet = 9;
+    [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("lượng đạn tối đa có thể mang theo")]
-    [SerializeField] private int _maxBullet = 27;
+    [SerializeField] private byte _maxBullet = 27;
     
     [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Thời gian chờ (giây) giữa hai phát bắn.\n" +
@@ -90,12 +99,6 @@ public class WeaponData : ScriptableObject
     [FoldoutGroup("Sound/sound/Switch Mode")]
     [Range(0.05f, 2f)]
     [SerializeField] private float _volume_switch_model = 1f;
-    
-    
-    [Tooltip("Bộ tham số recoil (GunRecoilData) gắn với khẩu súng này.\n" +
-             "GunRecoilController sẽ đọc trực tiếp từ đây thay vì được assign riêng lẻ,\n" +
-             "đảm bảo mỗi WeaponData luôn đi kèm đúng 1 bộ recoil của chính nó.")]
-    [SerializeField] private GunRecoilData _recoilData;
 
     [TabGroup("Weapon Data", "ADS")]
     [SerializeField] private float _ads_Pivot_Height = 0f;
@@ -105,12 +108,14 @@ public class WeaponData : ScriptableObject
     /// <summary>True nếu WeaponData có đủ dữ liệu cần thiết để spawn/sử dụng.</summary>
     public bool HasRecoilData => _recoilData != null;
     
+    public GameObject DropItemPrefab => _dropItemPrefab;
+    
     public Sprite Icon => _icon;
     public string ID => _iD;
     public int Index => _index;
     public string WeaponName => _name;
-    public int DefaultBullet => _defaultBullet;
-    public int MaxBullet => _maxBullet;
+    public byte DefaultBullet => _defaultBullet;
+    public byte MaxBullet => _maxBullet;
     public float FireDelay => _fireDelay;
     public float ADS_Zoom => _aDS_Zoom;
     public float Stand_Zoom => _stand_Zoom;

@@ -15,6 +15,8 @@ public class UIWeaponController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _magMaxAmmo_Text;
     [TabGroup("UI", "weapon")]
     [SerializeField] private TextMeshProUGUI _reloadAmmoKey;
+    [TabGroup("UI", "weapon")]
+    [SerializeField] private TextMeshProUGUI _dragItemKey;
 
     [TabGroup("UI", "weapon")]
     [SerializeField] private Image _weaponIcon;
@@ -60,6 +62,9 @@ public class UIWeaponController : MonoBehaviour
                 
                 string ReloadPath = TISRebindingSystem.GetActivePath(tis, "Reload", RebindTarget.PC);
                 _reloadAmmoKey.text = TISRebindingSystem.GetDisplayName(ReloadPath);
+                
+                string DragItemPath = TISRebindingSystem.GetActivePath(tis, "Drag", RebindTarget.PC);
+                _dragItemKey.text = TISRebindingSystem.GetShortDisplayName(DragItemPath);
             }
             else if (settingManager.SettingData.Platform == AimAssistPlatform.Gamepad)
             {
@@ -74,6 +79,9 @@ public class UIWeaponController : MonoBehaviour
                 
                 string ReloadPath = TISRebindingSystem.GetActivePath(tis, "Reload", RebindTarget.Gamepad);
                 _reloadAmmoKey.text = TISRebindingSystem.GetShortDisplayName(ReloadPath);
+                
+                string DragItemPath = TISRebindingSystem.GetActivePath(tis, "Drag", RebindTarget.Gamepad);
+                _dragItemKey.text = TISRebindingSystem.GetShortDisplayName(DragItemPath);
             }
         }
     }
@@ -87,6 +95,12 @@ public class UIWeaponController : MonoBehaviour
     public void SetWeaponActive(WeaponController ctrl)
     {
         if (ctrl == null) return;
+        
+        if (ctrl.Object == null || !ctrl.Object.IsValid)
+        {
+            Debug.LogWarning("[UIWeaponController] SetWeaponActive called before WeaponController was Spawned — skipping.");
+            return;
+        }
         
         _weaponIcon.sprite = ctrl.Data.Icon;
         _weapon_name_Text.text = ctrl.Data.WeaponName;

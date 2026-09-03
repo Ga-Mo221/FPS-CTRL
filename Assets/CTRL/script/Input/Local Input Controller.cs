@@ -9,6 +9,7 @@ public class LocalInputController : MonoBehaviour
     private NPlayer _player;
     private GameHudControllerBase _gameHudController;
     private NInGameMessagesHandler _messageHandler;
+    private WeaponManager _weaponManager;
 
     private void Awake()
     {
@@ -17,6 +18,7 @@ public class LocalInputController : MonoBehaviour
         _player = _componentManager.NPlayer;
         _gameHudController = _componentManager.GameHudController();
         _messageHandler = _componentManager.NInGameMessagesHandler;
+        _weaponManager = _componentManager.WeaponManager;
     }
 
     private void Update()
@@ -31,6 +33,8 @@ public class LocalInputController : MonoBehaviour
         OnTabScoreBoader();
 
         OnUIChatBox();
+
+        OnDragItem();
     }
     
     private void OnUI()
@@ -62,6 +66,23 @@ public class LocalInputController : MonoBehaviour
                 if (!GameManager.Instance.OnUIChatBox() && lastactive)
                 {
                     _messageHandler.SendInGameRPCMessage();
+                }
+            }
+        }
+    }
+
+    private void OnDragItem()
+    {
+        if (_input.GetSkillAction("Drag", TISButtonReadMode.PressDown))
+        {
+            var gm = GameManager.Instance;
+            if (gm != null && gm.GetCanDragItem())
+            {
+                var item = gm.GetDropItemWeapon;
+                if (item != null)
+                {
+                    _weaponManager.Rpc_RequestChangeWeapon(item.WeaponName.ToString(), item.CurrentBullet, item.MaxBullet);
+                    item.Despawn();
                 }
             }
         }

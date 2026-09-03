@@ -2600,10 +2600,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponManager
   _weapon_One_Prefab: {fileID: 0}
   _weapon_Two_Prefab: {fileID: 0}
+  _groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
   _weapon_Parrent: {fileID: 5717073189272879991}
   __weaponOneRef: {fileID: 0}
+  __weaponOneID:
+    _length: 0
+    _data:
+      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   _weapon_One_CTRL: {fileID: 0}
   __weaponTwoRef: {fileID: 0}
+  __weaponTwoID:
+    _length: 0
+    _data:
+      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   _weapon_Two_CTRL: {fileID: 0}
   __weapon_Active: 0
   _componentManager: {fileID: 7267980694266510406}
@@ -2695,6 +2706,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 136
   __kill: 0
+  _Assist: 0
+  _TotalExp: 0
   _aimForward: {x: 0, y: 0, z: 0}
   nPlayer: {fileID: 0}
 --- !u!114 &1161707875268341237

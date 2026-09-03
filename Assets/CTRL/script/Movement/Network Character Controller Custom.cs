@@ -198,6 +198,13 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     public void Teleport(Vector3? position = null, Quaternion? rotation = null) {
         _controller.enabled = false;
         NetworkTRSP.Teleport(this, transform, position, rotation);
+    
+        // ← THÊM: sync TargetYaw từ rotation được truyền vào
+        if (rotation.HasValue)
+        {
+            SetYaw(rotation.Value.eulerAngles.y);
+        }
+    
         _controller.enabled = true;
     }
     
@@ -339,6 +346,16 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
             moveVelocity.y,
             actualDisplacement.z / deltaTime
         );
+    }
+    
+    // Thêm vào Network_Character_Controller_Custom.cs
+    public void SetYaw(float yaw)
+    {
+        Data.TargetYaw = yaw;
+        _localVisualYaw = yaw;      // reset visual để tránh snap/lerp từ góc cũ
+        _localSmoothVel = 0f;
+        _visualYawInited = true;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
     
     // Gizmo

@@ -3,6 +3,7 @@ using Fusion;
 using Game.UI;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using WebSocketSharp;
 
 [DefaultExecutionOrder(1)]
 public class GameManager : MonoBehaviour
@@ -35,6 +36,10 @@ public class GameManager : MonoBehaviour
 
     [TabGroup("GameManager", "Player Settings")]
     [SerializeField] private int _killTarget = 10;
+    
+    [TabGroup("GameManager", "Player Settings")]
+    [Tooltip("Exp nhận được khi kill đủ 100% máu đối thủ")]
+    [SerializeField] private int _baseExpPerKill = 150;
     
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Player Settings")]
@@ -84,6 +89,18 @@ public class GameManager : MonoBehaviour
     [TabGroup("GameManager", "Runtime")]
     [SerializeField] private bool _onUIChatBox;
     
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private bool _onUILoadout = true;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private bool _canDragItem = false;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private DropItemWeapon _dropItemWeapon;
+    
     private byte[] connectionToken;
 
     private void Awake()
@@ -106,31 +123,6 @@ public class GameManager : MonoBehaviour
             Debug.Log($"<color=yellow>[GameManager]</color> Player Connection token {NConnectionTokenUtils.HashToken(connectionToken)}");
         }
     }
-
-    // private void Update()
-    // {
-    //     // Kill count giờ được tính bởi host trong NetworkGameState và đồng bộ
-    //     // xuống mọi client qua [Networked] properties. Ở đây chỉ đọc lại để
-    //     // hiển thị trong Odin Inspector cho tiện debug.
-    //     // var gs = NetworkGameState.Instance;
-    //     // if (gs == null || gs.Object == null || !gs.Object.IsValid) return;
-    //     //
-    //     // if (gs.IsMatchOver())
-    //     // {
-    //     //     KillInfo killInfo = new KillInfo();
-    //     //     gs.TryGetKillInfo(GetPlayerID(), out killInfo);
-    //     //
-    //     //     PlayerMatchStats playerMatchStats = new PlayerMatchStats();
-    //     //     playerMatchStats.kills = killInfo.Kills;
-    //     //     playerMatchStats.deaths = killInfo.Deaths;
-    //     //     playerMatchStats.bestStreak = _bestStreak;
-    //     //     playerMatchStats.killDeathRatio = killInfo.Kills / killInfo.Deaths;
-    //     // }
-    //
-    //     //RedKill  = NetworkGameState.Instance.RedKill;
-    //     //BlueKill = NetworkGameState.Instance.BlueKill;
-    //     //AllKill  = NetworkGameState.Instance.AllKill;
-    // }
     
     // ======================== PUBLIC API ================================
     
@@ -146,6 +138,8 @@ public class GameManager : MonoBehaviour
     
     public int KillTarget => _killTarget;
     public void SetKillTarget(int killTarget) => _killTarget = killTarget;
+    
+    public int GetEXPperKill()  => _baseExpPerKill;
     
     public void ResetStreak() => _lastBestStreak = 0;
 
@@ -172,13 +166,26 @@ public class GameManager : MonoBehaviour
     {
         if (status)
         {
-            if (!_onUIOption)
+            if (!_onUIOption && !_onUILoadout)
                 _onUIChatBox = true;
         }
         else _onUIChatBox = false;
     }
+    
+    public bool OnUILoadout() => _onUILoadout;
 
-    public bool OnUI() => _onUIOption || _onUIChatBox;
+    public void SetOnuiLoadout(bool status)
+    {
+        if (status)
+        {
+            _onUIOption = false;
+            _onUIChatBox = false;
+            _onUILoadout = true;
+        }
+        else _onUILoadout = false;
+    }
+
+    public bool OnUI() => _onUIOption || _onUIChatBox || _onUILoadout;
 
     public void SetConnectionToken(byte[] token) => connectionToken = token;
     
@@ -189,6 +196,11 @@ public class GameManager : MonoBehaviour
     public void SetGamePlayMode(GamePlayMode gamePlayMode) => _gamePlayMode = gamePlayMode;
     public void SetPlayerNickName(string nickname) => _playerNickName = nickname;
     public string GetPlayerNickName() => _playerNickName;
+    
+    public bool GetCanDragItem() => _canDragItem;
+    public void SetCanDragItem(bool canDragItem) => _canDragItem = canDragItem;
+    public DropItemWeapon GetDropItemWeapon => _dropItemWeapon;
+    public void SetDropItemWeapon(DropItemWeapon item) => _dropItemWeapon = item;
 
     public void NewGame()
     {
@@ -210,6 +222,8 @@ public class GameManager : MonoBehaviour
 
     public GameObject GetWeapon(string name)
     {
+        if (name.IsNullOrEmpty()) return null;
+        
         foreach (var weapon in _weapons)
             if (weapon.Name().Contains(name))
                 return weapon.Weapon;
@@ -223,12 +237,19 @@ public class GameManager : MonoBehaviour
         
         foreach (var weapon in _weapons)
         {
-            Debug.Log($"{name} : {weapon.Name()}");
             if (weapon.Name().Contains(name))
-            {
-                Debug.Log("tra ve icon " + weapon.Icon());
                 return weapon.Icon();
-            }
+        }
+        
+        return null;
+    }
+
+    public WeaponData GetWeaponData(string name)
+    {
+        foreach (var weapon in _weapons)
+        {
+            if (weapon.Name().Contains(name))
+                return weapon.Data();
         }
         
         return null;
@@ -237,20 +258,29 @@ public class GameManager : MonoBehaviour
 
 public struct KillInfo
 {
-    public NetworkId PlayerId { get; set; }
-    public string PlayerName { get; set; }
-    public PlayerTeam Team { get; set; }
-    public int Kills { get; set; }
+    public NetworkId PlayerId { get; private set; }
     
-    public int Deaths { get; set; }
+    public string PlayerName { get; private set; }
+    
+    public PlayerTeam Team { get; private set; }
+    
+    public int Kills { get; private set; }
+    
+    public int Assist { get; private set; }
+    
+    public int TotalExp { get; private set; }
+    
+    public int Deaths { get; private set; }
 
-    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths)
+    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths, int assist, int totalExp)
     {
         PlayerId = playerId;
         PlayerName = name;
         Team = team;
         Kills = kills;
         Deaths = deaths;
+        Assist = assist;
+        TotalExp = totalExp;
     }
 }
 
@@ -272,5 +302,11 @@ public struct WeaponInfo
         var ctrl = _weapon_Prefab.GetComponent<WeaponController>();
         var data = ctrl.Data;
         return data.Icon;
+    }
+
+    public WeaponData Data()
+    {
+        var ctrl = _weapon_Prefab.GetComponent<WeaponController>();
+        return ctrl.Data;
     }
 }

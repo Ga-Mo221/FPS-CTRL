@@ -393,6 +393,12 @@ public class WeaponController : NetworkBehaviour
         }
     }
 
+    public void SetBullet(int currentBullet, int maxBullet)
+    {
+        CurrentBulletvalue = currentBullet;
+        CurrentMaxBullet = maxBullet;
+    }
+
     /// <summary>
     /// Chỉ trigger camera recoil + gun recoil visual, không check cooldown.
     /// Dùng cho remote client khi nhận FireCount từ Host — Host đã xác nhận
