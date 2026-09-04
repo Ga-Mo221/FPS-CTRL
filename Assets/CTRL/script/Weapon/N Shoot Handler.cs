@@ -25,6 +25,19 @@ public class NShootHandler : NetworkBehaviour
     
     [Networked] public int TotalExp { get; private set; } = 0;
 
+    // ── Melee ──────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Timer delay từ lúc nhấn attack đến lúc hitbox check — đồng bộ với animation swing.
+    /// Networked để Host quản lý timing chính xác theo tick.
+    /// </summary>
+    [Networked] private TickTimer _meleeHitTimer { get; set; }
+
+    /// <summary>
+    /// Dot product threshold để lọc target trong hình nón trước mặt.
+    /// cos(50°) ≈ 0.64 → target phải nằm trong góc 50° tính từ aimForward.
+    /// </summary>
+    private const float MeleeDotThreshold = 0.64f;
+
     // ── Change detector ────────────────────────────────────────────────────
     private int _lastFireCount;
     public Vector3 _aimForward;
@@ -92,8 +105,20 @@ public class NShootHandler : NetworkBehaviour
 
                 if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
                 {
-                    // vũ khí cận chiến.
+                    var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
+                    float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
+                    _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
                 }
+            }
+        }
+
+        // Melee hit check — chạy sau delay để khớp với animation swing
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+        {
+            if (_meleeHitTimer.Expired(Runner))
+            {
+                _meleeHitTimer = default;
+                HandleMeleeHit(_aimForward);
             }
         }
     }
@@ -134,10 +159,8 @@ public class NShootHandler : NetworkBehaviour
                     shotInfo.GetShowEffect(i));
         }
 
-        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
-        {
-            // vũ khí cận chiến.
-        }
+        // Melee: không spawn projectile visual — animation + sound đã đủ
+        // OnFireVisualOnly() ở đầu hàm đã trigger gun recoil + camera recoil rồi
     }
 
     // ── Raycast + damage — chỉ chạy trên StateAuthority ──────────────────
@@ -253,6 +276,121 @@ public class NShootHandler : NetworkBehaviour
 
         return (rot * localOffset.normalized);
     }
+
+    // ── Melee hit detection ───────────────────────────────────────────────
+    /// <summary>
+    /// OverlapSphere → Dot product (lọc phía trước) → Raycast confirm (lọc xuyên tường).
+    /// Chỉ chạy trên StateAuthority sau khi _meleeHitTimer expired.
+    /// </summary>
+    private void HandleMeleeHit(Vector3 aimForward)
+    {
+        var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
+        float range    = weaponCtrl?.Data.Range  ?? 1.5f;
+        float radius   = weaponCtrl?.Data.MeleeRadius ?? 0.6f;
+
+        Vector3 origin      = _componentManager.Camera.transform.position;
+        Vector3 sphereCenter = origin + aimForward * (range * 0.5f);
+
+#if UNITY_EDITOR
+        DrawDebugSphere(sphereCenter, radius, Color.yellow, 1f);
+        Debug.DrawLine(origin, sphereCenter, Color.white, 1f);
+#endif
+
+        var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
+
+        if (Runner.LagCompensation == null) return;
+
+        // Bước 1: OverlapSphere — lấy tất cả hitbox trong vùng
+        var hits = new List<LagCompensatedHit>();
+        int count = Runner.LagCompensation.OverlapSphere(
+            sphereCenter, radius,
+            Object.InputAuthority,
+            hits, _hitMask, hitOptions);
+
+        if (count == 0) return;
+
+        // Key: root GameObject — đảm bảo mỗi player chỉ nhận damage 1 lần
+        var alreadyHit = new HashSet<GameObject>();
+
+        foreach (var hit in hits)
+        {
+            Transform hitboxTransform = hit.Hitbox?.transform ?? hit.Collider?.transform;
+            if (hitboxTransform == null) continue;
+
+            GameObject root = hitboxTransform.root.gameObject;
+            if (alreadyHit.Contains(root)) continue;
+
+            // Bước 2: Dot product — dùng center hitbox thay vì root.position
+            // để tránh sai lệch khi root nằm ở chân character
+            Vector3 hitboxCenter = hit.Hitbox != null
+                ? hit.Hitbox.transform.position
+                : hit.Collider.bounds.center;
+            Vector3 dirToTarget = (hitboxCenter - origin).normalized;
+
+            float dot = Vector3.Dot(aimForward, dirToTarget);
+            if (dot < MeleeDotThreshold) continue;
+
+            // Bước 3: Raycast từ origin → sphereCenter kéo dài thêm radius
+            // Tia đi qua trung tâm vùng chém, xuyên qua toàn bộ sphere
+            // → hit hitbox đầu tiên trên đường đó = bodypart chính xác
+            Vector3 dirToSphere = (sphereCenter - origin).normalized;
+            float distTotal     = Vector3.Distance(origin, sphereCenter) + radius;
+
+            if (!Runner.LagCompensation.Raycast(
+                    origin, dirToSphere, distTotal,
+                    Object.InputAuthority, out var confirmHit,
+                    _hitMask, hitOptions))
+                continue; // tia không hit gì cả — bỏ qua
+
+            // Kiểm tra confirmHit có thuộc root của target không
+            GameObject confirmRoot = confirmHit.Hitbox != null
+                ? confirmHit.Hitbox.transform.root.gameObject
+                : confirmHit.Collider?.transform.root.gameObject;
+
+            if (confirmRoot != root) continue; // tường hoặc object khác chặn
+
+            // confirmHit.Hitbox là hitbox đầu tiên trên đường tia đi qua sphere
+            // → bodypart (Head/Body/Legs/Hand) chính xác
+            Transform confirmedHitbox = confirmHit.Hitbox?.transform ?? hitboxTransform;
+
+            alreadyHit.Add(root);
+            Debug.DrawLine(origin, confirmHit.Point, Color.magenta, 1f);
+            HandleHit(confirmHit.Point, confirmHit.Normal, confirmedHitbox);
+        }
+
+        // Chỉ play audio 1 lần dù chém trúng bao nhiêu target
+        if (alreadyHit.Count > 0)
+            RPC_ApplyAudio();
+    }
+
+    // ── Debug helpers ────────────────────────────────────────────────────
+#if UNITY_EDITOR
+    private static void DrawDebugSphere(Vector3 center, float radius, Color color, float duration)
+    {
+        int segments = 16;
+        float step = 360f / segments;
+        for (int i = 0; i < segments; i++)
+        {
+            float a1 = i * step * Mathf.Deg2Rad;
+            float a2 = (i + 1) * step * Mathf.Deg2Rad;
+            // Vòng XY
+            Debug.DrawLine(
+                center + new Vector3(Mathf.Cos(a1), Mathf.Sin(a1), 0) * radius,
+                center + new Vector3(Mathf.Cos(a2), Mathf.Sin(a2), 0) * radius,
+                color, duration);
+            // Vòng XZ
+            Debug.DrawLine(
+                center + new Vector3(Mathf.Cos(a1), 0, Mathf.Sin(a1)) * radius,
+                center + new Vector3(Mathf.Cos(a2), 0, Mathf.Sin(a2)) * radius,
+                color, duration);
+            // Vòng YZ
+            Debug.DrawLine(
+                center + new Vector3(0, Mathf.Cos(a1), Mathf.Sin(a1)) * radius,
+                center + new Vector3(0, Mathf.Cos(a2), Mathf.Sin(a2)) * radius,
+                color, duration);
+        }
+    }
+#endif
 
     private void HandleHit(Vector3 point, Vector3 normal, Transform hitbox)
     {

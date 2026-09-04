@@ -29,8 +29,10 @@ public class WeaponData : ScriptableObject
     [TabGroup("Weapon Data", "Info")] 
     [SerializeField] private GameObject _dropItemPrefab;
     
+    [TabGroup("Weapon Data", "Bullet")] 
+    [SerializeField] private int _damage = 10;
     
-    
+    [Space]
     [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Lượng đạn tối đa của súng sau khi thay đạn.")]
     [SerializeField] private byte _defaultBullet = 9;
@@ -47,12 +49,16 @@ public class WeaponData : ScriptableObject
     [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Tầm bắn của đạn có thể bắn trúng kẻ định.(chiều dài của raycat)")]
     [SerializeField] private float _range = 100f;
-
-    [TabGroup("Weapon Data", "Bullet")] 
-    [SerializeField] private int _damage = 10;
     
+    [Header("Meele")]
     [TabGroup("Weapon Data", "Bullet")] 
+    [SerializeField] private float _meeleRadius = 0.6f;
+    [TabGroup("Weapon Data", "Bullet")] 
+    [SerializeField] private float _meleeHitDelay = 0.2f;
+    
+    [Space]
     [Header("ShootGun")]
+    [TabGroup("Weapon Data", "Bullet")] 
     [SerializeField] private int _pelletCount = 7;
     
     [TabGroup("Weapon Data", "Bullet")] 
@@ -130,6 +136,8 @@ public class WeaponData : ScriptableObject
     public float Stamd_Zoom_Z => _stamd_Zoom_Z;
     public float ADS_duration => _aDS_duration;
     public float Range => _range;
+    public float MeleeRadius => _meeleRadius;
+    public float MeleeHitDelay => _meleeHitDelay;
     public int Damage => _damage;
     public int PelletCount => _pelletCount;
     public int SpreadAngle => _spreadAngle;
