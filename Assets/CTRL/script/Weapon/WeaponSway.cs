@@ -109,6 +109,25 @@ public class WeaponSway : MonoBehaviour
         ComputeTurnLean();
         ApplyFinalTransform();
     }
+    
+    private void OnEnable()
+    {
+        // Reset runtime state
+        mouseTiltOffset   = Vector3.zero;
+        strafeOffset      = Vector3.zero;
+        turnOffset        = Vector3.zero;
+        strafeTiltCurrent = 0f;
+        turnTiltCurrent   = 0f;
+        LookDelta         = Vector2.zero;
+        MoveDirection     = Vector2.zero;
+
+        // Reset transform về vị trí/rotation gốc
+        if (weaponTransform != null)
+        {
+            weaponTransform.localPosition = originalLocalPos;
+            weaponTransform.localRotation = originalLocalRot;
+        }
+    }
 
     // ─────────────────────────────────────────
     //  Public API

@@ -157,6 +157,8 @@ public class GameManager : MonoBehaviour
         if (status)
             if (_onUIChatBox) _onUIChatBox = false;
         _onUIOption = status;
+        
+        SetMouseVisible();
     }
     
     public bool OnUIOption() => _onUIOption;
@@ -170,6 +172,8 @@ public class GameManager : MonoBehaviour
                 _onUIChatBox = true;
         }
         else _onUIChatBox = false;
+        
+        SetMouseVisible();
     }
     
     public bool OnUILoadout() => _onUILoadout;
@@ -183,6 +187,8 @@ public class GameManager : MonoBehaviour
             _onUILoadout = true;
         }
         else _onUILoadout = false;
+
+        SetMouseVisible();
     }
 
     public bool OnUI() => _onUIOption || _onUIChatBox || _onUILoadout;
@@ -202,8 +208,20 @@ public class GameManager : MonoBehaviour
     public DropItemWeapon GetDropItemWeapon => _dropItemWeapon;
     public void SetDropItemWeapon(DropItemWeapon item) => _dropItemWeapon = item;
 
+    private void SetMouseVisible()
+    {
+        bool visible = false;
+        if (_onUIOption || _onUILoadout) visible = true;
+        
+        Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = visible;
+        
+        Debug.Log("Set cursor visibility" + visible);
+    }
+
     public void NewGame()
     {
+        SetOnuiLoadout(false);
         SetOnUIOptions(false);
         SetOnUIChatBox(false);
         _bestStreak = 0;

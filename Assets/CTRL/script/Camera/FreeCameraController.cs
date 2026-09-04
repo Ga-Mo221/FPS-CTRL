@@ -44,46 +44,46 @@ public class FreeCameraController : MonoBehaviour
         _rootRotate = _cameraConstraint.transform;
     }
     
-    private void Start()
-    {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
+    // private void Start()
+    // {
+    //     Cursor.lockState = CursorLockMode.None;
+    //     Cursor.visible = false;
+    // }
 
-    private void Update()
-    {
-        if (!_movementHandler.Object.HasInputAuthority) return;
-        
-        if (_gameManager != null && _gameManager.OnUILoadout())
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-            return;
-        }
-        
-        if (_gamestate != null && _gamestate.IsMatchOver())
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-            return;
-        }
-        
-        bool onUI = _gameManager.OnUIOption();
-        if (onUI != _lastOnUI)
-        {
-            _lastOnUI = onUI;
-            if (onUI)
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
-            else
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            }
-        }
-    }
+    // private void Update()
+    // {
+    //     if (!_movementHandler.Object.HasInputAuthority) return;
+    //     
+    //     if (_gameManager != null && _gameManager.OnUILoadout())
+    //     {
+    //         Cursor.lockState = CursorLockMode.None;
+    //         Cursor.visible = true;
+    //         return;
+    //     }
+    //     
+    //     if (_gamestate != null && _gamestate.IsMatchOver())
+    //     {
+    //         Cursor.lockState = CursorLockMode.None;
+    //         Cursor.visible = true;
+    //         return;
+    //     }
+    //     
+    //     bool onUI = _gameManager.OnUIOption();
+    //     if (onUI != _lastOnUI)
+    //     {
+    //         _lastOnUI = onUI;
+    //         if (onUI)
+    //         {
+    //             Cursor.lockState = CursorLockMode.None;
+    //             Cursor.visible = true;
+    //         }
+    //         else
+    //         {
+    //             Cursor.lockState = CursorLockMode.Locked;
+    //             Cursor.visible = false;
+    //         }
+    //     }
+    // }
 
     // Quan trọng: Phải xoay xương trong LateUpdate để ghi đè lên Animator
     private void LateUpdate()

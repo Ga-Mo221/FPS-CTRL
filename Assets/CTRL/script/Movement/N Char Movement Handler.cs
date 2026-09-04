@@ -454,8 +454,8 @@ public class NCharMovementHandler : NetworkBehaviour
 
             if (shouldStop)
             {
-                //if (GrenadeID == 1) Frag = true;
-                //if (GrenadeID == 2) Flash = true;
+                if (GrenadeID == 1) Frag = true;
+                if (GrenadeID == 2) Flash = true;
                 GrenadeID = 0;
                 _stateLogic.StopThrow(ref state);
             }

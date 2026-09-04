@@ -83,6 +83,16 @@ public class NShootHandler : NetworkBehaviour
                     var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(_aimForward);
                     _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
                 }
+                
+                if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
+                {
+                    // bắn nhiều raycat.
+                }
+
+                if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+                {
+                    // vũ khí cận chiến.
+                }
             }
         }
     }
@@ -109,6 +119,16 @@ public class NShootHandler : NetworkBehaviour
             _playerMotionController
                 .ActiveWeponCTRL()
                 ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+        }
+
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
+        {
+            // bắn nhiều raycat.
+        }
+
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+        {
+            // vũ khí cận chiến.
         }
     }
 
