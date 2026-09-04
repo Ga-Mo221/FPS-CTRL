@@ -65,15 +65,21 @@ public class NCharMovementHandler : NetworkBehaviour
     
     // ── helpers cho NShootHandler ──────────────────────────────────────────
     public void IncrementFireCount() => FireCount++;
+
+    /// <summary>Rifle / Sniper: ghi 1 raycast vào slot 0, PelletCount = 0.</summary>
     public void SetLastShotInfo(Vector3 pos, Vector3 normal, bool showEffect)
     {
         LastShotInfo = new ShotInfo
         {
-            HitPosition = pos,
-            HitNormal   = normal,
-            ShowEffect  = showEffect
+            HitPosition  = pos,
+            HitNormal    = normal,
+            ShowEffect   = showEffect,
+            PelletCount  = 0   // 0 = không phải Shotgun
         };
     }
+
+    /// <summary>Shotgun: ghi ShotInfo đã build đầy đủ pellets từ NShootHandler.</summary>
+    public void SetLastShotInfo(ShotInfo shotInfo) => LastShotInfo = shotInfo;
 
     public override void Spawned()
     {

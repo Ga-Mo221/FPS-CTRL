@@ -51,6 +51,13 @@ public class WeaponData : ScriptableObject
     [TabGroup("Weapon Data", "Bullet")] 
     [SerializeField] private int _damage = 10;
     
+    [TabGroup("Weapon Data", "Bullet")] 
+    [Header("ShootGun")]
+    [SerializeField] private int _pelletCount = 7;
+    
+    [TabGroup("Weapon Data", "Bullet")] 
+    [SerializeField] private int _spreadAngle = 5;
+    
     [TabGroup("Weapon Data", "ADS")]
     [Tooltip("mức độ zoom của camera khi không có ống ngắp. giá trị càng nhỏ zoom càng xa.")]
     [SerializeField] private float _aDS_Zoom = 35f;
@@ -124,6 +131,8 @@ public class WeaponData : ScriptableObject
     public float ADS_duration => _aDS_duration;
     public float Range => _range;
     public int Damage => _damage;
+    public int PelletCount => _pelletCount;
+    public int SpreadAngle => _spreadAngle;
     public GunRecoilData RecoilData => _recoilData;
     public float Ads_Pivot_Height => _ads_Pivot_Height;
     public float Stand_Pivot_Height => _stand_Pivot_Height;

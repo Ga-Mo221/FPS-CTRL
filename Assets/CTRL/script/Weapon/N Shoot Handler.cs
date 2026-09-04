@@ -86,7 +86,8 @@ public class NShootHandler : NetworkBehaviour
                 
                 if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
                 {
-                    // bắn nhiều raycat.
+                    var shotInfo = GetShotgunHitInfo(_aimForward);
+                    _movementHandler.SetLastShotInfo(shotInfo);
                 }
 
                 if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
@@ -123,7 +124,14 @@ public class NShootHandler : NetworkBehaviour
 
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
         {
-            // bắn nhiều raycat.
+            var shotInfo   = _movementHandler.LastShotInfo;
+            var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
+            int count      = Mathf.Max(1, shotInfo.PelletCount); // fallback an toàn
+            for (int i = 0; i < count; i++)
+                weaponCtrl?.SpawnProjectileVisual(
+                    shotInfo.GetHitPosition(i),
+                    shotInfo.GetHitNormal(i),
+                    shotInfo.GetShowEffect(i));
         }
 
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
@@ -165,6 +173,85 @@ public class NShootHandler : NetworkBehaviour
         Vector3 missPoint = origin + aimForward * maxDistance;
         Debug.DrawLine(origin, missPoint, Color.green, 1f);
         return (missPoint, -aimForward, false);
+    }
+
+    // ── Shotgun: bắn N pellets trong hình nón spread ──────────────────────
+    private ShotInfo GetShotgunHitInfo(Vector3 aimForward)
+    {
+        var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
+        var weaponData  = weaponCtrl?.Data;
+        float maxDist   = weaponData != null ? weaponData.Range       : 50f;
+        int   pellets   = weaponData != null ? weaponData.PelletCount : 6;
+        float spread    = weaponData != null ? weaponData.SpreadAngle : 5f;
+
+        // ADS thu hẹp spread
+        if (_movementHandler.StateFl.IsADS)
+            spread *= 0.4f;
+
+        pellets = Mathf.Clamp(pellets, 1, 8); // tối đa 8 slot trong ShotInfo
+
+        Vector3 origin = _componentManager.Camera.transform.position;
+        if (_movementHandler.StateFl.IsADS && weaponCtrl != null)
+            origin = weaponCtrl.ADS_Shoot_Point;
+
+        var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
+
+        ShotInfo result = new ShotInfo { PelletCount = pellets };
+
+        for (int i = 0; i < pellets; i++)
+        {
+            // Tạo hướng lệch ngẫu nhiên trong hình nón
+            Vector3 pelletDir = GetSpreadDirection(aimForward, spread);
+
+            if (Runner.LagCompensation != null &&
+                Runner.LagCompensation.Raycast(
+                    origin, pelletDir, maxDist,
+                    Object.InputAuthority, out var hit,
+                    _hitMask, hitOptions))
+            {
+                bool showEffect = hit.Hitbox == null;
+                HandleHit(hit.Point, hit.Normal, hit.Hitbox?.transform);
+                result = result.SetPellet(i, hit.Point, hit.Normal, showEffect);
+
+                if (hit.Hitbox != null)
+                    Debug.DrawLine(origin, hit.Point, Color.red, 1f);
+                else if (hit.Collider != null)
+                    Debug.DrawLine(origin, hit.Point, Color.yellow, 1f);
+            }
+            else
+            {
+                // Miss — pellet bay hết tầm
+                Vector3 missPoint = origin + pelletDir * maxDist;
+                Debug.DrawLine(origin, missPoint, Color.cyan, 1f);
+                result = result.SetPellet(i, missPoint, -pelletDir, false);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Trả về hướng ngẫu nhiên lệch khỏi forward trong hình nón spreadAngle độ.
+    /// </summary>
+    private static Vector3 GetSpreadDirection(Vector3 forward, float spreadAngle)
+    {
+        // Random điểm trên đĩa tròn (uniform distribution)
+        float angle  = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        float radius = UnityEngine.Random.Range(0f, 1f);   // sqrt để uniform trên đĩa
+        radius = Mathf.Sqrt(radius);
+
+        // Chuyển sang local space của forward
+        Quaternion rot     = Quaternion.LookRotation(forward);
+        float halfAngleRad = spreadAngle * 0.5f * Mathf.Deg2Rad;
+        float tanHalf      = Mathf.Tan(halfAngleRad);
+
+        Vector3 localOffset = new Vector3(
+            radius * Mathf.Cos(angle) * tanHalf,
+            radius * Mathf.Sin(angle) * tanHalf,
+            1f
+        );
+
+        return (rot * localOffset.normalized);
     }
 
     private void HandleHit(Vector3 point, Vector3 normal, Transform hitbox)
