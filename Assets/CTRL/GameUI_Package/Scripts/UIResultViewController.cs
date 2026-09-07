@@ -79,7 +79,17 @@ namespace Game.UI
         [Button]
         public void ResultVisible(float time)
         {
-            StartCoroutine(startVisible(time));
+            var gm = GameManager.Instance;
+            if (gm == null) return;
+            
+            if (!gm.GetLocalGameOverUI())
+                StartCoroutine(startVisible(time));
+            else if (_canvasGroup != null && _playAgainButton != null)
+            {
+                _canvasGroup.alpha = 1;
+                _playAgainButton?.gameObject.SetActive(true);
+                _canvasGroup.blocksRaycasts = true;
+            }
         }
 
         private IEnumerator startVisible(float time)
@@ -92,6 +102,9 @@ namespace Game.UI
                 yield return null;
             }
             if (_canvasGroup != null) _canvasGroup.alpha = 1;
+            
+            if (GameManager.Instance != null)
+                GameManager.Instance.SetLocalGameOverUI(true);
             StartCoroutine(DisplayButton());
         }
 

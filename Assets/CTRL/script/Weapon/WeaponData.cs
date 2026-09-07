@@ -32,6 +32,9 @@ public class WeaponData : ScriptableObject
     [TabGroup("Weapon Data", "Bullet")] 
     [SerializeField] private int _damage = 10;
     
+    [TabGroup("Weapon Data", "Bullet")] 
+    [SerializeField] private int _rightDamage = 20;
+    
     [Space]
     [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Lượng đạn tối đa của súng sau khi thay đạn.")]
@@ -45,6 +48,15 @@ public class WeaponData : ScriptableObject
              "Ví dụ: 0.5 → click nhanh cỡ nào cũng phải chờ 0.5s mới bắn được phát tiếp.")]
     [Min(0.01f)]
     [SerializeField] private float _fireDelay = 0.133f;
+    [TabGroup("Weapon Data", "Bullet")]
+    [Tooltip("Thời gian kết thúc animation khi đứng của skill chuột phải.")]
+    [Min(0.01f)]
+    [SerializeField] private float _fireStandRightDelay = 3f;
+    [TabGroup("Weapon Data", "Bullet")]
+    [Tooltip("Thời gian kết thúc animation khi ngồi của skill chuột phải.")]
+    [Min(0.01f)]
+    [SerializeField] private float _fireCroundRightDelay = 3f;
+    
     
     [TabGroup("Weapon Data", "Bullet")]
     [Tooltip("Tầm bắn của đạn có thể bắn trúng kẻ định.(chiều dài của raycat)")]
@@ -55,6 +67,14 @@ public class WeaponData : ScriptableObject
     [SerializeField] private float _meeleRadius = 0.6f;
     [TabGroup("Weapon Data", "Bullet")] 
     [SerializeField] private float _meleeHitDelay = 0.2f;
+    [TabGroup("Weapon Data", "Bullet")]
+    [Tooltip("Thời gian kích hoạt trigger khi đúng của skill chuột phải.")]
+    [Min(0.01f)]
+    [SerializeField] private float _hitRightCrouchDelay = 3f;
+    [TabGroup("Weapon Data", "Bullet")]
+    [Tooltip("Thời gian kích hoạt trigger khi ngồi của skill chuột phải.")]
+    [Min(0.01f)]
+    [SerializeField] private float _hitRightStandDelay = 3f;
     
     [Space]
     [Header("ShootGun")]
@@ -130,6 +150,8 @@ public class WeaponData : ScriptableObject
     public byte DefaultBullet => _defaultBullet;
     public byte MaxBullet => _maxBullet;
     public float FireDelay => _fireDelay;
+    public float FireStandRightDelay => _fireStandRightDelay;
+    public float FireCrouchRightDelay => _fireCroundRightDelay;
     public float ADS_Zoom => _aDS_Zoom;
     public float Stand_Zoom => _stand_Zoom;
     public float ADS_Zoom_Z => _aDS_Zoom_Z;
@@ -138,7 +160,10 @@ public class WeaponData : ScriptableObject
     public float Range => _range;
     public float MeleeRadius => _meeleRadius;
     public float MeleeHitDelay => _meleeHitDelay;
+    public float HitStandRightDelay => _hitRightStandDelay;
+    public float HitCrouchRightDelay => _hitRightCrouchDelay;
     public int Damage => _damage;
+    public int RightDamage => _rightDamage;
     public int PelletCount => _pelletCount;
     public int SpreadAngle => _spreadAngle;
     public GunRecoilData RecoilData => _recoilData;

@@ -30,7 +30,9 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         if (_movementHandler.FireCount != _lastFireCount)
         {
             _lastFireCount = _movementHandler.FireCount;
-            _playerMotionController.IsShooting();
+            
+            if (!_movementHandler.RightPuch)
+                _playerMotionController.IsShooting();
         }
         
         _playerMotionController.IsDead(_hpHandler.IsDead);

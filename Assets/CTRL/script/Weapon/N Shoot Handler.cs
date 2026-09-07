@@ -107,6 +107,12 @@ public class NShootHandler : NetworkBehaviour
                 {
                     var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
                     float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
+                    if (_movementHandler.RightPuch && weaponCtrl)
+                    {
+                        if (_movementHandler.StateFl.IsCrouch)
+                            hitDelay = weaponCtrl.Data.HitCrouchRightDelay;
+                        else hitDelay = weaponCtrl.Data.HitStandRightDelay;
+                    }
                     _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
                 }
             }
@@ -119,6 +125,7 @@ public class NShootHandler : NetworkBehaviour
             {
                 _meleeHitTimer = default;
                 HandleMeleeHit(_aimForward);
+                _movementHandler.ResetRightPuch();
             }
         }
     }
@@ -158,7 +165,17 @@ public class NShootHandler : NetworkBehaviour
                     shotInfo.GetHitNormal(i),
                     shotInfo.GetShowEffect(i));
         }
-
+        
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+        {
+            if (_movementHandler.RightPuch)
+                _movementHandler.ResetADS();
+            
+            var shotInfo = _movementHandler.LastShotInfo;
+            _playerMotionController
+                .ActiveWeponCTRL()
+                ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+        }
         // Melee: không spawn projectile visual — animation + sound đã đủ
         // OnFireVisualOnly() ở đầu hàm đã trigger gun recoil + camera recoil rồi
     }
@@ -284,81 +301,118 @@ public class NShootHandler : NetworkBehaviour
     /// </summary>
     private void HandleMeleeHit(Vector3 aimForward)
     {
-        var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
-        float range    = weaponCtrl?.Data.Range  ?? 1.5f;
-        float radius   = weaponCtrl?.Data.MeleeRadius ?? 0.6f;
+        var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
+        float range     = weaponCtrl?.Data.Range       ?? 1.5f;
+        float radius    = weaponCtrl?.Data.MeleeRadius ?? 0.6f;
 
-        Vector3 origin      = _componentManager.Camera.transform.position;
+        Vector3 origin       = _componentManager.Camera.transform.position;
         Vector3 sphereCenter = origin + aimForward * (range * 0.5f);
 
-#if UNITY_EDITOR
+    #if UNITY_EDITOR
         DrawDebugSphere(sphereCenter, radius, Color.yellow, 1f);
         Debug.DrawLine(origin, sphereCenter, Color.white, 1f);
-#endif
+    #endif
 
         var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
-
         if (Runner.LagCompensation == null) return;
 
-        // Bước 1: OverlapSphere — lấy tất cả hitbox trong vùng
-        var hits = new List<LagCompensatedHit>();
+        var alreadyHit = new HashSet<GameObject>();
+
+        // ShotInfo mặc định — showEffect = false, ghi đè ở cuối nếu cần
+        var shotInfo = new ShotInfo
+        {
+            HitPosition = origin + aimForward * (range + radius),
+            HitNormal   = -aimForward,
+            ShowEffect  = false,
+            PelletCount = 0
+        };
+
+        // ── Tầng 0: Raycast trung tâm ─────────────────────────────────────
+        float centerRayDist = range + radius;
+        bool  centerHitWall = false;
+
+        if (Runner.LagCompensation.Raycast(
+                origin, aimForward, centerRayDist,
+                Object.InputAuthority, out var centerHit,
+                _hitMask, hitOptions))
+        {
+            if (centerHit.Hitbox != null)
+            {
+                // Trúng player — deal damage full, showEffect = false, kết thúc
+                Transform  centerHitbox = centerHit.Hitbox.transform;
+                GameObject centerRoot   = centerHitbox.root.gameObject;
+    #if UNITY_EDITOR
+                Debug.DrawLine(origin, centerHit.Point, Color.red, 1f);
+    #endif
+                alreadyHit.Add(centerRoot);
+                HandleHit(centerHit.Point, centerHit.Normal, centerHitbox);
+                _movementHandler.SetLastShotInfo(shotInfo); // showEffect = false
+                RPC_ApplyAudio();
+                return;
+            }
+
+            // Trúng tường — ghi nhận, chờ xem OverlapSphere có trúng player không
+            if (centerHit.Collider != null)
+            {
+                centerHitWall        = true;
+                shotInfo.HitPosition = centerHit.Point;
+                shotInfo.HitNormal   = centerHit.Normal;
+    #if UNITY_EDITOR
+                Debug.DrawLine(origin, centerHit.Point, Color.yellow, 1f);
+    #endif
+            }
+        }
+
+        // ── Tầng 1: OverlapSphere fallback ────────────────────────────────
+        var hits  = new List<LagCompensatedHit>();
         int count = Runner.LagCompensation.OverlapSphere(
             sphereCenter, radius,
             Object.InputAuthority,
             hits, _hitMask, hitOptions);
 
-        if (count == 0) return;
-
-        // Key: root GameObject — đảm bảo mỗi player chỉ nhận damage 1 lần
-        var alreadyHit = new HashSet<GameObject>();
-
-        foreach (var hit in hits)
+        if (count > 0)
         {
-            Transform hitboxTransform = hit.Hitbox?.transform ?? hit.Collider?.transform;
-            if (hitboxTransform == null) continue;
+            foreach (var hit in hits)
+            {
+                if (hit.Hitbox == null) continue;
 
-            GameObject root = hitboxTransform.root.gameObject;
-            if (alreadyHit.Contains(root)) continue;
+                Transform  hitboxTransform = hit.Hitbox.transform;
+                GameObject root            = hitboxTransform.root.gameObject;
+                if (alreadyHit.Contains(root)) continue;
 
-            // Bước 2: Dot product — dùng center hitbox thay vì root.position
-            // để tránh sai lệch khi root nằm ở chân character
-            Vector3 hitboxCenter = hit.Hitbox != null
-                ? hit.Hitbox.transform.position
-                : hit.Collider.bounds.center;
-            Vector3 dirToTarget = (hitboxCenter - origin).normalized;
+                // ── Tầng 2: Dot product ───────────────────────────────────
+                Vector3 hitboxCenter = hitboxTransform.position;
+                Vector3 dirToTarget  = (hitboxCenter - origin).normalized;
 
-            float dot = Vector3.Dot(aimForward, dirToTarget);
-            if (dot < MeleeDotThreshold) continue;
+                float dot = Vector3.Dot(aimForward, dirToTarget);
+                if (dot < MeleeDotThreshold) continue;
 
-            // Bước 3: Raycast từ origin → sphereCenter kéo dài thêm radius
-            // Tia đi qua trung tâm vùng chém, xuyên qua toàn bộ sphere
-            // → hit hitbox đầu tiên trên đường đó = bodypart chính xác
-            Vector3 dirToSphere = (sphereCenter - origin).normalized;
-            float distTotal     = Vector3.Distance(origin, sphereCenter) + radius;
+                // ── Tầng 3: Raycast confirm ───────────────────────────────
+                float distToHitbox = Vector3.Distance(origin, hitboxCenter) + 0.3f;
 
-            if (!Runner.LagCompensation.Raycast(
-                    origin, dirToSphere, distTotal,
-                    Object.InputAuthority, out var confirmHit,
-                    _hitMask, hitOptions))
-                continue; // tia không hit gì cả — bỏ qua
+                if (!Runner.LagCompensation.Raycast(
+                        origin, dirToTarget, distToHitbox,
+                        Object.InputAuthority, out var confirmHit,
+                        _hitMask, hitOptions))
+                    continue;
 
-            // Kiểm tra confirmHit có thuộc root của target không
-            GameObject confirmRoot = confirmHit.Hitbox != null
-                ? confirmHit.Hitbox.transform.root.gameObject
-                : confirmHit.Collider?.transform.root.gameObject;
+                if (confirmHit.Hitbox == null) continue;
+                if (confirmHit.Hitbox.transform.root.gameObject != root) continue;
 
-            if (confirmRoot != root) continue; // tường hoặc object khác chặn
-
-            // confirmHit.Hitbox là hitbox đầu tiên trên đường tia đi qua sphere
-            // → bodypart (Head/Body/Legs/Hand) chính xác
-            Transform confirmedHitbox = confirmHit.Hitbox?.transform ?? hitboxTransform;
-
-            alreadyHit.Add(root);
-            Debug.DrawLine(origin, confirmHit.Point, Color.magenta, 1f);
-            HandleHit(confirmHit.Point, confirmHit.Normal, confirmedHitbox);
+                Transform confirmedHitbox = confirmHit.Hitbox.transform;
+                alreadyHit.Add(root);
+    #if UNITY_EDITOR
+                Debug.DrawLine(origin, confirmHit.Point, Color.magenta, 1f);
+    #endif
+                // Trúng player qua OverlapSphere — damage giảm 1/2
+                HandleHit(confirmHit.Point, confirmHit.Normal, confirmedHitbox, 0.5f);
+            }
         }
 
-        // Chỉ play audio 1 lần dù chém trúng bao nhiêu target
+        // showEffect = true CHỈ KHI: raycast trúng tường VÀ không trúng player nào
+        shotInfo.ShowEffect = centerHitWall && alreadyHit.Count == 0;
+        _movementHandler.SetLastShotInfo(shotInfo); // luôn ghi đè, tránh giá trị cũ
+
         if (alreadyHit.Count > 0)
             RPC_ApplyAudio();
     }
@@ -392,7 +446,7 @@ public class NShootHandler : NetworkBehaviour
     }
 #endif
 
-    private void HandleHit(Vector3 point, Vector3 normal, Transform hitbox)
+    private void HandleHit(Vector3 point, Vector3 normal, Transform hitbox, float damageMultiplier = 1f)
     {
         if (hitbox == null) return;
 
@@ -402,15 +456,17 @@ public class NShootHandler : NetworkBehaviour
         if (HPHandler == null && hitNplayer == null && bodyParts == null) return;
 
         if (nPlayer.GamePlayMode == GamePlayMode.Solo)
-            HitDamage(HPHandler, bodyParts, hitNplayer);
+            HitDamage(HPHandler, bodyParts, hitNplayer, damageMultiplier);
         else if (nPlayer.NetworkedTeam != hitNplayer.NetworkedTeam)
-            HitDamage(HPHandler, bodyParts, hitNplayer);
+            HitDamage(HPHandler, bodyParts, hitNplayer, damageMultiplier);
     }
 
-    private void HitDamage(NHPHandler HPHandler, BodyPartsHandler bodyParts, NPlayer targetPlayer)
+    private void HitDamage(NHPHandler HPHandler, BodyPartsHandler bodyParts, NPlayer targetPlayer, float damageMultiplier = 1f)
     {
         var ctrl   = _weaponManager?.Weapon_Active();
         var damage = ctrl != null ? ctrl.Data.Damage : 10;
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee && _movementHandler.RightPuch)
+            damage = ctrl != null ? ctrl.Data.RightDamage : 20;
 
         switch (bodyParts.GetBodyParts())
         {
@@ -424,6 +480,8 @@ public class NShootHandler : NetworkBehaviour
             case BodyParts.Body:
                 break;
         }
+        
+        damage = Mathf.RoundToInt(damage * damageMultiplier);
 
         // Subscribe event của target nếu chưa theo dõi
         SubscribeTarget(HPHandler);

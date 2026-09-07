@@ -466,6 +466,7 @@ public class GunRecoilData : ScriptableObject
     {
         if (IsModeAllowed(AllowedModes.Semi))  return AllowedModes.Semi;
         if (IsModeAllowed(AllowedModes.Auto))  return AllowedModes.Auto;
+        if (IsModeAllowed(AllowedModes.Melee)) return AllowedModes.Melee;
         return AllowedModes.Burst;
     }
 

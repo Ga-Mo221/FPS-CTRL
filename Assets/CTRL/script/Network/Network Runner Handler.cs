@@ -129,6 +129,8 @@ public class NetworkRunnerHandler : MonoBehaviour
 
     void HostMigrationResume(NetworkRunner runner)
     {
+        if (GameManager.Instance != null) GameManager.Instance.SetStartHostMigration(true);
+        
         Debug.Log("<color=orange>[NetworkRunnerHandler]</color> HostMigrationResume Started", this);
         var weaponManagersToResolve = new List<WeaponManager>();
 

@@ -47,9 +47,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   _playerNickName: 
+  _playerId:
+    Raw: 0
   _gamePlayMode: 1
   FlashbangEffect: {fileID: 0}
   _respawnTime: 5
+  _canTakeDamageTime: 3
+  _startGameDuration: 10
+  _killTarget: 10
+  _baseExpPerKill: 150
   PlayerList: []
   BulletParrent: {fileID: 6422889730410951229}
   BulletCaseParrent: {fileID: 7197346575917051144}
@@ -57,10 +63,14 @@ MonoBehaviour:
   _weapons:
   - _weapon_Prefab: {fileID: 315522073390347134, guid: 1b57bc58da8b83e42a5ac63241df1816, type: 3}
   - _weapon_Prefab: {fileID: 1140873525885738155, guid: 22e79a94fa9fee5459c06239f10e82c6, type: 3}
-  RedKill: 0
-  BlueKill: 0
-  AllKill: 0
+  - _weapon_Prefab: {fileID: 582006340443541667, guid: d9a37fcd527e44c4e91e6513c7398138, type: 3}
   NetworkRunnerHandler: {fileID: 0}
+  _bestStreak: 0
+  _onUIOption: 0
+  _onUIChatBox: 0
+  _onUILoadout: 1
+  _canDragItem: 0
+  _dropItemWeapon: {fileID: 0}
 --- !u!1 &7688674044103331393
 GameObject:
   m_ObjectHideFlags: 0

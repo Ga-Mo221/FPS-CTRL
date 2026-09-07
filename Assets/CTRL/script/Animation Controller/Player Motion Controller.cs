@@ -47,7 +47,7 @@ public class PlayerMotionController : MonoBehaviour
         WeaponController controller = _w_manager.Weapon_Active();
         if (controller == null) return;
          if (controller.ADS(value))
-            _anim.SetBool("ADS", value);
+             _anim.SetBool("ADS", value);
     }
     
     public bool IsReloading(bool value)

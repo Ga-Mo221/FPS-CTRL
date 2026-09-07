@@ -150,6 +150,8 @@ public class WeaponController : NetworkBehaviour
     private AudioManager _audio;
     
     private List<ProjectileVisual> _poolBullet = new List<ProjectileVisual>();
+
+    [Networked] private bool _rightPuch {get; set;}
     
     // =============================== public Filed ============================================
     
@@ -249,12 +251,11 @@ public class WeaponController : NetworkBehaviour
         
         _audio = AudioManager.Instance;
         
-        if (_type == WeaponType.Melee) return;
+        _gun_Recoil_CTRL.OnShotFired += HandleShot;
         
         _parrentBullet.name = $"{_parrentBullet.name} for {transform.root.name} : {transform.name}";
         _parrentBullet.parent = GameManager.Instance.BulletParrent;
         
-        _gun_Recoil_CTRL.OnShotFired += HandleShot;
     }
 
     void OnEnable()
@@ -288,18 +289,24 @@ public class WeaponController : NetworkBehaviour
                 CurrentBulletvalue--;
                 if (_bulletController != null)
                     _bulletController.Drop();
-                    // reset effect
-                    _shoot_Effect.Play();
+                    
+                _shoot_Effect.Play();
+                _anim.SetTrigger("IsShooting");
+                
+                if (Object.HasInputAuthority && _bridge != null)
+                    _bridge.TryRumble(0.2f, 0.5f, 0.1f);
+                
+                if (_audio != null) _audio.PlayClip(_sound, Data.FireClip, Data.Volume_Fire);
                 break;
             case WeaponType.Melee:
+                if (!_rightPuch)
+                    _anim.SetTrigger("IsShooting");
+                
+                // rung va am thanh dựa trên delay va cham
                 break;
         }
         
-        if (Object.HasInputAuthority && _bridge != null)
-            _bridge.TryRumble(0.2f, 0.5f, 0.1f);
         
-        _anim.SetTrigger("IsShooting");
-        if (_audio != null) _audio.PlayClip(_sound, Data.FireClip, Data.Volume_Fire);
     }
 
     // ========================================== ADS ==================================
@@ -308,6 +315,13 @@ public class WeaponController : NetworkBehaviour
     {
         if (_type == WeaponType.Melee) return;
         ADSHandler();
+    }
+
+    public bool CanFire()
+    {
+        if (Runner != null)
+            _gun_Recoil_CTRL.NetworkTick(Runner.SimulationTime);
+        return _gun_Recoil_CTRL.CanFire;
     }
 
     private void ADSHandler()
@@ -395,8 +409,9 @@ public class WeaponController : NetworkBehaviour
         }
     }
 
-    public bool OnFire()
+    public bool OnFire(bool right, bool crounch)
     {
+        _rightPuch = right;
         _gun_Recoil_CTRL.NetworkTick(Runner.SimulationTime);
         
         switch (_type)
@@ -407,7 +422,8 @@ public class WeaponController : NetworkBehaviour
                 if (CurrentBulletvalue <= 0) return false;
                 return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
             case WeaponType.Melee:
-                return _gun_Recoil_CTRL.OnFire(_data.FireDelay);
+                float delay = !right ? _data.FireDelay : crounch ? _data.FireCrouchRightDelay : _data.FireStandRightDelay;
+                return _gun_Recoil_CTRL.OnFire(delay);
             default:
                 return false;
         }
@@ -426,13 +442,14 @@ public class WeaponController : NetworkBehaviour
     /// </summary>
     public void OnFireVisualOnly()
     {
+        _gun_Recoil_CTRL.TriggerRecoilVisual();
         if (_type == WeaponType.Melee) return;
         _cam_Recoil.OnFire();
-        _gun_Recoil_CTRL.TriggerRecoilVisual();
     }
 
     public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
     {
+        Debug.Log("SpawnProjectileVisual");
         if (_bullet_Prefab == null) return;
 
         var projectileVisual = GetBullet();
@@ -525,9 +542,9 @@ public class WeaponController : NetworkBehaviour
     
     public bool ADS(bool ads)
     {
-        if (_type == WeaponType.Melee) return false;
-        _ads = ads;
         _anim.SetBool("ADS", ads);
+        if (_type == WeaponType.Melee) return true;
+        _ads = ads;
         return true;
     }
 

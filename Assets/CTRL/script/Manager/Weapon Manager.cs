@@ -390,6 +390,8 @@ public class WeaponManager : NetworkBehaviour
 
     private void SpawnDropItem(WeaponController ctrl, Vector3? overridePos = null)
     {
+        if (ctrl.Data.DropItemPrefab == null) return;
+        
         Vector3 pos = overridePos ?? transform.position;
     
         // ✅ Raycast xuống tìm mặt đất

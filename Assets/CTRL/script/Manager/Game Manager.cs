@@ -57,19 +57,13 @@ public class GameManager : MonoBehaviour
     [TabGroup("GameManager", "Weapon")]
     [SerializeField] private WeaponInfo[] _weapons;
     
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private bool _locaGameOverUI;
     
-    // [TabGroup("GameManager", "Runtime")]
-    // [Header("KILL")]
-    // [Sirenix.OdinInspector.ReadOnly]
-    // [SerializeField] private int RedKill = 0;
-    //
-    // [Sirenix.OdinInspector.ReadOnly]
-    // [TabGroup("GameManager", "Runtime")]
-    // [SerializeField] private int BlueKill = 0;
-    
-    // [Sirenix.OdinInspector.ReadOnly]
-    // [TabGroup("GameManager", "Runtime")]
-    // [SerializeField] private int AllKill = 0;
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private bool _startHostMigration;
     
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Runtime")]
@@ -125,6 +119,12 @@ public class GameManager : MonoBehaviour
     }
     
     // ======================== PUBLIC API ================================
+    
+    public void SetLocalGameOverUI(bool value) => _locaGameOverUI = value;
+    public bool GetLocalGameOverUI() => _locaGameOverUI;
+    
+    public void SetStartHostMigration(bool value) => _startHostMigration = value;
+    public bool GetStartHostMigration() => _startHostMigration;
     
     public void setPlayerID(NetworkId playerId) => _playerId = playerId;
     
@@ -215,12 +215,11 @@ public class GameManager : MonoBehaviour
         
         Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = visible;
-        
-        Debug.Log("Set cursor visibility" + visible);
     }
 
     public void NewGame()
     {
+        SetLocalGameOverUI(false);
         SetOnuiLoadout(false);
         SetOnUIOptions(false);
         SetOnUIChatBox(false);
@@ -242,6 +241,7 @@ public class GameManager : MonoBehaviour
     {
         if (name.IsNullOrEmpty()) return null;
         
+        if (_weapons == null || _weapons.Length == 0) return null;
         foreach (var weapon in _weapons)
             if (weapon.Name().Contains(name))
                 return weapon.Weapon;

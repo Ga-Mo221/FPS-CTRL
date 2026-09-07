@@ -26,6 +26,8 @@ public class NCharMovementHandler : NetworkBehaviour
     // SHOOTING STATE
     // IsFiring chỉ dùng nội bộ trong frame FixedUpdateNetwork, không cần Networked
     public bool IsFiring { get; private set; }
+    [Networked] public bool RightPuch { get; private set; }
+    private bool _rightPuchDelay = false;
 
     // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
     // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
@@ -64,7 +66,10 @@ public class NCharMovementHandler : NetworkBehaviour
     private WeaponManager _weaponManager;
     
     // ── helpers cho NShootHandler ──────────────────────────────────────────
-    public void IncrementFireCount() => FireCount++;
+    public void IncrementFireCount()
+    {
+        FireCount++;
+    }
 
     /// <summary>Rifle / Sniper: ghi 1 raycast vào slot 0, PelletCount = 0.</summary>
     public void SetLastShotInfo(Vector3 pos, Vector3 normal, bool showEffect)
@@ -326,35 +331,76 @@ public class NCharMovementHandler : NetworkBehaviour
         var ctrl = _playerMotionController.ActiveWeponCTRL();
         var canShoot = false;
         if (ctrl != null)
-            canShoot = ctrl.OnFire();
+            canShoot = ctrl.OnFire(_rightPuchDelay, StateFl.IsCrouch);
         StateFl = state;
+        _rightPuchDelay = false;
         return canShoot;
     }
     
     private void ADSHandler(NInputData input, ref PlayerStateFlags state)
     {
-        if (state.IsSwitching || state.IsThrow || state.IsSlide)
-            return;
-        
-        if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS))
+        var melee = _weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee;
+
+        if (melee)
         {
-            _stateLogic.EnterADS(ref state, _constraintManager);
-            if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
+            var ctrl = _playerMotionController.ActiveWeponCTRL();
+            var canShoot = false;
+            if (ctrl != null)
+                canShoot = ctrl.CanFire();
+            
+            if (state.IsSwitching || state.IsThrow)
             {
-                // Sniper ADS → giảm tốc độ xoay camera
-                if (Object.HasInputAuthority)
-                    RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.SniperADSSensitivity);
+                IsFiring = false;
+                return;
             }
-            else if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle)
+            
+            if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS) && canShoot)
             {
-                // Rifle ADS → giảm tốc độ xoay camera
-                if (Object.HasInputAuthority)
-                    RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.RifleADSSensitivity);
+                RightPuch = true;
+                _rightPuchDelay = true;
+                IsFiring = true;
+                _stateLogic.EnterADS(ref state, _constraintManager);
             }
         }
+        else
+        {
+            if (state.IsSwitching || state.IsThrow || state.IsSlide)
+                return;
 
-        if (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
-            _stateLogic.ExitADS(ref state);
+            if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS))
+            {
+                _stateLogic.EnterADS(ref state, _constraintManager);
+                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
+                {
+                    // Sniper ADS → giảm tốc độ xoay camera
+                    if (Object.HasInputAuthority)
+                        RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.SniperADSSensitivity);
+                }
+                else if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle || 
+                         _weaponManager.Weapon_Active().WeaponType == WeaponType.Shotgun)
+                {
+                    // Rifle ADS → giảm tốc độ xoay camera
+                    if (Object.HasInputAuthority)
+                        RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.RifleADSSensitivity);
+                }
+            }
+
+            if (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
+                _stateLogic.ExitADS(ref state);
+        }
+    }
+
+    public void ResetRightPuch()
+    {
+        RightPuch = false;
+    }
+
+    public void ResetADS()
+    {
+        var state = StateFl;
+        _stateLogic.ExitADS(ref state);
+        StateFl = state;
+        Debug.Log("ResetADS");
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]

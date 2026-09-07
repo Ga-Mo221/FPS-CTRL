@@ -176,6 +176,13 @@ public class GunRecoilController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Trả về true nếu có thể bắn phát tiếp theo ngay lúc này.
+    /// Với Burst: false trong khi loạt đang chạy (cooldown tính gộp cả loạt).
+    /// Cần gọi NetworkTick() để <see cref="_time"/> được cập nhật trước khi dùng.
+    /// </summary>
+    public bool CanFire => _time >= _nextFireTime;
+
     /// <summary>Cập nhật trạng thái ADS.</summary>
     public void SetAiming(bool aiming) => _isAiming = aiming;
 
