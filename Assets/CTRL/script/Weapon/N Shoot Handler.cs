@@ -103,18 +103,18 @@ public class NShootHandler : NetworkBehaviour
                     _movementHandler.SetLastShotInfo(shotInfo);
                 }
 
-                if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
-                {
-                    var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
-                    float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
-                    if (_movementHandler.RightPuch && weaponCtrl)
-                    {
-                        if (_movementHandler.StateFl.IsCrouch)
-                            hitDelay = weaponCtrl.Data.HitCrouchRightDelay;
-                        else hitDelay = weaponCtrl.Data.HitStandRightDelay;
-                    }
-                    _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
-                }
+                // if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+                // {
+                //     var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
+                //     float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
+                //     if (_movementHandler.RightPuch && weaponCtrl)
+                //     {
+                //         if (_movementHandler.StateFl.IsCrouch)
+                //             hitDelay = weaponCtrl.Data.HitCrouchRightDelay;
+                //         else hitDelay = weaponCtrl.Data.HitStandRightDelay;
+                //     }
+                //     _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
+                // }
             }
         }
 
@@ -127,6 +127,24 @@ public class NShootHandler : NetworkBehaviour
                 HandleMeleeHit(_aimForward);
                 _movementHandler.ResetRightPuch();
             }
+        }
+    }
+
+    public void TriggerMeleeAttack()
+    {
+        if (!Object.HasStateAuthority) return;
+
+        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+        {
+            var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
+            float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
+            if (_movementHandler.RightPuch && weaponCtrl)
+            {
+                if (_movementHandler.StateFl.IsCrouch)
+                    hitDelay = weaponCtrl.Data.HitCrouchRightDelay;
+                else hitDelay = weaponCtrl.Data.HitStandRightDelay;
+            }
+            _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
         }
     }
 
@@ -170,11 +188,6 @@ public class NShootHandler : NetworkBehaviour
         {
             if (_movementHandler.RightPuch)
                 _movementHandler.ResetADS();
-            
-            var shotInfo = _movementHandler.LastShotInfo;
-            _playerMotionController
-                .ActiveWeponCTRL()
-                ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
         }
         // Melee: không spawn projectile visual — animation + sound đã đủ
         // OnFireVisualOnly() ở đầu hàm đã trigger gun recoil + camera recoil rồi
@@ -411,7 +424,12 @@ public class NShootHandler : NetworkBehaviour
 
         // showEffect = true CHỈ KHI: raycast trúng tường VÀ không trúng player nào
         shotInfo.ShowEffect = centerHitWall && alreadyHit.Count == 0;
-        _movementHandler.SetLastShotInfo(shotInfo); // luôn ghi đè, tránh giá trị cũ
+        //_movementHandler.SetLastShotInfo(shotInfo); // luôn ghi đè, tránh giá trị cũ
+
+        if (shotInfo.ShowEffect)
+            _playerMotionController
+                .ActiveWeponCTRL()
+                ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
 
         if (alreadyHit.Count > 0)
             RPC_ApplyAudio();

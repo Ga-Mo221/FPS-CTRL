@@ -110,8 +110,19 @@ public class PlayerMotionController : MonoBehaviour
     }
     
     public void IsShooting()
-    {
+    {        
         _anim.SetTrigger("IsShooting");
+    }
+
+    public void SetShootIndex(int index)
+    {
+        if (_w_manager == null) return;
+        WeaponController controller = _w_manager.Weapon_Active();
+        if (controller == null) return;
+        if (controller.WeaponType != WeaponType.Melee) return;
+        
+        _anim.SetInteger("ShootIndex", index);
+        controller.SetShotIndex(index);
     }
 
     public void GrenadeID(int grenadeID)

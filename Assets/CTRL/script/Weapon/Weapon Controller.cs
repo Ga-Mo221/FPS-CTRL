@@ -539,6 +539,11 @@ public class WeaponController : NetworkBehaviour
         //Debug.Log($"[WeaponController] {transform.name} IsSwitching: {isSwitching}");
         _anim.SetBool("IsSwitching", isSwitching);
     }
+
+    public void SetShotIndex(int index)
+    {
+        _anim.SetInteger("ShootIndex", index);
+    }
     
     public bool ADS(bool ads)
     {

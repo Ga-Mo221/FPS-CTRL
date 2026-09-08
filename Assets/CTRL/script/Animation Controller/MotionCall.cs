@@ -88,6 +88,12 @@ public class MotionCall : StateMachineBehaviour
         Disso.ResetMaterials();
     }
 
+    public void MeleeAttack(Animator animator)
+    {
+        var controller = animator.GetComponentInParent<NShootHandler>();
+        controller?.TriggerMeleeAttack();
+    }
+
     // ===================================== WEAPON =========================================================
     
     // Gun

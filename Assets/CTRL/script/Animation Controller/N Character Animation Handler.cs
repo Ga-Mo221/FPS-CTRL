@@ -26,6 +26,8 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     {
         var state = _movementHandler.StateFl;
         _smoothTime = _movementHandler.Data.MoveSmooth;
+
+        _playerMotionController.SetShootIndex(_movementHandler.ShootIndex);
         
         if (_movementHandler.FireCount != _lastFireCount)
         {

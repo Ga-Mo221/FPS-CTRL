@@ -29,6 +29,13 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public bool RightPuch { get; private set; }
     private bool _rightPuchDelay = false;
 
+    [Networked] public int ShootIndex { get; private set; } = 0;
+
+    [Networked] private TickTimer _meleeCooldownTimer { get; set; } // chặn input sau khi đánh
+    [Networked] private TickTimer _meleeComboTimer    { get; set; } // cửa sổ chờ click tiếp theo
+    private const float MELEE_COOLDOWN    = 0.2f; // chờ sau khi đánh xong
+    private const float MELEE_COMBO_WINDOW = 0.4f; // thời gian để nhấn đòn tiếp theo
+
     // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
     // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
     [Networked] private TickTimer _fireHoldTimer { get; set; }
@@ -291,13 +298,16 @@ public class NCharMovementHandler : NetworkBehaviour
         switch (_playerMotionController.ActiveWeaponMode())
         {
             case GunRecoilController.FiringMode.Semi:
-            case GunRecoilController.FiringMode.Melee:
             case GunRecoilController.FiringMode.Burst:
                 // Semi/Burst không bị ảnh hưởng bởi vấn đề này
                 // vì WasPressed chỉ cần 1 tick đúng là đủ
                 IsFiring = false;
                 if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
                     IsFiring = true;
+                break;
+
+            case GunRecoilController.FiringMode.Melee:
+                MeleeComboHandler(input);
                 break;
 
             case GunRecoilController.FiringMode.Auto:
@@ -335,6 +345,40 @@ public class NCharMovementHandler : NetworkBehaviour
         StateFl = state;
         _rightPuchDelay = false;
         return canShoot;
+    }
+
+    /// <summary>
+    /// Xử lý combo melee 3 đòn.
+    /// ShootIndex: 0 = idle, 1 = đòn 1, 2 = đòn 2, 3 = đòn 3 → reset về 0.
+    /// Nếu trong 0.5s không nhấn tiếp → reset về 0.
+    /// </summary>
+    private void MeleeComboHandler(NInputData input)
+    {
+        IsFiring = false;
+
+        // Đang trong cooldown → chưa nhận click
+        if (!_meleeCooldownTimer.ExpiredOrNotRunning(Runner))
+            return;
+
+        // Hết cửa sổ combo mà không click → reset
+        if (ShootIndex > 0 && _meleeComboTimer.Expired(Runner))
+        {
+            ShootIndex = 0;
+            _meleeComboTimer = default;
+        }
+
+        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
+        {
+            ShootIndex = (ShootIndex >= 3) ? 1 : ShootIndex + 1;
+
+            // Bắt đầu cooldown → chặn input trong 0.5s
+            _meleeCooldownTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN);
+
+            // Bắt đầu cửa sổ chờ click tiếp theo 0.5s (tính từ khi hết cooldown)
+            _meleeComboTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN + MELEE_COMBO_WINDOW);
+
+            IsFiring = true;
+        }
     }
     
     private void ADSHandler(NInputData input, ref PlayerStateFlags state)
