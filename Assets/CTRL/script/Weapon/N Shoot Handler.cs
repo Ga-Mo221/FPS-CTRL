@@ -22,7 +22,7 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>Số lần hỗ trợ kill (deal damage nhưng người khác kết liễu)</summary>
     [Networked, OnChangedRender(nameof(OnAssistChange))]
     public int Assist { get; private set; } = 0;
-    
+
     [Networked] public int TotalExp { get; private set; } = 0;
 
     // ── Melee ──────────────────────────────────────────────────────────────
@@ -31,6 +31,14 @@ public class NShootHandler : NetworkBehaviour
     /// Networked để Host quản lý timing chính xác theo tick.
     /// </summary>
     [Networked] private TickTimer _meleeHitTimer { get; set; }
+
+    /// <summary>
+    /// Counter tăng mỗi khi HandleMeleeHit() xác định cần spawn wall-hit visual.
+    /// Render() trên mọi client detect thay đổi → OnMeleeHitDetected() → SpawnProjectileVisual.
+    /// Tách riêng khỏi FireCount vì melee có delay giữa FireCount và hitbox check.
+    /// </summary>
+    [Networked] private int _meleeHitCount { get; set; }
+    private int _lastMeleeHitCount;
 
     /// <summary>
     /// Dot product threshold để lọc target trong hình nón trước mặt.
@@ -48,8 +56,7 @@ public class NShootHandler : NetworkBehaviour
 
     // Cache NHPHandler đã subscribe để quản lý event đúng cách
     private readonly Dictionary<NetworkId, NHPHandler> _subscribedTargets = new Dictionary<NetworkId, NHPHandler>();
-    
-    // Thêm vào đầu class
+
     /// <summary>Invoke local khi nhận exp — UI subscribe để hiển thị "+Xexp"</summary>
     public event System.Action<int, bool> OnExpGained; // (amount, isKill)
 
@@ -96,25 +103,12 @@ public class NShootHandler : NetworkBehaviour
                     var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(_aimForward);
                     _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
                 }
-                
+
                 if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
                 {
                     var shotInfo = GetShotgunHitInfo(_aimForward);
                     _movementHandler.SetLastShotInfo(shotInfo);
                 }
-
-                // if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
-                // {
-                //     var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
-                //     float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
-                //     if (_movementHandler.RightPuch && weaponCtrl)
-                //     {
-                //         if (_movementHandler.StateFl.IsCrouch)
-                //             hitDelay = weaponCtrl.Data.HitCrouchRightDelay;
-                //         else hitDelay = weaponCtrl.Data.HitStandRightDelay;
-                //     }
-                //     _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
-                // }
             }
         }
 
@@ -151,10 +145,20 @@ public class NShootHandler : NetworkBehaviour
     // ── Render (chạy trên tất cả máy, mỗi frame) ───────────────────────────
     public override void Render()
     {
+        // Rifle / Shotgun — FireCount tăng cùng tick với SetLastShotInfo nên data luôn sẵn
         if (_movementHandler.FireCount != _lastFireCount)
         {
             _lastFireCount = _movementHandler.FireCount;
             OnFireDetected();
+        }
+
+        // Melee wall-hit visual — dùng counter riêng vì có delay giữa FireCount và hitbox check.
+        // Host ghi SetLastShotInfo trước rồi mới tăng _meleeHitCount trong cùng một tick,
+        // nên khi client detect thay đổi thì LastShotInfo đã có data đúng.
+        if (_meleeHitCount != _lastMeleeHitCount)
+        {
+            _lastMeleeHitCount = _meleeHitCount;
+            OnMeleeHitDetected();
         }
     }
 
@@ -183,20 +187,32 @@ public class NShootHandler : NetworkBehaviour
                     shotInfo.GetHitNormal(i),
                     shotInfo.GetShowEffect(i));
         }
-        
+
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
         {
             if (_movementHandler.RightPuch)
                 _movementHandler.ResetADS();
         }
-        // Melee: không spawn projectile visual — animation + sound đã đủ
-        // OnFireVisualOnly() ở đầu hàm đã trigger gun recoil + camera recoil rồi
+        // Melee: không spawn projectile visual ở đây — OnMeleeHitDetected() xử lý riêng
+        // OnFireVisualOnly() ở đầu hàm đã trigger animation recoil + camera recoil rồi
+    }
+
+    /// <summary>
+    /// Gọi khi _meleeHitCount thay đổi — tức là Host vừa xác nhận có wall-hit visual cần spawn.
+    /// Chạy trên mọi client, data LastShotInfo đã được Host ghi trước đó trong cùng tick.
+    /// </summary>
+    private void OnMeleeHitDetected()
+    {
+        var shotInfo = _movementHandler.LastShotInfo;
+        _playerMotionController
+            .ActiveWeponCTRL()
+            ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
     }
 
     // ── Raycast + damage — chỉ chạy trên StateAuthority ──────────────────
     private (Vector3 hitPosition, Vector3 hitNormal, bool showEffect) GetRaycastHitInfo(Vector3 aimForward)
     {
-        var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
+        var weaponCtrl    = _playerMotionController.ActiveWeponCTRL();
         float maxDistance = weaponCtrl != null ? weaponCtrl.Data.Range : 200f;
 
         Vector3 origin = _componentManager.Camera.transform.position;
@@ -311,6 +327,8 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>
     /// OverlapSphere → Dot product (lọc phía trước) → Raycast confirm (lọc xuyên tường).
     /// Chỉ chạy trên StateAuthority sau khi _meleeHitTimer expired.
+    /// Nếu trúng tường (showEffect = true): ghi SetLastShotInfo trước, tăng _meleeHitCount sau
+    /// để Render() trên mọi client nhận đúng data trong cùng snapshot.
     /// </summary>
     private void HandleMeleeHit(Vector3 aimForward)
     {
@@ -424,12 +442,13 @@ public class NShootHandler : NetworkBehaviour
 
         // showEffect = true CHỈ KHI: raycast trúng tường VÀ không trúng player nào
         shotInfo.ShowEffect = centerHitWall && alreadyHit.Count == 0;
-        //_movementHandler.SetLastShotInfo(shotInfo); // luôn ghi đè, tránh giá trị cũ
 
         if (shotInfo.ShowEffect)
-            _playerMotionController
-                .ActiveWeponCTRL()
-                ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+        {
+            // Ghi data trước, trigger Render() sau — đảm bảo client đọc đúng LastShotInfo
+            _movementHandler.SetLastShotInfo(shotInfo);
+            _meleeHitCount++;
+        }
 
         if (alreadyHit.Count > 0)
             RPC_ApplyAudio();
@@ -498,7 +517,7 @@ public class NShootHandler : NetworkBehaviour
             case BodyParts.Body:
                 break;
         }
-        
+
         damage = Mathf.RoundToInt(damage * damageMultiplier);
 
         // Subscribe event của target nếu chưa theo dõi
@@ -512,8 +531,8 @@ public class NShootHandler : NetworkBehaviour
         if (isKill)
         {
             // Lấy tổng damage đã tích lũy (bao gồm phát vừa deal)
-            var targetId   = HPHandler.Object.Id;
-            int totalDmg   = _damageAccumulated.TryGetValue(targetId, out var acc) ? acc : 0;
+            var targetId = HPHandler.Object.Id;
+            int totalDmg = _damageAccumulated.TryGetValue(targetId, out var acc) ? acc : 0;
             GainExpFromDamage(targetId, totalDmg, HPHandler.MaxHP, isKill: true);
             _kill++;
         }
@@ -588,11 +607,11 @@ public class NShootHandler : NetworkBehaviour
     {
         if (targetMaxHP <= 0) return;
 
-        float expPercent = Mathf.Clamp01((float)totalDamage / targetMaxHP);
+        float expPercent    = Mathf.Clamp01((float)totalDamage / targetMaxHP);
         int _baseExpPerKill = 100;
         if (GameManager.Instance != null)
             _baseExpPerKill = GameManager.Instance.GetEXPperKill();
-        int   expGained  = Mathf.RoundToInt(_baseExpPerKill * expPercent);
+        int expGained = Mathf.RoundToInt(_baseExpPerKill * expPercent);
 
         if (expGained <= 0)
         {
