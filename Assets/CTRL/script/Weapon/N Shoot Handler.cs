@@ -32,6 +32,26 @@ public class NShootHandler : NetworkBehaviour
     /// </summary>
     [Networked] private TickTimer _meleeHitTimer { get; set; }
 
+    [Header("Melee Active Hit Window")]
+    [Tooltip("Sau khi hết delay swing, hitbox check sẽ tiếp tục chạy MỖI TICK trong khoảng thời gian này (giây) thay vì chỉ 1 tick duy nhất — giúp dễ trúng đòn hơn với đối tượng đang di chuyển / độ trễ mạng.")]
+    [SerializeField] private float _meleeHitWindowDuration = 0.15f;
+
+    /// <summary>
+    /// Cửa sổ thời gian (nhiều tick) mà HandleMeleeHit() được phép chạy sau khi _meleeHitTimer hết hạn.
+    /// Networked để mọi tick simulate/resimulate trên Host đều nhất quán.
+    /// </summary>
+    [Networked] private TickTimer _meleeHitWindowEndTimer { get; set; }
+
+    /// <summary>
+    /// Các target (theo NetworkId) đã bị đánh trúng trong pha vung vũ khí hiện tại.
+    /// Dùng để tránh double-hit / double-damage khi check hit lặp lại nhiều tick trong cùng 1 window.
+    /// Reset mỗi khi TriggerMeleeAttack() bắt đầu 1 swing mới.
+    /// </summary>
+    private readonly HashSet<NetworkId> _meleeAlreadyHitThisSwing = new HashSet<NetworkId>();
+
+    /// <summary>Đảm bảo wall-hit visual chỉ spawn 1 lần / swing dù window check nhiều tick.</summary>
+    private bool _meleeWallHitRegisteredThisSwing;
+
     /// <summary>
     /// Counter tăng mỗi khi HandleMeleeHit() xác định cần spawn wall-hit visual.
     /// Render() trên mọi client detect thay đổi → OnMeleeHitDetected() → SpawnProjectileVisual.
@@ -56,6 +76,12 @@ public class NShootHandler : NetworkBehaviour
 
     // Cache NHPHandler đã subscribe để quản lý event đúng cách
     private readonly Dictionary<NetworkId, NHPHandler> _subscribedTargets = new Dictionary<NetworkId, NHPHandler>();
+    private readonly Dictionary<NetworkId, System.Action<NetworkId, int>> _onDamageDealtHandlers 
+        = new Dictionary<NetworkId, System.Action<NetworkId, int>>();
+    private readonly Dictionary<NetworkId, System.Action<NetworkId>> _onDiedHandlers 
+        = new Dictionary<NetworkId, System.Action<NetworkId>>();
+    private readonly Dictionary<NetworkId, System.Action> _onRespawnedHandlers 
+        = new Dictionary<NetworkId, System.Action>();
 
     /// <summary>Invoke local khi nhận exp — UI subscribe để hiển thị "+Xexp"</summary>
     public event System.Action<int, bool> OnExpGained; // (amount, isKill)
@@ -115,11 +141,23 @@ public class NShootHandler : NetworkBehaviour
         // Melee hit check — chạy sau delay để khớp với animation swing
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
         {
+            // Delay ban đầu (khớp animation swing) vừa hết → mở cửa sổ active hit
             if (_meleeHitTimer.Expired(Runner))
             {
                 _meleeHitTimer = default;
-                HandleMeleeHit(_aimForward);
-                _movementHandler.ResetRightPuch();
+                _meleeHitWindowEndTimer = TickTimer.CreateFromSeconds(Runner, _meleeHitWindowDuration);
+                //_movementHandler.ResetRightPuch();
+            }
+
+            // Trong cửa sổ active — check hit MỖI TICK cho tới khi trúng player hoặc hết giờ,
+            // thay vì chỉ check đúng 1 tick như trước → dễ trigger trúng đòn hơn nhiều.
+            if (_meleeHitWindowEndTimer.IsRunning)
+            {
+                bool windowExpired = _meleeHitWindowEndTimer.Expired(Runner);
+                bool hitConfirmed  = HandleMeleeHit(_aimForward);
+
+                if (hitConfirmed || windowExpired)
+                    _meleeHitWindowEndTimer = default;
             }
         }
     }
@@ -139,6 +177,18 @@ public class NShootHandler : NetworkBehaviour
                 else hitDelay = weaponCtrl.Data.HitStandRightDelay;
             }
             _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
+
+            // FIX double-visual khi combo: hủy hẳn window của swing TRƯỚC (nếu vẫn đang chạy)
+            // trước khi reset state. Nếu không, FixedUpdateNetwork() vẫn còn cho HandleMeleeHit()
+            // của swing cũ chạy thêm vài tick nữa, và vì _meleeAlreadyHitThisSwing /
+            // _meleeWallHitRegisteredThisSwing vừa bị Clear() bên dưới, nó tưởng đây là swing
+            // "chưa hit gì" nên ghi nhận wall-hit thêm 1 lần nữa → _meleeHitCount tăng 2 lần
+            // liên tiếp trong vài chục ms → Render() trên client gọi SpawnProjectileVisual 2 lần.
+            _meleeHitWindowEndTimer = default;
+
+            // Bắt đầu swing mới → reset trạng thái hit của swing trước
+            _meleeAlreadyHitThisSwing.Clear();
+            _meleeWallHitRegisteredThisSwing = false;
         }
     }
 
@@ -160,6 +210,13 @@ public class NShootHandler : NetworkBehaviour
             _lastMeleeHitCount = _meleeHitCount;
             OnMeleeHitDetected();
         }
+    }
+    
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        var ids = new List<NetworkId>(_subscribedTargets.Keys);
+        foreach (var id in ids)
+            UnsubscribeTarget(id);
     }
 
     private void OnFireDetected()
@@ -330,7 +387,13 @@ public class NShootHandler : NetworkBehaviour
     /// Nếu trúng tường (showEffect = true): ghi SetLastShotInfo trước, tăng _meleeHitCount sau
     /// để Render() trên mọi client nhận đúng data trong cùng snapshot.
     /// </summary>
-    private void HandleMeleeHit(Vector3 aimForward)
+    /// <summary>
+    /// Được gọi mỗi tick trong suốt _meleeHitWindowDuration (không phải chỉ 1 tick).
+    /// Dùng _meleeAlreadyHitThisSwing để 1 target chỉ có thể bị đánh trúng (deal damage) đúng 1 lần / swing,
+    /// dù hàm này chạy lại nhiều lần liên tiếp trong cùng window.
+    /// Trả về true nếu tick này vừa xác nhận trúng 1 player (báo cho FixedUpdateNetwork dừng window sớm).
+    /// </summary>
+    private bool HandleMeleeHit(Vector3 aimForward)
     {
         var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
         float range     = weaponCtrl?.Data.Range       ?? 1.5f;
@@ -345,9 +408,9 @@ public class NShootHandler : NetworkBehaviour
     #endif
 
         var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
-        if (Runner.LagCompensation == null) return;
+        if (Runner.LagCompensation == null) return false;
 
-        var alreadyHit = new HashSet<GameObject>();
+        bool anyPlayerHitThisTick = false;
 
         // ShotInfo mặc định — showEffect = false, ghi đè ở cuối nếu cần
         var shotInfo = new ShotInfo
@@ -369,21 +432,29 @@ public class NShootHandler : NetworkBehaviour
         {
             if (centerHit.Hitbox != null)
             {
-                // Trúng player — deal damage full, showEffect = false, kết thúc
-                Transform  centerHitbox = centerHit.Hitbox.transform;
-                GameObject centerRoot   = centerHitbox.root.gameObject;
-    #if UNITY_EDITOR
-                Debug.DrawLine(origin, centerHit.Point, Color.red, 1f);
-    #endif
-                alreadyHit.Add(centerRoot);
-                HandleHit(centerHit.Point, centerHit.Normal, centerHitbox);
-                _movementHandler.SetLastShotInfo(shotInfo); // showEffect = false
-                RPC_ApplyAudio();
-                return;
-            }
+                Transform  centerHitbox    = centerHit.Hitbox.transform;
+                GameObject centerRoot      = centerHitbox.root.gameObject;
+                var        centerHPHandler = centerRoot.GetComponent<NHPHandler>();
+                bool       alreadyHitCenter = centerHPHandler != null &&
+                                               _meleeAlreadyHitThisSwing.Contains(centerHPHandler.Object.Id);
 
+                if (!alreadyHitCenter)
+                {
+                    // Trúng player — deal damage full, showEffect = false, kết thúc tick này
+    #if UNITY_EDITOR
+                    Debug.DrawLine(origin, centerHit.Point, Color.red, 1f);
+    #endif
+                    if (centerHPHandler != null)
+                        _meleeAlreadyHitThisSwing.Add(centerHPHandler.Object.Id);
+
+                    HandleHit(centerHit.Point, centerHit.Normal, centerHitbox);
+                    _movementHandler.SetLastShotInfo(shotInfo); // showEffect = false
+                    RPC_ApplyAudio();
+                    return true;
+                }
+            }
             // Trúng tường — ghi nhận, chờ xem OverlapSphere có trúng player không
-            if (centerHit.Collider != null)
+            else if (centerHit.Collider != null)
             {
                 centerHitWall        = true;
                 shotInfo.HitPosition = centerHit.Point;
@@ -409,7 +480,10 @@ public class NShootHandler : NetworkBehaviour
 
                 Transform  hitboxTransform = hit.Hitbox.transform;
                 GameObject root            = hitboxTransform.root.gameObject;
-                if (alreadyHit.Contains(root)) continue;
+                var        hpHandler       = root.GetComponent<NHPHandler>();
+
+                if (hpHandler != null && _meleeAlreadyHitThisSwing.Contains(hpHandler.Object.Id))
+                    continue;
 
                 // ── Tầng 2: Dot product ───────────────────────────────────
                 Vector3 hitboxCenter = hitboxTransform.position;
@@ -431,7 +505,9 @@ public class NShootHandler : NetworkBehaviour
                 if (confirmHit.Hitbox.transform.root.gameObject != root) continue;
 
                 Transform confirmedHitbox = confirmHit.Hitbox.transform;
-                alreadyHit.Add(root);
+                if (hpHandler != null)
+                    _meleeAlreadyHitThisSwing.Add(hpHandler.Object.Id);
+                anyPlayerHitThisTick = true;
     #if UNITY_EDITOR
                 Debug.DrawLine(origin, confirmHit.Point, Color.magenta, 1f);
     #endif
@@ -440,18 +516,22 @@ public class NShootHandler : NetworkBehaviour
             }
         }
 
-        // showEffect = true CHỈ KHI: raycast trúng tường VÀ không trúng player nào
-        shotInfo.ShowEffect = centerHitWall && alreadyHit.Count == 0;
-
-        if (shotInfo.ShowEffect)
+        // Wall-hit visual — chỉ spawn 1 lần / swing (dù window chạy nhiều tick),
+        // và chỉ khi chưa từng trúng player nào trong suốt swing này.
+        if (centerHitWall && !anyPlayerHitThisTick &&
+            _meleeAlreadyHitThisSwing.Count == 0 && !_meleeWallHitRegisteredThisSwing)
         {
+            shotInfo.ShowEffect = true;
+            _meleeWallHitRegisteredThisSwing = true;
             // Ghi data trước, trigger Render() sau — đảm bảo client đọc đúng LastShotInfo
             _movementHandler.SetLastShotInfo(shotInfo);
             _meleeHitCount++;
         }
 
-        if (alreadyHit.Count > 0)
+        if (anyPlayerHitThisTick)
             RPC_ApplyAudio();
+
+        return anyPlayerHitThisTick;
     }
 
     // ── Debug helpers ────────────────────────────────────────────────────
@@ -490,7 +570,9 @@ public class NShootHandler : NetworkBehaviour
         var hitNplayer = hitbox.root.gameObject.GetComponent<NPlayer>();
         var HPHandler  = hitbox.root.gameObject.GetComponent<NHPHandler>();
         var bodyParts  = hitbox.GetComponent<BodyPartsHandler>();
-        if (HPHandler == null && hitNplayer == null && bodyParts == null) return;
+
+        // Fix: cần HPHandler, hitNplayer VÀ bodyParts đều hợp lệ mới tiếp tục
+        if (HPHandler == null || hitNplayer == null || bodyParts == null) return;
 
         if (nPlayer.GamePlayMode == GamePlayMode.Solo)
             HitDamage(HPHandler, bodyParts, hitNplayer, damageMultiplier);
@@ -547,18 +629,51 @@ public class NShootHandler : NetworkBehaviour
         if (_subscribedTargets.ContainsKey(targetId)) return;
 
         _subscribedTargets[targetId] = HPHandler;
-
-        // Capture targetId cho lambda
         var capturedId = targetId;
 
-        HPHandler.OnDamageDealt += (attackerId, actualDmg) =>
+        // Lưu lại delegate để có thể unsubscribe sau
+        System.Action<NetworkId, int> onDamage = (attackerId, actualDmg) =>
             OnTargetDamaged(capturedId, attackerId, actualDmg);
 
-        HPHandler.OnDied += (killerId) =>
+        System.Action<NetworkId> onDied = (killerId) =>
             OnTargetDied(capturedId, killerId, HPHandler.MaxHP);
 
-        HPHandler.OnRespawned += () =>
+        System.Action onRespawned = () =>
             OnTargetRespawned(capturedId);
+
+        HPHandler.OnDamageDealt += onDamage;
+        HPHandler.OnDied        += onDied;
+        HPHandler.OnRespawned   += onRespawned;
+
+        _onDamageDealtHandlers[targetId] = onDamage;
+        _onDiedHandlers[targetId]        = onDied;
+        _onRespawnedHandlers[targetId]   = onRespawned;
+    }
+    
+    private void UnsubscribeTarget(NetworkId targetId)
+    {
+        if (!_subscribedTargets.TryGetValue(targetId, out var HPHandler)) return;
+        if (HPHandler == null) { CleanupTarget(targetId); return; }
+
+        if (_onDamageDealtHandlers.TryGetValue(targetId, out var onDamage))
+            HPHandler.OnDamageDealt -= onDamage;
+
+        if (_onDiedHandlers.TryGetValue(targetId, out var onDied))
+            HPHandler.OnDied -= onDied;
+
+        if (_onRespawnedHandlers.TryGetValue(targetId, out var onRespawned))
+            HPHandler.OnRespawned -= onRespawned;
+
+        CleanupTarget(targetId);
+    }
+
+    private void CleanupTarget(NetworkId targetId)
+    {
+        _subscribedTargets.Remove(targetId);
+        _onDamageDealtHandlers.Remove(targetId);
+        _onDiedHandlers.Remove(targetId);
+        _onRespawnedHandlers.Remove(targetId);
+        _damageAccumulated.Remove(targetId);
     }
 
     // ── Callbacks từ NHPHandler ───────────────────────────────────────────
@@ -566,6 +681,7 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>Tích lũy damage do MÌNH deal cho target</summary>
     private void OnTargetDamaged(NetworkId targetId, NetworkId attackerId, int actualDamage)
     {
+        if (Object == null || !Object.IsValid) return;
         // Chỉ tính damage của mình
         if (attackerId != Object.Id) return;
 
@@ -578,6 +694,7 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>Target chết — nếu không phải mình kill thì tính assist + exp</summary>
     private void OnTargetDied(NetworkId targetId, NetworkId killerId, int targetMaxHP)
     {
+        if (Object == null || !Object.IsValid) return;
         // Mình kill → đã xử lý trong HitDamage, bỏ qua
         if (killerId == Object.Id) return;
 
@@ -592,6 +709,7 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>Target respawn → reset tích lũy, bắt đầu vòng sống mới</summary>
     private void OnTargetRespawned(NetworkId targetId)
     {
+        if (Object == null || !Object.IsValid) return;
         _damageAccumulated.Remove(targetId);
         // Không unsubscribe vì target có thể bị bắn lại trong vòng tiếp theo
     }
@@ -634,6 +752,7 @@ public class NShootHandler : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
     private void RPC_ApplyAudio()
     {
+        Debug.Log("RPC_ApplyAudio");
         AudioManager.Instance.PlayClip(_hitSound, _playerData.TakeDamageClips, _playerData.Volume_TakeDamage, true, 0.5f, 1f);
 
         var HUD = _componentManager.GameHudController();

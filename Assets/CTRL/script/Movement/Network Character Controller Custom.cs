@@ -93,6 +93,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         _initial = default;
         _visualYawInited = false;  // ← reset flag
         _localSmoothVel = 0f;
+        Data.Velocity = Vector3.zero; // reset vận tốc khi spawn để tránh cộng dồn
         TryGetComponent(out _controller);
         _controller.enabled = false;
         _controller.enabled = true;
@@ -259,7 +260,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     {
         if (Grounded || ignoreGrounded) {
             var newVel = Data.Velocity;
-            newVel.y      += overrideImpulse ?? _data.JumpImpulse;
+            newVel.y      =  overrideImpulse ?? _data.JumpImpulse; // reset Y, không cộng dồn
             Data.Velocity =  newVel;
             return true;
         }

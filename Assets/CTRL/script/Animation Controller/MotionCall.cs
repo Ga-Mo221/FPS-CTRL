@@ -1,4 +1,5 @@
 using UnityEngine;
+using WebSocketSharp;
 
 public class MotionCall : StateMachineBehaviour
 {
@@ -90,8 +91,38 @@ public class MotionCall : StateMachineBehaviour
 
     public void MeleeAttack(Animator animator)
     {
+        animator.ResetTrigger("IsShooting");
         var controller = animator.GetComponentInParent<NShootHandler>();
         controller?.TriggerMeleeAttack();
+        
+        var movement = animator.GetComponentInParent<NCharMovementHandler>();
+        movement?.StartCoolDownCombat();
+    }
+
+    public void ResetRightPuchMelee(Animator animator)
+    {
+        var controller = animator.GetComponentInParent<NCharMovementHandler>();
+        controller?.ResetRightPuch();
+    }
+
+    public void RessetTrigger(Animator animator, string triggerName)
+    {
+        if (triggerName.IsNullOrEmpty()) return;
+        animator.ResetTrigger(triggerName);
+    }
+
+    public void RessetShootIndex(Animator animator)
+    {
+        var controller = animator.GetComponentInParent<NCharMovementHandler>();
+        if (controller != null)
+        {
+            Debug.Log("reset motion");
+            controller.ResetMeleeCombo();
+        }
+        else
+        {
+            Debug.Log("reset motion null");
+        }
     }
 
     // ===================================== WEAPON =========================================================

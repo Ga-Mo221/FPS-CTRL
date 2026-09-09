@@ -6,7 +6,7 @@ using UnityEngine;
 public class NHPHandler : NetworkBehaviour
 {
     [Networked, OnChangedRender(nameof(OnHPChanged))]
-    private int HP { get; set; }
+    public int HP { get; private set; }
 
     [Networked, OnChangedRender(nameof(OnStateChanged))]
     public bool IsDead { get; private set; }

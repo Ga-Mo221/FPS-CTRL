@@ -110,16 +110,12 @@ public class UICrosshair : MonoBehaviour
 
     private void SetHitVisuals(float gap)
     {
-        _hit_verticalDivider_U.rectTransform.SetLocalPositionAndRotation(
-            new Vector3(0, gap, 0), Quaternion.identity);
+        _hit_verticalDivider_U.rectTransform.localPosition = new Vector3(0, gap, 0);
         
-        _hit_verticalDivider_D.rectTransform.SetLocalPositionAndRotation(
-            new Vector3(0, -gap, 0), Quaternion.identity);
+        _hit_verticalDivider_D.rectTransform.localPosition = new Vector3(0, -gap, 0);
         
-        _hit_horizontalDivider_L.rectTransform.SetLocalPositionAndRotation(
-            new Vector3(-gap, 0, 0), Quaternion.identity);
+        _hit_horizontalDivider_L.rectTransform.localPosition = new Vector3(-gap, 0, 0);
         
-        _hit_horizontalDivider_R.rectTransform.SetLocalPositionAndRotation(
-            new Vector3(gap, 0, 0), Quaternion.identity);
+        _hit_horizontalDivider_R.rectTransform.localPosition = new Vector3(gap, 0, 0);
     }
 }

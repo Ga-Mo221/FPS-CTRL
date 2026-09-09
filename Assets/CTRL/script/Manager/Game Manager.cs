@@ -219,6 +219,7 @@ public class GameManager : MonoBehaviour
 
     public void NewGame()
     {
+        SetStartHostMigration(false);
         SetLocalGameOverUI(false);
         SetOnuiLoadout(false);
         SetOnUIOptions(false);

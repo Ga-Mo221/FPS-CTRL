@@ -7,6 +7,7 @@ using Sirenix.OdinInspector;
 using TrueInputSystem;
 using Unity.VisualScripting;
 using UnityEngine;
+using GaMo.BlenderEditorTools;
 
 public class WeaponController : NetworkBehaviour
 {
@@ -149,7 +150,7 @@ public class WeaponController : NetworkBehaviour
     
     private AudioManager _audio;
     
-    private List<ProjectileVisual> _poolBullet = new List<ProjectileVisual>();
+    private List<GameObject> _poolBullet = new List<GameObject>();
 
     [Networked] private bool _rightPuch {get; set;}
     
@@ -449,16 +450,25 @@ public class WeaponController : NetworkBehaviour
 
     public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
     {
-        Debug.Log("SpawnProjectileVisual");
         if (_bullet_Prefab == null) return;
+        //Debug.Log($"SpawnProjectileVisual {hitPosition}");
 
-        var projectileVisual = GetBullet();
-        projectileVisual.transform.position = _bullet_point.position;
-        projectileVisual.transform.rotation = _bullet_point.rotation;
-        projectileVisual.SetHit(hitPosition, hitNormal, showEffect);
+        var gameObjectprojectileVisual = GetBullet();
+        
+        if (WeaponType == WeaponType.Melee)
+        {
+            gameObjectprojectileVisual.transform.position = hitPosition;
+            gameObjectprojectileVisual.transform.rotation = Quaternion.LookRotation(hitNormal);
+        }else
+        {
+            gameObjectprojectileVisual.transform.position = _bullet_point.position;
+            gameObjectprojectileVisual.transform.rotation = _bullet_point.rotation;
+            var projectileVisual = gameObjectprojectileVisual.GetComponent<ProjectileVisual>();
+            projectileVisual.SetHit(hitPosition, hitNormal, showEffect);
+        }
     }
     
-    private ProjectileVisual GetBullet()
+    private GameObject GetBullet()
     {
         foreach (var bullet in _poolBullet)
         {
@@ -470,10 +480,9 @@ public class WeaponController : NetworkBehaviour
         }
 
         GameObject newbullet = Instantiate(_bullet_Prefab, _parrentBullet);
-        var visual = newbullet.GetComponent<ProjectileVisual>();
-        _poolBullet.Add(visual);
+        _poolBullet.Add(newbullet);
 
-        return visual;
+        return newbullet;
     }
     
     public void SwitchMode()

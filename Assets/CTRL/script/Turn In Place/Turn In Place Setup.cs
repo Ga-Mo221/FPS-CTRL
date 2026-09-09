@@ -1,4 +1,5 @@
 using UnityEngine;
+using GaMo.BlenderEditorTools;
 
 public static class TurnInPlaceSetup
 {

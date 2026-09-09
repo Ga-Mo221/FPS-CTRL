@@ -1,3 +1,4 @@
+using GaMo.BlenderEditorTools;
 using UnityEngine;
 
 public class FreeCameraController : MonoBehaviour

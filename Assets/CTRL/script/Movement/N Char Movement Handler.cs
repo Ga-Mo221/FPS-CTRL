@@ -34,7 +34,8 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] private TickTimer _meleeCooldownTimer { get; set; } // chặn input sau khi đánh
     [Networked] private TickTimer _meleeComboTimer    { get; set; } // cửa sổ chờ click tiếp theo
     private const float MELEE_COOLDOWN    = 0.2f; // chờ sau khi đánh xong
-    private const float MELEE_COMBO_WINDOW = 0.4f; // thời gian để nhấn đòn tiếp theo
+    private const float MELEE_COMBO_WINDOW = 0.6f; // thời gian để nhấn đòn tiếp theo
+    [SerializeField] private bool _canNextAttackCombo = true;
 
     // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
     // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
@@ -354,6 +355,7 @@ public class NCharMovementHandler : NetworkBehaviour
     /// </summary>
     private void MeleeComboHandler(NInputData input)
     {
+        if (RightPuch) return;
         IsFiring = false;
 
         // Đang trong cooldown → chưa nhận click
@@ -363,22 +365,44 @@ public class NCharMovementHandler : NetworkBehaviour
         // Hết cửa sổ combo mà không click → reset
         if (ShootIndex > 0 && _meleeComboTimer.Expired(Runner))
         {
-            ShootIndex = 0;
-            _meleeComboTimer = default;
+            ResetMeleeCombo();
         }
 
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
         {
-            ShootIndex = (ShootIndex >= 3) ? 1 : ShootIndex + 1;
-
-            // Bắt đầu cooldown → chặn input trong 0.5s
-            _meleeCooldownTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN);
-
-            // Bắt đầu cửa sổ chờ click tiếp theo 0.5s (tính từ khi hết cooldown)
-            _meleeComboTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN + MELEE_COMBO_WINDOW);
-
+            if (ShootIndex > 3) return;
+            if (!_canNextAttackCombo) return;
+            
+            ShootIndex++;
+            _canNextAttackCombo = false;
+            
             IsFiring = true;
         }
+    }
+
+    public void ResetMeleeCombo()
+    {
+        if (!Object.HasStateAuthority) return;
+        Debug.Log("ResetMeleeCombo");
+        ShootIndex = 0;
+        _meleeComboTimer = default;
+        _meleeCooldownTimer = default;
+        _canNextAttackCombo = true;
+    }
+
+    public void StartCoolDownCombat()
+    {
+        if (!Object.HasStateAuthority) return;
+        
+        Debug.Log("StartCoolDownCombat");
+        _canNextAttackCombo = true;
+        _meleeComboTimer = default;
+        _meleeCooldownTimer = default;
+        // Bắt đầu cooldown → chặn input trong 0.5s
+        _meleeCooldownTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN);
+
+        // Bắt đầu cửa sổ chờ click tiếp theo 0.5s (tính từ khi hết cooldown)
+        _meleeComboTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN + MELEE_COMBO_WINDOW);
     }
     
     private void ADSHandler(NInputData input, ref PlayerStateFlags state)
@@ -436,7 +460,12 @@ public class NCharMovementHandler : NetworkBehaviour
 
     public void ResetRightPuch()
     {
+        if (!Object.HasStateAuthority) return;
         RightPuch = false;
+        ShootIndex = 0;
+        _canNextAttackCombo = true;
+        _meleeComboTimer = default;
+        _meleeCooldownTimer = default;
     }
 
     public void ResetADS()
@@ -550,8 +579,8 @@ public class NCharMovementHandler : NetworkBehaviour
 
             if (shouldStop)
             {
-                if (GrenadeID == 1) Frag = true;
-                if (GrenadeID == 2) Flash = true;
+                //if (GrenadeID == 1) Frag = true;
+                //if (GrenadeID == 2) Flash = true;
                 GrenadeID = 0;
                 _stateLogic.StopThrow(ref state);
             }

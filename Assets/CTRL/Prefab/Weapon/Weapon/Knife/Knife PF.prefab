@@ -59,7 +59,7 @@ MonoBehaviour:
   _gun_Recoil_CTRL: {fileID: 8555197257148388042}
   _sway: {fileID: 1556449728477752849}
   _cam_Recoil: {fileID: 0}
-  _bullet_Prefab: {fileID: 5064896252876229858, guid: 5041eeb12cd5049cea0ffc96bb0676f5, type: 3}
+  _bullet_Prefab: {fileID: 108086, guid: eb502dbe945fa854aaa41b7aff96139d, type: 3}
   _shoot_Effect: {fileID: 0}
   _sound: {fileID: 2282574190097172704}
   _bulletController: {fileID: 0}
@@ -114,7 +114,7 @@ MonoBehaviour:
   _pole_Left: {fileID: 4464358461728880546}
   _hand_Right: {fileID: 2495381207720530494}
   _pole_Right: {fileID: 751296357359355187}
-  _bullet_point: {fileID: 2417386121428620949}
+  _bullet_point: {fileID: 0}
   _ads_Shoot_Point: {fileID: 0}
   _parrentBullet: {fileID: 8222591372992729732}
   _grenade_Flash_Name: RAW_Flash
@@ -165,7 +165,7 @@ MonoBehaviour:
   collisionPivot: {fileID: 0}
   animatedBone: {fileID: 133632767162941806}
   upperChest: {fileID: 6688699761053737232}
-  weaponTipTransform: {fileID: 2417386121428620949}
+  weaponTipTransform: {fileID: 304853147607142589}
   tipSphereRadius: 0.05
   tipLocalOffset: {x: 0, y: 0, z: 0.5}
   obstacleLayer:
@@ -262,6 +262,37 @@ MonoBehaviour:
   gizmoColorX: {r: 1, g: 0, b: 0, a: 1}
   gizmoColorY: {r: 0, g: 1, b: 0, a: 1}
   gizmoColorZ: {r: 0, g: 0, b: 1, a: 1}
+--- !u!1 &2907441659533215468
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 304853147607142589}
+  m_Layer: 0
+  m_Name: Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &304853147607142589
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2907441659533215468}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.003038, z: -0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1691228817110044267}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3622612743055844602
 GameObject:
   m_ObjectHideFlags: 0
@@ -310,37 +341,6 @@ MonoBehaviour:
   data: {fileID: 0}
   firingMode: 3
   burstCount: 3
---- !u!1 &5643457646846687132
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2417386121428620949}
-  m_Layer: 0
-  m_Name: Chop
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2417386121428620949
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5643457646846687132}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.0032, z: -0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1691228817110044267}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8112460833335152049
 GameObject:
   m_ObjectHideFlags: 0
@@ -1230,7 +1230,7 @@ PrefabInstance:
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 3780103547157710312, guid: e1707ada8d034f744b9b405d7fed067b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2417386121428620949}
+      addedObject: {fileID: 304853147607142589}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e1707ada8d034f744b9b405d7fed067b, type: 3}
 --- !u!4 &133632767162941806 stripped

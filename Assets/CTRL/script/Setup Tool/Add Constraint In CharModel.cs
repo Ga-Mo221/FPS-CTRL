@@ -3,6 +3,7 @@ using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEditor;
+using GaMo.BlenderEditorTools;
 
 
 public class AddConstraintInCharModel : MonoBehaviour
