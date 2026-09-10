@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -326,13 +325,11 @@ namespace GaMo.BlenderEditorTools
             [Tooltip("Seconds: nhập giây (vd: 1.5s)\nNormalized: nhập tỉ lệ 0→1 (vd: 0.85 = 85% clip)")]
             public TriggerMode mode = TriggerMode.Normalized;
 
-            [ShowIf("mode", TriggerMode.Seconds)]
             [Min(0f)]
             [Tooltip("Thời điểm kích hoạt (giây tính theo clip gốc, không phụ thuộc speed).\n" +
                      "Nếu > clipLength sẽ bị clamp (log warning 1 lần ở Editor).")]
             public float triggerSeconds = 0f;
 
-            [ShowIf("mode", TriggerMode.Normalized)]
             [Range(0f, 1f)]
             [Tooltip("Thời điểm kích hoạt (0 = đầu clip, 1 = cuối clip). Không phụ thuộc speed.")]
             public float normalizedValue = 0f;
@@ -343,33 +340,25 @@ namespace GaMo.BlenderEditorTools
                      "khiến trigger bị skip trong 1 frame (giống Unity Animation Event).")]
             public bool fireOnce = true;
 
-            [Header("Extra Parameter")] public EventPayloadType payloadType = EventPayloadType.None;
+            public EventPayloadType payloadType = EventPayloadType.None;
+            
 
-            [ShowIf("payloadType", EventPayloadType.Int)]
             public int intValue;
 
-            [ShowIf("payloadType", EventPayloadType.Float)]
             public float floatValue;
 
-            [ShowIf("payloadType", EventPayloadType.String)]
             public string stringValue;
 
-            [ShowIf("payloadType", EventPayloadType.Bool)]
             public bool boolValue;
-
-            [Header("Events")] [ShowIf("payloadType", EventPayloadType.None)]
+            
             public AnimatorEvent onTriggered;
 
-            [ShowIf("payloadType", EventPayloadType.Int)]
             public AnimatorIntEvent onTriggeredInt;
 
-            [ShowIf("payloadType", EventPayloadType.Float)]
             public AnimatorFloatEvent onTriggeredFloat;
 
-            [ShowIf("payloadType", EventPayloadType.String)]
             public AnimatorStringEvent onTriggeredString;
 
-            [ShowIf("payloadType", EventPayloadType.Bool)]
             public AnimatorBoolEvent onTriggeredBool;
 
             // Epsilon tuyệt đối cho phân loại biên.
@@ -445,10 +434,10 @@ namespace GaMo.BlenderEditorTools
 
         // ─── Inspector ────────────────────────────────────────────────────────────
 
-        [Header("Danh sách Events theo thời gian")] [SerializeField]
+        [SerializeField]
         private List<MotionTimeEvent> motionEvents = new List<MotionTimeEvent>();
 
-        [Header("Debug")] [SerializeField] private bool showDebugLog = false;
+        [SerializeField] private bool showDebugLog = false;
 
         // ─── Public API ───────────────────────────────────────────────────────────
 

@@ -383,7 +383,7 @@ public class NCharMovementHandler : NetworkBehaviour
     public void ResetMeleeCombo()
     {
         if (!Object.HasStateAuthority) return;
-        Debug.Log("ResetMeleeCombo");
+        //Debug.Log("ResetMeleeCombo");
         ShootIndex = 0;
         _meleeComboTimer = default;
         _meleeCooldownTimer = default;

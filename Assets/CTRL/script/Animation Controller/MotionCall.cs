@@ -115,14 +115,7 @@ public class MotionCall : StateMachineBehaviour
     {
         var controller = animator.GetComponentInParent<NCharMovementHandler>();
         if (controller != null)
-        {
-            Debug.Log("reset motion");
             controller.ResetMeleeCombo();
-        }
-        else
-        {
-            Debug.Log("reset motion null");
-        }
     }
 
     // ===================================== WEAPON =========================================================
