@@ -5,6 +5,9 @@
 //  Dùng tab system (Binding / Visual / Cooldown / Events / Debug)
 //  nhất quán với TISDirectionalSkillButtonEditor.
 //
+//  THAY ĐỔI: Binding Tab dùng dropdown chọn action từ
+//  TISInputProfileConfig thay vì gõ tay string skillName.
+//
 //  File này chỉ được biên dịch trong Unity Editor.
 //  Đặt trong thư mục Editor/ để Unity nhận đúng.
 // ============================================================
@@ -12,6 +15,7 @@
 #if UNITY_EDITOR
 namespace TrueInputSystem
 {
+    using System.Collections.Generic;
     using UnityEditor;
     using UnityEngine;
     using UnityEngine.UI;
@@ -56,6 +60,19 @@ namespace TrueInputSystem
         private SerializedProperty _onHold;
         private SerializedProperty _onHoldTimed;
 
+        // ── Dropdown state ────────────────────────────────────
+
+        /// <summary>
+        /// Profile được chọn trong Inspector để lấy danh sách action name.
+        /// Lưu bằng EditorPrefs theo instanceID của target để persist qua recompile.
+        /// </summary>
+        private TISInputProfileConfig _linkedProfile;
+        private string[] _actionNames    = System.Array.Empty<string>();
+        private int      _selectedIndex  = -1;
+
+        // Key lưu EditorPrefs: "TIS_SkillBtn_{instanceID}_ProfileGUID"
+        private string _profilePrefKey;
+
         // ── Styles ────────────────────────────────────────────
         private GUIStyle _headerStyle;
         private GUIStyle _badgeStyle;
@@ -96,19 +113,20 @@ namespace TrueInputSystem
             _onRelease     = serializedObject.FindProperty("OnRelease");
             _onHold        = serializedObject.FindProperty("OnHold");
             _onHoldTimed   = serializedObject.FindProperty("OnHoldTimed");
-            
+
+            // ── Khởi tạo dropdown ──────────────────────────────
+            _profilePrefKey = $"TIS_SkillBtn_{target.GetInstanceID()}_ProfileGUID";
+            RestoreLinkedProfileFromPrefs();
+
             SetComponentIcon();
         }
-        
+
         private void SetComponentIcon()
         {
-            // Tìm file icon theo tên, không cần biết nằm ở folder nào
             string[] guids = AssetDatabase.FindAssets("button t:Texture2D");
             foreach (var guid in guids)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
-
-                // Lọc đúng icon của package TrueInputSystem
                 if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
                 {
                     var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
@@ -121,7 +139,7 @@ namespace TrueInputSystem
             }
         }
 
-        // ── Styles init (delayed — requires GUISkin) ──────────
+        // ── Styles init ───────────────────────────────────────
         private void InitStyles()
         {
             if (_stylesInitialized) return;
@@ -154,7 +172,7 @@ namespace TrueInputSystem
             DrawButtonHeader();
             EditorGUILayout.Space(4);
 
-            _tab = GUILayout.Toolbar(_tab, _tabs);
+            _tab = DrawWrappedToolbar(_tab, _tabs);
             EditorGUILayout.Space(6);
 
             switch (_tab)
@@ -167,6 +185,56 @@ namespace TrueInputSystem
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  WRAPPED TOOLBAR
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Vẽ toolbar giống GUILayout.Toolbar nhưng tự xuống hàng khi
+        /// inspector quá hẹp để chứa tất cả tab trên một hàng.
+        /// </summary>
+        private int DrawWrappedToolbar(int selected, string[] tabs)
+        {
+            float viewWidth   = EditorGUIUtility.currentViewWidth - 20f;
+            float tabMinWidth = 60f;
+            float tabPadding  = 4f;
+
+            int tabsPerRow = Mathf.Max(1, Mathf.FloorToInt(
+                (viewWidth + tabPadding) / (tabMinWidth + tabPadding)));
+
+            int tabCount = tabs.Length;
+            int rows     = Mathf.CeilToInt((float)tabCount / tabsPerRow);
+
+            for (int row = 0; row < rows; row++)
+            {
+                int startIdx = row * tabsPerRow;
+                int endIdx   = Mathf.Min(startIdx + tabsPerRow, tabCount);
+                int count    = endIdx - startIdx;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    for (int i = startIdx; i < endIdx; i++)
+                    {
+                        float tabWidth = (viewWidth - (count - 1) * tabPadding) / count;
+
+                        bool isSelected = (selected == i);
+                        bool clicked    = GUILayout.Toggle(
+                            isSelected, tabs[i],
+                            EditorStyles.toolbarButton,
+                            GUILayout.Width(tabWidth), GUILayout.Height(22f));
+
+                        if (clicked && !isSelected)
+                            selected = i;
+
+                        if (i < endIdx - 1)
+                            GUILayout.Space(tabPadding);
+                    }
+                }
+            }
+
+            return selected;
         }
 
         // ══════════════════════════════════════════════════════
@@ -210,10 +278,81 @@ namespace TrueInputSystem
         {
             DrawSectionLabel("Skill Action");
 
-            EditorGUILayout.PropertyField(_skillName,
-                new GUIContent("Skill Name",
-                    "Phải khớp với tên action trong TISInputProfileConfig.\n" +
-                    "GetSkillAction(skillName) trả về true khi đang giữ nút."));
+            // ── Profile picker ────────────────────────────────
+            EditorGUI.BeginChangeCheck();
+            var newProfile = (TISInputProfileConfig)EditorGUILayout.ObjectField(
+                new GUIContent("Profile",
+                    "Chọn TISInputProfileConfig để lấy danh sách action name.\n" +
+                    "Không ảnh hưởng runtime — chỉ dùng để chọn tên action ở Editor."),
+                _linkedProfile,
+                typeof(TISInputProfileConfig),
+                allowSceneObjects: false);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                SetLinkedProfile(newProfile);
+            }
+
+            // ── Dropdown hoặc text field ──────────────────────
+            if (_linkedProfile != null && _actionNames.Length > 0)
+            {
+                // Sync index với giá trị hiện tại của _skillName
+                string currentName = _skillName.stringValue;
+                int syncedIndex = System.Array.IndexOf(_actionNames, currentName);
+
+                // Nếu tên hiện tại không có trong list → hiển thị cảnh báo
+                bool nameNotFound = syncedIndex < 0 && !string.IsNullOrEmpty(currentName);
+                if (nameNotFound)
+                {
+                    DrawHelpBox(
+                        $"Action \"{currentName}\" không tồn tại trong profile.\n" +
+                        "Chọn lại từ dropdown hoặc cập nhật profile.",
+                        MessageType.Warning);
+                    syncedIndex = 0; // fallback để dropdown không crash
+                }
+
+                EditorGUI.BeginChangeCheck();
+                int newIndex = EditorGUILayout.Popup(
+                    new GUIContent("Skill Name",
+                        "Chọn action name từ TISInputProfileConfig.\n" +
+                        "Phải khớp với bindingMobile hoặc actionName trong profile."),
+                    Mathf.Max(syncedIndex, 0),
+                    _actionNames);
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    _selectedIndex = newIndex;
+                    _skillName.stringValue = _actionNames[newIndex];
+                    serializedObject.ApplyModifiedProperties();
+                }
+            }
+            else
+            {
+                // Fallback: gõ tay như cũ khi chưa chọn profile
+                EditorGUILayout.PropertyField(_skillName,
+                    new GUIContent("Skill Name",
+                        "Gõ tay tên action (fallback khi chưa chọn Profile).\n" +
+                        "Phải khớp chính xác với actionName trong TISInputProfileConfig."));
+
+                if (_linkedProfile == null)
+                {
+                    DrawHelpBox(
+                        "Chọn một Profile bên trên để dùng dropdown thay cho gõ tay.\n" +
+                        "Tránh lỗi typo và luôn đồng bộ với config.",
+                        MessageType.Info);
+                }
+                else
+                {
+                    // Có profile nhưng không có action nào có bindingMobile
+                    DrawHelpBox(
+                        "Profile này chưa có action nào có Mobile Binding.\n" +
+                        "Thêm bindingMobile vào TISInputActionDefinition trong profile.",
+                        MessageType.Warning);
+                }
+            }
+
+            // ── Interactable & Touch Routing ──────────────────
+            EditorGUILayout.Space(4);
 
             EditorGUILayout.PropertyField(_interactable,
                 new GUIContent("Interactable",
@@ -228,9 +367,11 @@ namespace TrueInputSystem
                     "OFF = button block touch, camera zone không nhận ngón này.\n" +
                     "ON  = touch xuyên qua xuống camera zone."));
 
+            // ── Usage hint ────────────────────────────────────
+            string skillNameDisplay = _skillName.stringValue;
             DrawHelpBox(
                 "Game script đọc trạng thái:\n" +
-                $"  TISMobileButtonRegistry.WasPressedThisFrame(\"{_skillName.stringValue}\")\n\n" +
+                $"  TISMobileButtonRegistry.WasPressedThisFrame(\"{skillNameDisplay}\")\n\n" +
                 "Hold time:\n" +
                 "  btn.HoldTime  // giây đã giữ",
                 MessageType.Info);
@@ -386,7 +527,6 @@ namespace TrueInputSystem
 
             DrawSectionLabel("Runtime State");
 
-            // Interactable row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("Interactable");
@@ -395,7 +535,6 @@ namespace TrueInputSystem
                 GUI.color = Color.white;
             }
 
-            // HoldTime row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("Hold Time");
@@ -405,7 +544,6 @@ namespace TrueInputSystem
                 GUI.color = Color.white;
             }
 
-            // Cooldown progress bar
             if (_cooldownFill.objectReferenceValue is Image fillImg)
             {
                 EditorGUILayout.Space(4);
@@ -426,6 +564,103 @@ namespace TrueInputSystem
             }
 
             Repaint();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  DROPDOWN HELPERS
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Gán profile mới, rebuild danh sách action names, lưu GUID vào EditorPrefs.
+        /// Chỉ lấy các action có bindingMobile không rỗng (những action button có thể bind trên mobile).
+        /// </summary>
+        private void SetLinkedProfile(TISInputProfileConfig profile)
+        {
+            _linkedProfile = profile;
+
+            if (profile == null)
+            {
+                _actionNames   = System.Array.Empty<string>();
+                _selectedIndex = -1;
+                EditorPrefs.DeleteKey(_profilePrefKey);
+                return;
+            }
+
+            // Lưu GUID để restore sau recompile
+            string path = AssetDatabase.GetAssetPath(profile);
+            string guid = AssetDatabase.AssetPathToGUID(path);
+            EditorPrefs.SetString(_profilePrefKey, guid);
+
+            RebuildActionNames();
+        }
+
+        /// <summary>
+        /// Lấy toàn bộ action name trong profile có bindingMobile hợp lệ
+        /// và tính toán _selectedIndex khớp với _skillName hiện tại.
+        /// </summary>
+        private void RebuildActionNames()
+        {
+            if (_linkedProfile == null)
+            {
+                _actionNames   = System.Array.Empty<string>();
+                _selectedIndex = -1;
+                return;
+            }
+
+            var names = new List<string>();
+            foreach (var action in _linkedProfile.GetAllActions())
+            {
+                // Chỉ hiển thị action có mobile binding — những thứ button mobile có thể dùng
+                if (!string.IsNullOrEmpty(action.bindingMobile))
+                    names.Add(action.actionName);
+            }
+
+            _actionNames = names.ToArray();
+
+            // Sync selected index với _skillName đang lưu
+            string current = _skillName?.stringValue ?? "";
+            _selectedIndex = System.Array.IndexOf(_actionNames, current);
+        }
+
+        /// <summary>
+        /// Sau recompile/OnEnable: khôi phục profile từ GUID lưu trong EditorPrefs
+        /// rồi rebuild dropdown.
+        /// </summary>
+        private void RestoreLinkedProfileFromPrefs()
+        {
+            string guid = EditorPrefs.GetString(_profilePrefKey, "");
+            if (string.IsNullOrEmpty(guid))
+            {
+                // Không có pref → thử tìm profile đầu tiên trong project như gợi ý
+                // (optional: có thể bỏ block này nếu muốn luôn để trống)
+                TryAutoDetectProfile();
+                return;
+            }
+
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!string.IsNullOrEmpty(path))
+            {
+                _linkedProfile = AssetDatabase.LoadAssetAtPath<TISInputProfileConfig>(path);
+            }
+
+            RebuildActionNames();
+        }
+
+        /// <summary>
+        /// Nếu trong project chỉ có đúng 1 TISInputProfileConfig,
+        /// tự động chọn nó để tiện cho project nhỏ/mới.
+        /// Không làm gì nếu có nhiều hơn 1 (tránh chọn sai).
+        /// </summary>
+        private void TryAutoDetectProfile()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:TISInputProfileConfig");
+            if (guids.Length == 1)
+            {
+                string path    = AssetDatabase.GUIDToAssetPath(guids[0]);
+                var    profile = AssetDatabase.LoadAssetAtPath<TISInputProfileConfig>(path);
+                if (profile != null)
+                    SetLinkedProfile(profile);
+            }
         }
 
         // ══════════════════════════════════════════════════════

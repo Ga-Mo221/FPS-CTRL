@@ -157,6 +157,8 @@ namespace Game.UI
         public void SetBaloThree(string weapponOne, string weapponTwo)
             => _loadout.SetBaloThree(weapponOne, weapponTwo);
         
+        public void SetLoadoutVisible(bool visible) => _loadout?.gameObject.SetActive(visible);
+        
         // ============================ ALL ======================================
         
         // Đặt mục tiêu số mạng cần đạt để thắng.

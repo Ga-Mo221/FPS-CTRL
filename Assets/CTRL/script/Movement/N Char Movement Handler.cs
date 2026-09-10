@@ -394,7 +394,7 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         if (!Object.HasStateAuthority) return;
         
-        Debug.Log("StartCoolDownCombat");
+        //Debug.Log("StartCoolDownCombat");
         _canNextAttackCombo = true;
         _meleeComboTimer = default;
         _meleeCooldownTimer = default;
@@ -473,7 +473,7 @@ public class NCharMovementHandler : NetworkBehaviour
         var state = StateFl;
         _stateLogic.ExitADS(ref state);
         StateFl = state;
-        Debug.Log("ResetADS");
+        //Debug.Log("ResetADS");
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]

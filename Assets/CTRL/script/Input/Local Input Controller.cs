@@ -35,6 +35,8 @@ public class LocalInputController : MonoBehaviour
         OnUIChatBox();
 
         OnDragItem();
+
+        OpenLoadOut();
     }
     
     private void OnUI()
@@ -84,6 +86,18 @@ public class LocalInputController : MonoBehaviour
                     _weaponManager.Rpc_RequestChangeWeapon(item.WeaponName.ToString(), item.CurrentBullet, item.MaxBullet);
                     item.Despawn();
                 }
+            }
+        }
+    }
+
+    private void OpenLoadOut()
+    {
+        if (_input.GetSkillAction("B", TISButtonReadMode.PressUp))
+        {
+            var gm = GameManager.Instance;
+            if (gm != null && gm.SetOnuiLoadout(true))
+            {
+                _gameHudController.SetLoadoutVisible(true);
             }
         }
     }

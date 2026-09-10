@@ -152,13 +152,21 @@ public class GameManager : MonoBehaviour
     
     public int GetBestStreak() => _bestStreak;
     
-    public void SetOnUIOptions(bool status)
+    public bool SetOnUIOptions(bool status)
     {
         if (status)
+        {
             if (_onUIChatBox) _onUIChatBox = false;
+            if (_onUILoadout)
+            {
+                _onUIOption = false;
+                return false;
+            }
+        }
         _onUIOption = status;
         
         SetMouseVisible();
+        return true;
     }
     
     public bool OnUIOption() => _onUIOption;
@@ -178,7 +186,7 @@ public class GameManager : MonoBehaviour
     
     public bool OnUILoadout() => _onUILoadout;
 
-    public void SetOnuiLoadout(bool status)
+    public bool SetOnuiLoadout(bool status)
     {
         if (status)
         {
@@ -189,6 +197,7 @@ public class GameManager : MonoBehaviour
         else _onUILoadout = false;
 
         SetMouseVisible();
+        return true;
     }
 
     public bool OnUI() => _onUIOption || _onUIChatBox || _onUILoadout;
@@ -208,13 +217,20 @@ public class GameManager : MonoBehaviour
     public DropItemWeapon GetDropItemWeapon => _dropItemWeapon;
     public void SetDropItemWeapon(DropItemWeapon item) => _dropItemWeapon = item;
 
-    private void SetMouseVisible()
+    private void SetMouseVisible(bool state = false)
     {
-        bool visible = false;
-        if (_onUIOption || _onUILoadout) visible = true;
-        
-        Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
-        Cursor.visible = visible;
+        if (!state)
+        {
+            bool visible = false;
+            if (_onUIOption || _onUILoadout) visible = true;
+
+            Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = visible;
+        }else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 
     public void NewGame()
@@ -236,6 +252,8 @@ public class GameManager : MonoBehaviour
         
         foreach (Transform chill in BulletCaseParrent)
             Destroy(chill.gameObject);
+        
+        SetMouseVisible(true);
     }
 
     public GameObject GetWeapon(string name)

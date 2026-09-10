@@ -20,10 +20,11 @@
 //    • Tên clip mới = GIỮ NGUYÊN tên gốc (không thêm suffix) — để
 //      AnimatorControllerCreator vẫn tự nhận diện & gán Motion đúng
 //      theo tên khi build Animator Controller.
-//    • Chọn thư mục lưu output riêng (không được trùng thư mục clip gốc,
-//      tool sẽ chặn để tránh ghi đè clip gốc).
-//    • Cắt lại clip cùng tên sẽ tự động ghi đè bản cắt trước đó trong
-//      thư mục output (không phải clip gốc).
+//    • Toggle "Ghi đè clip gốc":
+//        ON  → cắt xong ghi thẳng vào clip gốc (giữ nguyên GUID/reference),
+//              ô thư mục output bị ẩn.
+//        OFF → lưu ra thư mục output riêng (tool chặn nếu trùng thư mục gốc),
+//              cắt lại cùng tên sẽ tự ghi đè bản cắt trước trong output.
 // =============================================================
 
 #if UNITY_EDITOR
@@ -48,6 +49,8 @@ public class ClipTrimmerTab
     private Vector2 scroll;
     private string  outputPath = "Assets/Animations/Trimmed";
 
+    [SerializeField] private bool overrideExisting = true;
+
     // ── Styles (khởi tạo lazy) ────────────────────────────────
     private GUIStyle _labelGray;
     private GUIStyle _labelGreen;
@@ -69,17 +72,30 @@ public class ClipTrimmerTab
         scroll = EditorGUILayout.BeginScrollView(scroll, GUILayout.Height(scrollHeight));
         EditorGUILayout.Space(4);
 
-        // ── Output folder ─────────────────────────────────────
-        EditorGUILayout.LabelField("Thư mục lưu kết quả", EditorStyles.boldLabel);
+        // ── Override toggle ───────────────────────────────────
         EditorGUILayout.BeginHorizontal();
-        outputPath = EditorGUILayout.TextField(outputPath);
-        if (GUILayout.Button("Browse", GUILayout.Width(60)))
-        {
-            string chosen = EditorUtility.OpenFolderPanel("Chọn thư mục lưu clip đã cắt", outputPath, "");
-            if (!string.IsNullOrEmpty(chosen) && chosen.StartsWith(Application.dataPath))
-                outputPath = "Assets" + chosen.Substring(Application.dataPath.Length);
-        }
+        overrideExisting = EditorGUILayout.Toggle(overrideExisting, GUILayout.Width(18));
+        EditorGUILayout.LabelField(
+            overrideExisting
+                ? "Ghi đè clip gốc  (không dùng thư mục output)"
+                : "Lưu ra thư mục output  (không ghi đè clip gốc)",
+            overrideExisting ? LabelGreen : LabelGray);
         EditorGUILayout.EndHorizontal();
+
+        // ── Output folder (ẩn khi override) ──────────────────
+        if (!overrideExisting)
+        {
+            EditorGUILayout.LabelField("Thư mục lưu kết quả", EditorStyles.boldLabel);
+            EditorGUILayout.BeginHorizontal();
+            outputPath = EditorGUILayout.TextField(outputPath);
+            if (GUILayout.Button("Browse", GUILayout.Width(60)))
+            {
+                string chosen = EditorUtility.OpenFolderPanel("Chọn thư mục lưu clip đã cắt", outputPath, "");
+                if (!string.IsNullOrEmpty(chosen) && chosen.StartsWith(Application.dataPath))
+                    outputPath = "Assets" + chosen.Substring(Application.dataPath.Length);
+            }
+            EditorGUILayout.EndHorizontal();
+        }
 
         DrawSeparator();
 
@@ -332,8 +348,9 @@ public class ClipTrimmerTab
 
                 try
                 {
-                    TrimClip(clip, startFrames[i], endFrames[i]);
-                    success++;
+                    bool skipped = TrimClip(clip, startFrames[i], endFrames[i], overrideExisting);
+                    if (skipped) skip++;
+                    else         success++;
                 }
                 catch (System.Exception ex)
                 {
@@ -361,7 +378,8 @@ public class ClipTrimmerTab
     // ─────────────────────────────────────────────────────────
     // CORE: CẮT 1 CLIP
     // ─────────────────────────────────────────────────────────
-    private void TrimClip(AnimationClip source, int startFrame, int endFrame)
+    /// <returns><c>true</c> nếu bị skip (file đã tồn tại và overrideExisting==false).</returns>
+    private bool TrimClip(AnimationClip source, int startFrame, int endFrame, bool overrideExisting)
     {
         float fps      = source.frameRate;
         float startTime = startFrame / fps;
@@ -417,22 +435,32 @@ public class ClipTrimmerTab
         AnimationUtility.SetAnimationEvents(newClip, newEvents.ToArray());
 
         // ── Lưu asset ─────────────────────────────────────────
-        // Tên trùng tên gốc, nên nếu cắt lại (đổi start/end rồi cắt lần nữa)
-        // cần xóa asset cũ tại đúng path này trước, tránh lỗi "already exists".
-        string assetPath   = $"{outputPath}/{newClip.name}.anim";
-        string sourcePath  = AssetDatabase.GetAssetPath(source);
+        string sourcePath = AssetDatabase.GetAssetPath(source);
 
-        // An toàn: tuyệt đối không ghi đè lên chính clip gốc (nếu output
-        // path trùng thư mục chứa clip gốc) — clip gốc phải luôn giữ nguyên.
-        if (string.Equals(assetPath, sourcePath, System.StringComparison.OrdinalIgnoreCase))
-            throw new System.Exception(
-                $"Thư mục output trùng với thư mục clip gốc — sẽ ghi đè '{source.name}'. Hãy chọn thư mục output khác.");
+        if (overrideExisting)
+        {
+            // Ghi đè thẳng vào clip gốc — CopySerialized giữ nguyên GUID/reference
+            EditorUtility.CopySerialized(newClip, source);
+            EditorUtility.SetDirty(source);
+            Debug.Log($"[ClipTrimmer] ✅ Đã ghi đè clip gốc: {sourcePath} [{startFrame}-{endFrame}]");
+        }
+        else
+        {
+            // Lưu ra outputPath
+            string assetPath   = $"{outputPath}/{newClip.name}.anim";
 
-        if (AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath) != null)
-            AssetDatabase.DeleteAsset(assetPath);
-        AssetDatabase.CreateAsset(newClip, assetPath);
+            if (string.Equals(assetPath, sourcePath, System.StringComparison.OrdinalIgnoreCase))
+                throw new System.Exception(
+                    $"Thư mục output trùng với thư mục clip gốc — sẽ ghi đè '{source.name}'. Hãy chọn thư mục output khác.");
 
-        Debug.Log($"[ClipTrimmer] ✅ Đã cắt: {source.name} [{startFrame}-{endFrame}] → {assetPath}");
+            if (AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath) != null)
+                AssetDatabase.DeleteAsset(assetPath);
+
+            AssetDatabase.CreateAsset(newClip, assetPath);
+            Debug.Log($"[ClipTrimmer] ✅ Đã cắt: {source.name} [{startFrame}-{endFrame}] → {assetPath}");
+        }
+
+        return false; // not skipped
     }
 
     // ─────────────────────────────────────────────────────────

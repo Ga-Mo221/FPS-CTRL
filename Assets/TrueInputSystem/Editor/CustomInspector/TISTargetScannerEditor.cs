@@ -143,7 +143,7 @@ namespace TrueInputSystem
             DrawScannerHeader();
             EditorGUILayout.Space(4);
 
-            _tab = GUILayout.Toolbar(_tab, _tabs);
+            _tab = DrawWrappedToolbar(_tab, _tabs);
             EditorGUILayout.Space(6);
 
             switch (_tab)
@@ -155,6 +155,56 @@ namespace TrueInputSystem
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  WRAPPED TOOLBAR
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Vẽ toolbar giống GUILayout.Toolbar nhưng tự xuống hàng khi
+        /// inspector quá hẹp để chứa tất cả tab trên một hàng.
+        /// </summary>
+        private int DrawWrappedToolbar(int selected, string[] tabs)
+        {
+            float viewWidth   = EditorGUIUtility.currentViewWidth - 20f;
+            float tabMinWidth = 60f;
+            float tabPadding  = 4f;
+
+            int tabsPerRow = Mathf.Max(1, Mathf.FloorToInt(
+                (viewWidth + tabPadding) / (tabMinWidth + tabPadding)));
+
+            int tabCount = tabs.Length;
+            int rows     = Mathf.CeilToInt((float)tabCount / tabsPerRow);
+
+            for (int row = 0; row < rows; row++)
+            {
+                int startIdx = row * tabsPerRow;
+                int endIdx   = Mathf.Min(startIdx + tabsPerRow, tabCount);
+                int count    = endIdx - startIdx;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    for (int i = startIdx; i < endIdx; i++)
+                    {
+                        float tabWidth = (viewWidth - (count - 1) * tabPadding) / count;
+
+                        bool isSelected = (selected == i);
+                        bool clicked    = GUILayout.Toggle(
+                            isSelected, tabs[i],
+                            EditorStyles.toolbarButton,
+                            GUILayout.Width(tabWidth), GUILayout.Height(22f));
+
+                        if (clicked && !isSelected)
+                            selected = i;
+
+                        if (i < endIdx - 1)
+                            GUILayout.Space(tabPadding);
+                    }
+                }
+            }
+
+            return selected;
         }
 
         // ══════════════════════════════════════════════════════

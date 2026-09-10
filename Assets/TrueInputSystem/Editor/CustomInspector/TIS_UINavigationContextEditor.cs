@@ -105,6 +105,54 @@ namespace TrueInputSystem
             };
         }
 
+        // ── Wrapped Toolbar ───────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Vẽ toolbar giống GUILayout.Toolbar nhưng tự xuống hàng khi
+        /// inspector quá hẹp để chứa tất cả tab trên một hàng.
+        /// </summary>
+        private int DrawWrappedToolbar(int selected, string[] tabs)
+        {
+            float viewWidth   = EditorGUIUtility.currentViewWidth - 20f;
+            float tabMinWidth = 100f;
+            float tabPadding  = 4f;
+
+            int tabsPerRow = Mathf.Max(1, Mathf.FloorToInt(
+                (viewWidth + tabPadding) / (tabMinWidth + tabPadding)));
+
+            int tabCount = tabs.Length;
+            int rows     = Mathf.CeilToInt((float)tabCount / tabsPerRow);
+
+            for (int row = 0; row < rows; row++)
+            {
+                int startIdx = row * tabsPerRow;
+                int endIdx   = Mathf.Min(startIdx + tabsPerRow, tabCount);
+                int count    = endIdx - startIdx;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    for (int i = startIdx; i < endIdx; i++)
+                    {
+                        float tabWidth = (viewWidth - (count - 1) * tabPadding) / count;
+
+                        bool isSelected = (selected == i);
+                        bool clicked    = GUILayout.Toggle(
+                            isSelected, tabs[i],
+                            EditorStyles.toolbarButton,
+                            GUILayout.Width(tabWidth), GUILayout.Height(22f));
+
+                        if (clicked && !isSelected)
+                            selected = i;
+
+                        if (i < endIdx - 1)
+                            GUILayout.Space(tabPadding);
+                    }
+                }
+            }
+
+            return selected;
+        }
+
         // ── Main draw ─────────────────────────────────────────────────────────────
 
         public override void OnInspectorGUI()
@@ -116,7 +164,7 @@ namespace TrueInputSystem
             DrawHeaders();
             EditorGUILayout.Space(4);
 
-            _selectedTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(26));
+            _selectedTab = DrawWrappedToolbar(_selectedTab, _tabLabels);
             EditorGUILayout.Space(6);
 
             switch (_selectedTab)
@@ -181,10 +229,7 @@ namespace TrueInputSystem
 
             EditorGUILayout.Space(4);
 
-            var prevBg = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.20f, 0.55f, 0.85f, 1f);   // blue
-
-            if (GUILayout.Button("Scan Child Buttons", GUILayout.Height(28)))
+            if (GUILayout.Button("Scan Child Buttons", EditorStyles.toolbarButton, GUILayout.Height(22f)))
             {
                 var scanCtx = (TISUINavigationContext)target;
                 Undo.RecordObject(scanCtx, "Scan Child Buttons");
@@ -192,7 +237,6 @@ namespace TrueInputSystem
                 EditorUtility.SetDirty(scanCtx);
             }
 
-            GUI.backgroundColor = prevBg;
             EditorGUILayout.EndVertical();
 
             // ── Runtime State (chỉ hiện khi đang Play) ───────────────────────────

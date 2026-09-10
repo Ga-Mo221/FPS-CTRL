@@ -41,6 +41,8 @@ public class AnimatorControllerCreator : EditorWindow
     [SerializeField] private List<AnimationClip> renameClips = new List<AnimationClip>();
     private string  removePrefix = "";
     private string  removeSuffix = "";
+    private string  findText     = "";
+    private string  replaceText  = "";
     private Vector2 renameScroll;
 
     // ── Trim Clips State (Tab 3) ──────────────────────────────
@@ -433,6 +435,7 @@ public class AnimatorControllerCreator : EditorWindow
         renameScroll = EditorGUILayout.BeginScrollView(renameScroll, GUILayout.Height(scrollHeight));
         EditorGUILayout.Space(4);
 
+        // ── Clip list ─────────────────────────────────────────
         EditorGUILayout.LabelField("Danh sách Clips", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
         var so   = new SerializedObject(this);
@@ -442,6 +445,7 @@ public class AnimatorControllerCreator : EditorWindow
         EditorGUILayout.EndVertical();
         EditorGUILayout.Space(6);
 
+        // ── Xóa Prefix / Suffix ───────────────────────────────
         EditorGUILayout.LabelField("Xóa khỏi tên", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
         EditorGUILayout.BeginHorizontal();
@@ -455,8 +459,28 @@ public class AnimatorControllerCreator : EditorWindow
         EditorGUILayout.EndVertical();
         EditorGUILayout.Space(6);
 
+        // ── Find / Replace ────────────────────────────────────
+        EditorGUILayout.LabelField("Find / Replace", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Find", GUILayout.Width(120));
+        findText = EditorGUILayout.TextField(findText);
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Replace với", GUILayout.Width(120));
+        replaceText = EditorGUILayout.TextField(replaceText);
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.HelpBox(
+            "Tìm và thay thế chuỗi bất kỳ trong tên clip (phân biệt hoa/thường)." +
+            "Để trống 'Replace với' để xóa chuỗi tìm được.",
+            MessageType.None);
+        EditorGUILayout.EndVertical();
+        EditorGUILayout.Space(6);
+
+        // ── Preview ───────────────────────────────────────────
         bool hasClips  = renameClips != null && renameClips.Count > 0;
-        bool hasTarget = !string.IsNullOrEmpty(removePrefix) || !string.IsNullOrEmpty(removeSuffix);
+        bool hasTarget = !string.IsNullOrEmpty(removePrefix) || !string.IsNullOrEmpty(removeSuffix)
+                      || !string.IsNullOrEmpty(findText);
 
         if (hasClips && hasTarget)
         {
@@ -476,7 +500,7 @@ public class AnimatorControllerCreator : EditorWindow
             foreach (var clip in renameClips)
             {
                 if (clip == null) continue;
-                string newName = ApplyRenameRules(clip.name, removePrefix, removeSuffix);
+                string newName = ApplyRenameRules(clip.name, removePrefix, removeSuffix, findText, replaceText);
                 bool changed   = newName != clip.name;
 
                 EditorGUILayout.BeginHorizontal();
@@ -490,6 +514,7 @@ public class AnimatorControllerCreator : EditorWindow
 
         EditorGUILayout.EndScrollView();
 
+        // ── Footer ────────────────────────────────────────────
         EditorGUILayout.BeginVertical(GUILayout.Height(footerHeight));
         GUILayout.FlexibleSpace();
 
@@ -501,8 +526,8 @@ public class AnimatorControllerCreator : EditorWindow
               fixedHeight = Mathf.Clamp(footerHeight - 16f, 28f, 80f) };
 
         string btnLabel = changeCount > 0
-            ? $"Xóa prefix/suffix  ({changeCount} clip sẽ đổi tên)"
-            : "Xóa prefix/suffix";
+            ? $"Đổi tên  ({changeCount} clip sẽ thay đổi)"
+            : "Đổi tên";
 
         if (GUILayout.Button(btnLabel, btn))
             ExecuteRename();
@@ -517,18 +542,31 @@ public class AnimatorControllerCreator : EditorWindow
         if (renameClips == null) return 0;
         int count = 0;
         foreach (var clip in renameClips)
-            if (clip != null && ApplyRenameRules(clip.name, removePrefix, removeSuffix) != clip.name)
+            if (clip != null && ApplyRenameRules(clip.name, removePrefix, removeSuffix, findText, replaceText) != clip.name)
                 count++;
         return count;
     }
 
-    private static string ApplyRenameRules(string original, string prefix, string suffix)
+    /// <summary>
+    /// Áp dụng theo thứ tự: xóa prefix → xóa suffix → find/replace.
+    /// </summary>
+    private static string ApplyRenameRules(string original, string prefix, string suffix,
+                                           string find = "", string replace = "")
     {
         string result = original;
+
+        // 1. Xóa prefix
         if (!string.IsNullOrEmpty(prefix) && result.StartsWith(prefix))
             result = result.Substring(prefix.Length);
+
+        // 2. Xóa suffix
         if (!string.IsNullOrEmpty(suffix) && result.EndsWith(suffix))
             result = result.Substring(0, result.Length - suffix.Length);
+
+        // 3. Find / Replace (phân biệt hoa/thường)
+        if (!string.IsNullOrEmpty(find) && result.Contains(find))
+            result = result.Replace(find, replace ?? "");
+
         return string.IsNullOrWhiteSpace(result) ? original : result;
     }
 
@@ -543,7 +581,7 @@ public class AnimatorControllerCreator : EditorWindow
             foreach (var clip in renameClips)
             {
                 if (clip == null) { skip++; continue; }
-                string newName = ApplyRenameRules(clip.name, removePrefix, removeSuffix);
+                string newName = ApplyRenameRules(clip.name, removePrefix, removeSuffix, findText, replaceText);
                 if (newName == clip.name) { skip++; continue; }
 
                 string err = AssetDatabase.RenameAsset(AssetDatabase.GetAssetPath(clip), newName);

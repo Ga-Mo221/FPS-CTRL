@@ -64,9 +64,7 @@ namespace TrueInputSystem
                 EditorGUI.indentLevel--;
             }
 
-            EditorGUILayout.Space(12);
-
-            if (GUILayout.Button("Rebuild Navigation", GUILayout.Height(36)))
+            if (GUILayout.Button("Rebuild Navigation", GUILayout.Height(20)))
             {
                 Undo.RecordObject(group, "Rebuild Group Navigation");
 

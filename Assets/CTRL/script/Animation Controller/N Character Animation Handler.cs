@@ -76,6 +76,6 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     public void LocalStopSwitch()
     {
         _localIsSwitching = false;
-        Debug.Log("[NCharacterAnimationHandler] LocalStopSwitch");
+        //Debug.Log("[NCharacterAnimationHandler] LocalStopSwitch");
     }
 }

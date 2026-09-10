@@ -3,11 +3,17 @@
 //
 //  Custom Editor cho TISDirectionalSkillButton.
 //  File này chỉ được biên dịch trong Unity Editor (không vào build).
+//
+//  THAY ĐỔI: Binding Tab dùng dropdown chọn action từ
+//  TISInputProfileConfig thay vì gõ tay string skillName.
+//  Direction Key cũng có dropdown (tất cả action trong profile)
+//  với option "Auto" đầu tiên → dùng skillName + "_Dir".
 // ============================================================
 
 #if UNITY_EDITOR
 namespace TrueInputSystem
 {
+    using System.Collections.Generic;
     using UnityEditor;
     using UnityEngine;
 
@@ -80,6 +86,22 @@ namespace TrueInputSystem
         private SerializedProperty _onDirectionCast;
         private SerializedProperty _onCancelled;
 
+        // ── Dropdown state ────────────────────────────────────
+        private TISInputProfileConfig _linkedProfile;
+
+        // Skill Name dropdown — action có bindingMobile
+        private string[] _actionNames   = System.Array.Empty<string>();
+        private int      _selectedIndex = -1;
+
+        // Direction Key dropdown — tất cả action + entry [0] = Auto
+        // Entry [0] luôn là AUTO_ENTRY (→ _directionActionName = "")
+        private string[] _dirKeyDisplayNames = System.Array.Empty<string>(); // hiển thị trong popup
+        private string[] _dirKeyValues       = System.Array.Empty<string>(); // giá trị ghi vào prop
+        private int      _dirKeyIndex        = 0;
+        private const    string AUTO_LABEL   = "— Auto  (skillName + \"_Dir\") —";
+
+        private string   _profilePrefKey;
+
         // ── Styles ────────────────────────────────────────────
         private GUIStyle _headerStyle;
         private GUIStyle _badgeStyle;
@@ -146,18 +168,20 @@ namespace TrueInputSystem
             _cancelZoneActiveSprite  = serializedObject.FindProperty("_cancelZoneActiveSprite");
             _indicatorCancelColor    = serializedObject.FindProperty("_indicatorCancelColor");
             _indicatorCancelSprite   = serializedObject.FindProperty("_indicatorCancelSprite");
+
+            // ── Khởi tạo dropdown ──────────────────────────────
+            _profilePrefKey = $"TIS_DirBtn_{target.GetInstanceID()}_ProfileGUID";
+            RestoreLinkedProfileFromPrefs();
+
             SetComponentIcon();
         }
-        
+
         private void SetComponentIcon()
         {
-            // Tìm file icon theo tên, không cần biết nằm ở folder nào
             string[] guids = AssetDatabase.FindAssets("directionbuttton t:Texture2D");
             foreach (var guid in guids)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
-
-                // Lọc đúng icon của package TrueInputSystem
                 if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
                 {
                     var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
@@ -170,7 +194,7 @@ namespace TrueInputSystem
             }
         }
 
-        // ── Styles init (delayed — requires GUISkin) ──────────
+        // ── Styles init ───────────────────────────────────────
         private void InitStyles()
         {
             if (_stylesInitialized) return;
@@ -207,7 +231,7 @@ namespace TrueInputSystem
             DrawButtonHeader(key);
             EditorGUILayout.Space(4);
 
-            _tab = GUILayout.Toolbar(_tab, _tabs);
+            _tab = DrawWrappedToolbar(_tab, _tabs);
             EditorGUILayout.Space(6);
 
             switch (_tab)
@@ -220,6 +244,59 @@ namespace TrueInputSystem
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  WRAPPED TOOLBAR
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Vẽ toolbar giống GUILayout.Toolbar nhưng tự xuống hàng khi
+        /// inspector quá hẹp để chứa tất cả tab trên một hàng.
+        /// </summary>
+        private int DrawWrappedToolbar(int selected, string[] tabs)
+        {
+            float viewWidth   = EditorGUIUtility.currentViewWidth - 20f; // trừ padding
+            float tabMinWidth = 60f;   // chiều rộng tối thiểu mỗi tab
+            float tabPadding  = 4f;    // khoảng cách giữa các tab
+
+            // Tính số tab vừa trên một hàng
+            int tabsPerRow = Mathf.Max(1, Mathf.FloorToInt(
+                (viewWidth + tabPadding) / (tabMinWidth + tabPadding)));
+
+            // Chia tabs thành các nhóm hàng
+            int tabCount = tabs.Length;
+            int rows     = Mathf.CeilToInt((float)tabCount / tabsPerRow);
+
+            for (int row = 0; row < rows; row++)
+            {
+                int startIdx = row * tabsPerRow;
+                int endIdx   = Mathf.Min(startIdx + tabsPerRow, tabCount);
+                int count    = endIdx - startIdx;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    for (int i = startIdx; i < endIdx; i++)
+                    {
+                        // Phân bổ đều chiều rộng cho các tab trong hàng
+                        float tabWidth = (viewWidth - (count - 1) * tabPadding) / count;
+
+                        bool isSelected = (selected == i);
+                        bool clicked    = GUILayout.Toggle(
+                            isSelected, tabs[i],
+                            isSelected ? EditorStyles.toolbarButton : EditorStyles.toolbarButton,
+                            GUILayout.Width(tabWidth), GUILayout.Height(22f));
+
+                        if (clicked && !isSelected)
+                            selected = i;
+
+                        if (i < endIdx - 1)
+                            GUILayout.Space(tabPadding);
+                    }
+                }
+            }
+
+            return selected;
         }
 
         // ══════════════════════════════════════════════════════
@@ -267,21 +344,132 @@ namespace TrueInputSystem
         {
             DrawSectionLabel("Skill Action");
 
-            EditorGUILayout.PropertyField(_skillName,
-                new GUIContent("Skill Name",
-                    "Phải khớp với tên action trong TISInputProfileConfig.\n" +
-                    "GetSkillAction(skillName) trả về true đúng 1 frame khi cast."));
+            // ── Profile picker ────────────────────────────────
+            EditorGUI.BeginChangeCheck();
+            var newProfile = (TISInputProfileConfig)EditorGUILayout.ObjectField(
+                new GUIContent("Profile",
+                    "Chọn TISInputProfileConfig để lấy danh sách action name.\n" +
+                    "Không ảnh hưởng runtime — chỉ dùng để chọn tên action ở Editor."),
+                _linkedProfile,
+                typeof(TISInputProfileConfig),
+                allowSceneObjects: false);
 
-            EditorGUILayout.PropertyField(_directionActionName,
-                new GUIContent("Direction Key",
-                    "Key đọc từ TISDirectionalRegistry.GetDirection(key).\n" +
-                    "Để trống = skillName + '_Dir'."));
+            if (EditorGUI.EndChangeCheck())
+                SetLinkedProfile(newProfile);
 
+            // ── Skill Name: dropdown hoặc text field ──────────
+            if (_linkedProfile != null && _actionNames.Length > 0)
+            {
+                string currentName = _skillName.stringValue;
+                int syncedIndex    = System.Array.IndexOf(_actionNames, currentName);
+
+                if (syncedIndex < 0 && !string.IsNullOrEmpty(currentName))
+                {
+                    DrawHelpBox(
+                        $"Action \"{currentName}\" không tồn tại trong profile.\n" +
+                        "Chọn lại từ dropdown hoặc cập nhật profile.",
+                        MessageType.Warning);
+                    syncedIndex = 0;
+                }
+
+                EditorGUI.BeginChangeCheck();
+                int newIndex = EditorGUILayout.Popup(
+                    new GUIContent("Skill Name",
+                        "Chọn action name từ TISInputProfileConfig.\n" +
+                        "GetSkillAction(skillName) trả về true đúng 1 frame khi cast."),
+                    Mathf.Max(syncedIndex, 0),
+                    _actionNames);
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    _selectedIndex         = newIndex;
+                    _skillName.stringValue = _actionNames[newIndex];
+                    serializedObject.ApplyModifiedProperties();
+                }
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(_skillName,
+                    new GUIContent("Skill Name",
+                        "Gõ tay tên action (fallback khi chưa chọn Profile).\n" +
+                        "Phải khớp chính xác với actionName trong TISInputProfileConfig."));
+
+                if (_linkedProfile == null)
+                    DrawHelpBox(
+                        "Chọn một Profile bên trên để dùng dropdown thay cho gõ tay.\n" +
+                        "Tránh lỗi typo và luôn đồng bộ với config.",
+                        MessageType.Info);
+                else
+                    DrawHelpBox(
+                        "Profile này chưa có action nào có Mobile Binding.\n" +
+                        "Thêm bindingMobile vào TISInputActionDefinition trong profile.",
+                        MessageType.Warning);
+            }
+
+            // ── Direction Key ─────────────────────────────────
+            EditorGUILayout.Space(6);
+            DrawSectionLabel("Direction Key");
+
+            if (_linkedProfile != null && _dirKeyDisplayNames.Length > 0)
+            {
+                // Sync index với _directionActionName hiện tại
+                string currentDirKey = _directionActionName.stringValue;
+                int syncedDirIndex;
+
+                if (string.IsNullOrEmpty(currentDirKey))
+                {
+                    // Đang ở Auto mode → index 0
+                    syncedDirIndex = 0;
+                }
+                else
+                {
+                    // Tìm trong _dirKeyValues (bắt đầu từ index 1 vì 0 = Auto)
+                    syncedDirIndex = System.Array.IndexOf(_dirKeyValues, currentDirKey);
+                    if (syncedDirIndex < 0)
+                    {
+                        // Tên hiện tại không có trong profile → cảnh báo + fallback Auto
+                        DrawHelpBox(
+                            $"Direction Key \"{currentDirKey}\" không tồn tại trong profile.\n" +
+                            "Chọn lại từ dropdown hoặc giữ Auto.",
+                            MessageType.Warning);
+                        syncedDirIndex = 0;
+                    }
+                }
+
+                EditorGUI.BeginChangeCheck();
+                int newDirIndex = EditorGUILayout.Popup(
+                    new GUIContent("Direction Key",
+                        "Chọn action name làm key lưu vào TISDirectionalRegistry.\n" +
+                        "Auto → tự dùng skillName + \"_Dir\" (khuyên dùng nếu không cần override)."),
+                    syncedDirIndex,
+                    _dirKeyDisplayNames);
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    _dirKeyIndex = newDirIndex;
+                    // index 0 = Auto → ghi chuỗi rỗng
+                    _directionActionName.stringValue = newDirIndex == 0 ? "" : _dirKeyValues[newDirIndex];
+                    serializedObject.ApplyModifiedProperties();
+                }
+            }
+            else
+            {
+                // Fallback text field khi chưa có profile
+                EditorGUILayout.PropertyField(_directionActionName,
+                    new GUIContent("Direction Key",
+                        "Key đọc từ TISDirectionalRegistry.GetDirection(key).\n" +
+                        "Để trống = tự dùng skillName + \"_Dir\"."));
+            }
+
+            // Effective key (read-only preview) — luôn hiển thị
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUILayout.TextField(new GUIContent("Effective Key",
-                "Key thực tế đang dùng để ghi/đọc direction registry."), $"\"{key}\"");
+            EditorGUILayout.TextField(
+                new GUIContent("Effective Key",
+                    "Key thực tế đang dùng để ghi/đọc direction registry."),
+                $"\"{key}\"");
             EditorGUI.EndDisabledGroup();
 
+            // ── Touch Routing ─────────────────────────────────
             EditorGUILayout.Space(6);
             DrawSectionLabel("Touch Routing");
 
@@ -290,11 +478,13 @@ namespace TrueInputSystem
                     "OFF = button block touch, camera zone không nhận ngón này.\n" +
                     "ON  = touch xuyên qua xuống camera zone."));
 
+            // ── Usage hint ────────────────────────────────────
+            string sn = _skillName.stringValue;
             DrawHelpBox(
                 "Game script đọc hướng:\n" +
                 $"  Vector2 dir = TISDirectionalRegistry.GetDirection(\"{key}\");\n\n" +
                 "Hoặc check cast + direction:\n" +
-                $"  if (TISMobileButtonRegistry.WasPressedThisFrame(\"{_skillName.stringValue}\"))\n" +
+                $"  if (TISMobileButtonRegistry.WasPressedThisFrame(\"{sn}\"))\n" +
                 $"      dir = TISDirectionalRegistry.GetDirection(\"{key}\");",
                 MessageType.Info);
         }
@@ -352,7 +542,6 @@ namespace TrueInputSystem
 
         private void DrawVisualTab()
         {
-            // ── Sub-tab bar ───────────────────────────────────
             EditorGUI.BeginChangeCheck();
             _visualSubTab = GUILayout.Toolbar(_visualSubTab, _visualSubTabs,
                 EditorStyles.toolbarButton, GUILayout.Height(22f));
@@ -360,9 +549,9 @@ namespace TrueInputSystem
 
             switch (_visualSubTab)
             {
-                case 0: DrawVisualSubTab_Button();    break;
-                case 1: DrawVisualSubTab_Indicator(); break;
-                case 2: DrawVisualSubTab_CancelZone();break;
+                case 0: DrawVisualSubTab_Button();     break;
+                case 1: DrawVisualSubTab_Indicator();  break;
+                case 2: DrawVisualSubTab_CancelZone(); break;
             }
         }
 
@@ -371,13 +560,12 @@ namespace TrueInputSystem
         {
             DrawSectionLabel("Button States");
 
-            // ── Visual Mode dropdown ───────────────────────────
             EditorGUILayout.PropertyField(_buttonVisualMode,
                 new GUIContent("Visual Mode",
                     "ColorTint: đổi màu Image, giữ sprite gốc.\n" +
                     "SpriteSwap: đổi sprite theo state, color luôn = white."));
 
-            var bMode = (TISDirectionalSkillButton.VisualMode)_buttonVisualMode.enumValueIndex;
+            var bMode      = (TISDirectionalSkillButton.VisualMode)_buttonVisualMode.enumValueIndex;
             bool showColor  = bMode == TISDirectionalSkillButton.VisualMode.ColorTint;
             bool showSprite = bMode == TISDirectionalSkillButton.VisualMode.SpriteSwap;
 
@@ -404,7 +592,7 @@ namespace TrueInputSystem
 
                 EditorGUILayout.LabelField("State", EditorStyles.boldLabel, GUILayout.Width(labelW));
                 if (showColor)
-                    EditorGUILayout.LabelField("Color", EditorStyles.boldLabel, GUILayout.Width(colorW));
+                    EditorGUILayout.LabelField("Color",  EditorStyles.boldLabel, GUILayout.Width(colorW));
                 if (showSprite)
                     EditorGUILayout.LabelField("Sprite", EditorStyles.boldLabel, GUILayout.Width(spriteW));
             }
@@ -427,7 +615,6 @@ namespace TrueInputSystem
                 "Image vòng tròn tầm kỹ năng — hiện khi đang kéo, ẩn khi nhả."));
         }
 
-        /// <summary>Vẽ 1 hàng state: Label + (Color | Sprite) tùy VisualMode.</summary>
         private void DrawButtonStateRow(string label,
             SerializedProperty colorProp, SerializedProperty spriteProp,
             bool showColor, bool showSprite)
@@ -435,9 +622,9 @@ namespace TrueInputSystem
             EditorGUILayout.Space(1);
             using (new EditorGUILayout.HorizontalScope())
             {
-                float totalW  = EditorGUIUtility.currentViewWidth - 20f;
-                float labelW  = totalW * 0.35f;
-                float fieldW  = totalW * 0.60f;
+                float totalW = EditorGUIUtility.currentViewWidth - 20f;
+                float labelW = totalW * 0.35f;
+                float fieldW = totalW * 0.60f;
 
                 EditorGUILayout.LabelField(label, GUILayout.Width(labelW));
 
@@ -479,13 +666,12 @@ namespace TrueInputSystem
                 return;
             }
 
-            // ── Visual Mode dropdown ───────────────────────────
             EditorGUILayout.PropertyField(_indicatorVisualMode,
                 new GUIContent("Visual Mode",
                     "ColorTint: đổi màu indicator theo state.\n" +
                     "SpriteSwap: đổi sprite, color luôn = white."));
 
-            var iMode = (TISDirectionalSkillButton.VisualMode)_indicatorVisualMode.enumValueIndex;
+            var iMode       = (TISDirectionalSkillButton.VisualMode)_indicatorVisualMode.enumValueIndex;
             bool showColor  = iMode == TISDirectionalSkillButton.VisualMode.ColorTint;
             bool showSprite = iMode == TISDirectionalSkillButton.VisualMode.SpriteSwap;
 
@@ -502,7 +688,7 @@ namespace TrueInputSystem
             {
                 EditorGUILayout.PropertyField(_indicatorLength, new GUIContent("Length (px)",
                     "Độ dài indicator từ tâm button."));
-                EditorGUILayout.PropertyField(_indicatorWidth,  new GUIContent("Width (px)"));
+                EditorGUILayout.PropertyField(_indicatorWidth, new GUIContent("Width (px)"));
             }
             EditorGUI.indentLevel--;
 
@@ -518,7 +704,6 @@ namespace TrueInputSystem
             DrawIndicatorStateRow("Ready (threshold reached)",  _indicatorReadyColor, _indicatorReadySprite,    showColor, showSprite);
         }
 
-        /// <summary>Vẽ 1 hàng state indicator tùy VisualMode.</summary>
         private void DrawIndicatorStateRow(string label,
             SerializedProperty colorProp, SerializedProperty spriteProp,
             bool showColor, bool showSprite)
@@ -578,13 +763,12 @@ namespace TrueInputSystem
             EditorGUILayout.PropertyField(_cancelZoneImage, new GUIContent("Cancel Zone Image",
                 "Image để đổi màu/sprite khi hover/active.\nĐể null = chỉ detect vùng, không đổi visual."));
 
-            // ── Visual Mode dropdown ───────────────────────────
             EditorGUILayout.PropertyField(_cancelZoneVisualMode,
                 new GUIContent("Visual Mode",
                     "ColorTint: đổi màu cancel zone theo state.\n" +
                     "SpriteSwap: đổi sprite, color luôn = white."));
 
-            var czMode = (TISDirectionalSkillButton.VisualMode)_cancelZoneVisualMode.enumValueIndex;
+            var czMode      = (TISDirectionalSkillButton.VisualMode)_cancelZoneVisualMode.enumValueIndex;
             bool showColor  = czMode == TISDirectionalSkillButton.VisualMode.ColorTint;
             bool showSprite = czMode == TISDirectionalSkillButton.VisualMode.SpriteSwap;
 
@@ -601,14 +785,13 @@ namespace TrueInputSystem
             else
                 EditorGUILayout.HelpBox("SpriteSwap: chỉ đổi sprite. Image.color luôn = white.", MessageType.None);
 
-            DrawCancelStateRow("Normal (idle)",      _cancelZoneNormalColor, _cancelZoneNormalSprite, showColor, showSprite);
-            DrawCancelStateRow("Active (hovering)",  _cancelZoneActiveColor, _cancelZoneActiveSprite, showColor, showSprite);
+            DrawCancelStateRow("Normal (idle)",     _cancelZoneNormalColor, _cancelZoneNormalSprite, showColor, showSprite);
+            DrawCancelStateRow("Active (hovering)", _cancelZoneActiveColor, _cancelZoneActiveSprite, showColor, showSprite);
 
             EditorGUILayout.Space(6);
             DrawSectionLabel("Indicator Cancel State");
 
-            // Indicator cancel state dùng cùng _indicatorVisualMode (vì cùng indicator image)
-            var iMode       = (TISDirectionalSkillButton.VisualMode)_indicatorVisualMode.enumValueIndex;
+            var iMode        = (TISDirectionalSkillButton.VisualMode)_indicatorVisualMode.enumValueIndex;
             bool iShowColor  = iMode == TISDirectionalSkillButton.VisualMode.ColorTint;
             bool iShowSprite = iMode == TISDirectionalSkillButton.VisualMode.SpriteSwap;
 
@@ -619,7 +802,6 @@ namespace TrueInputSystem
             DrawCancelStateRow("Indicator (cancel)", _indicatorCancelColor, _indicatorCancelSprite, iShowColor, iShowSprite);
         }
 
-        /// <summary>Vẽ 1 hàng state cancel zone tùy VisualMode.</summary>
         private void DrawCancelStateRow(string label,
             SerializedProperty colorProp, SerializedProperty spriteProp,
             bool showColor, bool showSprite)
@@ -701,7 +883,6 @@ namespace TrueInputSystem
 
             DrawSectionLabel("Runtime State");
 
-            // IsDragging row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("IsDragging");
@@ -710,7 +891,6 @@ namespace TrueInputSystem
                 GUI.color = Color.white;
             }
 
-            // IsInCancelZone row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("IsInCancelZone");
@@ -719,7 +899,6 @@ namespace TrueInputSystem
                 GUI.color = Color.white;
             }
 
-            // WasCastThisFrame row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("WasCastThisFrame");
@@ -733,11 +912,10 @@ namespace TrueInputSystem
 
             using (new EditorGUI.DisabledScope(true))
             {
-                EditorGUILayout.Vector2Field("Direction (live)",   btn.Direction);
-                EditorGUILayout.Vector2Field("CastDirection",      btn.CastDirection);
+                EditorGUILayout.Vector2Field("Direction (live)", btn.Direction);
+                EditorGUILayout.Vector2Field("CastDirection",    btn.CastDirection);
             }
 
-            // Angle row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("Direction Angle");
@@ -747,7 +925,6 @@ namespace TrueInputSystem
                 GUI.color = Color.white;
             }
 
-            // Registry row
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PrefixLabel("Registry Dir");
@@ -766,6 +943,118 @@ namespace TrueInputSystem
         }
 
         // ══════════════════════════════════════════════════════
+        //  DROPDOWN HELPERS
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Gán profile mới, rebuild danh sách action names, lưu GUID vào EditorPrefs.
+        /// Chỉ lấy các action có bindingMobile không rỗng.
+        /// </summary>
+        private void SetLinkedProfile(TISInputProfileConfig profile)
+        {
+            _linkedProfile = profile;
+
+            if (profile == null)
+            {
+                _actionNames        = System.Array.Empty<string>();
+                _dirKeyDisplayNames = System.Array.Empty<string>();
+                _dirKeyValues       = System.Array.Empty<string>();
+                _selectedIndex      = -1;
+                _dirKeyIndex        = 0;
+                EditorPrefs.DeleteKey(_profilePrefKey);
+                return;
+            }
+
+            string path = AssetDatabase.GetAssetPath(profile);
+            string guid = AssetDatabase.AssetPathToGUID(path);
+            EditorPrefs.SetString(_profilePrefKey, guid);
+
+            RebuildActionNames();
+        }
+
+        /// <summary>
+        /// Lấy toàn bộ action name trong profile:
+        ///   · _actionNames     — action có bindingMobile  (cho Skill Name dropdown)
+        ///   · _dirKeyValues    — tất cả action            (cho Direction Key dropdown, index 0 = Auto)
+        ///   · _dirKeyDisplayNames — nhãn hiển thị tương ứng
+        /// </summary>
+        private void RebuildActionNames()
+        {
+            if (_linkedProfile == null)
+            {
+                _actionNames        = System.Array.Empty<string>();
+                _dirKeyDisplayNames = System.Array.Empty<string>();
+                _dirKeyValues       = System.Array.Empty<string>();
+                _selectedIndex      = -1;
+                _dirKeyIndex        = 0;
+                return;
+            }
+
+            // ── Skill Name: chỉ action có bindingMobile ────────
+            var names = new List<string>();
+            foreach (var action in _linkedProfile.GetAllActions())
+            {
+                if (!string.IsNullOrEmpty(action.bindingMobile))
+                    names.Add(action.actionName);
+            }
+            _actionNames   = names.ToArray();
+            string current = _skillName?.stringValue ?? "";
+            _selectedIndex = System.Array.IndexOf(_actionNames, current);
+
+            // ── Direction Key: tất cả action + Auto ở đầu ──────
+            var dirDisplays = new List<string> { AUTO_LABEL };
+            var dirValues   = new List<string> { "" };          // "" = Auto
+            foreach (var action in _linkedProfile.GetAllActions())
+            {
+                dirDisplays.Add(action.actionName);
+                dirValues.Add(action.actionName);
+            }
+            _dirKeyDisplayNames = dirDisplays.ToArray();
+            _dirKeyValues       = dirValues.ToArray();
+
+            // Sync _dirKeyIndex với _directionActionName hiện tại
+            string currentDir = _directionActionName?.stringValue ?? "";
+            _dirKeyIndex = string.IsNullOrEmpty(currentDir)
+                ? 0
+                : System.Array.IndexOf(_dirKeyValues, currentDir);
+            if (_dirKeyIndex < 0) _dirKeyIndex = 0; // fallback Auto nếu không tìm thấy
+        }
+
+        /// <summary>
+        /// Sau recompile/OnEnable: khôi phục profile từ GUID lưu trong EditorPrefs.
+        /// </summary>
+        private void RestoreLinkedProfileFromPrefs()
+        {
+            string guid = EditorPrefs.GetString(_profilePrefKey, "");
+            if (string.IsNullOrEmpty(guid))
+            {
+                TryAutoDetectProfile();
+                return;
+            }
+
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!string.IsNullOrEmpty(path))
+                _linkedProfile = AssetDatabase.LoadAssetAtPath<TISInputProfileConfig>(path);
+
+            RebuildActionNames();
+        }
+
+        /// <summary>
+        /// Nếu trong project chỉ có đúng 1 TISInputProfileConfig, tự động chọn nó.
+        /// </summary>
+        private void TryAutoDetectProfile()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:TISInputProfileConfig");
+            if (guids.Length == 1)
+            {
+                string path    = AssetDatabase.GUIDToAssetPath(guids[0]);
+                var    profile = AssetDatabase.LoadAssetAtPath<TISInputProfileConfig>(path);
+                if (profile != null)
+                    SetLinkedProfile(profile);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
         //  HELPERS
         // ══════════════════════════════════════════════════════
 
@@ -779,10 +1068,6 @@ namespace TrueInputSystem
             EditorGUILayout.Space(2);
         }
 
-        /// <summary>
-        /// Vẽ một hàng gồm label + Color field + Sprite field cạnh nhau.
-        /// Layout: [Label 38%] [Color 30%] [Sprite 32%]
-        /// </summary>
         private void DrawColorSpriteRow(string label,
             SerializedProperty colorProp, SerializedProperty spriteProp,
             string colorTooltip = "", string spriteTooltip = "")
@@ -790,15 +1075,13 @@ namespace TrueInputSystem
             EditorGUILayout.Space(1);
             using (new EditorGUILayout.HorizontalScope())
             {
-                float totalW   = EditorGUIUtility.currentViewWidth - 20f;
-                float labelW   = totalW * 0.35f;
-                float colorW   = totalW * 0.30f;
-                float spriteW  = totalW * 0.35f;
+                float totalW  = EditorGUIUtility.currentViewWidth - 20f;
+                float labelW  = totalW * 0.35f;
+                float colorW  = totalW * 0.30f;
+                float spriteW = totalW * 0.35f;
 
-                // Label
                 EditorGUILayout.LabelField(new GUIContent(label), GUILayout.Width(labelW));
 
-                // Color field (no label)
                 colorProp.colorValue = EditorGUI.ColorField(
                     GUILayoutUtility.GetRect(colorW, EditorGUIUtility.singleLineHeight,
                         GUILayout.Width(colorW)),
@@ -808,7 +1091,6 @@ namespace TrueInputSystem
 
                 GUILayout.Space(4f);
 
-                // Sprite ObjectField (no label)
                 spriteProp.objectReferenceValue = EditorGUI.ObjectField(
                     GUILayoutUtility.GetRect(spriteW, EditorGUIUtility.singleLineHeight,
                         GUILayout.Width(spriteW)),

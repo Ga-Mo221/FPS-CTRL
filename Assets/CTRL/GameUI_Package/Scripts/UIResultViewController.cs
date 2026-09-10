@@ -73,7 +73,10 @@ namespace Game.UI
         public void LeaveRoom()
         {
             if (GameManager.Instance != null)
+            {
+                GameManager.Instance.NewGame();
                 GameManager.Instance.NetworkRunnerHandler.LeaveRoom();
+            }
         }
 
         [Button]

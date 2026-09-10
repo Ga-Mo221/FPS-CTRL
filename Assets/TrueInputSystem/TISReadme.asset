@@ -1,0 +1,119 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854baba75934455bad2b6eb03e6779de, type: 3}
+  m_Name: TISReadme
+  m_EditorClassIdentifier: 
+  icon: {fileID: 0}
+  title: TrueInputSystem (TIS)
+  sections:
+  - heading: Giới thiệu
+    text: TrueInputSystem là một Unity input management package được thiết
+      kế để giải quyết bài toán đa nền tảng - PC, Gamepad, và Mobile - trong
+      một hệ thống duy nhất, thống nhất.
+    linkText: 
+    url:
+  - heading: Vấn đề nó giải quyết
+    text: Unity's New Input System khá mạnh nhưng cồng kềnh khi cần hỗ trợ
+      đồng thời cả bàn phím, tay cầm, và màn hình cảm ứng với các UI controls
+      ảo. TIS bọc toàn bộ complexity đó lại và cung cấp một API đơn giản cho
+      game code.
+    linkText: 
+    url:
+  - heading: Kiến trúc tổng quan
+    text: 'Lớp trung tâm: TISInputBridge - một MonoBehaviour singleton hoạt
+      động như facade, uỷ thác xuống ba sub-system:
+
+      - TISProfileBuilder: xây dựng InputActionAsset từ TISInputProfileConfig
+      (ScriptableObject)
+
+      - TISActionReader: cache và đọc action theo frame (Button / Vector2 /
+      Axis)
+
+      - TISOverrideChannel: nhận override values từ mobile controls và expose
+      MoveDirection, LookDelta, ZoomDelta'
+    linkText: 
+    url:
+  - heading: Mobile UI Layer
+    text: 'Tự động tạo bởi TISMobileInputSetup:
+
+      - TISVirtualJoystick: dynamic joystick (PUBG-style), có activation zone
+
+      - TISTouchCameraZone: vùng swipe để xoay camera + pinch-to-zoom
+
+      - TISMultiFingerGestureDetector: theo dõi centroid, 2-finger pan, tách
+      biệt với pinch
+
+      - TISMobileSkillButton: on-screen buttons với cooldown fill, color tint
+      / sprite swap
+
+      - TISMobileButtonRegistry: static registry kết nối uGUI pointer events
+      với EnhancedTouch IDs'
+    linkText: 
+    url:
+  - heading: Tính năng nổi bật
+    text: 'Profile System: toàn bộ binding được định nghĩa trong
+      TISInputProfileConfig (ScriptableObject), hot-swap runtime bằng
+      bridge.SwapProfile().
+
+      Key Rebinding: TISRebindingSystem, interactive rebinding với PlayerPrefs
+      persistence, hỗ trợ PC và Gamepad, blacklist path, UI component
+      TISRebindingUI tự build từ profile.
+
+      Input Buffer: TISInputBuffer giữ "pressed" state trong một time window
+      để không miss action khi frame drop.
+
+      Object Tracker: TISObjectTracker theo dõi touch vào GameObject qua
+      raycast, hỗ trợ double-tap per-object và double-tap màn hình, cả 3D và
+      2D physics.
+
+      Gamepad Rumble: TryRumble() với coroutine auto-stop.'
+    linkText: 
+    url:
+  - heading: Editor Tools
+    text: 'TISSetupTool: custom EditorWindow 3-panel để tạo và chỉnh profile
+      trực quan - chọn binding từ dropdown, toggle platform, validate xung
+      đột, save/load .asset.
+
+      TISMobileInputSetupEditor: custom Inspector với preview màn hình điện
+      thoại vẽ bằng EditorGUI.DrawRect, hiển thị joystick BG/knob và phân
+      vùng Joystick/Camera theo tỉ lệ thực.'
+    linkText: 
+    url:
+  - heading: API mẫu cho game code
+    text: 'Vector2 move = bridge.MoveDirection;
+
+      if (bridge.GetSkillAction("Jump")) Jump();
+
+      if (bridge.IsSkillHeld("Run")) Run();
+
+      if (bridge.GestureIsTwoFingerPanning) PanMap(bridge.GestureTwoFingerPanDelta);
+
+      float zoom = bridge.ZoomDelta; // scroll wheel hoặc pinch, cùng một property
+
+      Game code không cần biết input đến từ keyboard, gamepad hay mobile - TIS
+      tự xử lý.'
+    linkText: 
+    url:
+  - heading: Điểm kỹ thuật đáng chú ý
+    text: 'Execution order: Bridge (-100) -> CameraZone (-90) -> GestureDetector
+      (-85) -> MobileInputSetup (-50).
+
+      Không có GC allocation trong hot path: dùng index loop thay foreach,
+      cache event camera, pre-allocate arrays cho trigger state.
+
+      EnhancedTouch / uGUI ID mismatch được giải quyết bằng spatial matching +
+      mapping dictionary trong TISMobileButtonRegistry.
+
+      Interface ITISInputBridge cho phép inject mock input khi unit test.'
+    linkText: 
+    url:
+  loadedLayout: 1
