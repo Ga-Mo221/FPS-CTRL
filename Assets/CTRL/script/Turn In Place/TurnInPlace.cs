@@ -39,11 +39,7 @@ public class TurnInPlace : MonoBehaviour
     [SerializeField] private float _idleConfirmDelay = 0.08f;
 
     [TabGroup("Turn In Place", "Detection")]
-    [Tooltip("(Tùy chọn) Gán CharacterController để đọc velocity + isGrounded chính xác hơn. Nếu để trống sẽ tính từ position delta + Raycast.")]
-    [SerializeField] private CharacterController _characterController;
-
-    [TabGroup("Turn In Place", "Detection")]
-    [Tooltip("Raycast fallback: khoảng cách kiểm tra mặt đất khi không có CharacterController.")]
+    [Tooltip("Khoảng cách Raycast kiểm tra mặt đất từ transform.position.")]
     [Range(0.05f, 0.5f)]
     [SerializeField] private float _groundCheckDistance = 0.15f;
 
@@ -70,10 +66,6 @@ public class TurnInPlace : MonoBehaviour
     {
         _componentManager = GetComponent<CharComponentManager>();
         _hpHandler = _componentManager.NHPHandler;
-
-        // CharacterController auto-grab nếu không gán tay
-        if (_characterController == null)
-            _characterController = GetComponent<CharacterController>();
 
         _late_root_Rot_Y = _root.rotation.eulerAngles.y;
         _lastPosition = transform.position;
@@ -116,7 +108,7 @@ public class TurnInPlace : MonoBehaviour
 
     /// <summary>
     /// Trả về true khi character đứng yên VÀ đang chạm đất → cần TurnInPlace.
-    /// Ưu tiên đọc từ CharacterController; fallback về position delta + Raycast.
+    /// Tốc độ tính từ position delta; ground check bằng Raycast.
     /// Có debounce nhỏ để tránh giật khi bước vào trạng thái idle.
     /// </summary>
     private bool DetectTurnInPlace()
@@ -138,45 +130,23 @@ public class TurnInPlace : MonoBehaviour
     }
 
     /// <summary>
-    /// Kiểm tra chạm đất.
-    /// Raycast luôn là nguồn chính (đáng tin hơn CC.isGrounded vì CC chỉ true
-    /// khi frame trước có gọi Move/SimpleMove và có va chạm phía dưới).
-    /// CC.isGrounded dùng thêm như OR để bắt những trường hợp Raycast bỏ sót.
+    /// Kiểm tra chạm đất bằng Raycast từ transform.position hướng xuống.
     /// </summary>
     private bool IsGrounded()
     {
-        // Bắn ray từ feet (đáy CC nếu có, không thì transform.position)
-        Vector3 rayOrigin = _characterController != null
-            ? transform.position + Vector3.up * _characterController.skinWidth
-            : transform.position;
-
-        bool rayHit = Physics.Raycast(rayOrigin, Vector3.down, _groundCheckDistance, _groundLayer, QueryTriggerInteraction.Ignore);
-
-        // CC.isGrounded bổ sung — true khi CC đang tiếp xúc ground trong frame hiện tại
-        bool ccGrounded = _characterController != null && _characterController.isGrounded;
-
-        return rayHit || ccGrounded;
+        return Physics.Raycast(transform.position, Vector3.down, _groundCheckDistance, _groundLayer, QueryTriggerInteraction.Ignore);
     }
 
     /// <summary>
-    /// Lấy tốc độ ngang (XZ). Dùng CharacterController.velocity nếu có,
-    /// ngược lại tính từ position delta trong frame.
+    /// Lấy tốc độ ngang (XZ) từ position delta trong frame.
     /// </summary>
     private float GetHorizontalSpeed()
     {
-        if (_characterController != null)
-        {
-            Vector3 ccVel = _characterController.velocity;
-            return new Vector2(ccVel.x, ccVel.z).magnitude;
-        }
-
-        // Fallback: position delta
         Vector3 currentPos = transform.position;
         Vector3 delta = currentPos - _lastPosition;
         _lastPosition = currentPos;
 
-        float speed = new Vector2(delta.x, delta.z).magnitude / Mathf.Max(Time.deltaTime, 1e-5f);
-        return speed;
+        return new Vector2(delta.x, delta.z).magnitude / Mathf.Max(Time.deltaTime, 1e-5f);
     }
 
     // ── Existing logic (không đổi) ───────────────────────────────────────────
@@ -239,20 +209,15 @@ public class TurnInPlace : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        // Tính origin giống hệt IsGrounded()
-        float skinWidth = _characterController != null ? _characterController.skinWidth : 0f;
-        Vector3 rayOrigin = transform.position + Vector3.up * skinWidth;
+        Vector3 rayOrigin = transform.position;
         Vector3 rayEnd    = rayOrigin + Vector3.down * _groundCheckDistance;
 
-        // Raycast để biết có hit không (dùng đúng layer như runtime)
         bool rayHit = Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit,
                                       _groundCheckDistance, _groundLayer,
                                       QueryTriggerInteraction.Ignore);
-        bool ccGrounded  = _characterController != null && _characterController.isGrounded;
-        bool isGrounded  = rayHit || ccGrounded;
 
         // Màu ray: xanh lá = grounded, đỏ = không chạm đất
-        Gizmos.color = isGrounded ? Color.green : Color.red;
+        Gizmos.color = rayHit ? Color.green : Color.red;
         Gizmos.DrawLine(rayOrigin, rayEnd);
 
         // Điểm bắt đầu ray (sphere nhỏ)
@@ -267,18 +232,15 @@ public class TurnInPlace : MonoBehaviour
         }
         else
         {
-            // Điểm cuối ray khi không hit
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(rayEnd, 0.04f);
         }
 
         // Label trạng thái (hiện trong Scene view)
-        UnityEditor.Handles.color = isGrounded ? Color.green : Color.red;
+        UnityEditor.Handles.color = rayHit ? Color.green : Color.red;
         UnityEditor.Handles.Label(
             rayOrigin + Vector3.up * 0.1f,
-            isGrounded
-                ? $"Grounded ✓  (ray:{rayHit} | cc:{ccGrounded})"
-                : $"NOT Grounded  (ray:{rayHit} | cc:{ccGrounded})"
+            rayHit ? "Grounded ✓" : "NOT Grounded"
         );
     }
 #endif
