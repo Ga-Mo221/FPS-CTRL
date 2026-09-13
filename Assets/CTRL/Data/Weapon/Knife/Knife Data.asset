@@ -19,33 +19,40 @@ MonoBehaviour:
   _recoilData: {fileID: 11400000, guid: 0909a9a8b03677a46a72d7c57873419f, type: 2}
   _dropItemPrefab: {fileID: 0}
   _damage: 60
-  _rightDamage: 100
-  _defaultBullet: 9
-  _maxBullet: 27
-  _fireDelay: 0.7
-  _fireStandRightDelay: 3
-  _fireCroundRightDelay: 3
   _range: 0.4
-  _meeleRadius: 0.8
-  _meleeHitDelay: 0.3
-  _hitRightCrouchDelay: 1.3
-  _hitRightStandDelay: 1.35
-  _pelletCount: 7
-  _spreadAngle: 5
+  _fireDelay: 0.7
+  _defaultBullet: 9
+  _bulletPlusCount: 1
+  _maxBullet: 27
   _aDS_Zoom: 35
   _stand_Zoom: 60
   _aDS_Zoom_Z: 0.177
   _stamd_Zoom_Z: 0
   _aDS_duration: 0.25
-  _fire_clip: {fileID: 0}
-  _volume_fire: 1
-  _magazine_in_clip: {fileID: 0}
-  _volume_magazine: 1
-  _slide_clip: {fileID: 0}
+  _ads_Pivot_Height: 0
+  _stand_Pivot_Height: 0
+  _rightDamage: 100
+  _meeleRadius: 0.8
+  _meleeHitDelay: 0.3
+  _fireStandRightDelay: 3
+  _hitRightStandDelay: 1.35
+  _fireCroundRightDelay: 3
+  _hitRightCrouchDelay: 1.3
+  _pelletCount: 7
+  _spreadAngle: 5
+  _fire_clip:
+  - {fileID: 8300000, guid: 71ad9d525dcc4204da5c5c14abc4e862, type: 3}
+  - {fileID: 8300000, guid: c566d899f82ea1f4fba882f0536604a1, type: 3}
+  - {fileID: 8300000, guid: d699671f1be7f4a47b2dee6a9af63204, type: 3}
+  - {fileID: 8300000, guid: af6bb0feddca04e4cabc238c8d695cc3, type: 3}
+  - {fileID: 8300000, guid: 5d11affa80ddd8d47a7f07a23ed38024, type: 3}
+  _volume_fire: 0.245
+  _magazine_in_clip:
+  - {fileID: 8300000, guid: 1122b1cd4d191a14bb27c958210afd6b, type: 3}
+  _volume_magazine: 0.304
+  _slide_clip: []
   _volume_slide: 1
   _switch_clip: {fileID: 0}
   _volume_switch: 1
   _switch_model_clip: {fileID: 0}
   _volume_switch_model: 1
-  _ads_Pivot_Height: 0
-  _stand_Pivot_Height: 0

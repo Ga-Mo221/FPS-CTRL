@@ -882,6 +882,56 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MotionCall
+--- !u!114 &-5385220475438044990
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerSeconds: 0
+    normalizedValue: 0.7
+    fireOnce: 1
+    payloadType: 1
+    intValue: 0
+    floatValue: 0
+    stringValue: 
+    boolValue: 0
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -4587111760539577849}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioWeaponShoot
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
+  showDebugLog: 0
 --- !u!1101 &-5299744349477878045
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -958,7 +1008,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -993,6 +1043,56 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
+  showDebugLog: 0
+--- !u!114 &-4958075692666275444
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerSeconds: 0
+    normalizedValue: 0.76
+    fireOnce: 1
+    payloadType: 1
+    intValue: 0
+    floatValue: 0
+    stringValue: 
+    boolValue: 0
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -648227069247066093}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioWeaponShoot
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
   showDebugLog: 0
 --- !u!1107 &-4812716518186295193
 AnimatorStateMachine:
@@ -1093,6 +1193,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-4587111760539577849
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1102 &-4399929419823130714
 AnimatorState:
   serializedVersion: 6
@@ -1249,7 +1361,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -1647,7 +1759,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -1708,6 +1820,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-2801077896352891863
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1101 &-2784995108180042623
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -2222,7 +2346,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: -4129192427077638529}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -4587111760539577849}
+  - {fileID: -5385220475438044990}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -2268,6 +2394,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &-648227069247066093
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1102 &-589401950419651146
 AnimatorState:
   serializedVersion: 6
@@ -3113,7 +3251,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -3589,7 +3727,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -3625,7 +3763,79 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
+    normalizedValue: 0.09
+    fireOnce: 1
+    payloadType: 0
+    intValue: 0
+    floatValue: 0
+    stringValue: 
+    boolValue: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 8605246190833864239}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioWeaponMagazine
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
+  - mode: 1
+    triggerSeconds: 0
+    normalizedValue: 0.48
+    fireOnce: 1
+    payloadType: 1
+    intValue: 4
+    floatValue: 0
+    stringValue: 
+    boolValue: 1
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 8605246190833864239}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioWeaponShoot
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
+  - mode: 1
+    triggerSeconds: 0
     normalizedValue: 1
     fireOnce: 1
     payloadType: 4
@@ -3726,6 +3936,56 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &4012214950320049487
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerSeconds: 0
+    normalizedValue: 0.74
+    fireOnce: 1
+    payloadType: 1
+    intValue: 0
+    floatValue: 0
+    stringValue: 
+    boolValue: 0
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -2801077896352891863}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioWeaponShoot
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
+  showDebugLog: 0
 --- !u!1101 &4125166832473087498
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -3818,7 +4078,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -4232,7 +4492,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -4367,7 +4627,9 @@ AnimatorState:
   - {fileID: 978412732403232199}
   - {fileID: -2910948485931042252}
   - {fileID: 5421400486984353692}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -648227069247066093}
+  - {fileID: -4958075692666275444}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -4540,7 +4802,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
     payloadType: 4
@@ -4576,7 +4838,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 1
     fireOnce: 1
     payloadType: 4
@@ -4835,7 +5097,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
   - mode: 1
-    triggerValue: 0
+    triggerSeconds: 0
     normalizedValue: 0.481
     fireOnce: 1
     payloadType: 4
@@ -4883,7 +5145,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 6369372601852935156}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -2801077896352891863}
+  - {fileID: 4012214950320049487}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0

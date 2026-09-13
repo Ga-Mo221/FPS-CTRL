@@ -7,6 +7,8 @@ public class UIGameplay : MonoBehaviour
     [SerializeField] private UIResultViewController _winlose;
     private Coroutine _endGame;
     
+    private bool OnLoad = false;
+    
     private void Update()
     {
         var gs = NetworkGameState.Instance;
@@ -14,7 +16,7 @@ public class UIGameplay : MonoBehaviour
             
         if (GameManager.Instance == null) return;
 
-        if (gs.IsMatchOver())
+        if (gs.IsMatchOver() && !OnLoad)
         {
             // Set Mvp
             KillInfo mvpPlayer = new KillInfo();
@@ -41,6 +43,8 @@ public class UIGameplay : MonoBehaviour
                 
             if (_endGame == null && gameObject.activeInHierarchy)
                 _endGame = StartCoroutine(DisplayResult(3f));
+            
+            OnLoad = true;
         }
     }
     

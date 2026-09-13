@@ -73,19 +73,21 @@ public class AnimatorControllerCreator : EditorWindow
 
     private static readonly ParamDef[] DefaultParams =
     {
-        new ParamDef { name = "IsDead",      type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "IsGrouded",   type = AnimatorControllerParameterType.Bool,    defaultBool  = true  },
-        new ParamDef { name = "MoveX",       type = AnimatorControllerParameterType.Float,   defaultFloat = 0f    },
-        new ParamDef { name = "MoveY",       type = AnimatorControllerParameterType.Float,   defaultFloat = 0f    },
-        new ParamDef { name = "IsCrouching", type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "IsSliding",   type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "IsJumping",   type = AnimatorControllerParameterType.Trigger                       },
-        new ParamDef { name = "ADS",         type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "IsReloading", type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "IsThrow",     type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "GrenadeID",   type = AnimatorControllerParameterType.Int                          },
-        new ParamDef { name = "IsSwitching", type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
-        new ParamDef { name = "IsShooting",  type = AnimatorControllerParameterType.Trigger                       },
+        new ParamDef { name = "IsDead",       type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "IsGrouded",    type = AnimatorControllerParameterType.Bool,    defaultBool  = true  },
+        new ParamDef { name = "MoveX",        type = AnimatorControllerParameterType.Float,   defaultFloat = 0f    },
+        new ParamDef { name = "MoveY",        type = AnimatorControllerParameterType.Float,   defaultFloat = 0f    },
+        new ParamDef { name = "IsCrouching",  type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "IsSliding",    type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "IsJumping",    type = AnimatorControllerParameterType.Trigger                       },
+        new ParamDef { name = "ADS",          type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "IsReloading",  type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "IsThrow",      type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "GrenadeID",    type = AnimatorControllerParameterType.Int                           },
+        new ParamDef { name = "IsSwitching",  type = AnimatorControllerParameterType.Bool,    defaultBool  = false },
+        new ParamDef { name = "IsShooting",   type = AnimatorControllerParameterType.Trigger                       },
+        new ParamDef { name = "ShootIndex",   type = AnimatorControllerParameterType.Int                           },
+        new ParamDef { name = "CurrentBullet",type = AnimatorControllerParameterType.Int                           },
     };
 
     // ─────────────────────────────────────────────────────────

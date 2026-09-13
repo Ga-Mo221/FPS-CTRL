@@ -19,33 +19,39 @@ MonoBehaviour:
   _recoilData: {fileID: 11400000, guid: bbe832d56560aef4694835b656d3979b, type: 2}
   _dropItemPrefab: {fileID: 9050542745613523368, guid: 630da6b77a8fb6f4f8d4d3b5199ea6bd, type: 3}
   _damage: 25
-  _rightDamage: 20
-  _defaultBullet: 30
-  _maxBullet: 120
-  _fireDelay: 0.12
-  _fireStandRightDelay: 3
-  _fireCroundRightDelay: 3
   _range: 100
-  _meeleRadius: 0.6
-  _meleeHitDelay: 0.2
-  _hitRightCrouchDelay: 3
-  _hitRightStandDelay: 3
-  _pelletCount: 7
-  _spreadAngle: 10
+  _fireDelay: 0.12
+  _defaultBullet: 30
+  _bulletPlusCount: 30
+  _maxBullet: 120
   _aDS_Zoom: 35
   _stand_Zoom: 60
   _aDS_Zoom_Z: 0.1
   _stamd_Zoom_Z: 0
   _aDS_duration: 0.2
-  _fire_clip: {fileID: 8300000, guid: 806d83cf05c0d174db1b287c55549097, type: 3}
-  _volume_fire: 0.203
-  _magazine_in_clip: {fileID: 0}
-  _volume_magazine: 1
-  _slide_clip: {fileID: 0}
-  _volume_slide: 1
-  _switch_clip: {fileID: 0}
-  _volume_switch: 1
-  _switch_model_clip: {fileID: 8300000, guid: cd180fe60e0559c4e99053a0c5fa5033, type: 3}
-  _volume_switch_model: 1
   _ads_Pivot_Height: 0
   _stand_Pivot_Height: 0
+  _rightDamage: 20
+  _meeleRadius: 0.6
+  _meleeHitDelay: 0.2
+  _fireStandRightDelay: 3
+  _hitRightStandDelay: 3
+  _fireCroundRightDelay: 3
+  _hitRightCrouchDelay: 3
+  _pelletCount: 7
+  _spreadAngle: 10
+  _fire_clip:
+  - {fileID: 8300000, guid: 806d83cf05c0d174db1b287c55549097, type: 3}
+  _volume_fire: 0.203
+  _fire_failed_clip: {fileID: 8300000, guid: cd180fe60e0559c4e99053a0c5fa5033, type: 3}
+  _volume_fire_failed: 0.288
+  _magazine_in_clip:
+  - {fileID: 8300000, guid: 23b9925b2758f8c44bf817684cced4c3, type: 3}
+  _volume_magazine: 0.288
+  _slide_clip:
+  - {fileID: 8300000, guid: b04e4f9edff2c414081dac7d7024ae5e, type: 3}
+  _volume_slide: 0.427
+  _switch_clip: {fileID: 0}
+  _volume_switch: 1
+  _switch_model_clip: {fileID: 8300000, guid: 1c82500d70c7a904f81736c7e32751e8, type: 3}
+  _volume_switch_model: 0.198

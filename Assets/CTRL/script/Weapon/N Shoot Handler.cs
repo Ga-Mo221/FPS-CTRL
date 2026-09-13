@@ -752,7 +752,6 @@ public class NShootHandler : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
     private void RPC_ApplyAudio()
     {
-        Debug.Log("RPC_ApplyAudio");
         AudioManager.Instance.PlayClip(_hitSound, _playerData.TakeDamageClips, _playerData.Volume_TakeDamage, true, 0.5f, 1f);
 
         var HUD = _componentManager.GameHudController();

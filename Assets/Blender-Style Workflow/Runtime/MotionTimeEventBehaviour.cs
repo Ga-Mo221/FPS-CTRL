@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+#if UNITY_EDITOR
+using UnityEditor.Animations;
+#endif
 
 namespace GaMo.BlenderEditorTools
 {
@@ -270,6 +273,19 @@ namespace GaMo.BlenderEditorTools
 
             /// <summary>parallel array với motionEvents, indexed giống nhau.</summary>
             public EventRuntime[] events;
+
+            /// <summary>
+            /// [Debug-only] Tên AnimatorState hiện tại, cache DUY NHẤT 1 lần tại OnStateEnter
+            /// (xem ResolveStateNameForDebug) — KHÔNG resolve lại trong OnStateUpdate/FireEvent
+            /// vì lookup này dùng API Editor tìm kiếm toàn bộ AnimatorController, khá đắt.
+            /// </summary>
+            public string cachedStateName;
+
+            /// <summary>
+            /// [Debug-only] Tên Layer chứa state hiện tại (animator.GetLayerName(layerIndex)),
+            /// cache cùng lúc với cachedStateName tại OnStateEnter.
+            /// </summary>
+            public string cachedLayerName;
         }
 
         private readonly Dictionary<int, PerInstanceData> _instanceStates
@@ -316,6 +332,114 @@ namespace GaMo.BlenderEditorTools
 
         /// <summary>Phần dư [0,1) đúng cho cả số âm, dựa trên FloorInt.</summary>
         private static float Frac01(float v) => v - FloorInt(v);
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// [Debug-only] Resolve tên AnimatorState bằng cách so khớp hash (stateInfo.shortNameHash)
+        /// trực tiếp trên AnimatorController ĐANG được gán cho Animator này.
+        ///
+        /// FIX [DEBUG v13]: Bản cũ dùng AnimatorController.FindStateMachineBehaviourContext(this),
+        /// nhưng hàm đó chỉ tìm `this` trong các asset .controller GỐC nằm trong project. Nếu
+        /// Animator đang chạy một controller bị CLONE lúc runtime (Instantiate(controller),
+        /// AnimatorOverrideController, v.v.) thì StateMachineBehaviour instance đang thực thi
+        /// KHÔNG còn cùng object reference với bản gốc trong asset → luôn trả về "<unknown state>",
+        /// đúng như log thực tế quan sát được ('Gost_FBX').
+        ///
+        /// Cách này thay vào đó lấy đúng controller mà Animator ĐANG dùng (unwrap
+        /// AnimatorOverrideController nếu có), rồi so khớp AnimatorState.nameHash với
+        /// stateInfo.shortNameHash — hash chỉ phụ thuộc chuỗi tên state (Animator.StringToHash),
+        /// nên vẫn đúng dù controller là bản clone. Chỉ gọi 1 lần tại OnStateEnter (cache vào
+        /// PerInstanceData.cachedStateName) vì vẫn là duyệt cây state machine — không rẻ để
+        /// gọi mỗi frame trong OnStateUpdate/FireEvent.
+        /// </summary>
+        private static string ResolveStateNameForDebug(Animator animator, AnimatorStateInfo stateInfo,
+            int layerIndex)
+        {
+            RuntimeAnimatorController runtimeController = animator.runtimeAnimatorController;
+            while (runtimeController is AnimatorOverrideController overrideController)
+                runtimeController = overrideController.runtimeAnimatorController;
+
+            if (!(runtimeController is AnimatorController controller))
+                return "<unknown state>";
+
+            var layers = controller.layers;
+            if (layerIndex < 0 || layerIndex >= layers.Length)
+                return "<unknown state>";
+
+            string found = FindStateNameByHash(layers[layerIndex].stateMachine, stateInfo.shortNameHash);
+            return found ?? "<unknown state>";
+        }
+
+        /// <summary>[Debug-only] Duyệt đệ quy qua sub-state-machine để tìm state khớp nameHash.</summary>
+        private static string FindStateNameByHash(AnimatorStateMachine stateMachine, int hash)
+        {
+            var states = stateMachine.states;
+            for (int i = 0; i < states.Length; i++)
+            {
+                if (states[i].state != null && states[i].state.nameHash == hash)
+                    return states[i].state.name;
+            }
+
+            var subMachines = stateMachine.stateMachines;
+            for (int i = 0; i < subMachines.Length; i++)
+            {
+                string found = FindStateNameByHash(subMachines[i].stateMachine, hash);
+                if (found != null) return found;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// [Debug-only] Liệt kê "Target.Method" của các persistent listener (gán trong Inspector)
+        /// trên UnityEvent tương ứng payloadType hiện tại của evt.
+        ///
+        /// GHI CHÚ: GetPersistentEventCount/GetPersistentTarget/GetPersistentMethodName là API
+        /// RUNTIME công khai trên UnityEventBase (không thuộc UnityEditor), nhưng chỉ có ý nghĩa
+        /// cho persistent call (gán sẵn trong Inspector) — listener gán bằng AddListener() lúc
+        /// runtime sẽ KHÔNG xuất hiện ở đây. Gate trong UNITY_EDITOR vì chỉ phục vụ debug log.
+        /// </summary>
+        private static string GetListenerNamesForDebug(UnityEventBase unityEvent)
+        {
+            if (unityEvent == null) return "<none>";
+
+            int n = unityEvent.GetPersistentEventCount();
+            if (n == 0) return "<no persistent listener>";
+
+            if (n == 1) return FormatListenerForDebug(unityEvent, 0);
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < n; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(FormatListenerForDebug(unityEvent, i));
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// FIX [DEBUG v13]: target có thể là ScriptableObject/asset CHƯA từng được đặt tên —
+        /// khác với GameObject (luôn có tên mặc định), ScriptableObject.name mặc định là CHUỖI
+        /// RỖNG ("") chứ không phải null. Bản cũ chỉ check target == null nên in ra ".Method"
+        /// (thiếu tên target) thay vì báo rõ đây là loại object gì. FIX: fallback về tên Type.
+        /// </summary>
+        private static string FormatListenerForDebug(UnityEventBase unityEvent, int index)
+        {
+            var target = unityEvent.GetPersistentTarget(index);
+            string method = unityEvent.GetPersistentMethodName(index);
+
+            string targetName;
+            if (target == null)
+                targetName = "<null target>";
+            else if (!string.IsNullOrEmpty(target.name))
+                targetName = target.name;
+            else
+                targetName = $"<unnamed {target.GetType().Name}>";
+
+            return string.IsNullOrEmpty(method) ? $"{targetName}.<none>" : $"{targetName}.{method}";
+        }
+#endif
 
         // ─── MotionTimeEvent ──────────────────────────────────────────────────────
 
@@ -430,6 +554,23 @@ namespace GaMo.BlenderEditorTools
                     case EventPayloadType.Bool: onTriggeredBool?.Invoke(animator, boolValue); break;
                 }
             }
+
+            /// <summary>
+            /// [Debug-only] Trả về UnityEvent (dạng base, không generic) tương ứng payloadType —
+            /// dùng để đọc persistent listener (tên hàm) cho debug log trong FireEvent.
+            /// Không dùng cho runtime dispatch thực sự (xem Invoke() ở trên).
+            /// </summary>
+            public UnityEventBase GetActiveEventForDebug()
+            {
+                switch (payloadType)
+                {
+                    case EventPayloadType.Int: return onTriggeredInt;
+                    case EventPayloadType.Float: return onTriggeredFloat;
+                    case EventPayloadType.String: return onTriggeredString;
+                    case EventPayloadType.Bool: return onTriggeredBool;
+                    default: return onTriggered;
+                }
+            }
         }
 
         // ─── Inspector ────────────────────────────────────────────────────────────
@@ -479,6 +620,18 @@ namespace GaMo.BlenderEditorTools
                 events = new EventRuntime[count]
             };
 
+#if UNITY_EDITOR
+            // Cache tên State + Layer 1 LẦN DUY NHẤT tại Enter — xem ResolveStateNameForDebug để
+            // biết vì sao không resolve lại ở Update/FireEvent (hot path).
+            if (showDebugLog)
+            {
+                data.cachedStateName = ResolveStateNameForDebug(animator, stateInfo, layerIndex);
+                // animator.GetLayerName là API runtime công khai (không phải Editor-only), nhưng
+                // vẫn gate ở đây vì chỉ phục vụ debug log, không cần tốn chi phí khi tắt log.
+                data.cachedLayerName = animator.GetLayerName(layerIndex);
+            }
+#endif
+
             for (int i = 0; i < count; i++)
             {
                 var rt = new EventRuntime();
@@ -499,7 +652,8 @@ namespace GaMo.BlenderEditorTools
             for (int i = 0; i < count; i++)
             {
                 if (data.events[i].cachedBoundary == enterBoundary)
-                    FireEvent(evts[i], data.events[i], animator, stateInfo.speed, data.cachedClipLength);
+                    FireEvent(evts[i], data.events[i], animator, stateInfo.speed, data.cachedClipLength,
+                        data.cachedStateName, data.cachedLayerName);
             }
         }
 
@@ -671,14 +825,16 @@ namespace GaMo.BlenderEditorTools
                         {
                             int endIdx = loLoopIdx + l;
                             if (rt.lastFiredLoop == endIdx) continue;
-                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength);
+                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength,
+                                data.cachedStateName, data.cachedLayerName);
                             rt.lastFiredLoop = endIdx;
                         }
                         else // start: đầu loop l+1
                         {
                             int startIdx = loLoopIdx + l + 1;
                             if (rt.lastFiredLoop == startIdx) continue;
-                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength);
+                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength,
+                                data.cachedStateName, data.cachedLayerName);
                             rt.lastFiredLoop = startIdx;
                         }
                     }
@@ -706,7 +862,8 @@ namespace GaMo.BlenderEditorTools
                         {
                             // FIX [CRITICAL v8-A]: lastFiredLoop chỉ gán khi thực sự fire trong loop này.
                             // KHÔNG dùng hasFired cumulative (bug cũ gán loop dù trigNorm nằm ngoài range).
-                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength);
+                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength,
+                                data.cachedStateName, data.cachedLayerName);
                             rt.lastFiredLoop = loop;
                         }
                     }
@@ -744,7 +901,8 @@ namespace GaMo.BlenderEditorTools
                         if (trigNorm >= to && trigNorm < from)
                         {
                             // FIX [CRITICAL v8-A]: lastFiredLoop chỉ gán khi thực sự fire trong loop này.
-                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength);
+                            FireEvent(evt, rt, animator, effectiveSpeed, data.cachedClipLength,
+                                data.cachedStateName, data.cachedLayerName);
                             rt.lastFiredLoop = loop;
                         }
                     }
@@ -812,7 +970,8 @@ namespace GaMo.BlenderEditorTools
                     : true; // fireOnce=false: luôn fire tại Exit
                 if (shouldFire)
                     // FIX [PERF v8-F]: Truyền stateInfo.speed thay vì gọi GetCurrentAnimatorStateInfo.
-                    FireEvent(evt, rt, animator, stateInfo.speed, data.cachedClipLength);
+                    FireEvent(evt, rt, animator, stateInfo.speed, data.cachedClipLength, data.cachedStateName,
+                        data.cachedLayerName);
             }
 
             _instanceStates.Remove(id);
@@ -835,9 +994,17 @@ namespace GaMo.BlenderEditorTools
         /// PERF [v8-F]: cachedSpeed truyền từ caller (stateInfo.speed) thay vì gọi lại
         ///              GetCurrentAnimatorStateInfo bên trong — tránh native call đắt.
         ///              OnStateEnter/Exit truyền stateInfo.speed trực tiếp.
+        /// FIX [DEBUG v12]: Thêm stateName vào log — truyền từ caller (data.cachedStateName,
+        ///              đã resolve 1 lần tại OnStateEnter, xem ResolveStateNameForDebug) thay vì
+        ///              resolve lại ở đây (hot path, chạy mỗi lần fire).
+        ///              Tên hàm callback được lấy qua persistent-call API của UnityEventBase
+        ///              (GetListenerNamesForDebug) — CHỈ thấy listener gán sẵn trong Inspector,
+        ///              không thấy listener gán bằng AddListener() lúc runtime.
+        /// FIX [DEBUG v14]: Thêm layerName vào log (data.cachedLayerName, cache cùng lúc với
+        ///              cachedStateName tại OnStateEnter qua animator.GetLayerName(layerIndex)).
         /// </summary>
         private void FireEvent(MotionTimeEvent evt, EventRuntime rt, Animator animator, float cachedSpeed,
-            float clipLength)
+            float clipLength, string stateName, string layerName)
         {
 #if UNITY_EDITOR
             if (showDebugLog)
@@ -848,9 +1015,21 @@ namespace GaMo.BlenderEditorTools
                 string ctx = rt.cachedBoundary == 0 ? "[Enter/LoopStart]"
                     : rt.cachedBoundary == 1 ? "[Exit/LoopEnd]"
                     : $"[mid norm={rt.cachedTriggerNorm:F3}]";
+                string listeners = GetListenerNamesForDebug(evt.GetActiveEventForDebug());
+                // FIX [DEBUG v15]: Hiển thị payload type + giá trị trong log để dễ debug.
+                string payloadStr = evt.payloadType switch
+                {
+                    EventPayloadType.Int    => $" | int={evt.intValue}",
+                    EventPayloadType.Float  => $" | float={evt.floatValue:F3}",
+                    EventPayloadType.String => $" | string=\"{evt.stringValue}\"",
+                    EventPayloadType.Bool   => $" | bool={evt.boolValue}",
+                    _                       => " | Animator only"
+                };
                 // FIX [PERF v8-F]: Dùng cachedSpeed từ caller, không gọi GetCurrentAnimatorStateInfo.
                 Debug.Log(
-                    $"[MotionTimeEvent] '{animator.name}' @ {pos} {ctx} clip={clipLength:F3}s speed={cachedSpeed:F2}");
+                    $"[MotionTimeEvent] '{animator.name}' layer='{layerName ?? "<unknown layer>"}' " +
+                    $"state='{stateName ?? "<unknown state>"}' " +
+                    $"@ {pos} {ctx} clip={clipLength:F3}s speed={cachedSpeed:F2}{payloadStr} -> {listeners}");
             }
 #endif
 

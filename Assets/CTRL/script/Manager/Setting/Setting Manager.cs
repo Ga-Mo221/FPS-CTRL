@@ -22,11 +22,11 @@ public class SettingManager : MonoBehaviour
 
     public SettingData SettingData => _settingData;
 
+    public void SetMouseSensitivity(float sensitivity)
+        => _settingData.MouseSensitivity = sensitivity;
     // save or load setting data to file
     
-
-    [Button]
-    private void UpdateMouseSensitivity()
+    public void UpdateMouseSensitivity()
     {
         if (_settingData == null) return;
 

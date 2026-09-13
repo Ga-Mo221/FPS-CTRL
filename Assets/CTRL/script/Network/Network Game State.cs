@@ -39,6 +39,13 @@ public class NetworkGameState : NetworkBehaviour
     private float _killUpdateTimer;
     private readonly Dictionary<NetworkId, KillInfo> _killLookup = new Dictionary<NetworkId, KillInfo>();
 
+    // ── Persistent kill tracking (chống mất kill khi player rời phòng) ────────
+    // Lưu kill snapshot của từng player ở lần update trước để tính delta
+    private readonly Dictionary<NetworkId, int> _playerKillSnapshot = new Dictionary<NetworkId, int>();
+    // Tích lũy kill của các player đã rời phòng, không bao giờ giảm
+    private int _redKillAccumulated  = 0;
+    private int _blueKillAccumulated = 0;
+
     // Danh sách đã sort giảm dần theo kill, dùng cho scoreboard/leaderboard UI.
     // Không sort trực tiếp trên Dictionary vì Dictionary không đảm bảo thứ tự phần tử.
     private readonly List<KillInfo> _killLeaderboard = new List<KillInfo>();
@@ -71,9 +78,12 @@ public class NetworkGameState : NetworkBehaviour
             return;
         }
 
-        CurrentRound = 1;
-        GameStarted  = false;
-        RoundEnded   = false;
+        CurrentRound         = 1;
+        GameStarted          = false;
+        RoundEnded           = false;
+        _redKillAccumulated  = 0;
+        _blueKillAccumulated = 0;
+        _playerKillSnapshot.Clear();
         StartCountdown();
     }
 
@@ -214,25 +224,48 @@ public class NetworkGameState : NetworkBehaviour
     }
     
     /// <summary>
-    /// Chỉ host gọi (trong FixedUpdateNetwork): tính tổng RedKill/BlueKill từ
-    /// _killLookup (đã được RebuildKillLookupAndLeaderboard build ở Update()) rồi
-    /// ghi vào [Networked] properties để Fusion đồng bộ xuống mọi client.
+    /// Chỉ host gọi (trong FixedUpdateNetwork): cộng thêm delta kill từ
+    /// _killLookup vào accumulator, đảm bảo RedKill/BlueKill chỉ tăng chứ
+    /// không bao giờ giảm — kể cả khi player rời phòng giữa chừng.
     /// </summary>
     private void ApplyNetworkedKillStats()
     {
-        int redKill = 0;
-        int blueKill = 0;
+        // Tập hợp các player hiện đang online trong lần update này
+        var currentIds = new HashSet<NetworkId>(_killLookup.Keys);
+
+        // Phát hiện player đã rời phòng: có trong snapshot nhưng không còn trong _killLookup
+        var leftPlayers = new List<NetworkId>();
+        foreach (var id in _playerKillSnapshot.Keys)
+            if (!currentIds.Contains(id))
+                leftPlayers.Add(id);
+
+        // Xóa snapshot của player đã rời — kill của họ đã được cộng vào
+        // accumulator ở lần update cuối cùng họ còn online, nên không mất.
+        foreach (var id in leftPlayers)
+            _playerKillSnapshot.Remove(id);
+
+        // Với từng player hiện online: tính delta so với snapshot trước
         foreach (KillInfo killInfo in _killLookup.Values)
         {
-            if (killInfo.Team == PlayerTeam.Red)
-                redKill += killInfo.Kills;
-            else if (killInfo.Team == PlayerTeam.Blue)
-                blueKill += killInfo.Kills;
+            _playerKillSnapshot.TryGetValue(killInfo.PlayerId, out int prevKills);
+            int delta = Mathf.Max(0, killInfo.Kills - prevKills); // chỉ cộng, không trừ
+
+            if (delta > 0)
+            {
+                if (killInfo.Team == PlayerTeam.Red)
+                    _redKillAccumulated  += delta;
+                else if (killInfo.Team == PlayerTeam.Blue)
+                    _blueKillAccumulated += delta;
+            }
+
+            // Cập nhật snapshot cho lần sau
+            _playerKillSnapshot[killInfo.PlayerId] = killInfo.Kills;
         }
 
-        RedKill  = redKill;
-        BlueKill = blueKill;
-        //AllKill  = redKill + blueKill;
+        // Ghi vào [Networked] để Fusion đồng bộ xuống mọi client
+        RedKill  = _redKillAccumulated;
+        BlueKill = _blueKillAccumulated;
+        //AllKill  = _redKillAccumulated + _blueKillAccumulated;
     }
 
     /// <summary>

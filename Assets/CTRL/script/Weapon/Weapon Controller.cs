@@ -5,7 +5,6 @@ using Fusion;
 using Game.UI;
 using Sirenix.OdinInspector;
 using TrueInputSystem;
-using Unity.VisualScripting;
 using UnityEngine;
 using GaMo.BlenderEditorTools;
 
@@ -18,8 +17,11 @@ public class WeaponController : NetworkBehaviour
     [Networked] public NetworkObject OwnerCharacter { get; set; }
     
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
+    [ReadOnly]
     public int CurrentBulletvalue { get; private set; }
+    
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
+    [ReadOnly]
     public int CurrentMaxBullet { get; private set; }
     
     // ============================ LOCAL FILED =====================================
@@ -47,7 +49,11 @@ public class WeaponController : NetworkBehaviour
     [SerializeField] private ShootEffectController _shoot_Effect;
     
     [TabGroup("Weapon Controller", "Weapon Data")]
-    [SerializeField] private AudioSource _sound;
+    [SerializeField] private AudioSource _sound_shoot;
+    
+    [TabGroup("Weapon Controller", "Weapon Data")]
+    [SerializeField] private AudioSource _sound_Slider;
+    
     [TabGroup("Weapon Controller", "Weapon Data")]
     [SerializeField] private BulletCaseController _bulletController;
     
@@ -144,6 +150,7 @@ public class WeaponController : NetworkBehaviour
     private bool _ads;
     private bool _lastAdsState;
     private Coroutine _blendRoutine;
+    private Coroutine _fireFailedDelay;
     
     private Transform _ads_Pivot_transform;
     private bool _isCrouch;
@@ -165,7 +172,7 @@ public class WeaponController : NetworkBehaviour
     public  Transform Pole_Left => _pole_Left;
     public  Transform Pole_Right => _pole_Right;
     public TransformConstraint ADS_Pivot => _ads_Pivot;
-    public AudioSource Sound => _sound;
+    public AudioSource Sound_Slider => _sound_Slider;
     public Vector3 ADS_Shoot_Point => _ads_Shoot_Point.position;
     public void SetAdsPivotTransform(Transform transform) =>  _ads_Pivot_transform = transform;
     public GunRecoilController GunRecoilCTRL => _gun_Recoil_CTRL;
@@ -256,7 +263,6 @@ public class WeaponController : NetworkBehaviour
         
         _parrentBullet.name = $"{_parrentBullet.name} for {transform.root.name} : {transform.name}";
         _parrentBullet.parent = GameManager.Instance.BulletParrent;
-        
     }
 
     void OnEnable()
@@ -266,6 +272,9 @@ public class WeaponController : NetworkBehaviour
 
         _ads_Pivot.transform.localPosition = _ads_pivot_position_original;
         _ads_Pivot.transform.localRotation = _ads_pivot_rotation_original;
+       
+        if (Object != null)
+            CurrentBullet(CurrentBulletvalue);
     }
 
     void OnDestroy()
@@ -297,7 +306,7 @@ public class WeaponController : NetworkBehaviour
                 if (Object.HasInputAuthority && _bridge != null)
                     _bridge.TryRumble(0.2f, 0.5f, 0.1f);
                 
-                if (_audio != null) _audio.PlayClip(_sound, Data.FireClip, Data.Volume_Fire);
+                if (_audio != null) _audio.PlayClip(_sound_shoot, Data.FireClip, Data.Volume_Fire);
                 break;
             case WeaponType.Melee:
                 if (!_rightPuch)
@@ -388,19 +397,42 @@ public class WeaponController : NetworkBehaviour
     
     // ======================= FIRE ====================================
 
-    public void Reload()
+    public bool Reload()
     {
-        if (CurrentMaxBullet >= _data.DefaultBullet)
+        if (CurrentMaxBullet >= _data.BulletPlusCount)
         {
-            CurrentMaxBullet -= _data.DefaultBullet - CurrentBulletvalue;
-            CurrentBulletvalue = _data.DefaultBullet;
-        }else if (CurrentMaxBullet > 0)
-        {
-            int thieu = _data.DefaultBullet - CurrentBulletvalue;
-            if (thieu <= CurrentMaxBullet)
+
+            int bullet;
+            if (_data.BulletPlusCount == _data.DefaultBullet)
+                bullet = _data.BulletPlusCount - CurrentBulletvalue;
+            else
             {
-                CurrentBulletvalue = _data.DefaultBullet;
-                CurrentMaxBullet -= thieu;
+                var currentBullet = CurrentBulletvalue;
+                if (currentBullet + _data.BulletPlusCount >= _data.DefaultBullet)
+                    bullet = _data.DefaultBullet - CurrentBulletvalue;
+                else bullet = _data.BulletPlusCount;
+            }
+            
+            CurrentMaxBullet -= bullet;
+            CurrentBulletvalue += bullet;
+        }
+        else if (CurrentMaxBullet > 0)
+        {
+            int bullet;
+            if (_data.BulletPlusCount == _data.DefaultBullet)
+                bullet = _data.BulletPlusCount - CurrentBulletvalue;
+            else
+            {
+                var currentBullet = CurrentBulletvalue;
+                if (currentBullet + _data.BulletPlusCount >= _data.DefaultBullet)
+                    bullet = _data.DefaultBullet - CurrentBulletvalue;
+                else bullet = _data.BulletPlusCount;
+            }
+            
+            if (bullet <= CurrentMaxBullet)
+            {
+                CurrentBulletvalue += bullet;
+                CurrentMaxBullet -= bullet;
             }
             else
             {
@@ -408,6 +440,14 @@ public class WeaponController : NetworkBehaviour
                 CurrentMaxBullet = 0;
             }
         }
+        
+        if (CurrentBulletvalue >=  _data.DefaultBullet)
+            return true;
+
+        if (CurrentMaxBullet == 0)
+            return true;
+        
+        return false;
     }
 
     public bool OnFire(bool right, bool crounch)
@@ -420,7 +460,11 @@ public class WeaponController : NetworkBehaviour
             case WeaponType.Rifle:
             case WeaponType.Shotgun:
             case WeaponType.Sniper:
-                if (CurrentBulletvalue <= 0) return false;
+                if (CurrentBulletvalue <= 0)
+                {
+                    RPC_ApplyAudio();
+                    return false;
+                }
                 return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
             case WeaponType.Melee:
                 float delay = !right ? _data.FireDelay : crounch ? _data.FireCrouchRightDelay : _data.FireStandRightDelay;
@@ -428,6 +472,25 @@ public class WeaponController : NetworkBehaviour
             default:
                 return false;
         }
+    }
+    
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_ApplyAudio()
+    {
+        if (GetMode() == GunRecoilController.FiringMode.Auto)
+        {
+            if (_fireFailedDelay == null && gameObject.activeInHierarchy)
+                _fireFailedDelay = StartCoroutine(LoadFireFailed(0.25f));
+        }
+        else
+            AudioManager.Instance.PlayClip(_sound_shoot, _data.FireFailedClip, _data.Volume_Fire_Failed, false, 0.5f, 1f);
+    }
+
+    private IEnumerator LoadFireFailed(float delay)
+    {
+        AudioManager.Instance.PlayClip(_sound_shoot, _data.FireFailedClip, _data.Volume_Fire_Failed, false, 0.5f, 1f);
+        yield return new WaitForSeconds(delay);
+        _fireFailedDelay = null;
     }
 
     public void SetBullet(int currentBullet, int maxBullet)
@@ -520,6 +583,7 @@ public class WeaponController : NetworkBehaviour
         {
             _cam_Recoil.SetFiringMode(mode);
             Debug.Log($"[GunRecoilDemo] Mode → {mode}");
+            _audio.PlayClip(_sound_Slider, _data.Switch_ModelClip, _data.Volume_Switch_Model);
             return true;
         }
         return false;
@@ -530,6 +594,9 @@ public class WeaponController : NetworkBehaviour
     {
         if (_gameHudController != null)
             _gameHudController.SetBullet(CurrentBulletvalue, CurrentMaxBullet);
+        
+        if (Object != null)
+            CurrentBullet(CurrentBulletvalue);
     }
     
     // ============================================ ANIMATOR =================================================
@@ -585,6 +652,13 @@ public class WeaponController : NetworkBehaviour
     }
     
     public void GrenadeID(int grenadeID) => _anim.SetInteger("GrenadeID", grenadeID);
+    
+    private void CurrentBullet(int value)
+    {
+        _anim.SetInteger("CurrentBullet", value);
+        if (_componentManager != null && _componentManager.Animator != null)
+            _componentManager.Animator.SetInteger("CurrentBullet", value);
+    }
     
     
     //========================================== EDITOR ============================================

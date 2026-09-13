@@ -18,6 +18,7 @@ namespace GaMo.BlenderEditorTools
         // Cache GUIContent để tránh tạo object mới mỗi lần OnInspectorGUI repaint
         private GUIContent _gcConstraintObject;
         private GUIContent _gcHasExternalPoseDriver;
+        private GUIContent _gcNormalizeWeights;
         private GUIContent _gcTargetsList;
         private GUIContent _gcEnablePosition;
         private GUIContent _gcPositionSpace;
@@ -36,6 +37,7 @@ namespace GaMo.BlenderEditorTools
         // Properties chung
         private SerializedProperty constraintObjectProp;
         private SerializedProperty hasExternalPoseDriverProp;
+        private SerializedProperty normalizeWeightsProp;
         private SerializedProperty targetsProp;
 
         // Properties - Position
@@ -68,6 +70,7 @@ namespace GaMo.BlenderEditorTools
         {
             constraintObjectProp = serializedObject.FindProperty("constraintObject");
             hasExternalPoseDriverProp = serializedObject.FindProperty("hasExternalPoseDriver");
+            normalizeWeightsProp = serializedObject.FindProperty("normalizeWeights");
             targetsProp = serializedObject.FindProperty("targets");
 
             enablePositionProp = serializedObject.FindProperty("enablePositionConstraint");
@@ -95,6 +98,7 @@ namespace GaMo.BlenderEditorTools
             // Khởi tạo GUIContent cache một lần duy nhất thay vì tạo mới mỗi frame repaint
             _gcConstraintObject = new GUIContent("Constraint Object", constraintObjectProp.tooltip);
             _gcHasExternalPoseDriver = new GUIContent("Has External Pose Driver", hasExternalPoseDriverProp.tooltip);
+            _gcNormalizeWeights = new GUIContent("Normalize Weights", normalizeWeightsProp.tooltip);
             _gcTargetsList = new GUIContent("Targets List", targetsProp.tooltip);
             _gcEnablePosition = new GUIContent("Enable Position Constraint", enablePositionProp.tooltip);
             _gcPositionSpace = new GUIContent("Position Space", positionSpaceProp.tooltip);
@@ -254,6 +258,8 @@ namespace GaMo.BlenderEditorTools
             // ── MULTI-TARGET SETTINGS ────────────────────────────────────────────────
             EditorGUILayout.LabelField("Multi-Target Settings", EditorStyles.boldLabel);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.PropertyField(normalizeWeightsProp, _gcNormalizeWeights);
+            EditorGUILayout.Space(4);
             EditorGUILayout.PropertyField(targetsProp, _gcTargetsList, true);
             EditorGUILayout.EndVertical();
 

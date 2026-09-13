@@ -80,6 +80,32 @@ public class AudioManager : MonoBehaviour
         source.maxDistance = maxDistance;
         source.PlayOneShot(clips[index]);
     }
+    
+    public void PlayClip(
+        AudioSource source, 
+        AudioClip[] clips, 
+        float volume, 
+        int startRandom,
+        int endRandom,
+        bool stop = true, 
+        float minDistance = 1, 
+        float maxDistance = 10)
+    {
+        if (source.enabled == false) return;
+        if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
+        if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
+        if (source == null || clips.Length == 0) return;
+        if (stop) Stop(source);
+        if (startRandom > clips.Length) startRandom = clips.Length;
+        if (endRandom > clips.Length) endRandom = clips.Length;
+        int index = Random.Range(startRandom, endRandom);
+        source.spatialBlend = 1f;
+        source.volume = volume;
+        source.pitch = Random.Range(0.8f, 1.2f);
+        source.minDistance = minDistance;
+        source.maxDistance = maxDistance;
+        source.PlayOneShot(clips[index]);
+    }
 
     public void PlayClip(
         AudioSource source, 

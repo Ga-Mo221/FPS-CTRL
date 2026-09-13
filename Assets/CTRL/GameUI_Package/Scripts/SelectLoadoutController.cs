@@ -13,7 +13,7 @@ namespace Game.UI
         private void Start()
         {
             SetBaloOne(WeaponName._M4, WeaponName._9MM_DEMON);
-            SetBaloTwo(WeaponName._M4, WeaponName._KNIFE);
+            SetBaloTwo(WeaponName._REMINGTON, WeaponName._KNIFE);
             SetBaloThree(WeaponName._9MM_DEMON, WeaponName._KNIFE);
             
             if (GameManager.Instance != null && GameManager.Instance.GetStartHostMigration())

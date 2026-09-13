@@ -67,8 +67,9 @@ public class MotionCall : StateMachineBehaviour
         var controller = animator.GetComponentInParent<NCharMovementHandler>();
         var weaponManager = animator.GetComponentInParent<WeaponManager>();
         
-        controller?.StopReload();
-        weaponManager?.Weapon_Active()?.Reload();
+        if (weaponManager != null && weaponManager.Weapon_Active() != null)
+            if (weaponManager.Weapon_Active().Reload())
+                controller?.StopReload();
     }
 
     public void DeadVFX(Animator animator)
@@ -121,29 +122,46 @@ public class MotionCall : StateMachineBehaviour
     // ===================================== WEAPON =========================================================
     
     // Gun
-    public void WeaponMagazine(Animator animator)
+    public void AudioWeaponMagazine(Animator animator)
     {
         var controller = animator.GetComponentInParent<WeaponController>();
 
         if (controller == null)
             return;
         
-        AudioManager.Instance.PlayClip(controller.Sound, 
+        AudioManager.Instance.PlayClip(controller.Sound_Slider, 
             controller.Data.MagazineInClip,
             controller.Data.Volume_Magazine);
     }
     
     // Gun
-    public void WeaponSlide(Animator animator)
+    public void AudioWeaponSlide(Animator animator)
     {
         var controller = animator.GetComponentInParent<WeaponController>();
 
         if (controller == null)
             return;
         
-        AudioManager.Instance.PlayClip(controller.Sound, 
+        AudioManager.Instance.PlayClip(controller.Sound_Slider, 
             controller.Data.SlideClip,
             controller.Data.Volume_Slide);
+    }
+    
+    public void AudioWeaponShoot(Animator animator, int index)
+    {
+        var controller = animator.GetComponentInParent<WeaponController>();
+
+        if (controller == null)
+            return;
+        
+        if (index == 0)
+            AudioManager.Instance.PlayClip(controller.Sound_Slider, 
+                controller.Data.FireClip,
+                controller.Data.Volume_Fire, 0, 3);
+        else
+            AudioManager.Instance.PlayClip(controller.Sound_Slider, 
+                controller.Data.FireClip,
+                controller.Data.Volume_Fire, index, index);
     }
     
     // Gun
