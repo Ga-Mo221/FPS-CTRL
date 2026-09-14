@@ -208,9 +208,13 @@ public class WeaponManager : NetworkBehaviour
     {
         SwitchWeapon();
     }
-    
-    // WeaponManager.cs
 
+    /// <summary>
+    /// duoc goi tu UI cua clients
+    /// </summary>
+    /// <param name="weaponOneName"></param>
+    /// <param name="weaponTwoName"></param>
+    /// <param name="info"></param>
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     public void Rpc_RequestChangeWeapon(string weaponOneName, string weaponTwoName, RpcInfo info = default)
     {
@@ -219,6 +223,13 @@ public class WeaponManager : NetworkBehaviour
         SwitchWeaponActive(1);
     }
     
+    /// <summary>
+    /// duoc goi tu input local cua clients khi nhat mot vu khi
+    /// </summary>
+    /// <param name="weaponName"></param>
+    /// <param name="currentBullet"></param>
+    /// <param name="maxBullet"></param>
+    /// <param name="info"></param>
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     public async void Rpc_RequestChangeWeapon(string weaponName, int currentBullet, int maxBullet, RpcInfo info = default)
     {
@@ -267,6 +278,9 @@ public class WeaponManager : NetworkBehaviour
 
     #region Switch Weapon
     
+    /// <summary>
+    /// duoc toi tu animation event
+    /// </summary>
     public void SwitchWeapon()
     {
         if (_weapon_One_CTRL == null && _weaponOneRef != null || _weapon_Two_CTRL == null && _weaponTwoRef != null)
@@ -428,7 +442,14 @@ public class WeaponManager : NetworkBehaviour
             return _weapon_One_CTRL;
         if (_weaponTwoRef != null && _weapon_Two_CTRL != null && _weapon_Two_CTRL.gameObject.activeSelf)
             return _weapon_Two_CTRL;
+        // FIX #3: hàm này được gọi ~10 lần/frame từ PlayerMotionController (IsDead, IsCrouching,
+        // ADS, Move, v.v.). Debug.Log không điều kiện ở đây sẽ spam console mỗi frame trong bất
+        // kỳ khoảng thời gian nào chưa có weapon active (vài frame đầu sau spawn, lúc switch
+        // weapon, lúc resolve sau migration) — tốn hiệu năng thật kể cả ở build release.
+        // Giữ log lại nhưng chỉ bật trong Editor để debug, không chạy ở build.
+#if UNITY_EDITOR
         Debug.Log("<color=red>[WeaponManager]</color> WeaponController not active.", this);
+#endif
         return null;
     }
 
@@ -449,42 +470,138 @@ public class WeaponManager : NetworkBehaviour
 
     void OnWeaponRefsChanged()
     {
-        // Weapon One bị despawn → remove khỏi ConstraintManager
-        var idOne = _weaponOneID.ToString();
-        if (_weaponOneRef != null && !idOne.IsNullOrEmpty())
+        // FIX: cleanup phải dựa trên _weapon_X_CTRL / ID ĐANG CACHE (giá trị cũ), KHÔNG phụ
+        // thuộc _weaponXRef mới. Điều kiện cũ check "_weaponOneRef != null" — tức là ref MỚI
+        // vẫn còn — nên khi despawn thật sự (_weaponOneRef chuyển thành null), khối cleanup
+        // không bao giờ chạy: _weapon_One_CTRL giữ tham chiếu dangling tới object đã despawn,
+        // và entry cũ trong ConstraintManager không bao giờ được remove (leak). Kiểm tra
+        // _weapon_One_CTRL != null (cache cũ) mới đúng ý định "vừa có 1 controller cũ cần dọn".
+        if (_weapon_One_CTRL != null)
         {
-            _componentManager.ConstraintManager.RemoveWeapon(idOne);
+            var idOne = _weaponOneID.ToString();
+            if (!idOne.IsNullOrEmpty())
+                _componentManager.ConstraintManager.RemoveWeapon(idOne);
             _weapon_One_CTRL = null;
         }
-        // Weapon Two bị despawn → remove khỏi ConstraintManager 
-        var idTwo = _weaponTwoID.ToString();
-        if (_weaponTwoRef != null && !idTwo.IsNullOrEmpty())
+        if (_weapon_Two_CTRL != null)
         {
-            _componentManager.ConstraintManager.RemoveWeapon(idTwo);
+            var idTwo = _weaponTwoID.ToString();
+            if (!idTwo.IsNullOrEmpty())
+                _componentManager.ConstraintManager.RemoveWeapon(idTwo);
             _weapon_Two_CTRL = null;
         }
-        
-        ResolveWeaponControllers();
 
-        SwitchWeapon();
+        // Non-authority: ResolveWeaponControllers trả về true nếu có weapon đang chờ ID sync.
+        // SwitchWeapon sẽ được gọi bên trong coroutine sau khi AddNewWeapon hoàn tất.
+        // Authority: trả về false — AddNewWeapon đã xong đồng bộ, gọi SwitchWeapon ngay.
+        bool pendingAsync = ResolveWeaponControllers();
+        if (!pendingAsync)
+            SwitchWeapon();
     }
     
-    private void ResolveWeaponControllers()
+    /// <summary>
+    /// Resolve WeaponController references và đăng ký vào ConstraintManager.
+    /// Trả về true nếu có ít nhất một weapon đang chờ ID sync qua coroutine (non-authority).
+    /// Caller không được gọi SwitchWeapon ngay khi kết quả là true — coroutine sẽ lo.
+    /// </summary>
+    private bool ResolveWeaponControllers()
     {
+        bool hasPending = false;
+
         if (_weaponOneRef != null && _weapon_One_CTRL == null)
         {
             _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
-            if (_weapon_One_CTRL != null) _weapon_One_CTRL.Respawn();
-            _weaponOneID = new NetworkString<_16>(_weapon_One_CTRL.Data.ID + "_STTWP1");
-            _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL, _weaponOneID.ToString());
-        } 
+            if (_weapon_One_CTRL != null)
+            {
+                if (Object.HasStateAuthority)
+                {
+                    // Authority: set ID ngay, add đồng bộ luôn.
+                    _weapon_One_CTRL.Respawn();
+                    _weaponOneID = new NetworkString<_16>(_weapon_One_CTRL.Data.ID + "_STTWP1");
+                    _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL, _weaponOneID.ToString());
+                }
+                else
+                {
+                    // Non-authority: _weaponOneID chưa chắc đã sync về kịp.
+                    // Chờ đến khi ID khớp với weapon vừa resolve xong rồi mới AddNewWeapon.
+                    hasPending = true;
+                    var ctrl = _weapon_One_CTRL;
+                    StartCoroutine(WaitForIDThenAdd(
+                        ctrl,
+                        ctrl.Data.ID + "_STTWP1",
+                        () => _weaponOneID.ToString(),
+                        () => _weapon_One_CTRL == ctrl,   // hủy nếu weapon đã bị thay
+                        isLast: true                      // coroutine này chịu trách nhiệm gọi SwitchWeapon
+                    ));
+                }
+            }
+        }
+
         if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
         {
             _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
-            if (_weapon_Two_CTRL != null) _weapon_Two_CTRL.Respawn();
-            _weaponTwoID = new NetworkString<_16>(_weapon_Two_CTRL.Data.ID + "_STTWP2");
-            _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL, _weaponTwoID.ToString());
+            if (_weapon_Two_CTRL != null)
+            {
+                if (Object.HasStateAuthority)
+                {
+                    _weapon_Two_CTRL.Respawn();
+                    _weaponTwoID = new NetworkString<_16>(_weapon_Two_CTRL.Data.ID + "_STTWP2");
+                    _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL, _weaponTwoID.ToString());
+                }
+                else
+                {
+                    // Nếu weapon one cũng đang pending, weapon two KHÔNG được gọi SwitchWeapon
+                    // (weapon one sẽ lo). Nếu chỉ mình weapon two pending thì nó gọi.
+                    bool twoIsLast = !hasPending;
+                    hasPending = true;
+                    var ctrl = _weapon_Two_CTRL;
+                    StartCoroutine(WaitForIDThenAdd(
+                        ctrl,
+                        ctrl.Data.ID + "_STTWP2",
+                        () => _weaponTwoID.ToString(),
+                        () => _weapon_Two_CTRL == ctrl,
+                        isLast: twoIsLast
+                    ));
+                }
+            }
         }
+
+        return hasPending;
+    }
+
+    /// <summary>
+    /// Coroutine dành cho non-authority client: poll đến khi NetworkString đã sync về
+    /// đúng ID của weapon vừa resolve, rồi mới gọi AddNewWeapon.
+    /// Nếu isLast == true, gọi SwitchWeapon sau khi add xong.
+    /// </summary>
+    private System.Collections.IEnumerator WaitForIDThenAdd(
+        WeaponController ctrl,
+        string expectedID,
+        System.Func<string> getID,
+        System.Func<bool> isStillValid,
+        bool isLast)
+    {
+        // Chờ đến khi ID synced về chứa đúng Data.ID của weapon này
+        while (true)
+        {
+            if (!isStillValid()) yield break;   // weapon đã bị replace — hủy
+
+            var currentID = getID();
+            if (!currentID.IsNullOrEmpty() && currentID == expectedID)
+                break;
+
+            yield return null;
+        }
+
+        if (!isStillValid()) yield break;
+
+        var id = getID();
+        if (!id.IsNullOrEmpty())
+            _componentManager.ConstraintManager.AddNewWeapon(ctrl, id);
+
+        // Chỉ coroutine "cuối cùng" mới gọi SwitchWeapon để tránh gọi nhiều lần
+        if (isLast)
+            SwitchWeapon();
     }
     
     

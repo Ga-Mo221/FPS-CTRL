@@ -147,6 +147,7 @@ public class WeaponController : NetworkBehaviour
     [TabGroup("Weapon Controller", "Runtime")]
     [SerializeField] private Camera _camera_Zoom;
 
+    private bool _isDead = false;
     private bool _ads;
     private bool _lastAdsState;
     private Coroutine _blendRoutine;
@@ -241,6 +242,9 @@ public class WeaponController : NetworkBehaviour
 
     public void Respawn()
     { 
+        _ads = false;
+        _lastAdsState = true;
+        
         if (_type == WeaponType.Melee) return;
         
         CurrentMaxBullet = _data.MaxBullet;
@@ -296,7 +300,8 @@ public class WeaponController : NetworkBehaviour
             case WeaponType.Rifle:
             case WeaponType.Shotgun:
             case WeaponType.Sniper:
-                CurrentBulletvalue--;
+                if (Object.HasStateAuthority)
+                    CurrentBulletvalue--;
                 if (_bulletController != null)
                     _bulletController.Drop();
                     
@@ -327,39 +332,85 @@ public class WeaponController : NetworkBehaviour
         ADSHandler();
     }
 
-    public bool CanFire()
+    /// <summary>
+    /// Advance đồng hồ simulation của recoil controller (cooldown + burst continuation).
+    /// CHỈ được gọi từ FixedUpdateNetwork() (hoặc hàm được gọi trực tiếp từ đó, ví dụ
+    /// NCharMovementHandler.ADSHandler()). KHÔNG gọi từ Update(), UI, hay bất kỳ nơi nào
+    /// ngoài simulation path — nếu không, HandleBurstTick() có thể advance burst state
+    /// ngoài tick simulate và sẽ không rollback được khi Fusion resimulate.
+    /// </summary>
+    public void AdvanceRecoilTick()
     {
         if (Runner != null)
             _gun_Recoil_CTRL.NetworkTick(Runner.SimulationTime);
-        return _gun_Recoil_CTRL.CanFire;
+    }
+
+    /// <summary>
+    /// Query thuần "có thể bắn phát tiếp theo không", KHÔNG side-effect.
+    /// Yêu cầu AdvanceRecoilTick() đã được gọi trong cùng tick trước đó
+    /// (CanFire() bên dưới làm việc này giúp caller trong simulation path).
+    /// </summary>
+    public bool CanFireQuery() => _gun_Recoil_CTRL.CanFire;
+
+    /// <summary>
+    /// Advance tick rồi trả về CanFire. CHỈ gọi từ trong FixedUpdateNetwork
+    /// (ví dụ NCharMovementHandler.ADSHandler() cho melee). Nếu cần query
+    /// nhiều lần trong cùng tick mà không muốn advance lại, dùng CanFireQuery().
+    /// </summary>
+    public bool CanFire()
+    {
+        AdvanceRecoilTick();
+        return CanFireQuery();
     }
 
     private void ADSHandler()
     {
+        if (_isDead)
+        {
+            _ads = !_lastAdsState;
+        }
         if (_ads != _lastAdsState)
         {
             _lastAdsState = _ads;
-            _gun_Recoil_CTRL.SetAiming(_ads);
-            _cam_Recoil.SetADS(_ads);
-            if (_blendRoutine != null)
-                StopCoroutine(_blendRoutine);
-
-            float target = _ads ? 1f : 0f;
-            float zoom = _ads ? _data.ADS_Zoom : _data.Stand_Zoom;
-            float zoom_z = _ads ? _data.ADS_Zoom_Z : _data.Stamd_Zoom_Z;
-            float Pivot_Height = _ads && _isCrouch ? _data.Ads_Pivot_Height : _data.Stand_Pivot_Height;
-            _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Height, _data.ADS_duration));
+            ADSBlend(_ads);
         }
+    }
+
+    private void ADSBlend(bool ads)
+    {
+        _gun_Recoil_CTRL.SetAiming(ads);
+        _cam_Recoil.SetADS(ads);
+        if (_blendRoutine != null)
+            StopCoroutine(_blendRoutine);
+
+        float target = ads ? 1f : 0f;
+        float zoom = ads ? _data.ADS_Zoom : _data.Stand_Zoom;
+        float zoom_z = ads ? _data.ADS_Zoom_Z : _data.Stamd_Zoom_Z;
+        float Pivot_Height = ads && _isCrouch ? _data.Ads_Pivot_Height : _data.Stand_Pivot_Height;
+        _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Height, _data.ADS_duration));
     }
 
     private IEnumerator ADSBlend(float targetWeight, float zoomTarget, float zoomZ, float pivotHeight, float duration = 0.25f)
     {
-        // XÓA HOÀN TOÀN 4 DÒNG CHECK APPROXIMATELY Ở ĐÂY
-    
         float start = _ads_Pivot.targets[0].weight;
+        // float start = 0;
+        // if (_ads_Pivot.targets.Count > 0 && _ads_Pivot.targets[0] != null)
+        //     start = _ads_Pivot.targets[0].weight;
+        
         float startzoom = _camera_Zoom.fieldOfView;
         float startzoom_z = _camera_Zoom.transform.localPosition.z;
+        // float startzoom = 0;
+        // float startzoom_z = 0;
+        // if (_camera_Zoom != null)
+        // {
+        //     startzoom = _camera_Zoom.fieldOfView;
+        //     startzoom_z = _camera_Zoom.transform.localPosition.z;
+        // }
+
         float startHeight = _ads_Pivot_transform.localPosition.z;
+        // float startHeight = 0;
+        // if (_ads_Pivot_transform != null)
+        //     startHeight = _ads_Pivot_transform.localPosition.z;
     
         float time = 0f;
         Vector3 _zoomYtarget = _camera_Zoom.transform.localPosition; // Lấy vị trí hiện tại thay vì Vector3.zero để giữ lại trục X và Z
@@ -399,6 +450,7 @@ public class WeaponController : NetworkBehaviour
 
     public bool Reload()
     {
+        if (!Object.HasStateAuthority) return false;
         if (CurrentMaxBullet >= _data.BulletPlusCount)
         {
 
@@ -462,7 +514,18 @@ public class WeaponController : NetworkBehaviour
             case WeaponType.Sniper:
                 if (CurrentBulletvalue <= 0)
                 {
-                    RPC_ApplyAudio();
+                    // FIX: RPC_ApplyAudio() chỉ StateAuthority được phép gửi (RpcSources.StateAuthority).
+                    // OnFire() còn được gọi từ nhánh client-side prediction trong
+                    // NShootHandler.FixedUpdateNetwork() (InputAuthority nhưng KHÔNG có StateAuthority)
+                    // để dự đoán visual/audio ngay lập tức — gọi RPC ở nhánh đó vi phạm quyền gửi và bị
+                    // Fusion reject ("Local simulation is not allowed to send this RPC").
+                    // Máy đang predict chính là máy cần nghe âm thanh "hết đạn" nên phát trực tiếp cục
+                    // bộ, không cần round-trip RPC tới chính mình. Chỉ khi chạy trên StateAuthority
+                    // (Host, có thể điều khiển 1 máy khác) mới cần RPC để báo cho InputAuthority phát âm.
+                    if (Object.HasStateAuthority)
+                        RPC_ApplyAudio();
+                    else if (Object.HasInputAuthority)
+                        ApplyFireFailedAudio();
                     return false;
                 }
                 return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
@@ -476,6 +539,15 @@ public class WeaponController : NetworkBehaviour
     
     [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
     private void RPC_ApplyAudio()
+    {
+        ApplyFireFailedAudio();
+    }
+
+    /// <summary>
+    /// Phần logic audio/coroutine thuần cục bộ, không cần dữ liệu network — factor ra khỏi
+    /// RPC_ApplyAudio() để nhánh client-prediction (không có quyền gửi RPC) gọi trực tiếp.
+    /// </summary>
+    private void ApplyFireFailedAudio()
     {
         if (GetMode() == GunRecoilController.FiringMode.Auto)
         {
@@ -601,7 +673,11 @@ public class WeaponController : NetworkBehaviour
     
     // ============================================ ANIMATOR =================================================
     
-    public void IsDead(bool isDead) => _anim.SetBool("IsDead", isDead);
+    public void IsDead(bool isDead)
+    {
+        _isDead = isDead;
+        _anim.SetBool("IsDead", isDead);
+    }
     public void IsGrouded(bool isGrouded) => _anim.SetBool("IsGrouded", isGrouded); 
     public void IsCrouching(bool isCrouching)
     {
@@ -623,6 +699,7 @@ public class WeaponController : NetworkBehaviour
     
     public bool ADS(bool ads)
     {
+        if (_isDead) return false;
         _anim.SetBool("ADS", ads);
         if (_type == WeaponType.Melee) return true;
         _ads = ads;

@@ -6,6 +6,7 @@ public class DisplayFPSController : MonoBehaviour
 
     private void Awake()
     {
+        Application.runInBackground = true;
         ApplyMaxFPS();
     }
 

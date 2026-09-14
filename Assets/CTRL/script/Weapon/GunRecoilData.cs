@@ -153,10 +153,10 @@ public class GunRecoilData : ScriptableObject
     [Tooltip("Hệ số nhân thêm lên giật xoay khi đang bắn chế độ Auto hoặc Burst.\n" +
              "Mô phỏng hiện tượng súng leo dần (climb) khi bắn liên tục.\n\n" +
              "• X = nhân Roll   (ví dụ: 1.3 → nghiêng mạnh hơn 30% khi auto)\n" +
-             "• Y = (chưa dùng, dự phòng)\n" +
+             "• Y = (chưa dùng — giữ = 1, không ảnh hưởng đến gameplay)\n" +
              "• Z = nhân Yaw    (ví dụ: 7 → lắc ngang nhiều hơn khi auto)\n\n" +
              "Đặt = 1 để không thay đổi so với semi. Tăng Z tạo hiệu ứng 'spin-up' đặc trưng súng máy.")]
-    public Vector3 extraRot = new Vector3(1.3f, 3f, 7f);
+    public Vector3 extraRot = new Vector3(1.3f, 1f, 7f);
 
     [Tooltip("Hệ số nhân thêm lên giật tịnh tiến khi đang bắn chế độ Auto hoặc Burst.\n\n" +
              "• X = nhân KickRight  (lệch ngang thêm khi auto)\n" +
@@ -179,6 +179,18 @@ public class GunRecoilData : ScriptableObject
     [Range(0f, 20f)]
     public float clampMultiplier = 5f;
 
+    [Header("Translation Clamp — Target Accumulation")]
+    [Tooltip("Hệ số nhân lên giá trị kick tịnh tiến tối đa để tính ngưỡng clamp.\n\n" +
+             "Clamp được tính từ data hiện tại:\n" +
+             "  maxKickback  = kickback.x  × extraLoc.z × locClampMultiplier\n" +
+             "  maxKickUp    = kickUp.y    × extraLoc.y × locClampMultiplier\n" +
+             "  maxKickRight = kickRight.y × extraLoc.x × locClampMultiplier\n\n" +
+             "• 1–3 = giới hạn chặt, vũ khí không bị bay xa khỏi origin\n" +
+             "• 0   = tắt clamp tịnh tiến (nguy hiểm — vũ khí có thể bay xuyên map)\n\n" +
+             "ĐÂY LÀ THAM SỐ QUAN TRỌNG ĐỂ TRÁNH VŨ KHÍ BAY KHỎI MAP.")]
+    [Range(0f, 20f)]
+    public float locClampMultiplier = 3f;
+
     // ── Computed clamp limits (tự suy từ data, không cần nhập tay) ──────────
     /// <summary>Giới hạn Pitch (X) của _targetRot. Tự tính từ pitch + clampMultiplier.</summary>
     public Vector2 MaxPitch
@@ -186,9 +198,12 @@ public class GunRecoilData : ScriptableObject
         get
         {
             if (clampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
-            float worstKick = Mathf.Min(pitch.x, pitch.y); // pitch thường âm → min là cực âm nhất
-            float lo = worstKick * clampMultiplier;
-            float hi = Mathf.Abs(worstKick) * 0.5f;       // phía dương nhỏ hơn (hiếm khi pitch dương)
+            // Pitch thường âm (nòng ngóc lên). Lấy worst = giá trị tuyệt đối lớn nhất.
+            // FIX: áp clampMultiplier đối xứng cả hai phía để clamp thực sự hoạt động
+            // khi _targetRot.x tích lũy nhiều phát liên tiếp (đặc biệt chế độ Auto).
+            float worstKick = Mathf.Max(Mathf.Abs(pitch.x), Mathf.Abs(pitch.y));
+            float lo = -worstKick * clampMultiplier;
+            float hi =  worstKick * clampMultiplier * 0.25f; // phía dương cho phép nhỏ hơn
             return new Vector2(lo, hi);
         }
     }
@@ -212,6 +227,44 @@ public class GunRecoilData : ScriptableObject
             if (clampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
             float worstYaw = Mathf.Max(Mathf.Abs(yaw.x), Mathf.Abs(yaw.w)) * extraRot.z;
             return new Vector2(-worstYaw * clampMultiplier, worstYaw * clampMultiplier);
+        }
+    }
+
+    // ── Computed translation clamp limits ────────────────────────────────────
+
+    /// <summary>Giới hạn Kickback (Z) của _targetLoc. Tự tính từ kickback + extraLoc.z + locClampMultiplier.</summary>
+    public Vector2 MaxKickback
+    {
+        get
+        {
+            if (locClampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
+            // kickback thường âm (lùi ra sau), worst case = kickback.x (cực âm nhất)
+            float worstKb = Mathf.Min(kickback.x, kickback.y) * extraLoc.z;
+            float lo = worstKb * locClampMultiplier;
+            float hi = Mathf.Abs(worstKb) * 0.5f; // phía dương hiếm xảy ra
+            return new Vector2(lo, hi);
+        }
+    }
+
+    /// <summary>Giới hạn KickUp (Y) của _targetLoc. Tự tính từ kickUp + extraLoc.y + locClampMultiplier.</summary>
+    public Vector2 MaxKickUp
+    {
+        get
+        {
+            if (locClampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
+            float worstKu = Mathf.Max(Mathf.Abs(kickUp.x), Mathf.Abs(kickUp.y)) * extraLoc.y;
+            return new Vector2(-worstKu * locClampMultiplier, worstKu * locClampMultiplier);
+        }
+    }
+
+    /// <summary>Giới hạn KickRight (X) của _targetLoc. Tự tính từ kickRight + extraLoc.x + locClampMultiplier.</summary>
+    public Vector2 MaxKickRight
+    {
+        get
+        {
+            if (locClampMultiplier <= 0f) return new Vector2(float.MinValue, float.MaxValue);
+            float worstKr = Mathf.Max(Mathf.Abs(kickRight.x), Mathf.Abs(kickRight.y)) * extraLoc.x;
+            return new Vector2(-worstKr * locClampMultiplier, worstKr * locClampMultiplier);
         }
     }
 
@@ -487,56 +540,157 @@ public class GunRecoilData : ScriptableObject
     // ─────────────────────────────────────────────
 
     /// <summary>
-    /// Trả về true nếu asset hợp lệ.
-    /// Gọi từ Editor hoặc runtime Awake.
+    /// Collect toàn bộ vấn đề của asset vào một list.
+    /// Trả về true nếu không có lỗi nào (issues rỗng).
+    /// Gọi từ Editor button hoặc runtime Awake.
     /// </summary>
-    public bool Validate(out string errorMessage)
+    public bool ValidateAll(out System.Collections.Generic.List<string> issues, float semiFireDelay = 0.25f, float autoFireDelay = 0.1f)
     {
-        // Allowed modes
+        issues = new System.Collections.Generic.List<string>();
+
+        // ── Allowed modes ──────────────────────────────────────────────
         if (allowedModes == 0)
-        { errorMessage = "AllowedModes: phải có ít nhất một mode được tick."; return false; }
+            issues.Add("[AllowedModes] Phải có ít nhất một mode được tick.");
 
-        // Pitch range
+        if (IsModeAllowed(AllowedModes.Burst) && BurstCount < 2)
+            issues.Add($"[BurstCount] Burst mode được bật nhưng BurstCount = {BurstCount} (khuyến nghị ≥ 2).");
+
+        // ── Rotation targets ───────────────────────────────────────────
         if (pitch.x > pitch.y)
-        { errorMessage = "Pitch: min (X) phải ≤ max (Y)."; return false; }
+            issues.Add($"[Pitch] min (X={pitch.x}) phải ≤ max (Y={pitch.y}).");
+        if (pitch.x >= 0f && pitch.y >= 0f)
+            issues.Add($"[Pitch] Cả hai giá trị đều dương ({pitch.x}, {pitch.y}). " +
+                       "Pitch thường âm để nòng súng ngóc lên. Kiểm tra lại. " +
+                       "Khuyến nghị: Pistol = (-8, -3), Rifle = (-4, -2), Shotgun = (-12, -5), Sniper = (-15, -6).");
 
-        // Roll: XY là cặp min, ZW là cặp max
         if (roll.x > roll.y)
-        { errorMessage = "Roll: min range (X) phải ≤ (Y)."; return false; }
+            issues.Add($"[Roll] min range: X ({roll.x}) phải ≤ Y ({roll.y}).");
         if (roll.z > roll.w)
-        { errorMessage = "Roll: max range (Z) phải ≤ (W)."; return false; }
+            issues.Add($"[Roll] max range: Z ({roll.z}) phải ≤ W ({roll.w}).");
 
-        // Yaw: tương tự
         if (yaw.x > yaw.y)
-        { errorMessage = "Yaw: min range (X) phải ≤ (Y)."; return false; }
+            issues.Add($"[Yaw] min range: X ({yaw.x}) phải ≤ Y ({yaw.y}).");
         if (yaw.z > yaw.w)
-        { errorMessage = "Yaw: max range (Z) phải ≤ (W)."; return false; }
+            issues.Add($"[Yaw] max range: Z ({yaw.z}) phải ≤ W ({yaw.w}).");
 
-        // Translation ranges
+        // ── Translation targets ────────────────────────────────────────
         if (kickback.x > kickback.y)
-        { errorMessage = "Kickback: min (X) phải ≤ max (Y)."; return false; }
+            issues.Add($"[Kickback] min (X={kickback.x}) phải ≤ max (Y={kickback.y}).");
+        if (kickback.x >= 0f && kickback.y >= 0f)
+            issues.Add($"[Kickback] Cả hai giá trị đều dương ({kickback.x}, {kickback.y}). " +
+                       "Kickback thường âm (súng lùi ra sau). Kiểm tra lại. " +
+                       "Khuyến nghị: Pistol = (-0.05, -0.02), Rifle = (-0.03, -0.015), " +
+                       "Shotgun = (-0.10, -0.05), Sniper = (-0.06, -0.03).");
+
         if (kickUp.x > kickUp.y)
-        { errorMessage = "KickUp: min (X) phải ≤ max (Y)."; return false; }
+            issues.Add($"[KickUp] min (X={kickUp.x}) phải ≤ max (Y={kickUp.y}).");
+
         if (kickRight.x > kickRight.y)
-        { errorMessage = "KickRight: min (X) phải ≤ max (Y)."; return false; }
+            issues.Add($"[KickRight] min (X={kickRight.x}) phải ≤ max (Y={kickRight.y}).");
 
-        // Smooth / damp phải dương
-        if (smoothRot.x <= 0f || smoothRot.y <= 0f || smoothRot.z <= 0f)
-        { errorMessage = "SmoothRot: tất cả components phải > 0."; return false; }
-        if (smoothLoc.x <= 0f || smoothLoc.y <= 0f || smoothLoc.z <= 0f)
-        { errorMessage = "SmoothLoc: tất cả components phải > 0."; return false; }
-        if (pushAccel <= 0f || pushDamp <= 0f)
-        { errorMessage = "PushAccel và PushDamp phải > 0."; return false; }
+        // ── Aim multipliers ────────────────────────────────────────────
+        if (aimRotMultiplier.x < 0f || aimRotMultiplier.y < 0f || aimRotMultiplier.z < 0f)
+            issues.Add($"[AimRotMultiplier] Không nên âm ({aimRotMultiplier}). " +
+                       "Giá trị âm sẽ đảo chiều giật khi ADS. " +
+                       "Khuyến nghị: X (Pitch) = 0.3–0.6, Y (Roll) = 0.2–0.5, Z (Yaw) = 0.3–0.6. " +
+                       "Sniper: X = 0.1–0.3. Đặt = 1.0 nếu muốn giữ nguyên như bắn từ hông.");
+        if (aimLocMultiplier.x < 0f || aimLocMultiplier.y < 0f || aimLocMultiplier.z < 0f)
+            issues.Add($"[AimLocMultiplier] Không nên âm ({aimLocMultiplier}). " +
+                       "Giá trị âm sẽ đảo chiều tịnh tiến khi ADS. " +
+                       "Khuyến nghị: X (KickRight) = 0.3–0.7, Y (KickUp) = 0.4–0.7, Z (Kickback) = 0.5–0.8. " +
+                       "Đặt = 1.0 để giữ nguyên không giảm khi ADS.");
+
+        // ── Smooth / damp ──────────────────────────────────────────────
+        if (smoothRot.x <= 0f)
+            issues.Add($"[SmoothRot.X] Phải > 0 (hiện tại: {smoothRot.x}). Dùng cho Semi decay. " +
+                       "Khuyến nghị: Pistol/Sniper = 12–20, Rifle/SMG = 10–15, Shotgun = 6–12.");
+        if (smoothRot.y <= 0f)
+            issues.Add($"[SmoothRot.Y] Phải > 0 (hiện tại: {smoothRot.y}). Dùng cho Auto decay. " +
+                       "Khuyến nghị: 9–25 — thấp hơn SmoothRot.X để giật Auto cộng dồn tự nhiên.");
+        if (smoothRot.z <= 0f)
+            issues.Add($"[SmoothRot.Z] Phải > 0 (hiện tại: {smoothRot.z}). Dùng cho Roll smooth. " +
+                       "Khuyến nghị: 3–8 (thường thấp hơn SmoothRot.X để roll trôi mượt hơn pitch).");
+
+        if (smoothLoc.x <= 0f)
+            issues.Add($"[SmoothLoc.X] Phải > 0 (hiện tại: {smoothLoc.x}). Dùng cho Semi loc decay. " +
+                       "Khuyến nghị: 1–5 nếu muốn cảm giác nặng; >= 10 nếu cần tránh tích lũy kickback.");
+        if (smoothLoc.y <= 0f)
+            issues.Add($"[SmoothLoc.Y] Phải > 0 (hiện tại: {smoothLoc.y}). Dùng cho Auto loc decay. " +
+                       "Khuyến nghị: 18–30 để kickback Auto không tích lũy ở 600 RPM (0.1s/phát).");
+        if (smoothLoc.z <= 0f)
+            issues.Add($"[SmoothLoc.Z] Phải > 0 (hiện tại: {smoothLoc.z}). " +
+                       "Khuyến nghị: 30–60 (dự phòng, ít ảnh hưởng gameplay).");
+
+        if (pushAccel <= 0f)
+            issues.Add($"[PushAccel] Phải > 0 (hiện tại: {pushAccel}). " +
+                       "Khuyến nghị: 3–5 (phục hồi chậm/nặng nề), 7–10 (vừa phải), 15+ (rất nhanh).");
+        if (pushDamp <= 0f)
+            issues.Add($"[PushDamp] Phải > 0 (hiện tại: {pushDamp}). " +
+                       $"Khuyến nghị: >= 2×√pushAccel để tránh dao động. " +
+                       $"Với pushAccel={pushAccel:F1}: PushDamp >= {2f * Mathf.Sqrt(Mathf.Max(pushAccel,0.01f)):F1}.");
+
+        // ── Pushback underdamped warning ───────────────────────────────
+        if (pushAccel > 0f && pushDamp > 0f)
+        {
+            float critDamp = 2f * Mathf.Sqrt(pushAccel);
+            if (pushDamp < critDamp * 0.5f)
+                issues.Add($"[PushDamp] Có thể underdamped nặng (pushDamp={pushDamp:F1}, " +
+                           $"critical≈{critDamp:F1}). Camera có thể dao động qua lại nhiều lần. " +
+                           $"Khuyến nghị: PushDamp >= {critDamp * 0.5f:F1} (tối thiểu, ít dao động), " +
+                           $">= {critDamp:F1} (critically damped, không dao động), " +
+                           $">= {critDamp * 1.5f:F1} (overdamped, phục hồi mượt chậm hơn).");
+        }
+
+        // ── Noise ──────────────────────────────────────────────────────
         if (idleNoiseDecayTime < 0f)
-        { errorMessage = "IdleNoiseDecayTime phải ≥ 0."; return false; }
+            issues.Add($"[IdleNoiseDecayTime] Phải ≥ 0 (hiện tại: {idleNoiseDecayTime}). " +
+                       "Khuyến nghị: 0 (noise tắt ngay), 0.3–0.5 (fade-out nhẹ, mặc định), 1.0 (kéo dài). " +
+                       "Sửa: đặt giá trị >= 0.");
+        if (noiseScalar > 0f)
+        {
+            if (noiseAccel.x <= 0f || noiseAccel.y <= 0f)
+                issues.Add($"[NoiseAccel] Phải > 0 khi noiseScalar > 0 (hiện tại: {noiseAccel}). " +
+                           "Khuyến nghị: X (ngang) = 6–10, Y (dọc) = 10–15. " +
+                           "Tăng để noise rung nhanh/co cụm; giảm để noise trôi chậm/lan rộng.");
+            if (noiseDamp.x <= 0f || noiseDamp.y <= 0f)
+                issues.Add($"[NoiseDamp] Phải > 0 khi noiseScalar > 0 (hiện tại: {noiseDamp}). " +
+                           $"Khuyến nghị: X >= {2f * Mathf.Sqrt(Mathf.Max(noiseAccel.x, 0.01f)):F1} " +
+                           $"(với noiseAccel.X={noiseAccel.x:F1}), " +
+                           $"Y >= {2f * Mathf.Sqrt(Mathf.Max(noiseAccel.y, 0.01f)):F1} " +
+                           $"(với noiseAccel.Y={noiseAccel.y:F1}). " +
+                           "Đặt >= 2×√noiseAccel để tắt dao động thừa.");
+        }
 
-        // Camera shake
+        // ── Camera shake ───────────────────────────────────────────────
         if (camSnappiness <= 0f)
-        { errorMessage = "CamSnappiness phải > 0."; return false; }
+            issues.Add($"[CamSnappiness] Phải > 0 (hiện tại: {camSnappiness}). " +
+                       "Khuyến nghị: 6–10 (mượt) đến 15–20 (nhanh/snap). Giá trị thấp = camera bắt kịp chậm hơn.");
         if (camReturnSpeed <= 0f)
-        { errorMessage = "CamReturnSpeed phải > 0."; return false; }
+            issues.Add($"[CamReturnSpeed] Phải > 0 (hiện tại: {camReturnSpeed}). " +
+                       "Khuyến nghị: 5–10 (hồi chậm, cảm giác nặng) đến 15–25 (hồi nhanh, cảm giác nhẹ).");
+        if (camAimWeight < 0f || camAimWeight > 1f)
+            issues.Add($"[CamAimWeight] Phải nằm trong [0, 1] (hiện tại: {camAimWeight:F2}). " +
+                       "Khuyến nghị: 0.4–0.7 — giảm giật camera khi ADS nhưng không triệt tiêu hoàn toàn.");
 
-        // Curves: phải bắt đầu và kết thúc tại 0
+        // ── PlayRate ───────────────────────────────────────────────────
+        if (playRate <= 0f)
+            issues.Add($"[PlayRate] Phải > 0 (hiện tại: {playRate}). " +
+                       "Khuyến nghị: 0.8–1.0 (mềm/chậm), 1.0–1.3 (mặc định), 1.5–2.0 (sắc/nhanh). " +
+                       "Giá trị quá nhỏ (< 0.1) sẽ làm animation recoil rất chậm và không phản hồi.");
+
+        // ── Clamp multipliers ──────────────────────────────────────────
+        if (clampMultiplier < 0f)
+            issues.Add($"[ClampMultiplier] Không nên âm (hiện tại: {clampMultiplier}). " +
+                       "Khuyến nghị: 0 (tắt clamp), 1–2 (chặt — chặn ngay sau 1–2 phát), " +
+                       "3–5 (vừa phải, mặc định — cho phép tích lũy vài phát trước khi chặn), " +
+                       "10+ (rất rộng — gần như không giới hạn). Đặt = 0 để âm.");
+        if (locClampMultiplier <= 0f)
+            issues.Add($"[LocClampMultiplier] Nên > 0 để tránh vũ khí bay khỏi map (hiện tại: {locClampMultiplier}). " +
+                       "Khuyến nghị: 1–3 (chặt, an toàn — vũ khí không bị đẩy quá xa), " +
+                       "3–5 (vừa phải — có khoảng cộng dồn nhỏ), " +
+                       "0 = TẮT HOÀN TOÀN (nguy hiểm, vũ khí có thể xuyên qua map/camera).");
+
+        // ── Curves ────────────────────────────────────────────────────
         AnimationCurve[] allCurves =
         {
             semiRotX, semiRotY, semiRotZ,
@@ -555,41 +709,559 @@ public class GunRecoilData : ScriptableObject
         for (int i = 0; i < allCurves.Length; i++)
         {
             var curve = allCurves[i];
+            string cName = curveNames[i];
+
             if (curve == null || curve.length == 0)
-            { errorMessage = $"{curveNames[i]}: curve rỗng."; return false; }
+            {
+                issues.Add($"[{cName}] Curve rỗng — không có key nào.");
+                continue;
+            }
 
             float startVal = curve.Evaluate(curve.keys[0].time);
             float endVal   = curve.Evaluate(curve.keys[curve.length - 1].time);
 
             if (Mathf.Abs(startVal) > 0.001f)
-            { errorMessage = $"{curveNames[i]}: phải bắt đầu tại 0 (hiện tại: {startVal:F4})."; return false; }
+                issues.Add($"[{cName}] Phải bắt đầu tại 0 (hiện tại: {startVal:F4}). " +
+                           "Curve bắt đầu ≠ 0 sẽ gây giật tức thời khi phát đầu tiên. " +
+                           "Sửa: chọn key đầu tiên trong Curve Editor, đặt Value = 0.");
             if (Mathf.Abs(endVal) > 0.001f)
-            { errorMessage = $"{curveNames[i]}: phải kết thúc tại 0 (hiện tại: {endVal:F4})."; return false; }
+                issues.Add($"[{cName}] Phải kết thúc tại 0 (hiện tại: {endVal:F4}). " +
+                           "Curve kết thúc ≠ 0 sẽ giữ súng ở vị trí lệch sau khi hết animation. " +
+                           "Sửa: chọn key cuối cùng trong Curve Editor, đặt Value = 0.");
 
-            // FIX: curve là hệ số lerp nên PHẢI nằm trong [0,1] xuyên suốt, không chỉ đầu/cuối.
-            // Mathf.Lerp tự clamp t vào [0,1], nên nếu curve đi ra ngoài khoảng này (ví dụ
-            // overshoot âm ở giữa curve), phát bắn sẽ bị "đứng khựng" (t âm → clamp về 0,
-            // không lerp) rồi giật bù đột ngột khi curve quay lại dương — đây chính là lỗi
-            // đã gặp với M4_Recoil.asset (curve có key value: -0.6 và -0.1 ở giữa).
-            float startTime = curve.keys[0].time;
-            float endTime   = curve.keys[curve.length - 1].time;
-            const int sampleCount = 20;
+            // Curve là hệ số lerp → PHẢI nằm trong [0,1] xuyên suốt.
+            // Nếu âm: Lerp clamp về 0 → súng đứng khựng. Nếu > 1: Lerp clamp về 1 → snap cứng.
+            float startTime  = curve.keys[0].time;
+            float endTime    = curve.keys[curve.length - 1].time;
+            const int sampleCount = 30;
+            float firstOOB = float.NaN;
+            float firstOOBVal = 0f;
             for (int s = 0; s <= sampleCount; s++)
             {
                 float t = Mathf.Lerp(startTime, endTime, s / (float)sampleCount);
                 float v = curve.Evaluate(t);
                 if (v < -0.01f || v > 1.01f)
                 {
-                    errorMessage = $"{curveNames[i]}: curve vượt ra ngoài [0,1] tại t={t:F3} " +
-                                   $"(giá trị: {v:F3}). Curve là hệ số lerp nên phải luôn nằm " +
-                                   $"trong [0,1], nếu không phát bắn sẽ bị đứng khựng rồi giật bù đột ngột.";
-                    return false;
+                    if (float.IsNaN(firstOOB)) { firstOOB = t; firstOOBVal = v; }
                 }
+            }
+            if (!float.IsNaN(firstOOB))
+                issues.Add($"[{cName}] Curve vượt ngoài [0,1] — lần đầu tại t={firstOOB:F3} " +
+                           $"(giá trị: {firstOOBVal:F3}). Curve là hệ số lerp; nếu âm → súng đứng " +
+                           $"khựng rồi giật bù đột ngột. Nếu > 1 → snap cứng vượt quá target. " +
+                           "Sửa: trong Curve Editor chọn tất cả key → Right-Click → 'Clamp' hoặc " +
+                           "điều chỉnh tay để toàn bộ đường cong nằm trong dải [0, 1].");
+        }
+
+        // ── Accumulation simulation ────────────────────────────────────────
+        // Simulate N phát bắn liên tiếp với fireDelay điển hình để kiểm tra
+        // xem smooth decay có kịp kéo _targetRot/_targetLoc về trước phát tiếp theo không.
+        // Nếu không → tích lũy vô hạn → súng xoay vòng / bay ra ngoài map.
+        //
+        // Mô hình toán: mỗi bước dt, decay chạy Lerp(target, 0, smoothX * dt).
+        // Tương đương: target *= (1 - smoothX * dt) per frame (xấp xỉ tuyến tính).
+        // Sau fireDelay giây: remainFactor ≈ exp(-smooth * fireDelay) [continuous].
+        // Ta simulate discrete theo frameRate để sát với runtime thực tế hơn.
+        CheckAccumulationRot(issues, semiFireDelay, autoFireDelay);
+        CheckAccumulationLoc(issues, semiFireDelay, autoFireDelay);
+
+        return issues.Count == 0;
+    }
+
+    // ─────────────────────────────────────────────
+    //  ACCUMULATION SIMULATION HELPERS
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Kiểm tra xem rotation (_targetRot) có bị cộng dồn không kiểm soát không.
+    /// Simulate vòng bắn Auto/Semi điển hình ở 60 fps.
+    /// </summary>
+    private void CheckAccumulationRot(System.Collections.Generic.List<string> issues, float semiFireDelay, float autoFireDelay)
+    {
+        // ── Thông số simulate ─────────────────────────────────────────────────
+        // fireDelay: khoảng cách giữa 2 phát — dùng giá trị thực tế phổ biến.
+        // Semi: ~0.25s (4 shots/s bắn nhanh), Auto: ~0.1s (600 RPM).
+        // Clamp multiplier tự tính từ data → kết quả giữa clamp và không clamp.
+
+        const int   simShots    = 20;   // số phát simulate
+        const float fps         = 60f;
+        const float dt          = 1f / fps;
+
+        // ── SEMI (smoothRot.x, fireDelay = 0.25s) ─────────────────────────
+        {
+            float fireDelay = semiFireDelay;
+            float smooth = smoothRot.x;
+            float pitchKick = pitch.x; // worst case: giá trị cực đại
+
+            float target   = 0f;
+            float peakSeen = 0f;
+            for (int shot = 0; shot < simShots; shot++)
+            {
+                // Kick
+                target += pitchKick;
+
+                // Decay trong fireDelay giây @ fps
+                int frames = Mathf.RoundToInt(fireDelay / dt);
+                for (int f = 0; f < frames; f++)
+                    target = Mathf.Lerp(target, 0f, smooth * dt);
+
+                peakSeen = Mathf.Max(peakSeen, Mathf.Abs(target));
+            }
+
+            // Tính steady-state thực: sau N phát nếu |target| vẫn tăng → không ổn định
+            // Ngưỡng: nếu sau 20 phát tích lũy > clampMultiplier * |pitchKick| * 2 thì cảnh báo
+            float safeThreshold = Mathf.Abs(pitchKick) * Mathf.Max(clampMultiplier, 1f);
+            float decayRatio    = DecayRatioPerShot(smooth, fireDelay, fps);
+
+            if (decayRatio > 0.85f) // chỉ decay được < 15% mỗi phát thì tích lũy rất nhanh
+            {
+                // Tính smooth tối thiểu để decayRatio <= 0.85
+                float minSmoothForSemiPitch = 0f;
+                for (float s = 0.1f; s <= 50f; s += 0.1f)
+                {
+                    if (DecayRatioPerShot(s, fireDelay, fps) <= 0.85f)
+                    {
+                        minSmoothForSemiPitch = s;
+                        break;
+                    }
+                }
+                // Tính pitch max an toàn với smooth hiện tại (decayRatio <= 0.85 → không apply nếu smooth đủ)
+                issues.Add(
+                    $"[Accumulation | Semi | Pitch] SmoothRot.X ({smooth:F1}) quá thấp so với " +
+                    $"fireDelay {fireDelay:F2}s — chỉ decay được {(1f-decayRatio)*100f:F0}% " +
+                    $"giữa 2 phát. Sau {simShots} phát _targetRot.X tích lũy ~{peakSeen:F1}° " +
+                    $"(ngưỡng an toàn ≈ {safeThreshold:F1}°). " +
+                    "Tăng SmoothRot.X hoặc giảm Pitch để tránh súng xoay vòng. " +
+                    $"Khuyến nghị: SmoothRot.X >= {minSmoothForSemiPitch:F1} " +
+                    $"(để decay >= 15%/phát tại fireDelay={fireDelay:F2}s). " +
+                    $"Hoặc giảm |Pitch.X| <= {Mathf.Abs(pitchKick) * (1f - decayRatio) / (decayRatio > 0f ? decayRatio : 0.01f):F2}° " +
+                    $"(nếu giữ SmoothRot.X={smooth:F1}).");
             }
         }
 
-        errorMessage = string.Empty;
-        return true;
+        // ── AUTO (smoothRot.y, fireDelay = 0.1s = 600 RPM) ──────────────
+        if (IsModeAllowed(AllowedModes.Auto))
+        {
+            float fireDelay = autoFireDelay;
+            float smooth = smoothRot.y;
+            // Auto dùng extraRot nhân thêm
+            float pitchKick = pitch.x; // pitch không nhân extraRot theo trục X trong code
+
+            float target   = 0f;
+            float peakSeen = 0f;
+            bool  growing  = false;
+            float prevAbs  = 0f;
+
+            for (int shot = 0; shot < simShots; shot++)
+            {
+                target += pitchKick;
+
+                int frames = Mathf.RoundToInt(fireDelay / dt);
+                for (int f = 0; f < frames; f++)
+                    target = Mathf.Lerp(target, 0f, smooth * dt);
+
+                float curAbs = Mathf.Abs(target);
+                if (shot > 0 && curAbs > prevAbs + 0.01f) growing = true;
+                peakSeen = Mathf.Max(peakSeen, curAbs);
+                prevAbs  = curAbs;
+            }
+
+            float decayRatio = DecayRatioPerShot(smooth, fireDelay, fps);
+
+            if (growing)
+            {
+                // Tính SmoothRot.Y tối thiểu để Auto Pitch không growing
+                float minSmoothAutoP = 0f;
+                for (float s = 0.5f; s <= 100f; s += 0.5f)
+                {
+                    float tTest = 0f, prevA = 0f; bool g = false;
+                    for (int sh = 0; sh < simShots; sh++)
+                    {
+                        tTest += pitchKick;
+                        int fr = Mathf.RoundToInt(fireDelay / dt);
+                        for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, s * dt);
+                        float ca = Mathf.Abs(tTest);
+                        if (sh > 0 && ca > prevA + 0.01f) { g = true; break; }
+                        prevA = ca;
+                    }
+                    if (!g) { minSmoothAutoP = s; break; }
+                }
+                // Tính pitch max an toàn với SmoothRot.Y hiện tại
+                float maxSafePitchAuto = 0f;
+                for (float pm = 0.1f; pm <= 20f; pm += 0.1f)
+                {
+                    float tTest = 0f, prevA = 0f; bool g = false;
+                    for (int sh = 0; sh < simShots; sh++)
+                    {
+                        tTest -= pm;
+                        int fr = Mathf.RoundToInt(fireDelay / dt);
+                        for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, smooth * dt);
+                        float ca = Mathf.Abs(tTest);
+                        if (sh > 0 && ca > prevA + 0.01f) { g = true; break; }
+                        prevA = ca;
+                    }
+                    if (!g) { maxSafePitchAuto = pm; break; }
+                }
+                issues.Add(
+                    $"[Accumulation | Auto | Pitch] _targetRot.X vẫn tăng liên tục sau {simShots} " +
+                    $"phát Auto (fireDelay={fireDelay:F2}s, SmoothRot.Y={smooth:F1}). " +
+                    $"Decay chỉ xử lý được {(1f-decayRatio)*100f:F0}% per phát — " +
+                    $"tích lũy đạt ~{peakSeen:F1}° và sẽ tiếp tục leo. " +
+                    $"Clamp MaxPitch={MaxPitch.x:F1}° sẽ chặn nhưng súng sẽ BỊ KHOÁ ở góc đó. " +
+                    "Tăng SmoothRot.Y để decay kịp giữa các phát. " +
+                    $"Khuyến nghị: SmoothRot.Y >= {minSmoothAutoP:F1} " +
+                    $"(với pitch={pitchKick:F2}°, fireDelay={fireDelay:F2}s). " +
+                    $"Hoặc |Pitch.X| <= {maxSafePitchAuto:F2}° (nếu giữ SmoothRot.Y={smooth:F1}).");
+            }
+
+            // Yaw tích lũy khi Auto (nhân extraRot.z)
+            float yawKick = Mathf.Max(Mathf.Abs(yaw.x), Mathf.Abs(yaw.w)) * extraRot.z;
+            if (yawKick > 0f)
+            {
+                float yTarget   = 0f;
+                float yPeakSeen = 0f;
+                bool  yGrowing  = false;
+                float yPrevAbs  = 0f;
+
+                for (int shot = 0; shot < simShots; shot++)
+                {
+                    yTarget += yawKick;
+                    int frames = Mathf.RoundToInt(fireDelay / dt);
+                    for (int f = 0; f < frames; f++)
+                        yTarget = Mathf.Lerp(yTarget, 0f, smooth * dt);
+
+                    float yAbs = Mathf.Abs(yTarget);
+                    if (shot > 0 && yAbs > yPrevAbs + 0.01f) yGrowing = true;
+                    yPeakSeen = Mathf.Max(yPeakSeen, yAbs);
+                    yPrevAbs  = yAbs;
+                }
+
+                if (yGrowing)
+                {
+                    // Tính SmoothRot.Y min để Yaw không growing
+                    float minSmoothYaw = 0f;
+                    for (float s = 0.5f; s <= 100f; s += 0.5f)
+                    {
+                        float yT = 0f, yP = 0f; bool yG = false;
+                        for (int sh = 0; sh < simShots; sh++)
+                        {
+                            yT += yawKick;
+                            int fr = Mathf.RoundToInt(fireDelay / dt);
+                            for (int ff = 0; ff < fr; ff++) yT = Mathf.Lerp(yT, 0f, s * dt);
+                            float ya = Mathf.Abs(yT);
+                            if (sh > 0 && ya > yP + 0.01f) { yG = true; break; }
+                            yP = ya;
+                        }
+                        if (!yG) { minSmoothYaw = s; break; }
+                    }
+                    // Tính ExtraRot.Z max an toàn (giữ smooth và yaw.w hiện tại)
+                    float maxSafeExtraRotZ = 0f;
+                    float yawWMax = Mathf.Max(Mathf.Abs(yaw.x), Mathf.Abs(yaw.w));
+                    for (float erz = 0.5f; erz <= 20f; erz += 0.5f)
+                    {
+                        float kickT = yawWMax * erz;
+                        float yT = 0f, yP = 0f; bool yG = false;
+                        for (int sh = 0; sh < simShots; sh++)
+                        {
+                            yT += kickT;
+                            int fr = Mathf.RoundToInt(fireDelay / dt);
+                            for (int ff = 0; ff < fr; ff++) yT = Mathf.Lerp(yT, 0f, smooth * dt);
+                            float ya = Mathf.Abs(yT);
+                            if (sh > 0 && ya > yP + 0.01f) { yG = true; break; }
+                            yP = ya;
+                        }
+                        if (!yG) { maxSafeExtraRotZ = erz; break; }
+                    }
+                    // Tính Yaw.W max an toàn (giữ smooth và extraRot.z hiện tại)
+                    float maxSafeYawW = 0f;
+                    for (float yw = 0.1f; yw <= 10f; yw += 0.1f)
+                    {
+                        float kickT = yw * extraRot.z;
+                        float yT = 0f, yP = 0f; bool yG = false;
+                        for (int sh = 0; sh < simShots; sh++)
+                        {
+                            yT += kickT;
+                            int fr = Mathf.RoundToInt(fireDelay / dt);
+                            for (int ff = 0; ff < fr; ff++) yT = Mathf.Lerp(yT, 0f, smooth * dt);
+                            float ya = Mathf.Abs(yT);
+                            if (sh > 0 && ya > yP + 0.01f) { yG = true; break; }
+                            yP = ya;
+                        }
+                        if (!yG) { maxSafeYawW = yw; break; }
+                    }
+                    issues.Add(
+                        $"[Accumulation | Auto | Yaw] _targetRot.Y (Yaw × ExtraRot.Z = {yawKick:F2}°/phát) " +
+                        $"tích lũy liên tục sau {simShots} phát. Đạt ~{yPeakSeen:F1}° — " +
+                        $"súng xoay ngang không kiểm soát. " +
+                        $"Giảm Yaw ({yaw.w:F2}), ExtraRot.Z ({extraRot.z:F1}), hoặc tăng SmoothRot.Y ({smooth:F1}). " +
+                        $"Khuyến nghị: " +
+                        $"(A) SmoothRot.Y >= {minSmoothYaw:F0} " +
+                        $"(với YawKick={yawKick:F2}°/phát, fireDelay={fireDelay:F2}s). " +
+                        (maxSafeExtraRotZ > 0f ? $"(B) ExtraRot.Z <= {maxSafeExtraRotZ:F1} (giữ SmoothRot.Y={smooth:F1}, Yaw.W={yaw.w:F2}). " : "") +
+                        (maxSafeYawW > 0f ? $"(C) Yaw.W <= {maxSafeYawW:F2}° (giữ SmoothRot.Y={smooth:F1}, ExtraRot.Z={extraRot.z:F1})." : ""));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra location (_targetLoc) có tích lũy không kiểm soát không.
+    /// </summary>
+    private void CheckAccumulationLoc(System.Collections.Generic.List<string> issues, float semiFireDelay, float autoFireDelay)
+    {
+        const int   simShots    = 20;
+        const float fps         = 60f;
+        const float dt          = 1f / fps;
+
+        // ── SEMI kickback (smoothLoc.x, fireDelay = 0.25s) ────────────────
+        {
+            float fireDelay = semiFireDelay;
+            float smooth    = smoothLoc.x;
+            float kbKick    = kickback.x; // worst case (cực âm nhất, = xa nhất)
+
+            float target   = 0f;
+            float peakSeen = 0f;
+            bool  growing  = false;
+            float prevAbs  = 0f;
+
+            for (int shot = 0; shot < simShots; shot++)
+            {
+                target += kbKick;
+                int frames = Mathf.RoundToInt(fireDelay / dt);
+                for (int f = 0; f < frames; f++)
+                    target = Mathf.Lerp(target, 0f, smooth * dt);
+
+                float curAbs = Mathf.Abs(target);
+                if (shot > 0 && curAbs > prevAbs + 0.0001f) growing = true;
+                peakSeen = Mathf.Max(peakSeen, curAbs);
+                prevAbs  = curAbs;
+            }
+
+            if (growing)
+            {
+                // Tính SmoothLoc.X tối thiểu để không growing
+                float minSmoothLocX = 0f;
+                for (float s = 0.1f; s <= 100f; s += 0.1f)
+                {
+                    float tTest = 0f, prevA = 0f; bool g = false;
+                    for (int sh = 0; sh < simShots; sh++)
+                    {
+                        tTest += kbKick;
+                        int fr = Mathf.RoundToInt(fireDelay / dt);
+                        for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, s * dt);
+                        float ca = Mathf.Abs(tTest);
+                        if (sh > 0 && ca > prevA + 0.0001f) { g = true; break; }
+                        prevA = ca;
+                    }
+                    if (!g) { minSmoothLocX = s; break; }
+                }
+                // Tính fireDelay tối thiểu để không growing (nếu muốn giữ smooth thấp)
+                float minFireDelayForSafe = 0f;
+                for (float fd = 0.1f; fd <= 10f; fd += 0.1f)
+                {
+                    float tTest = 0f, prevA = 0f; bool g = false;
+                    for (int sh = 0; sh < simShots; sh++)
+                    {
+                        tTest += kbKick;
+                        int fr = Mathf.RoundToInt(fd / dt);
+                        for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, smooth * dt);
+                        float ca = Mathf.Abs(tTest);
+                        if (sh > 0 && ca > prevA + 0.0001f) { g = true; break; }
+                        prevA = ca;
+                    }
+                    if (!g) { minFireDelayForSafe = fd; break; }
+                }
+                issues.Add(
+                    $"[Accumulation | Semi | Kickback] _targetLoc.Z tích lũy liên tục " +
+                    $"(kickback={kbKick:F4}m/phát, SmoothLoc.X={smooth:F1}, fireDelay={semiFireDelay:F3}s). " +
+                    $"Sau {simShots} phát: ~{peakSeen:F4}m — vũ khí bị đẩy ra xa khỏi tay. " +
+                    $"LocClampMultiplier={locClampMultiplier:F1} sẽ chặn tại {MaxKickback.x:F4}m nhưng " +
+                    "súng sẽ bị khoá ở vị trí đó. Tăng SmoothLoc.X hoặc giảm Kickback. " +
+                    $"Khuyến nghị: " +
+                    $"(A) SmoothLoc.X >= {minSmoothLocX:F1} " +
+                    $"(với kickback={kbKick:F4}m, fireDelay={semiFireDelay:F3}s). " +
+                    (minFireDelayForSafe > 0f && minFireDelayForSafe < 5f
+                        ? $"(B) Giảm tốc độ bắn: Semi fireDelay >= {minFireDelayForSafe:F1}s " +
+                          $"(≈{60f/minFireDelayForSafe:F0} RPM) nếu giữ SmoothLoc.X={smooth:F1}. "
+                        : "(B) SmoothLoc.X=1.1 quá thấp — bất kỳ kickback nào cũng growing ở fireDelay này. ") +
+                    $"(C) Compromise: SmoothLoc.X = {minSmoothLocX * 0.5f:F1}, " +
+                    $"Kickback.X = {kbKick * 0.5f:F4}m (giảm cả hai để giữ feel nặng).");
+            }
+        }
+
+        // ── AUTO kickback (smoothLoc.y, fireDelay = 0.1s) ─────────────────
+        if (IsModeAllowed(AllowedModes.Auto))
+        {
+            float fireDelay = autoFireDelay;
+            float smooth = smoothLoc.y;
+            float kbKick = kickback.x * extraLoc.z; // Auto nhân thêm extraLoc.z
+
+            float target   = 0f;
+            float peakSeen = 0f;
+            bool  growing  = false;
+            float prevAbs  = 0f;
+
+            for (int shot = 0; shot < simShots; shot++)
+            {
+                target += kbKick;
+                int frames = Mathf.RoundToInt(fireDelay / dt);
+                for (int f = 0; f < frames; f++)
+                    target = Mathf.Lerp(target, 0f, smooth * dt);
+
+                float curAbs = Mathf.Abs(target);
+                if (shot > 0 && curAbs > prevAbs + 0.0001f) growing = true;
+                peakSeen = Mathf.Max(peakSeen, curAbs);
+                prevAbs  = curAbs;
+            }
+
+            // Auto thường decay nhanh hơn (smoothLoc.y = 25 default) → ít cộng dồn hơn,
+            // nhưng nếu ai đó set thấp thì vẫn nguy hiểm
+            if (growing)
+            {
+                float minSmoothLocY = 0f;
+                for (float s = 0.5f; s <= 100f; s += 0.5f)
+                {
+                    float tTest = 0f, prevA = 0f; bool g = false;
+                    for (int sh = 0; sh < simShots; sh++)
+                    {
+                        tTest += kbKick;
+                        int fr = Mathf.RoundToInt(fireDelay / dt);
+                        for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, s * dt);
+                        float ca = Mathf.Abs(tTest);
+                        if (sh > 0 && ca > prevA + 0.0001f) { g = true; break; }
+                        prevA = ca;
+                    }
+                    if (!g) { minSmoothLocY = s; break; }
+                }
+                // Tính ExtraLoc.Z max an toàn
+                float maxSafeExtraLocZ = 0f;
+                float baseKb = kickback.x;
+                for (float elz = 0.1f; elz <= 5f; elz += 0.1f)
+                {
+                    float kickT = baseKb * elz;
+                    float tTest = 0f, prevA = 0f; bool g = false;
+                    for (int sh = 0; sh < simShots; sh++)
+                    {
+                        tTest += kickT;
+                        int fr = Mathf.RoundToInt(fireDelay / dt);
+                        for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, smooth * dt);
+                        float ca = Mathf.Abs(tTest);
+                        if (sh > 0 && ca > prevA + 0.0001f) { g = true; break; }
+                        prevA = ca;
+                    }
+                    if (!g) { maxSafeExtraLocZ = elz; break; }
+                }
+                issues.Add(
+                    $"[Accumulation | Auto | Kickback] _targetLoc.Z tích lũy liên tục khi Auto " +
+                    $"(kickback×extraLoc.Z={kbKick:F4}m/phát, SmoothLoc.Y={smooth:F1}, fireDelay={autoFireDelay:F3}s). " +
+                    $"Sau {simShots} phát: ~{peakSeen:F4}m. " +
+                    $"Ngưỡng clamp MaxKickback={MaxKickback.x:F4}m. " +
+                    "Tăng SmoothLoc.Y hoặc giảm Kickback / ExtraLoc.Z. " +
+                    $"Khuyến nghị: " +
+                    $"(A) SmoothLoc.Y >= {minSmoothLocY:F1} " +
+                    $"(với kbKick={kbKick:F4}m, fireDelay={autoFireDelay:F3}s). " +
+                    (maxSafeExtraLocZ > 0f
+                        ? $"(B) ExtraLoc.Z <= {maxSafeExtraLocZ:F2} (giữ SmoothLoc.Y={smooth:F1}, Kickback.X={kickback.x:F4}). "
+                        : "") +
+                    $"(C) Kickback.X >= {kbKick / (maxSafeExtraLocZ > 0f ? maxSafeExtraLocZ : extraLoc.z):F4}m " +
+                    $"(nếu giữ SmoothLoc.Y={smooth:F1}, ExtraLoc.Z={extraLoc.z:F2}).");
+            }
+
+            // KickUp Auto — ít nguy hiểm hơn nhưng vẫn kiểm tra
+            float kuKick = kickUp.y * extraLoc.y;
+            if (kuKick > 0f)
+            {
+                float kuTarget = 0f;
+                float kuPeak   = 0f;
+                bool  kuGrow   = false;
+                float kuPrev   = 0f;
+
+                for (int shot = 0; shot < simShots; shot++)
+                {
+                    kuTarget += kuKick;
+                    int frames = Mathf.RoundToInt(fireDelay / dt);
+                    for (int f = 0; f < frames; f++)
+                        kuTarget = Mathf.Lerp(kuTarget, 0f, smooth * dt);
+
+                    float ka = Mathf.Abs(kuTarget);
+                    if (shot > 0 && ka > kuPrev + 0.0001f) kuGrow = true;
+                    kuPeak = Mathf.Max(kuPeak, ka);
+                    kuPrev = ka;
+                }
+
+                if (kuGrow)
+                {
+                    float minSmoothForKU = 0f;
+                    for (float s = 0.5f; s <= 100f; s += 0.5f)
+                    {
+                        float tTest = 0f, prevA = 0f; bool g = false;
+                        for (int sh = 0; sh < simShots; sh++)
+                        {
+                            tTest += kuKick;
+                            int fr = Mathf.RoundToInt(fireDelay / dt);
+                            for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, s * dt);
+                            float ca = Mathf.Abs(tTest);
+                            if (sh > 0 && ca > kuPrev + 0.0001f) { g = true; break; }
+                            prevA = ca;
+                        }
+                        if (!g) { minSmoothForKU = s; break; }
+                    }
+                    float maxSafeKickUpY = 0f;
+                    for (float ku = 0.001f; ku <= 0.1f; ku += 0.001f)
+                    {
+                        float kickT = ku * extraLoc.y;
+                        float tTest = 0f, prevA = 0f; bool g = false;
+                        for (int sh = 0; sh < simShots; sh++)
+                        {
+                            tTest += kickT;
+                            int fr = Mathf.RoundToInt(fireDelay / dt);
+                            for (int ff = 0; ff < fr; ff++) tTest = Mathf.Lerp(tTest, 0f, smooth * dt);
+                            float ca = Mathf.Abs(tTest);
+                            if (sh > 0 && ca > prevA + 0.0001f) { g = true; break; }
+                            prevA = ca;
+                        }
+                        if (!g) { maxSafeKickUpY = ku; break; }
+                    }
+                    issues.Add(
+                        $"[Accumulation | Auto | KickUp] _targetLoc.Y tích lũy khi Auto " +
+                        $"(kickUp×extraLoc.Y={kuKick:F4}m/phát, SmoothLoc.Y={smooth:F1}). " +
+                        $"Sau {simShots} phát: ~{kuPeak:F4}m — súng trôi lên trên. " +
+                        "Tăng SmoothLoc.Y hoặc giảm KickUp / ExtraLoc.Y. " +
+                        $"Khuyến nghị: " +
+                        $"(A) SmoothLoc.Y >= {minSmoothForKU:F1} " +
+                        $"(với kickUp={kuKick:F4}m, fireDelay={fireDelay:F3}s). " +
+                        (maxSafeKickUpY > 0f
+                            ? $"(B) KickUp.Y <= {maxSafeKickUpY:F3}m (giữ SmoothLoc.Y={smooth:F1}, ExtraLoc.Y={extraLoc.y:F2}). "
+                            : "") +
+                        $"Lưu ý: SmoothLoc.Y ảnh hưởng cả KickUp lẫn Kickback — tăng SmoothLoc.Y " +
+                        "đồng thời giải quyết cả hai nếu cũng bị lỗi Auto Kickback.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tính tỉ lệ còn lại của target sau fireDelay giây decay rời rạc ở fps Hz.
+    /// remainRatio = 1.0 → không decay gì. 0.0 → decay hoàn toàn.
+    /// </summary>
+    private static float DecayRatioPerShot(float smooth, float fireDelay, float fps)
+    {
+        float dt     = 1f / fps;
+        int   frames = Mathf.RoundToInt(fireDelay / dt);
+        float remain = 1f;
+        for (int f = 0; f < frames; f++)
+            remain *= (1f - smooth * dt);
+        return Mathf.Clamp01(remain);
+    }
+
+    /// <summary>
+    /// Compat wrapper — trả về lỗi đầu tiên như cũ, dùng bởi runtime Awake.
+    /// </summary>
+    public bool Validate(out string errorMessage)
+    {
+        bool ok = ValidateAll(out var issues);
+        errorMessage = ok ? string.Empty : issues[0];
+        return ok;
     }
 
     private void OnValidate()
@@ -608,27 +1280,272 @@ public class GunRecoilData : ScriptableObject
 [CustomEditor(typeof(GunRecoilData))]
 public class GunRecoilDataEditor : Editor
 {
+    // ── Loại súng để validate thêm các quy tắc đặc thù ──────────────────────
+    public enum GunType { None, Rifle, Pistol, Shotgun, Sniper }
+
+    private GunType _gunType       = GunType.None;
+    private float   _semiFireDelay = 0.25f;   // giây/phát — điền từ WeaponData thực tế
+    private float   _autoFireDelay = 0.1f;    // giây/phát — 0.1s ≈ 600 RPM
+
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
 
         GunRecoilData data = (GunRecoilData)target;
 
-        EditorGUILayout.Space(8);
-        if (GUILayout.Button("✔  Validate Asset", GUILayout.Height(28)))
+        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("── Validation Settings ──────────────────", EditorStyles.boldLabel);
+
+        // Gun type
+        _gunType = (GunType)EditorGUILayout.EnumPopup(
+            new GUIContent("Gun Type", "Chọn loại súng để nhận cảnh báo đặc thù."),
+            _gunType);
+
+        EditorGUILayout.Space(4);
+
+        // Fire delay dùng cho accumulation simulation
+        EditorGUILayout.LabelField("Accumulation Simulation", EditorStyles.boldLabel);
+
+        _semiFireDelay = EditorGUILayout.FloatField(
+            new GUIContent("Semi Fire Delay (s)",
+                "Khoảng thời gian giữa 2 phát Semi (giây).\n" +
+                "Lấy từ WeaponData.fireRate thực tế của khẩu súng này.\n" +
+                "Ví dụ: 0.25s = 240 RPM, 0.15s = 400 RPM."),
+            _semiFireDelay);
+        _semiFireDelay = Mathf.Max(0.05f, _semiFireDelay);
+
+        _autoFireDelay = EditorGUILayout.FloatField(
+            new GUIContent("Auto Fire Delay (s)",
+                "Khoảng thời gian giữa 2 phát Auto (giây).\n" +
+                "Lấy từ WeaponData.fireRate thực tế của khẩu súng này.\n" +
+                "Ví dụ: 0.1s = 600 RPM, 0.067s = 900 RPM."),
+            _autoFireDelay);
+        _autoFireDelay = Mathf.Max(0.016f, _autoFireDelay);
+
+        // RPM display
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel(" ");
+        EditorGUILayout.LabelField(
+            $"→ Semi ≈ {60f / _semiFireDelay:F0} RPM    Auto ≈ {60f / _autoFireDelay:F0} RPM",
+            EditorStyles.miniLabel);
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(6);
+
+        // Validate button
+        GUI.backgroundColor = new Color(0.3f, 0.8f, 0.4f);
+        if (GUILayout.Button("✔  Validate Asset", GUILayout.Height(32)))
         {
-            if (data.Validate(out string error))
-                EditorUtility.DisplayDialog("Validation Passed ✔", "Tất cả giá trị hợp lệ!", "OK");
-            else
-                EditorUtility.DisplayDialog("Validation Failed ✘", error, "OK");
+            RunValidation(data, _gunType, _semiFireDelay, _autoFireDelay);
         }
+        GUI.backgroundColor = Color.white;
 
         EditorGUILayout.Space(4);
         EditorGUILayout.HelpBox(
-            $"Allowed modes: {data.allowedModes}\n" +
-            $"Semi curve duration: {data.SemiCurveDuration:F2}s\n" +
-            $"Auto curve duration: {data.AutoCurveDuration:F2}s",
+            $"Allowed modes : {data.allowedModes}\n" +
+            $"Semi  curve   : {data.SemiCurveDuration:F2}s\n" +
+            $"Auto  curve   : {data.AutoCurveDuration:F2}s\n" +
+            $"Burst count   : {data.BurstCount}\n" +
+            $"Sim fire delay: Semi {_semiFireDelay:F3}s | Auto {_autoFireDelay:F3}s",
             MessageType.Info);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  CORE VALIDATION RUNNER
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void RunValidation(GunRecoilData data, GunType gunType, float semiFireDelay = 0.25f, float autoFireDelay = 0.1f)
+    {
+        string assetName = data.name;
+        string tag       = $"[GunRecoilData | {assetName}]";
+
+        // 1. Thu thập lỗi chung
+        bool ok = data.ValidateAll(out var issues, semiFireDelay, autoFireDelay);
+
+        // 2. Thu thập cảnh báo đặc thù theo loại súng
+        var hints = new System.Collections.Generic.List<string>();
+        if (gunType != GunType.None)
+            CollectGunTypeHints(data, gunType, hints);
+
+        // 3. Log kết quả
+        if (ok && hints.Count == 0)
+        {
+            Debug.Log($"<color=#44ff88>{tag} ✔ PASSED — không có vấn đề nào được tìm thấy.</color>",
+                      data);
+        }
+        else
+        {
+            // Tiêu đề tổng quan
+            int errorCount = issues.Count;
+            int hintCount  = hints.Count;
+            Debug.LogWarning(
+                $"{tag} Validation kết thúc — " +
+                $"{errorCount} lỗi, {hintCount} cảnh báo loại súng ({gunType}).\n" +
+                "Chi tiết xem các dòng bên dưới ↓", data);
+
+            // Log từng lỗi
+            for (int i = 0; i < issues.Count; i++)
+                Debug.LogError($"{tag} [{i + 1}/{errorCount}] {issues[i]}", data);
+
+            // Log từng hint theo gun type
+            for (int i = 0; i < hints.Count; i++)
+                Debug.LogWarning($"{tag} [Hint {i + 1}/{hintCount} | {gunType}] {hints[i]}", data);
+        }
+
+        // 4. Ping asset trong Project window để dễ tìm
+        EditorGUIUtility.PingObject(data);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  GUN-TYPE SPECIFIC HINTS
+    //  Mỗi loại súng có dải giá trị "lành mạnh" khác nhau.
+    //  Các con số dưới đây là khuyến nghị thực tế — không phải giới hạn cứng.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void CollectGunTypeHints(GunRecoilData d, GunType type,
+        System.Collections.Generic.List<string> hints)
+    {
+        switch (type)
+        {
+            // ── RIFLE (AR / SMG) ─────────────────────────────────────────
+            // Semi + Auto, pitch vừa phải, yaw nhỏ, noise thấp
+            case GunType.Rifle:
+            {
+                CheckModeExpected(d, GunRecoilData.AllowedModes.Auto,
+                    "Rifle thường có chế độ Auto. Nếu chỉ Semi thì đây là súng chiến thuật.", hints);
+
+                if (Mathf.Abs(d.pitch.x) < 1f)
+                    hints.Add($"Pitch rất nhỏ (|X|={Mathf.Abs(d.pitch.x):F2}). " +
+                              "Rifle thường pitch 1.5–4° mỗi phát.");
+                if (Mathf.Abs(d.pitch.x) > 8f)
+                    hints.Add($"Pitch quá lớn (|X|={Mathf.Abs(d.pitch.x):F2}). " +
+                              "Rifle hiếm khi vượt 6°/phát — kiểm tra lại.");
+
+                if (Mathf.Abs(d.yaw.w) > 3f)
+                    hints.Add($"Yaw max ({d.yaw.w:F2}) khá cao cho Rifle. " +
+                              "AR thường yaw ±0.5–2°.");
+
+                if (d.extraRot.z < 1f)
+                    hints.Add($"ExtraRot.Z ({d.extraRot.z:F2}) < 1. Rifle Auto sẽ không leo ngang — " +
+                              "thêm climb nếu muốn mô phỏng full-auto.");
+
+                if (d.smoothRot.y > 20f)
+                    hints.Add($"SmoothRot.Y (Auto decay = {d.smoothRot.y:F1}) rất cao. " +
+                              "Rifle auto giật sẽ reset quá nhanh giữa các phát.");
+
+                if (d.noiseScalar > 2f)
+                    hints.Add($"NoiseScalar ({d.noiseScalar:F2}) cao cho Rifle. " +
+                              "Thường 0.5–1.5 để không che khuất crosshair.");
+                break;
+            }
+
+            // ── PISTOL ───────────────────────────────────────────────────
+            // Semi only, pitch mạnh, kickback rõ, noise thấp, no auto
+            case GunType.Pistol:
+            {
+                if (d.IsModeAllowed(GunRecoilData.AllowedModes.Auto))
+                    hints.Add("Pistol thường chỉ có Semi. Auto trên pistol rất hiếm " +
+                              "(trừ Glock 18 / Beretta 93R).");
+
+                if (Mathf.Abs(d.pitch.x) < 2f)
+                    hints.Add($"Pitch nhỏ (|X|={Mathf.Abs(d.pitch.x):F2}). " +
+                              "Pistol thường pitch 3–8° — giật cảm giác nhẹ.");
+                if (Mathf.Abs(d.pitch.x) > 12f)
+                    hints.Add($"Pitch rất lớn (|X|={Mathf.Abs(d.pitch.x):F2}). " +
+                              "Pistol hiếm khi vượt 10°/phát.");
+
+                if (d.kickback.x > -0.01f)
+                    hints.Add($"Kickback quá nhỏ (X={d.kickback.x:F4}). " +
+                              "Pistol thường kickback -0.02 đến -0.05 để cảm giác giật tay.");
+
+                if (d.camRecoilX < 1.5f)
+                    hints.Add($"CamRecoilX ({d.camRecoilX:F2}) thấp. " +
+                              "Pistol nên có camera shake rõ hơn (2–5) vì không có báng tì vai.");
+
+                if (d.smoothRot.x < 10f)
+                    hints.Add($"SmoothRot.X (Semi decay = {d.smoothRot.x:F1}) thấp. " +
+                              "Pistol thường hồi nhanh (12–20) giữa các phát semi.");
+                break;
+            }
+
+            // ── SHOTGUN ──────────────────────────────────────────────────
+            // Semi / Pump (Semi only), pitch rất mạnh, kickback lớn, yaw rộng, noise cao
+            case GunType.Shotgun:
+            {
+                if (d.IsModeAllowed(GunRecoilData.AllowedModes.Auto))
+                    hints.Add("Shotgun thường chỉ Semi (pump/semi-auto). " +
+                              "Auto shotgun rất hiếm — xác nhận lại nếu chủ ý.");
+
+                if (Mathf.Abs(d.pitch.x) < 4f)
+                    hints.Add($"Pitch nhỏ (|X|={Mathf.Abs(d.pitch.x):F2}). " +
+                              "Shotgun thường pitch mạnh 5–12° mỗi phát.");
+
+                if (d.kickback.x > -0.03f)
+                    hints.Add($"Kickback nhỏ (X={d.kickback.x:F4}). " +
+                              "Shotgun nên có kickback lớn (-0.05 đến -0.12) để cảm giác 'đá' mạnh.");
+
+                if (d.pushAmount > -0.5f)
+                    hints.Add($"PushAmount ({d.pushAmount:F2}) nhỏ. " +
+                              "Shotgun thường pushAmount -0.6 đến -1.2 để camera jolt mạnh.");
+
+                if (Mathf.Abs(d.yaw.w) < 1f && Mathf.Abs(d.roll.w) < 2f)
+                    hints.Add("Yaw và Roll đều nhỏ. Shotgun thường có yaw/roll rộng hơn " +
+                              "(yaw ±1–3°, roll ±3–6°) để cảm giác súng không kiểm soát được.");
+
+                if (d.smoothRot.x > 20f)
+                    hints.Add($"SmoothRot.X (Semi decay = {d.smoothRot.x:F1}) rất cao. " +
+                              "Shotgun pump-action nên phục hồi chậm (6–12) — mỗi phát nặng nề.");
+                break;
+            }
+
+            // ── SNIPER ───────────────────────────────────────────────────
+            // Semi only, pitch rất lớn, yaw nhỏ, noise tối thiểu khi ADS, hồi chậm
+            case GunType.Sniper:
+            {
+                if (d.IsModeAllowed(GunRecoilData.AllowedModes.Auto))
+                    hints.Add("Sniper không nên có Auto mode. " +
+                              "Nếu là DMR bán tự động thì cần cân nhắc kỹ tốc độ bắn.");
+
+                if (d.IsModeAllowed(GunRecoilData.AllowedModes.Burst))
+                    hints.Add("Sniper thường không có Burst mode.");
+
+                if (Mathf.Abs(d.pitch.x) < 5f)
+                    hints.Add($"Pitch nhỏ (|X|={Mathf.Abs(d.pitch.x):F2}). " +
+                              "Sniper thường pitch 6–15° mỗi phát — giật mạnh để phạt bắn nhanh.");
+
+                if (d.aimRotMultiplier.x > 0.4f)
+                    hints.Add($"AimRotMultiplier.X ({d.aimRotMultiplier.x:F2}) cao khi ADS. " +
+                              "Sniper khi scope-in nên giảm pitch rõ rệt (0.1–0.3) để cảm giác 'kiểm soát được'.");
+
+                if (d.camRecoilX < 3f)
+                    hints.Add($"CamRecoilX ({d.camRecoilX:F2}) thấp. " +
+                              "Sniper nên shake camera mạnh (4–10) mỗi phát.");
+
+                if (d.smoothRot.x > 15f)
+                    hints.Add($"SmoothRot.X (Semi decay = {d.smoothRot.x:F1}) cao. " +
+                              "Sniper nên hồi chậm (5–10) để phạt follow-up shot quá nhanh.");
+
+                if (d.noiseScalar > 1f && d.aimLocMultiplier.x > 0.5f)
+                    hints.Add($"NoiseScalar ({d.noiseScalar:F2}) cao và AimLocMultiplier chưa giảm noise khi ADS. " +
+                              "Sniper khi scope-in cần noise gần như bằng 0.");
+
+                if (d.extraRot.z > 3f)
+                    hints.Add($"ExtraRot.Z ({d.extraRot.z:F2}) lớn nhưng Sniper không bắn Auto. " +
+                              "ExtraRot chỉ ảnh hưởng Auto/Burst — giá trị này không có tác dụng.");
+                break;
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void CheckModeExpected(GunRecoilData d, GunRecoilData.AllowedModes mode,
+        string message, System.Collections.Generic.List<string> hints)
+    {
+        if (!d.IsModeAllowed(mode))
+            hints.Add(message);
     }
 }
 #endif

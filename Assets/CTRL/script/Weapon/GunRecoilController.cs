@@ -384,12 +384,16 @@ public class GunRecoilController : MonoBehaviour
         ApplyTranslationKick(isAuto: true);
         ApplyPushKick();
 
-        // FIX: reset timer về 0 mỗi phát, giống Semi — tránh timer trôi dạt rơi vào
-        // đoạn giữa curve (có thể là đoạn âm) một cách khó đoán trước.
-        // Vì _targetRot vẫn cộng dồn qua ApplyRotationKick() phía trên, việc curve chạy
-        // lại từ đầu mỗi phát vẫn tạo hiệu ứng giật chồng lên nhau khi bắn liên tục.
-        _autoTimer  = 0f;
-        _autoActive = true;
+        // FIX: KHÔNG reset _autoTimer về 0 mỗi phát.
+        // Nếu reset, curve sẽ mãi chạy lại từ đầu và không bao giờ đến cuối
+        // → _autoActive không bao giờ tắt → block decay (smoothRot.y) không bao giờ chạy
+        // → _targetRot.x tích lũy vô hạn dù đã có clamp MaxPitch.
+        // Thay vào đó: chỉ reset nếu chưa active (phát đầu tiên của chuỗi auto).
+        if (!_autoActive)
+        {
+            _autoTimer  = 0f;
+            _autoActive = true;
+        }
         _semiActive = false;
         _semiTimer  = 0f;
 
@@ -477,6 +481,15 @@ public class GunRecoilController : MonoBehaviour
         float krVal = Random.Range(data.kickRight.x, data.kickRight.y) * extraMult.x * aimMult.x;
 
         _targetLoc += new Vector3(krVal, kuVal, kbVal);
+
+        // FIX: clamp tích lũy _targetLoc để vũ khí không bay xuyên map khi bắn Auto/Burst liên tục.
+        // Tương tự rotation clamp ở ApplyRotationKick — giới hạn tự tính từ data.locClampMultiplier.
+        var kbClamp = data.MaxKickback;
+        var kuClamp = data.MaxKickUp;
+        var krClamp = data.MaxKickRight;
+        _targetLoc.x = Mathf.Clamp(_targetLoc.x, krClamp.x, krClamp.y);
+        _targetLoc.y = Mathf.Clamp(_targetLoc.y, kuClamp.x, kuClamp.y);
+        _targetLoc.z = Mathf.Clamp(_targetLoc.z, kbClamp.x, kbClamp.y);
     }
 
     private void ApplyPushKick()
@@ -621,6 +634,12 @@ public class GunRecoilController : MonoBehaviour
         _pushVelocity += (0f - _pushCurrent) * data.pushAccel * dt;
         _pushVelocity -= _pushVelocity * data.pushDamp * dt;
         _pushCurrent  += _pushVelocity * dt;
+
+        // FIX: clamp _pushCurrent để spring không tích lũy vô hạn khi bắn Auto/Burst liên tục
+        // dẫn đến vũ khí bị đẩy xa theo trục Z rồi bay khỏi map.
+        // Giới hạn = MaxKickback (tính từ data.locClampMultiplier) — dùng chung ngưỡng với _targetLoc.Z.
+        var kbClamp = data.MaxKickback;
+        _pushCurrent = Mathf.Clamp(_pushCurrent, kbClamp.x, kbClamp.y);
     }
 
     // ─────────────────────────────────────────────

@@ -163,31 +163,26 @@ namespace GaMo.BlenderEditorTools
         private Vector3    _snapRight;
         private Vector3    _snapUp;
         private Vector3    _snapForward;
+        
+        private bool _restPoseReady = false;
 
         void OnEnable()
         {
             CaptureInitialStates();
-
+            
+            _restPoseReady = false;
+            
             if (!hasExternalPoseDriver)
-            {
-                // BUG CŨ: CaptureRestPose() gọi trực tiếp trong OnEnable → chụp pose trước khi
-                // Animator evaluate frame đầu tiên → rest pose là T-pose/bind-pose thay vì
-                // animation pose thực tế.
-                //
-                // FIX: delay 1 frame qua coroutine. Sau yield return null, Animator đã chạy xong
-                // LateUpdate frame đầu → constraintObject.localPosition/Rotation phản ánh đúng
-                // animation pose. Với non-Animator object thì delay 1 frame cũng không có hại.
-                //
-                // Nếu bạn cần capture ngay lập tức (không có Animator, muốn dùng pose hiện tại),
-                // gọi CaptureRestPose() thủ công từ code sau khi object đã được setup xong.
                 StartCoroutine(CaptureRestPoseNextFrame());
-            }
+            else
+                _restPoseReady = true;
         }
 
         private IEnumerator CaptureRestPoseNextFrame()
         {
             yield return null;   // chờ Animator/IK evaluate xong frame đầu
             CaptureRestPose();
+            _restPoseReady = true;
         }
 
         /// <summary>
@@ -478,6 +473,7 @@ namespace GaMo.BlenderEditorTools
 
         void LateUpdate()
         {
+            if (!_restPoseReady) return;
             int count = targets.Count;
             if (constraintObject == null || count == 0) return;
 
@@ -488,7 +484,14 @@ namespace GaMo.BlenderEditorTools
                 if (t.target != null) totalWeight += t.weight;
             }
 
-            if (totalWeight <= 0f) return;
+            if (totalWeight <= 0f)
+            {
+                if (enablePositionConstraint)
+                    constraintObject.localPosition = GetBaselineLocalPos();
+                if (enableRotationConstraint)
+                    constraintObject.localRotation = GetBaselineLocalRot();
+                return;
+            }
 
             // ── normalizeWeights: tách blend ratio ra khỏi global influence ────────────
             // normalizeWeights = true (khuyên dùng):
@@ -500,12 +503,12 @@ namespace GaMo.BlenderEditorTools
             //   invTotalWeight = 1/totalWeight vẫn normalize blend ratio.
             //   blendInfluence = Clamp01(totalWeight × influence) → influence co lại khi totalWeight < 1.
             //   Dùng khi muốn coroutine blend-in tự nhiên giảm influence (totalWeight tăng từ 0→1).
-            float blendPosInfluence  = normalizeWeights
-                ? Mathf.Clamp01(positionInfluence)
-                : Mathf.Clamp01(totalWeight * positionInfluence);
+            float blendPosInfluence = normalizeWeights
+                ? Mathf.Clamp01(positionInfluence) * totalWeight   // normalize blend ratio, nhưng vẫn fade theo totalWeight
+                : Mathf.Clamp01(totalWeight * positionInfluence);  // giữ nguyên hành vi cũ
 
-            float blendRotInfluence  = normalizeWeights
-                ? Mathf.Clamp01(rotationInfluence)
+            float blendRotInfluence = normalizeWeights
+                ? Mathf.Clamp01(rotationInfluence) * totalWeight
                 : Mathf.Clamp01(totalWeight * rotationInfluence);
 
             float invTotalWeight = 1f / totalWeight;

@@ -42,8 +42,17 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] private TickTimer _fireHoldTimer { get; set; }
 
     // Số tick buffer — đủ để che lấp jitter 1-2 tick mà không delay cảm giác
-    // Với tick rate 30: 3 tick = 100ms buffer
-    private const int FIRE_BUFFER_TICKS = 5;
+    // Với tick rate 30: 3 tick = 100ms buffer.
+    // FIX Bug #6: giảm từ 5 → 3 (166.7ms → 100ms) để giảm "ghost firing" sau khi
+    // thả chuột nhưng release packet bị mất.
+    private const int FIRE_BUFFER_TICKS = 3;
+
+    /// <summary>
+    /// AimForward của tick cuối cùng có input packet thật từ client.
+    /// Khi Host fire từ buffer timer (không có packet), dùng giá trị này thay vì
+    /// AimForward hiện tại (có thể là packet cũ từ tick trước) để raycast đúng hướng.
+    /// </summary>
+    [Networked] public Vector3 LastConfirmedAimForward { get; private set; }
 
 
     [Networked] private TickTimer _slideTimer { get; set; }
@@ -140,7 +149,13 @@ public class NCharMovementHandler : NetworkBehaviour
         }
         
         //if (GameManager.instance.OnUI) return;
-        
+
+        // FIX Bug #2: IsFiring là local non-networked state, không được Fusion
+        // restore/rollback khi resimulate. Reset về false mỗi tick rồi derive lại
+        // từ input bên dưới, để tránh giá trị cũ từ tick trước leak sang khi
+        // GetInput() == false (packet miss) hoặc khi resimulate.
+        IsFiring = false;
+
         if (GetInput(out NInputData inputdata))
         {
             MoveDirection = inputdata.MoveDirection;
@@ -162,6 +177,8 @@ public class NCharMovementHandler : NetworkBehaviour
 
             // Lưu AimForward từ InputData — chính xác hơn camera local, đồng bộ cho mọi máy
             AimForward = inputdata.AimForward;
+            // Ghi nhớ AimForward của tick có input thật — dùng khi Host fire từ buffer timer
+            LastConfirmedAimForward = inputdata.AimForward;
             
             _newState = StateFl;
 
@@ -188,6 +205,18 @@ public class NCharMovementHandler : NetworkBehaviour
             
             _previousButtons = inputdata.Buttons;
             StateFl = _newState;
+        }
+        else if (Object.HasStateAuthority)
+        {
+            // FIX Bug #2: không có input packet trong tick này (jitter/packet miss).
+            // Với Auto fire, dùng _fireHoldTimer buffer để quyết định có nên tiếp tục
+            // bắn hay không thay vì im lặng để IsFiring = false (đã reset ở trên) làm
+            // súng khựng lại giữa chừng.
+            if (_playerMotionController != null &&
+                _playerMotionController.ActiveWeaponMode() == GunRecoilController.FiringMode.Auto)
+            {
+                IsFiring = !_fireHoldTimer.ExpiredOrNotRunning(Runner);
+            }
         }
     }
 
@@ -314,9 +343,10 @@ public class NCharMovementHandler : NetworkBehaviour
             case GunRecoilController.FiringMode.Auto:
                 if (input.Buttons.IsSet(InputButtons.Attack))
                 {
-                    // Nhận được Attack=true → gia hạn buffer timer
-                    if (_fireHoldTimer.ExpiredOrNotRunning(Runner))
-                        _fireHoldTimer = TickTimer.CreateFromTicks(Runner, FIRE_BUFFER_TICKS);
+                    // FIX Bug #3: luôn refresh (sliding window) thay vì chỉ tạo khi đã hết,
+                    // nếu không buffer sẽ hết hạn theo tick tạo ban đầu dù Attack vẫn giữ,
+                    // khiến 1 tick miss đúng lúc expire làm súng dừng đột ngột.
+                    _fireHoldTimer = TickTimer.CreateFromTicks(Runner, FIRE_BUFFER_TICKS);
                     IsFiring = true;
                 }
                 else if (input.Buttons.WasReleased(_previousButtons, InputButtons.Attack))

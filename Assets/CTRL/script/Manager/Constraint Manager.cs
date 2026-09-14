@@ -37,6 +37,7 @@ public class ConstraintManager : MonoBehaviour
 
     public void AddNewWeapon(WeaponController ctrl, string ID, float weight = 0)
     {
+        Debug.Log($"Add target {ID} vao {ctrl.Data.WeaponName}");
         foreach (var body in _list_Bone_Body)
         {
             foreach (var trans in ctrl.List_Bone_Body)
@@ -69,6 +70,7 @@ public class ConstraintManager : MonoBehaviour
 
     public void RemoveWeapon(string id)
     {
+        Debug.Log("Remove target: "+id);
         foreach (var cons in _list_Bone_Body)
             cons?.RemoveTarget(id);
         foreach (var cons in _list_Bone_Grenade)

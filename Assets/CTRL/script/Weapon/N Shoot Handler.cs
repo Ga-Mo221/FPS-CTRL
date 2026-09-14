@@ -70,6 +70,12 @@ public class NShootHandler : NetworkBehaviour
     private int _lastFireCount;
     public Vector3 _aimForward;
 
+    // ── Client-Side Prediction ─────────────────────────────────────────────
+    // FIX Bug #5: đã bỏ _predictedFireTick / _predictedFireCount — không cần nữa vì
+    // OnFireDetected() giờ cho InputAuthority (client thuần) return sớm hoàn toàn thay
+    // vì so khớp một giá trị predicted duy nhất (không đủ khi có nhiều predicted shot
+    // in-flight cùng lúc ở ping cao).
+
     // ── Exp & damage tracking (local only, không cần sync) ────────────────
     // Key: NetworkId của target, Value: tổng damage đã deal cho target đó trong vòng sống hiện tại
     private readonly Dictionary<NetworkId, int> _damageAccumulated = new Dictionary<NetworkId, int>();
@@ -110,46 +116,79 @@ public class NShootHandler : NetworkBehaviour
 
     public int GetDeathCount() => _nHPHandler.DeadCount;
 
-    // ── Simulation (chỉ chạy trên StateAuthority = Host) ───────────────────
+    // ── Simulation ─────────────────────────────────────────────────────────
     public override void FixedUpdateNetwork()
     {
-        if (!Object.HasStateAuthority) return;
-
         _aimForward = _movementHandler.AimForward;
 
-        if (_movementHandler.IsFiring)
+        // ── HOST: authoritative damage & raycast ──────────────────────────
+        if (Object.HasStateAuthority)
         {
-            if (_movementHandler.FireOnce())
+            if (_movementHandler.IsFiring)
             {
-                _movementHandler.IncrementFireCount();
-
-                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle ||
-                    _weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
+                if (_movementHandler.FireOnce())
                 {
-                    var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(_aimForward);
-                    _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
+                    _movementHandler.IncrementFireCount();
+
+                    // Khi Host fire từ buffer timer (không có input packet thật trong tick này),
+                    // AimForward hiện tại có thể là giá trị cũ từ tick trước.
+                    // → Dùng LastConfirmedAimForward (hướng của packet thật cuối cùng) để raycast.
+                    // Khi có packet thật, cả hai đều bằng nhau nên không ảnh hưởng gì.
+                    Vector3 rayDir = _movementHandler.LastConfirmedAimForward != Vector3.zero
+                        ? _movementHandler.LastConfirmedAimForward
+                        : _aimForward;
+
+                    if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle ||
+                        _weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
+                    {
+                        var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(rayDir);
+                        _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
+                    }
+
+                    if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
+                    {
+                        var shotInfo = GetShotgunHitInfo(rayDir);
+                        _movementHandler.SetLastShotInfo(shotInfo);
+                    }
                 }
+            }
 
-                if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
+            // Melee hit check — chạy sau delay để khớp với animation swing
+            if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+            {
+                if (_meleeHitWindowEndTimer.IsRunning)
                 {
-                    var shotInfo = GetShotgunHitInfo(_aimForward);
-                    _movementHandler.SetLastShotInfo(shotInfo);
+                    bool windowExpired = _meleeHitWindowEndTimer.Expired(Runner);
+                    bool hitConfirmed  = HandleMeleeHit(_aimForward);
+
+                    if (hitConfirmed || windowExpired)
+                        _meleeHitWindowEndTimer = default;
                 }
             }
         }
 
-        // Melee hit check — chạy sau delay để khớp với animation swing
-        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
+        // ── CLIENT PREDICTION: visual ngay lập tức, không chờ Host ────────
+        // Chỉ chạy trên client thuần (không phải Host), không phải resimulate
+        if (Object.HasInputAuthority && !Object.HasStateAuthority && Runner.IsForward)
         {
-            // Trong cửa sổ active — check hit MỖI TICK cho tới khi trúng player hoặc hết giờ,
-            // thay vì chỉ check đúng 1 tick như trước → dễ trigger trúng đòn hơn nhiều.
-            if (_meleeHitWindowEndTimer.IsRunning)
+            if (_movementHandler.IsFiring && _movementHandler.FireOnce())
             {
-                bool windowExpired = _meleeHitWindowEndTimer.Expired(Runner);
-                bool hitConfirmed  = HandleMeleeHit(_aimForward);
+                var weaponType = _weaponManager.Weapon_Active()?.WeaponType;
 
-                if (hitConfirmed || windowExpired)
-                    _meleeHitWindowEndTimer = default;
+                // Visual ngay: animation recoil, camera recoil, muzzle flash, âm thanh
+                _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
+
+                // Spawn projectile visual dựa trên raycast cục bộ (chỉ để visual, không deal damage)
+                if (weaponType == WeaponType.Rifle || weaponType == WeaponType.Sniper)
+                {
+                    var (hitPos, hitNormal, showEffect) = GetLocalRaycastVisual(_aimForward);
+                    _playerMotionController.ActiveWeponCTRL()
+                        ?.SpawnProjectileVisual(hitPos, hitNormal, showEffect);
+                }
+                else if (weaponType == WeaponType.Shotgun)
+                {
+                    SpawnLocalShotgunVisual(_aimForward);
+                }
             }
         }
     }
@@ -187,11 +226,30 @@ public class NShootHandler : NetworkBehaviour
     // ── Render (chạy trên tất cả máy, mỗi frame) ───────────────────────────
     public override void Render()
     {
-        // Rifle / Shotgun — FireCount tăng cùng tick với SetLastShotInfo nên data luôn sẵn
-        if (_movementHandler.FireCount != _lastFireCount)
+        // Rifle / Shotgun — FireCount tăng cùng tick với SetLastShotInfo nên data luôn sẵn.
+        // FIX Bug #4: ping cao / snapshot thưa có thể khiến FireCount nhảy nhiều đơn vị
+        // giữa 2 lần Render() liên tiếp. Trước đây chỉ so sánh != nên chỉ chạy OnFireDetected()
+        // một lần dù FireCount tăng 3-4 → mất visual những phát ở giữa.
+        int fireDelta = _movementHandler.FireCount - _lastFireCount;
+        if (fireDelta > 0)
         {
             _lastFireCount = _movementHandler.FireCount;
-            OnFireDetected();
+
+            // InputAuthority (client thuần) đã tự predict visual theo đúng nhịp ngay khi
+            // bắn (xem FixedUpdateNetwork ở trên) — loop lại ở đây sẽ không tái tạo đúng
+            // cadence (nó sẽ chạy dồn N lần trong 1 frame) mà chỉ trùng lặp hiệu ứng cuối.
+            // OnFireDetected() bên dưới đã tự return sớm cho InputAuthority, nên chỉ cần
+            // gọi 1 lần cho gọn — còn Host và proxy (nhìn người khác bắn) mới cần loop
+            // đủ delta để không mất visual những phát bị "gộp" do snapshot thưa.
+            if (Object.HasInputAuthority && !Object.HasStateAuthority)
+            {
+                OnFireDetected();
+            }
+            else
+            {
+                for (int i = 0; i < fireDelta; i++)
+                    OnFireDetected();
+            }
         }
 
         // Melee wall-hit visual — dùng counter riêng vì có delay giữa FireCount và hitbox check.
@@ -213,9 +271,25 @@ public class NShootHandler : NetworkBehaviour
 
     private void OnFireDetected()
     {
+        // InputAuthority (client thuần, không phải Host) đã tự predict toàn bộ visual ngay trong
+        // FixedUpdateNetwork (OnFireVisualOnly() + spawn projectile visual bằng local raycast)
+        // -> bỏ qua hoàn toàn, không cần làm lại gì ở đây.
+        if (Object.HasInputAuthority && !Object.HasStateAuthority)
+            return;
+
+        // FIX: StateAuthority (Host) đã tự áp dụng hiệu ứng bắn THẬT (audio, camera recoil, gun
+        // recoil kick, trừ đạn) qua FireOnce() -> OnFire() -> OnShotFired -> HandleShot() ->
+        // PlayFireEffect() ngay trong FixedUpdateNetwork(). Trước đây guard ở trên chỉ chặn nhánh
+        // InputAuthority-dự-đoán, còn Host vẫn lọt xuống gọi OnFireVisualOnly() ở đây một lần nữa
+        // (TriggerRecoilVisual() -> OnShotFired -> PlayFireEffect()) MỖI KHI Render() thấy FireCount
+        // đổi — tức là PlayFireEffect() chạy 2 lần / phát bắn, trừ CurrentBulletvalue 2 lần và có
+        // thể xuống âm. Chỉ proxy thuần (không StateAuthority, không InputAuthority) mới thực sự
+        // cần OnFireVisualOnly() ở đây, vì proxy không tự simulate bắn — chỉ phản chiếu qua FireCount.
         if (!Object.HasStateAuthority)
             _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
 
+        // SpawnProjectileVisual (điểm/effect trúng đạn) thì Host VẪN CẦN — FixedUpdateNetwork của
+        // Host chỉ raycast + ghi LastShotInfo (networked), không tự spawn visual cho chính mình.
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Rifle ||
             _weaponManager.Weapon_Active()?.WeaponType == WeaponType.Sniper)
         {
@@ -229,7 +303,7 @@ public class NShootHandler : NetworkBehaviour
         {
             var shotInfo   = _movementHandler.LastShotInfo;
             var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
-            int count      = Mathf.Max(1, shotInfo.PelletCount); // fallback an toàn
+            int count      = Mathf.Max(1, shotInfo.PelletCount);
             for (int i = 0; i < count; i++)
                 weaponCtrl?.SpawnProjectileVisual(
                     shotInfo.GetHitPosition(i),
@@ -242,8 +316,9 @@ public class NShootHandler : NetworkBehaviour
             if (_movementHandler.RightPuch)
                 _movementHandler.ResetADS();
         }
-        // Melee: không spawn projectile visual ở đây — OnMeleeHitDetected() xử lý riêng
-        // OnFireVisualOnly() ở đầu hàm đã trigger animation recoil + camera recoil rồi
+        // Melee: không spawn projectile visual ở đây — OnMeleeHitDetected() xử lý riêng.
+        // OnFireVisualOnly() (nếu có chạy, tức là proxy) đã trigger animation recoil + camera
+        // recoil rồi; Host thì tự đã có recoil thật từ FixedUpdateNetwork nên không cần nữa.
     }
 
     /// <summary>
@@ -256,6 +331,70 @@ public class NShootHandler : NetworkBehaviour
         _playerMotionController
             .ActiveWeponCTRL()
             ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+    }
+
+    // ── Client-side local raycast (visual only, không deal damage) ─────────
+
+    /// <summary>
+    /// Raycast cục bộ trên client để lấy hitPosition/hitNormal cho visual ngay lập tức.
+    /// Dùng Physics.Raycast thông thường (không LagCompensation) vì chỉ cần visual gần đúng.
+    /// Damage thật vẫn do Host tính qua LagCompensation.
+    /// </summary>
+    private (Vector3 hitPosition, Vector3 hitNormal, bool showEffect) GetLocalRaycastVisual(Vector3 aimForward)
+    {
+        var weaponCtrl    = _playerMotionController.ActiveWeponCTRL();
+        float maxDistance = weaponCtrl != null ? weaponCtrl.Data.Range : 200f;
+
+        Vector3 origin = _componentManager.Camera.transform.position;
+        if (_movementHandler.StateFl.IsADS && weaponCtrl != null)
+            origin = weaponCtrl.ADS_Shoot_Point;
+
+        if (Physics.Raycast(origin, aimForward, out RaycastHit hit, maxDistance, _hitMask))
+        {
+            // showEffect = false nếu trúng hitbox (player), true nếu trúng wall
+            bool isPlayer  = hit.collider.GetComponentInParent<NHPHandler>() != null;
+            bool showEffect = !isPlayer;
+            return (hit.point, hit.normal, showEffect);
+        }
+
+        return (origin + aimForward * maxDistance, -aimForward, false);
+    }
+
+    /// <summary>
+    /// Spawn visual cho tất cả pellet shotgun phía client ngay lập tức.
+    /// </summary>
+    private void SpawnLocalShotgunVisual(Vector3 aimForward)
+    {
+        var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
+        var weaponData  = weaponCtrl?.Data;
+        float maxDist   = weaponData != null ? weaponData.Range       : 50f;
+        int   pellets   = weaponData != null ? weaponData.PelletCount : 6;
+        float spread    = weaponData != null ? weaponData.SpreadAngle : 5f;
+
+        if (_movementHandler.StateFl.IsADS)
+            spread *= 0.4f;
+
+        pellets = Mathf.Clamp(pellets, 1, 8);
+
+        Vector3 origin = _componentManager.Camera.transform.position;
+        if (_movementHandler.StateFl.IsADS && weaponCtrl != null)
+            origin = weaponCtrl.ADS_Shoot_Point;
+
+        for (int i = 0; i < pellets; i++)
+        {
+            Vector3 pelletDir = GetSpreadDirection(aimForward, spread);
+
+            if (Physics.Raycast(origin, pelletDir, out RaycastHit hit, maxDist, _hitMask))
+            {
+                bool isPlayer   = hit.collider.GetComponentInParent<NHPHandler>() != null;
+                bool showEffect = !isPlayer;
+                weaponCtrl?.SpawnProjectileVisual(hit.point, hit.normal, showEffect);
+            }
+            else
+            {
+                weaponCtrl?.SpawnProjectileVisual(origin + pelletDir * maxDist, -pelletDir, false);
+            }
+        }
     }
 
     // ── Raycast + damage — chỉ chạy trên StateAuthority ──────────────────
