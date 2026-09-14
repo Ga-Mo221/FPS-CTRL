@@ -355,7 +355,9 @@ public class NCharMovementHandler : NetworkBehaviour
     /// </summary>
     private void MeleeComboHandler(NInputData input)
     {
-        if (RightPuch) return;
+        if (RightPuch)
+            return;
+        
         IsFiring = false;
 
         // Đang trong cooldown → chưa nhận click
@@ -365,13 +367,19 @@ public class NCharMovementHandler : NetworkBehaviour
         // Hết cửa sổ combo mà không click → reset
         if (ShootIndex > 0 && _meleeComboTimer.Expired(Runner))
         {
+            ShootIndex = 0;
+            _meleeComboTimer = default;
+            _meleeCooldownTimer = default;
             ResetMeleeCombo();
         }
 
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
         {
-            if (ShootIndex > 3) return;
-            if (!_canNextAttackCombo) return;
+            if (ShootIndex > 3)
+                return;
+            
+            if (!_canNextAttackCombo)
+                return;
             
             ShootIndex++;
             _canNextAttackCombo = false;
@@ -383,10 +391,6 @@ public class NCharMovementHandler : NetworkBehaviour
     public void ResetMeleeCombo()
     {
         if (!Object.HasStateAuthority) return;
-        //Debug.Log("ResetMeleeCombo");
-        ShootIndex = 0;
-        _meleeComboTimer = default;
-        _meleeCooldownTimer = default;
         _canNextAttackCombo = true;
     }
 

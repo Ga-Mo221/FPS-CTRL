@@ -114,6 +114,7 @@ namespace Game.UI
         private IEnumerator DisplayButton()
         {
             yield return new WaitForSeconds(3f);
+            GameManager.Instance?.SetOnUIOptions(true);
             _playAgainButton?.gameObject.SetActive(true);
             if (_canvasGroup != null)
                 _canvasGroup.blocksRaycasts = true;

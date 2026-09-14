@@ -90,7 +90,7 @@ public class MotionCall : StateMachineBehaviour
         Disso.ResetMaterials();
     }
 
-    public void MeleeAttack(Animator animator)
+    public void MeleeAttackCouldown(Animator animator)
     {
         animator.ResetTrigger("IsShooting");
         var controller = animator.GetComponentInParent<NShootHandler>();
@@ -98,6 +98,12 @@ public class MotionCall : StateMachineBehaviour
         
         var movement = animator.GetComponentInParent<NCharMovementHandler>();
         movement?.StartCoolDownCombat();
+    }
+
+    public void MeleeAttackTrigger(Animator animator)
+    {
+        var controller = animator.GetComponentInParent<NShootHandler>();
+        controller?.OnMeleeHitAnimEvent();
     }
 
     public void ResetRightPuchMelee(Animator animator)
@@ -112,7 +118,7 @@ public class MotionCall : StateMachineBehaviour
         animator.ResetTrigger(triggerName);
     }
 
-    public void RessetShootIndex(Animator animator)
+    public void RessetCanAttackMelee(Animator animator)
     {
         var controller = animator.GetComponentInParent<NCharMovementHandler>();
         if (controller != null)

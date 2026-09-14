@@ -235,9 +235,10 @@ public class GameManager : MonoBehaviour
 
     public void NewGame()
     {
+        Debug.Log("<color=yellow>[GameManager]</color> NewGame");
         SetStartHostMigration(false);
         SetLocalGameOverUI(false);
-        SetOnuiLoadout(false);
+        SetOnuiLoadout(true);
         SetOnUIOptions(false);
         SetOnUIChatBox(false);
         _bestStreak = 0;

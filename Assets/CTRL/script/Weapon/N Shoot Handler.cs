@@ -141,14 +141,6 @@ public class NShootHandler : NetworkBehaviour
         // Melee hit check — chạy sau delay để khớp với animation swing
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
         {
-            // Delay ban đầu (khớp animation swing) vừa hết → mở cửa sổ active hit
-            if (_meleeHitTimer.Expired(Runner))
-            {
-                _meleeHitTimer = default;
-                _meleeHitWindowEndTimer = TickTimer.CreateFromSeconds(Runner, _meleeHitWindowDuration);
-                //_movementHandler.ResetRightPuch();
-            }
-
             // Trong cửa sổ active — check hit MỖI TICK cho tới khi trúng player hoặc hết giờ,
             // thay vì chỉ check đúng 1 tick như trước → dễ trigger trúng đòn hơn nhiều.
             if (_meleeHitWindowEndTimer.IsRunning)
@@ -165,31 +157,31 @@ public class NShootHandler : NetworkBehaviour
     public void TriggerMeleeAttack()
     {
         if (!Object.HasStateAuthority) return;
+        if (_weaponManager.Weapon_Active()?.WeaponType != WeaponType.Melee) return;
 
-        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
-        {
-            var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
-            float hitDelay = weaponCtrl?.Data.MeleeHitDelay ?? 0.2f;
-            if (_movementHandler.RightPuch && weaponCtrl)
-            {
-                if (_movementHandler.StateFl.IsCrouch)
-                    hitDelay = weaponCtrl.Data.HitCrouchRightDelay;
-                else hitDelay = weaponCtrl.Data.HitStandRightDelay;
-            }
-            _meleeHitTimer = TickTimer.CreateFromSeconds(Runner, hitDelay);
+        // Hủy window của swing cũ (nếu còn chạy) — tránh double-visual
+        _meleeHitWindowEndTimer = default;
 
-            // FIX double-visual khi combo: hủy hẳn window của swing TRƯỚC (nếu vẫn đang chạy)
-            // trước khi reset state. Nếu không, FixedUpdateNetwork() vẫn còn cho HandleMeleeHit()
-            // của swing cũ chạy thêm vài tick nữa, và vì _meleeAlreadyHitThisSwing /
-            // _meleeWallHitRegisteredThisSwing vừa bị Clear() bên dưới, nó tưởng đây là swing
-            // "chưa hit gì" nên ghi nhận wall-hit thêm 1 lần nữa → _meleeHitCount tăng 2 lần
-            // liên tiếp trong vài chục ms → Render() trên client gọi SpawnProjectileVisual 2 lần.
-            _meleeHitWindowEndTimer = default;
+        // Reset trạng thái hit của swing trước
+        _meleeAlreadyHitThisSwing.Clear();
+        _meleeWallHitRegisteredThisSwing = false;
 
-            // Bắt đầu swing mới → reset trạng thái hit của swing trước
-            _meleeAlreadyHitThisSwing.Clear();
-            _meleeWallHitRegisteredThisSwing = false;
-        }
+        // KHÔNG set _meleeHitTimer nữa — Animation Event sẽ kích hoạt hitbox
+        // _meleeHitTimer chỉ giữ lại nếu cần fallback (xem ghi chú bên dưới)
+    }
+
+    /// <summary>
+    /// Gọi từ Animation Event đúng frame vung vũ khí chạm điểm tác động.
+    /// Thay thế hoàn toàn cho _meleeHitTimer delay cũ — chính xác hơn theo từng frame.
+    /// StateAuthority check bên trong để Proxy không xử lý.
+    /// </summary>
+    public void OnMeleeHitAnimEvent()
+    {
+        if (!Object.HasStateAuthority) return;
+        if (_weaponManager.Weapon_Active()?.WeaponType != WeaponType.Melee) return;
+
+        // Mở cửa sổ hit ngay lập tức (không cần delay nữa)
+        _meleeHitWindowEndTimer = TickTimer.CreateFromSeconds(Runner, _meleeHitWindowDuration);
     }
 
     // ── Render (chạy trên tất cả máy, mỗi frame) ───────────────────────────
