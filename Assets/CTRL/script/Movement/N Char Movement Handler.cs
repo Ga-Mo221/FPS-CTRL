@@ -164,7 +164,9 @@ public class NCharMovementHandler : NetworkBehaviour
             float maxPitch = _data.PitchMax;
             var pitchCamera = _data.PitchCamera * CameraSpeed;
             
-            if (StateFl.IsADS || StateFl.IsThrow)
+            // if (StateFl.IsADS || StateFl.IsThrow)
+            //     pitchCamera *= ADSLookSpeedMultiplier;
+            if (StateFl.IsADS)
                 pitchCamera *= ADSLookSpeedMultiplier;
             
             NetworkedPitch = Mathf.Clamp(
@@ -420,7 +422,6 @@ public class NCharMovementHandler : NetworkBehaviour
 
     public void ResetMeleeCombo()
     {
-        if (!Object.HasStateAuthority) return;
         _canNextAttackCombo = true;
     }
 
@@ -472,7 +473,7 @@ public class NCharMovementHandler : NetworkBehaviour
             if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS))
             {
                 _stateLogic.EnterADS(ref state, _constraintManager);
-                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
+                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper )
                 {
                     // Sniper ADS → giảm tốc độ xoay camera
                     if (Object.HasInputAuthority)

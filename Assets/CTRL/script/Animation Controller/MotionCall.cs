@@ -137,7 +137,7 @@ public class MotionCall : StateMachineBehaviour
         
         AudioManager.Instance.PlayClip(controller.Sound_Slider, 
             controller.Data.MagazineInClip,
-            controller.Data.Volume_Magazine);
+            controller.Data.Volume_Magazine, true, 0.5f, 1f);
     }
     
     // Gun
@@ -150,7 +150,7 @@ public class MotionCall : StateMachineBehaviour
         
         AudioManager.Instance.PlayClip(controller.Sound_Slider, 
             controller.Data.SlideClip,
-            controller.Data.Volume_Slide);
+            controller.Data.Volume_Slide, true, 0.5f, 1f);
     }
     
     public void AudioWeaponShoot(Animator animator, int index)
@@ -170,11 +170,52 @@ public class MotionCall : StateMachineBehaviour
                 controller.Data.Volume_Fire, index, index);
     }
     
+    public void AudioWeaponSlider(Animator animator, int index)
+    {
+        var controller = animator.GetComponentInParent<WeaponController>();
+
+        if (controller == null)
+            return;
+        
+        if (index == 0)
+            AudioManager.Instance.PlayClip(controller.Sound_Slider, 
+                controller.Data.SlideClip,
+                controller.Data.Volume_Slide, 0, 3);
+        else
+            AudioManager.Instance.PlayClip(controller.Sound_Slider, 
+                controller.Data.SlideClip,
+                controller.Data.Volume_Slide, index-1, index-1);
+    }
+    
+    public void AudioWeaponMagazine(Animator animator, int index)
+    {
+        var controller = animator.GetComponentInParent<WeaponController>();
+
+        if (controller == null)
+            return;
+        
+        if (index == 0)
+            AudioManager.Instance.PlayClip(controller.Sound_Slider, 
+                controller.Data.MagazineInClip,
+                controller.Data.Volume_Magazine, 0, 3);
+        else
+            AudioManager.Instance.PlayClip(controller.Sound_Slider, 
+                controller.Data.MagazineInClip,
+                controller.Data.Volume_Magazine, index-1, index-1);
+    }
+    
     // Gun
     public void SetStateWeaponCollision(Animator animator, bool state)
     {
         var component = animator.GetComponentInParent<WeaponCollisionResolver>();
         if (component == null) return;
         component.SetState(state);
+    }
+    
+    // Gun
+    public void DropBullet(Animator animator)
+    {
+        var controller = animator.GetComponentInParent<WeaponController>();
+        controller?.DropCaseBullet();
     }
 }

@@ -4,9 +4,6 @@ using UnityEngine;
 
 public class UIMainMenuHandler : MonoBehaviour
 {
-    const string GamePlaySceneName = "SampleScene";
-    
-    
     [SerializeField] private CanvasGroup _playerDetaisPanel;
     [SerializeField] private CanvasGroup _sessionListPanel;
     [SerializeField] private CanvasGroup _createSessionPanel;
@@ -116,7 +113,7 @@ public class UIMainMenuHandler : MonoBehaviour
         {
             HideAllPanels();
             
-            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), GamePlaySceneName);
+            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), SceneName._SHORT_MAP_1);
             
             _statusPanel?.SetActive(true);
         }

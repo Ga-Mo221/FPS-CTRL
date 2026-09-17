@@ -324,7 +324,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Create session {sessionName}" +
                   $"in lobby {lobbyName} scene {sceneName}");
         
-        int buildIndex = SceneUtility.GetBuildIndexByScenePath($"Assets/Scenes/Setup/{sceneName}.unity");
+        int buildIndex = SceneUtility.GetBuildIndexByScenePath(SceneName.GetPath(sceneName));
         SceneRef sceneRef = SceneRef.FromIndex(buildIndex);
         
         var clientTask = InitializeNetworkRunner
@@ -386,7 +386,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         SpawnNetworkRunner = null;
 
         // Chờ scene load xong hoàn toàn
-        var asyncLoad = SceneManager.LoadSceneAsync("MainMenu_Test");
+        var asyncLoad = SceneManager.LoadSceneAsync(SceneName.GetPath(SceneName._MAIN_MENU));
         while (!asyncLoad.isDone)
             await Task.Yield();
 
@@ -434,7 +434,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         await SpawnNetworkRunner.Shutdown();
         SpawnNetworkRunner = null;
         
-        var asyncLoad = SceneManager.LoadSceneAsync("MainMenu_Test");
+        var asyncLoad = SceneManager.LoadSceneAsync(SceneName.GetPath(SceneName._MAIN_MENU));
         while (!asyncLoad.isDone)
             await Task.Yield();
         

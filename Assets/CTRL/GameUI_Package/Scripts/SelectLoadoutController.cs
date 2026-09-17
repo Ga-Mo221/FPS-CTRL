@@ -14,7 +14,7 @@ namespace Game.UI
         {
             SetBaloOne(WeaponName._M4, WeaponName._9MM_DEMON);
             SetBaloTwo(WeaponName._REMINGTON, WeaponName._KNIFE);
-            SetBaloThree(WeaponName._9MM_DEMON, WeaponName._KNIFE);
+            SetBaloThree(WeaponName._M24, WeaponName._9MM_DEMON);
             
             if (GameManager.Instance != null && GameManager.Instance.GetStartHostMigration())
                 gameObject.SetActive(false);

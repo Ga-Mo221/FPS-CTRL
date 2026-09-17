@@ -97,7 +97,30 @@ public class LocalInputController : MonoBehaviour
             var gm = GameManager.Instance;
             if (gm != null && gm.SetOnuiLoadout(true))
             {
-                _gameHudController.SetLoadoutVisible(true);
+                var local = NPlayer.Local;
+                if (local != null)
+                {
+                    var Components = local.ComponentManager;
+                    if (Components == null) return;
+
+                    var Weapons = Components.WeaponManager;
+                    if (Weapons == null) return;
+
+                    var Grenade = Components.NCharMovementHandler;
+                    if (Grenade == null) return;
+
+                    bool W1 = true, W2 = true;
+
+                    if (Weapons.Weapon_One_CTRL != null)
+                        W1 = Weapons.Weapon_One_CTRL.CanSwitchLayout();
+                    
+                    if (Weapons.Weapon_Two_CTRL != null)
+                        W2 = Weapons.Weapon_Two_CTRL.CanSwitchLayout();
+                    
+                    if (W1 && W2 && !Grenade.Frag && !Grenade.Flash)
+                        _gameHudController.SetLoadoutVisible(true);
+                    else gm.SetOnuiLoadout(false);
+                }
             }
         }
     }

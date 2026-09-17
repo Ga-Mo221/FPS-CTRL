@@ -24,7 +24,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
     private bool _isPublicJoinMessageSent = false;
     
-    public CharComponentManager _componentManager { get; private set; }
+    public CharComponentManager ComponentManager { get; private set; }
     private NInGameMessagesHandler _nInGameMessagesHandler;
     //private UIHPPlayer _uiLocalPlayer;
     private UIPlayerNickName _uiPlayerNickName;
@@ -60,12 +60,12 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     
     private void InitPlayer()
     {
-        _componentManager = GetComponent<CharComponentManager>();
-        _nInGameMessagesHandler = _componentManager.NInGameMessagesHandler;
+        ComponentManager = GetComponent<CharComponentManager>();
+        _nInGameMessagesHandler = ComponentManager.NInGameMessagesHandler;
         //_uiLocalPlayer = _componentManager.UihpPlayer;
-        _uiPlayerNickName = _componentManager.UIPlayerNickName;
-        _shootHandler = _componentManager.NShootHandler;
-        _movementHandler = _componentManager.NCharMovementHandler;
+        _uiPlayerNickName = ComponentManager.UIPlayerNickName;
+        _shootHandler = ComponentManager.NShootHandler;
+        _movementHandler = ComponentManager.NCharMovementHandler;
         
         IsLocalPlayer = Object.HasInputAuthority 
                         || (Runner.IsServer && Object.StateAuthority == Runner.LocalPlayer);
@@ -74,7 +74,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         {
             Local = this;
             
-            _componentManager.DisplayUI();
+            ComponentManager.DisplayUI();
             
             GameManager.Instance.setPlayerID(Object.Id);
             
@@ -84,7 +84,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             
             //_uiLocalPlayer?.gameObject.SetActive(true);
 
-            var parrentCamera = _componentManager.Camera.transform.parent.gameObject;
+            var parrentCamera = ComponentManager.Camera.transform.parent.gameObject;
             parrentCamera.SetActive(true);
             parrentCamera.transform.parent.parent.parent = null;
             _uiPlayerNickName.gameObject.SetActive(false);
@@ -113,7 +113,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         else
         {
             //_uiLocalPlayer?.gameObject.SetActive(false);
-            GameObject localCamera = _componentManager.Camera.transform.parent.gameObject;
+            GameObject localCamera = ComponentManager.Camera.transform.parent.gameObject;
             localCamera.SetActive(false);
             
             if (!string.IsNullOrEmpty(Nickname.ToString()))
@@ -268,7 +268,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     void OnNicknameChanged()
     {
         Debug.Log($"<color=green>[NPlayer]</color> OnNicknameChanged to {Nickname.ToString()}", this);
-        _componentManager.UIPlayerNickName.SetNickName(Nickname.ToString());
+        ComponentManager.UIPlayerNickName.SetNickName(Nickname.ToString());
     }
 
     void OnDestroy()

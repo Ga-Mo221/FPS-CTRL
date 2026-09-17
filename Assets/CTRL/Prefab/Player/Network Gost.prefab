@@ -2696,6 +2696,7 @@ MonoBehaviour:
   _RightPuch: 0
   _ShootIndex: 0
   _canNextAttackCombo: 1
+  _LastConfirmedAimForward: {x: 0, y: 0, z: 0}
   _CanTakeDamage:
     _value: 1
   _SwitchCount: 0
@@ -2815,13 +2816,13 @@ MonoBehaviour:
     _length: 0
     _data:
       Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  _weapon_One_CTRL: {fileID: 0}
+  Weapon_One_CTRL: {fileID: 0}
   __weaponTwoRef: {fileID: 0}
   __weaponTwoID:
     _length: 0
     _data:
       Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  _weapon_Two_CTRL: {fileID: 0}
+  Weapon_Two_CTRL: {fileID: 0}
   __weapon_Active: 0
   _componentManager: {fileID: 7267980694266510406}
   _camera: {fileID: 6031967234010882723}
@@ -2910,7 +2911,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NShootHandler
   _fragPrefab: {fileID: 8316430782400148506, guid: 3b815ab5fdbaa28489e8ebcbb53ff055, type: 3}
-  _flashPrefab: {fileID: 2983917033844984590, guid: d4b302c24ce14914b9b9433f73bd2d3f, type: 3}
+  _flashPrefab: {fileID: 52834420443135674, guid: f7e49178189355747a4f337fb37a0c4f, type: 3}
   _throwPointRight: {fileID: 4870814209445416101}
   _throwPointLeft: {fileID: 4950083662886209044}
   _fore: 14

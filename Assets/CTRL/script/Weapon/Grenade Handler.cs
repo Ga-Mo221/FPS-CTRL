@@ -8,8 +8,10 @@ public class GrenadeHandler : NetworkBehaviour
 {
     [SerializeField] private GrenadeType _grenadeType;
 
+    [TabGroup("Grenade", "Setiing")] 
+    [SerializeField] private float _despawn_duration = 2f;
     [TabGroup("Grenade", "Setiing")]
-    [SerializeField] private float _duration = 2f;
+    [SerializeField] private float _Ex_duration = 2f;
     [TabGroup("Grenade", "Setiing")]
     [SerializeField] private float _radius = 4f;
     [TabGroup("Grenade", "Setiing")]
@@ -84,7 +86,7 @@ public class GrenadeHandler : NetworkBehaviour
         _throwByPlayerName = thrownByPlayerName;
         _throwByPlayerRef  = throwByPlayerRef;
 
-        _explodeTickTimer  = TickTimer.CreateFromSeconds(Runner, _duration);
+        _explodeTickTimer  = TickTimer.CreateFromSeconds(Runner, _Ex_duration);
     }
 
     public override void FixedUpdateNetwork()
@@ -93,28 +95,38 @@ public class GrenadeHandler : NetworkBehaviour
 
         if (_explodeTickTimer.Expired(Runner))
         {
-            _despawnTimer    = TickTimer.CreateFromSeconds(Runner, 5);
+            _despawnTimer    = TickTimer.CreateFromSeconds(Runner, 2f);
             _explodePosition = _grenadeMesh.transform.position;
-
-            int hitCount = Runner.LagCompensation.OverlapSphere(
-                transform.position, _radius, _throwByPlayerRef,
-                _hits, _collisionLayer);
+            
+            int hitCount = 0;
+            if (_grenadeType != GrenadeType.Smoke)
+            {
+                hitCount = Runner.LagCompensation.OverlapSphere(
+                    transform.position, _radius, _throwByPlayerRef,
+                    _hits, _collisionLayer);
+            }
 
             _processedRoots.Clear();
 
             for (int i = 0; i < hitCount; i++)
             {
-                Transform root = _hits[i].Hitbox.transform.root;
-                if (!_processedRoots.Add(root)) continue;
+                Transform root = null;
+                if (_grenadeType != GrenadeType.Smoke)
+                {
+                    root = _hits[i].Hitbox.transform.root;
+                    if (!_processedRoots.Add(root)) continue;
+                }
 
                 switch (_grenadeType)
                 {
                     case GrenadeType.Frag:
-                        HandleFrag(root, i);
+                        if (root != null)
+                            HandleFrag(root, i);
                         break;
 
                     case GrenadeType.Flash:
-                        HandleFlash(root);
+                        if (root != null)
+                            HandleFlash(root);
                         break;
 
                     case GrenadeType.Smoke:
@@ -200,7 +212,7 @@ public class GrenadeHandler : NetworkBehaviour
     {
         GameObject ex  = Instantiate(_explosionPrefab, position, Quaternion.identity);
         var        des = ex.GetComponent<DestroyGameobject>();
-        des.DestroyFrag(_explodeClips, _explodeVolume, true, _explodeMinDistance, _explodeMaxDistance);
+        des.DestroyFrag(_despawn_duration, _explodeClips, _explodeVolume, true, _explodeMinDistance, _explodeMaxDistance);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]

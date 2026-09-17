@@ -58,8 +58,15 @@ public class WeaponController : NetworkBehaviour
     [SerializeField] private BulletCaseController _bulletController;
     
     // ========================= TRANSFORM =============================
+
+    [TabGroup("Weapon Controller", "Transform")] 
+    [BoxGroup("Weapon Controller/Transform/Sniper")]
+    [ShowIf("_type", WeaponType.Sniper)]
+    [SerializeField] private Transform _glass;
+    [BoxGroup("Weapon Controller/Transform/Sniper")]
+    [ShowIf("_type", WeaponType.Sniper)]
+    [SerializeField] private Transform _zoomCamera;
     
-    [TabGroup("Weapon Controller", "Transform")]
     [BoxGroup("Weapon Controller/Transform/Hand List")]
     [SerializeField] private Transform[] _list_Bone_Body;
     
@@ -288,6 +295,13 @@ public class WeaponController : NetworkBehaviour
             Destroy(_parrentBullet.gameObject);
     }
 
+    public bool CanSwitchLayout()
+    {
+        if (WeaponType == WeaponType.Melee) return true;
+
+        return CurrentBulletvalue == Data.DefaultBullet && CurrentMaxBullet == Data.MaxBullet;
+    }
+
     private void HandleShot(GunRecoilController.FiringMode mode)
     {
         PlayFireEffect();
@@ -302,7 +316,7 @@ public class WeaponController : NetworkBehaviour
             case WeaponType.Sniper:
                 if (Object.HasStateAuthority)
                     CurrentBulletvalue--;
-                if (_bulletController != null)
+                if (_bulletController != null && _type != WeaponType.Sniper)
                     _bulletController.Drop();
                     
                 _shoot_Effect.Play();
@@ -320,14 +334,19 @@ public class WeaponController : NetworkBehaviour
                 // rung va am thanh dựa trên delay va cham
                 break;
         }
-        
-        
+    }
+
+    public void DropCaseBullet()
+    {
+        if (_bulletController == null) return;
+        _bulletController.Drop();
     }
 
     // ========================================== ADS ==================================
     
     private void Update()
     {
+        if (!Object.HasInputAuthority) return;
         if (_type == WeaponType.Melee) return;
         ADSHandler();
     }
@@ -372,12 +391,16 @@ public class WeaponController : NetworkBehaviour
         if (_ads != _lastAdsState)
         {
             _lastAdsState = _ads;
-            ADSBlend(_ads);
+            if (_ads_Pivot_transform != null &&
+                _ads_Pivot.targets[0] != null)
+                ADSBlend(_ads);
         }
     }
 
     private void ADSBlend(bool ads)
     {
+        SniperADS(ads);
+        
         _gun_Recoil_CTRL.SetAiming(ads);
         _cam_Recoil.SetADS(ads);
         if (_blendRoutine != null)
@@ -392,25 +415,25 @@ public class WeaponController : NetworkBehaviour
 
     private IEnumerator ADSBlend(float targetWeight, float zoomTarget, float zoomZ, float pivotHeight, float duration = 0.25f)
     {
-        float start = _ads_Pivot.targets[0].weight;
-        // float start = 0;
-        // if (_ads_Pivot.targets.Count > 0 && _ads_Pivot.targets[0] != null)
-        //     start = _ads_Pivot.targets[0].weight;
+        //float start = _ads_Pivot.targets[0].weight;
+        float start = 0;
+        if (_ads_Pivot.targets.Count > 0 && _ads_Pivot.targets[0] != null)
+            start = _ads_Pivot.targets[0].weight;
         
-        float startzoom = _camera_Zoom.fieldOfView;
-        float startzoom_z = _camera_Zoom.transform.localPosition.z;
-        // float startzoom = 0;
-        // float startzoom_z = 0;
-        // if (_camera_Zoom != null)
-        // {
-        //     startzoom = _camera_Zoom.fieldOfView;
-        //     startzoom_z = _camera_Zoom.transform.localPosition.z;
-        // }
+        // float startzoom = _camera_Zoom.fieldOfView;
+        // float startzoom_z = _camera_Zoom.transform.localPosition.z;
+        float startzoom = 0;
+        float startzoom_z = 0;
+        if (_camera_Zoom != null)
+        {
+            startzoom = _camera_Zoom.fieldOfView;
+            startzoom_z = _camera_Zoom.transform.localPosition.z;
+        }
 
-        float startHeight = _ads_Pivot_transform.localPosition.z;
-        // float startHeight = 0;
-        // if (_ads_Pivot_transform != null)
-        //     startHeight = _ads_Pivot_transform.localPosition.z;
+        //float startHeight = _ads_Pivot_transform.localPosition.z;
+        float startHeight = 0;
+        if (_ads_Pivot_transform != null)
+            startHeight = _ads_Pivot_transform.localPosition.z;
     
         float time = 0f;
         Vector3 _zoomYtarget = _camera_Zoom.transform.localPosition; // Lấy vị trí hiện tại thay vì Vector3.zero để giữ lại trục X và Z
@@ -439,6 +462,17 @@ public class WeaponController : NetworkBehaviour
         _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, _zoomYtarget.y, zoomZ);
         _ads_Pivot_transform.transform.localPosition = new Vector3(PivotHeight.x, PivotHeight.y, pivotHeight);
         _blendRoutine = null;
+    }
+
+    private void SniperADS(bool ads)
+    {
+        if (_type != WeaponType.Sniper) return;
+        if (_glass != null)
+            _glass.gameObject.SetActive(!ads);
+        if (_zoomCamera != null)
+            _zoomCamera.gameObject.SetActive(ads);
+        if (GameManager.Instance != null)
+            GameManager.Instance.VolumeController.TriggerADS(ads, 0.25f);
     }
     
     // ======================= WEAPON SWAY =============================

@@ -22,13 +22,13 @@ public class WeaponManager : NetworkBehaviour
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponOneRef { get; set; }
     [Networked] public NetworkString<_16> _weaponOneID { get; set; }
-    public WeaponController _weapon_One_CTRL;
+    public WeaponController Weapon_One_CTRL;
     
     // Weapon Two
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponTwoRef { get; set; }
     [Networked] public NetworkString<_16> _weaponTwoID { get; set; }
-    public WeaponController _weapon_Two_CTRL;
+    public WeaponController Weapon_Two_CTRL;
     
     // Active Weapon
     [Networked] public byte _weapon_Active { get; set; } = 0;
@@ -97,10 +97,10 @@ public class WeaponManager : NetworkBehaviour
 
     private void SpawnWeaponOne(string weaponOne)
     {
-        if (_weapon_One_CTRL != null)
+        if (Weapon_One_CTRL != null)
         {
             Runner.Despawn(_weaponOneRef);
-            _weapon_One_CTRL = null;
+            Weapon_One_CTRL = null;
             _weaponOneRef = null;
         }
         
@@ -109,10 +109,10 @@ public class WeaponManager : NetworkBehaviour
 
     private void SpawnWeaponTwo(string weaponTwo)
     {
-        if (_weapon_Two_CTRL != null)
+        if (Weapon_Two_CTRL != null)
         {
             Runner.Despawn(_weaponTwoRef);
-            _weapon_Two_CTRL = null;
+            Weapon_Two_CTRL = null;
             _weaponTwoRef = null;
         }
         
@@ -132,13 +132,13 @@ public class WeaponManager : NetworkBehaviour
             CreateWeapon(_weapon_One_Prefab, out var w1);
             _weaponOneRef = w1;
         }
-        if (_weapon_One_CTRL == null && _weapon_One_Prefab != null || 
-            _weapon_Two_CTRL == null && _weapon_Two_Prefab != null)
+        if (Weapon_One_CTRL == null && _weapon_One_Prefab != null || 
+            Weapon_Two_CTRL == null && _weapon_Two_Prefab != null)
             if (!NeedsResolveAfterMigration)
             {
                 ResolveWeaponControllers();
-                if (_weapon_One_CTRL != null) _weapon_One_CTRL.Respawn();
-                if (_weapon_Two_CTRL != null) _weapon_Two_CTRL.Respawn();
+                if (Weapon_One_CTRL != null) Weapon_One_CTRL.Respawn();
+                if (Weapon_Two_CTRL != null) Weapon_Two_CTRL.Respawn();
             }
     }
 
@@ -238,13 +238,13 @@ public class WeaponManager : NetworkBehaviour
 
         if (_weapon_Active == 1)
         {
-            await WaitUntilReady(() => _weapon_One_CTRL != null && _weapon_One_CTRL.Object != null && _weapon_One_CTRL.Object.IsValid);
-            _weapon_One_CTRL.SetBullet(currentBullet, maxBullet);
+            await WaitUntilReady(() => Weapon_One_CTRL != null && Weapon_One_CTRL.Object != null && Weapon_One_CTRL.Object.IsValid);
+            Weapon_One_CTRL.SetBullet(currentBullet, maxBullet);
         }
         else if (_weapon_Active == 2)
         {
-            await WaitUntilReady(() => _weapon_Two_CTRL != null && _weapon_Two_CTRL.Object != null && _weapon_Two_CTRL.Object.IsValid);
-            _weapon_Two_CTRL.SetBullet(currentBullet, maxBullet);
+            await WaitUntilReady(() => Weapon_Two_CTRL != null && Weapon_Two_CTRL.Object != null && Weapon_Two_CTRL.Object.IsValid);
+            Weapon_Two_CTRL.SetBullet(currentBullet, maxBullet);
         }
     }
 
@@ -258,7 +258,7 @@ public class WeaponManager : NetworkBehaviour
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void Rpc_RequestDropWeapon(Vector3 dropPosition, byte weaponSlot)
     {
-        WeaponController ctrl = weaponSlot == 1 ? _weapon_One_CTRL : _weapon_Two_CTRL;
+        WeaponController ctrl = weaponSlot == 1 ? Weapon_One_CTRL : Weapon_Two_CTRL;
         if (ctrl == null) return;
 
         SpawnDropItem(ctrl, dropPosition);
@@ -283,22 +283,22 @@ public class WeaponManager : NetworkBehaviour
     /// </summary>
     public void SwitchWeapon()
     {
-        if (_weapon_One_CTRL == null && _weaponOneRef != null || _weapon_Two_CTRL == null && _weaponTwoRef != null)
+        if (Weapon_One_CTRL == null && _weaponOneRef != null || Weapon_Two_CTRL == null && _weaponTwoRef != null)
             ResolveWeaponControllers();
         
         if (_weapon_Active == 1)
         {
-            if (_weapon_One_CTRL == null || !IsWeaponReady(_weapon_One_CTRL)) return;
+            if (Weapon_One_CTRL == null || !IsWeaponReady(Weapon_One_CTRL)) return;
             
             SwitchToWeaponOne();
-            _componentManager.GameHudController().SwitchWeaponUI(_weapon_One_CTRL);
+            _componentManager.GameHudController().SwitchWeaponUI(Weapon_One_CTRL);
         }
         if (_weapon_Active == 2)
         {
-            if (_weapon_Two_CTRL == null || !IsWeaponReady(_weapon_Two_CTRL)) return;
+            if (Weapon_Two_CTRL == null || !IsWeaponReady(Weapon_Two_CTRL)) return;
             
             SwitchToWeaponTwo();
-            _componentManager.GameHudController().SwitchWeaponUI(_weapon_Two_CTRL);
+            _componentManager.GameHudController().SwitchWeaponUI(Weapon_Two_CTRL);
         }
     }
     
@@ -351,7 +351,7 @@ public class WeaponManager : NetworkBehaviour
             _componentManager.ConstraintManager?.SwitchWeapon(_weaponOneID.ToString());
             _weaponOneRef?.gameObject.SetActive(true);
             _weaponTwoRef?.gameObject.SetActive(false);
-            _anim?.WeaponIndex(_weapon_One_CTRL.Data.Index);
+            _anim?.WeaponIndex(Weapon_One_CTRL.Data.Index);
         }
     }
 
@@ -363,7 +363,7 @@ public class WeaponManager : NetworkBehaviour
             _componentManager.ConstraintManager?.SwitchWeapon(_weaponTwoID.ToString());
             _weaponOneRef?.gameObject.SetActive(false);
             _weaponTwoRef?.gameObject.SetActive(true);
-            _anim?.WeaponIndex(_weapon_Two_CTRL.Data.Index);
+            _anim?.WeaponIndex(Weapon_Two_CTRL.Data.Index);
         }
     }
 
@@ -375,7 +375,7 @@ public class WeaponManager : NetworkBehaviour
 
             if (Object.HasStateAuthority)
             {
-                SpawnDropItem(_weapon_One_CTRL);
+                SpawnDropItem(Weapon_One_CTRL);
             }
             else if (Object.HasInputAuthority) // ✅ Chỉ client sở hữu mới gửi RPC
             {
@@ -391,7 +391,7 @@ public class WeaponManager : NetworkBehaviour
 
             if (Object.HasStateAuthority)
             {
-                SpawnDropItem(_weapon_Two_CTRL);
+                SpawnDropItem(Weapon_Two_CTRL);
             }
             else if (Object.HasInputAuthority) // ✅
             {
@@ -438,10 +438,10 @@ public class WeaponManager : NetworkBehaviour
 
     public WeaponController Weapon_Active()
     {
-        if (_weaponOneRef != null && _weapon_One_CTRL != null && _weapon_One_CTRL.gameObject.activeSelf)
-            return _weapon_One_CTRL;
-        if (_weaponTwoRef != null && _weapon_Two_CTRL != null && _weapon_Two_CTRL.gameObject.activeSelf)
-            return _weapon_Two_CTRL;
+        if (_weaponOneRef != null && Weapon_One_CTRL != null && Weapon_One_CTRL.gameObject.activeSelf)
+            return Weapon_One_CTRL;
+        if (_weaponTwoRef != null && Weapon_Two_CTRL != null && Weapon_Two_CTRL.gameObject.activeSelf)
+            return Weapon_Two_CTRL;
         // FIX #3: hàm này được gọi ~10 lần/frame từ PlayerMotionController (IsDead, IsCrouching,
         // ADS, Move, v.v.). Debug.Log không điều kiện ở đây sẽ spam console mỗi frame trong bất
         // kỳ khoảng thời gian nào chưa có weapon active (vài frame đầu sau spawn, lúc switch
@@ -455,16 +455,16 @@ public class WeaponManager : NetworkBehaviour
 
     public void Respawn()
     {
-        if (_weapon_One_CTRL != null)
+        if (Weapon_One_CTRL != null)
         {
             _weapon_Active = 1;
-            _weapon_One_CTRL.Respawn();
+            Weapon_One_CTRL.Respawn();
         }
-        if (_weapon_Two_CTRL != null)
+        if (Weapon_Two_CTRL != null)
         {
-            if (_weapon_One_CTRL == null)
+            if (Weapon_One_CTRL == null)
                 _weapon_Active = 2;
-            _weapon_Two_CTRL.Respawn();
+            Weapon_Two_CTRL.Respawn();
         }
     }
 
@@ -476,19 +476,19 @@ public class WeaponManager : NetworkBehaviour
         // không bao giờ chạy: _weapon_One_CTRL giữ tham chiếu dangling tới object đã despawn,
         // và entry cũ trong ConstraintManager không bao giờ được remove (leak). Kiểm tra
         // _weapon_One_CTRL != null (cache cũ) mới đúng ý định "vừa có 1 controller cũ cần dọn".
-        if (_weapon_One_CTRL != null)
+        if (Weapon_One_CTRL != null)
         {
             var idOne = _weaponOneID.ToString();
             if (!idOne.IsNullOrEmpty())
                 _componentManager.ConstraintManager.RemoveWeapon(idOne);
-            _weapon_One_CTRL = null;
+            Weapon_One_CTRL = null;
         }
-        if (_weapon_Two_CTRL != null)
+        if (Weapon_Two_CTRL != null)
         {
             var idTwo = _weaponTwoID.ToString();
             if (!idTwo.IsNullOrEmpty())
                 _componentManager.ConstraintManager.RemoveWeapon(idTwo);
-            _weapon_Two_CTRL = null;
+            Weapon_Two_CTRL = null;
         }
 
         // Non-authority: ResolveWeaponControllers trả về true nếu có weapon đang chờ ID sync.
@@ -508,45 +508,45 @@ public class WeaponManager : NetworkBehaviour
     {
         bool hasPending = false;
 
-        if (_weaponOneRef != null && _weapon_One_CTRL == null)
+        if (_weaponOneRef != null && Weapon_One_CTRL == null)
         {
-            _weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
-            if (_weapon_One_CTRL != null)
+            Weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
+            if (Weapon_One_CTRL != null)
             {
                 if (Object.HasStateAuthority)
                 {
                     // Authority: set ID ngay, add đồng bộ luôn.
-                    _weapon_One_CTRL.Respawn();
-                    _weaponOneID = new NetworkString<_16>(_weapon_One_CTRL.Data.ID + "_STTWP1");
-                    _componentManager.ConstraintManager.AddNewWeapon(_weapon_One_CTRL, _weaponOneID.ToString());
+                    Weapon_One_CTRL.Respawn();
+                    _weaponOneID = new NetworkString<_16>(Weapon_One_CTRL.Data.ID + "_STTWP1");
+                    _componentManager.ConstraintManager.AddNewWeapon(Weapon_One_CTRL, _weaponOneID.ToString());
                 }
                 else
                 {
                     // Non-authority: _weaponOneID chưa chắc đã sync về kịp.
                     // Chờ đến khi ID khớp với weapon vừa resolve xong rồi mới AddNewWeapon.
                     hasPending = true;
-                    var ctrl = _weapon_One_CTRL;
+                    var ctrl = Weapon_One_CTRL;
                     StartCoroutine(WaitForIDThenAdd(
                         ctrl,
                         ctrl.Data.ID + "_STTWP1",
                         () => _weaponOneID.ToString(),
-                        () => _weapon_One_CTRL == ctrl,   // hủy nếu weapon đã bị thay
+                        () => Weapon_One_CTRL == ctrl,   // hủy nếu weapon đã bị thay
                         isLast: true                      // coroutine này chịu trách nhiệm gọi SwitchWeapon
                     ));
                 }
             }
         }
 
-        if (_weaponTwoRef != null && _weapon_Two_CTRL == null)
+        if (_weaponTwoRef != null && Weapon_Two_CTRL == null)
         {
-            _weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
-            if (_weapon_Two_CTRL != null)
+            Weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
+            if (Weapon_Two_CTRL != null)
             {
                 if (Object.HasStateAuthority)
                 {
-                    _weapon_Two_CTRL.Respawn();
-                    _weaponTwoID = new NetworkString<_16>(_weapon_Two_CTRL.Data.ID + "_STTWP2");
-                    _componentManager.ConstraintManager.AddNewWeapon(_weapon_Two_CTRL, _weaponTwoID.ToString());
+                    Weapon_Two_CTRL.Respawn();
+                    _weaponTwoID = new NetworkString<_16>(Weapon_Two_CTRL.Data.ID + "_STTWP2");
+                    _componentManager.ConstraintManager.AddNewWeapon(Weapon_Two_CTRL, _weaponTwoID.ToString());
                 }
                 else
                 {
@@ -554,12 +554,12 @@ public class WeaponManager : NetworkBehaviour
                     // (weapon one sẽ lo). Nếu chỉ mình weapon two pending thì nó gọi.
                     bool twoIsLast = !hasPending;
                     hasPending = true;
-                    var ctrl = _weapon_Two_CTRL;
+                    var ctrl = Weapon_Two_CTRL;
                     StartCoroutine(WaitForIDThenAdd(
                         ctrl,
                         ctrl.Data.ID + "_STTWP2",
                         () => _weaponTwoID.ToString(),
-                        () => _weapon_Two_CTRL == ctrl,
+                        () => Weapon_Two_CTRL == ctrl,
                         isLast: twoIsLast
                     ));
                 }

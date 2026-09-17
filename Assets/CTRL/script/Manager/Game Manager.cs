@@ -23,7 +23,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GamePlayMode _gamePlayMode = GamePlayMode.Team;
     
     [TabGroup("GameManager", "Player Settings")]
-    public FlashbangEffect FlashbangEffect;
+    public VolumeController VolumeController;
     
     [TabGroup("GameManager", "Player Settings")]
     [SerializeField] private float _respawnTime = 5f;

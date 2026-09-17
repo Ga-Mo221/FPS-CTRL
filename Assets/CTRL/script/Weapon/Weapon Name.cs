@@ -4,4 +4,5 @@ public static class WeaponName
     public const string _M4 = "M4";
     public const string _KNIFE = "Knife Short";
     public const string _REMINGTON = "Remington";
+    public const string _M24 = "M24";
 }

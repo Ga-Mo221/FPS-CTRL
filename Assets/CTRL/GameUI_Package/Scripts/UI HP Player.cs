@@ -158,7 +158,7 @@ public class UIHPPlayer : MonoBehaviour
         }
         yield return StartCoroutine(FadeTo(_uiFlash_WhiteImage, 1f, 0.2f));
         yield return new WaitForSeconds(duration);
-        GameManager.Instance.FlashbangEffect.TriggerFlashbang(6f);
+        GameManager.Instance.VolumeController.TriggerFlashbang(6f);
         yield return StartCoroutine(FadeTo(_uiFlash_WhiteImage, 0f, 3f));
     }
 

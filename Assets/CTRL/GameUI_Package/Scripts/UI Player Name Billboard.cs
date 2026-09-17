@@ -9,7 +9,7 @@ public class UIPlayerNameBillboard : MonoBehaviour
         if (targetCamera == null)
         {
             if (NPlayer.Local != null)
-                targetCamera = NPlayer.Local._componentManager.Camera;
+                targetCamera = NPlayer.Local.ComponentManager.Camera;
             return;
         }
 
