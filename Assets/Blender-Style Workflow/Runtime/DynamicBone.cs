@@ -52,6 +52,13 @@ namespace GaMo.BlenderEditorTools
         [Tooltip("Danh sách SphereCollider / CapsuleCollider dùng để cản xương.")]
         public List<Collider> colliders = new List<Collider>();
 
+        [Tooltip("[B4] Số vòng lặp giải va chạm mỗi frame. 1 = single-pass (kết quả có thể phụ " +
+                 "thuộc thứ tự trong danh sách Colliders khi 2 collider chồng nhau). 2-3 giúp " +
+                 "particle hội tụ ra ngoài TẤT CẢ collider ổn định hơn, giảm phụ thuộc thứ tự " +
+                 "add collider vào list — đổi lại tốn thêm CPU tuyến tính theo số vòng lặp.")]
+        [Range(1, 4)]
+        public int collisionSolveIterations = 2;
+
         // ══════════════════════════════════════════════════════════
         //  CLOTH LINKS (nối ngang giữa các chain)
         // ══════════════════════════════════════════════════════════
@@ -97,13 +104,16 @@ namespace GaMo.BlenderEditorTools
         [Range(0f, 1f)]
         public float springStiffness = 0.3f;
 
-        [Tooltip("Hệ số nhân lực đàn hồi. Tăng để xương bật mạnh hơn khi trở về rest pose.")] [Range(0f, 100f)]
+        [Tooltip("Hệ số nhân lực đàn hồi. Tăng để xương bật mạnh hơn khi trở về rest pose.")] [Range(0f, 500f)]
         public float springForceMultiplier = 1f;
 
         // ══════════════════════════════════════════════════════════
         //  PHYSICS — GRAVITY
         // ══════════════════════════════════════════════════════════
-        [Tooltip("Trọng lực tác động lên toàn bộ các chuỗi xương.")]
+        [Tooltip("Trọng lực tác động lên toàn bộ các chuỗi xương.\n" +
+                 "Nếu đổi HƯỚNG gravity lúc runtime ở preset Custom, gọi RefreshRestGravity() " +
+                 "(rẻ hơn InitializeTrees()) để rest-pose-gravity cập nhật theo hướng mới — " +
+                 "nếu không chỉ magnitude được dùng, hướng vẫn theo giá trị lúc InitializeTrees().")]
         public Vector3 gravity = new Vector3(0, -9.81f, 0);
 
         [Tooltip(
@@ -257,8 +267,44 @@ namespace GaMo.BlenderEditorTools
             public float restLength;
         }
 
+        // [0.3][A4] Cache phần BẤT BIẾN của mỗi CapsuleCollider (không phụ thuộc transform
+        // world, chỉ phụ thuộc thiết lập local của collider: direction/radius/height).
+        // Mỗi frame chỉ còn phải tính lại phần world-space (center, axis, scale) thay vì
+        // làm lại toàn bộ ternary + property access cho từng particle x collider.
+        private struct CapsuleLocalData
+        {
+            public Vector3 localAxis;     // Vector3.right / .up / .forward tuỳ capsule.direction
+            public float radiusUnscaled;  // capsule.radius (chưa nhân lossyScale)
+            public float heightUnscaled;  // capsule.height (chưa nhân lossyScale)
+        }
+
+        private readonly Dictionary<CapsuleCollider, CapsuleLocalData> _capsuleCache =
+            new Dictionary<CapsuleCollider, CapsuleLocalData>();
+
+        private CapsuleLocalData GetCapsuleLocalData(CapsuleCollider capsule)
+        {
+            if (_capsuleCache.TryGetValue(capsule, out var cached))
+                return cached;
+
+            var data = new CapsuleLocalData
+            {
+                localAxis = capsule.direction == 0 ? Vector3.right :
+                    capsule.direction == 2 ? Vector3.forward : Vector3.up,
+                radiusUnscaled = capsule.radius,
+                heightUnscaled = capsule.height
+            };
+            _capsuleCache[capsule] = data;
+            return data;
+        }
+
         private List<BoneNode> rootNodes = new List<BoneNode>();
         private List<ClothLink> clothLinks = new List<ClothLink>();
+
+        // [1.3][A3] Tập tối thiểu các node cần EnforceBoneLength khi giải cloth links —
+        // xem giải thích chi tiết tại ComputeClothEnforcementRoots().
+        private List<BoneNode> _clothEnforcementRoots = new List<BoneNode>();
+        private readonly HashSet<BoneNode> _clothTouchedScratch = new HashSet<BoneNode>();
+
         private Vector3 dragDirection = Vector3.zero;
         private Vector3 lastManagerPosition;
 
@@ -270,7 +316,7 @@ namespace GaMo.BlenderEditorTools
 
         void Start()
         {
-            ApplyCurrentPreset();
+            //ApplyCurrentPreset();
 
             InitializeTrees();
             lastManagerPosition = transform.position;
@@ -278,6 +324,7 @@ namespace GaMo.BlenderEditorTools
 
         public void InitializeTrees()
         {
+            _capsuleCache.Clear();
             rootNodes.Clear();
             foreach (Transform root in rootBones)
             {
@@ -286,6 +333,30 @@ namespace GaMo.BlenderEditorTools
             }
 
             BuildClothLinks();
+        }
+
+        /// <summary>
+        /// [0.5][B3] Cập nhật lại restGravityLocal của toàn bộ node theo hướng gravity hiện tại,
+        /// KHÔNG rebuild lại cây/cloth links. Gọi hàm này sau khi đổi HƯỚNG gravity lúc runtime
+        /// (ví dụ preset Custom, hoặc gameplay logic thay đổi gravity theo trạng thái nhân vật).
+        /// Rẻ hơn nhiều so với gọi lại InitializeTrees() vì không rebuild tree/cloth links.
+        /// Nếu không gọi hàm này, restGravityLocal vẫn giữ hướng cũ (chỉ magnitude của gravity
+        /// mới có hiệu lực ngay, hướng thì không).
+        /// </summary>
+        public void RefreshRestGravity()
+        {
+            foreach (var root in rootNodes)
+                if (root != null)
+                    RefreshRestGravityRecursive(root);
+        }
+
+        private void RefreshRestGravityRecursive(BoneNode node)
+        {
+            if (node.parent != null)
+                node.restGravityLocal = node.parent.transform.InverseTransformDirection(gravity.normalized);
+
+            foreach (var child in node.children)
+                RefreshRestGravityRecursive(child);
         }
 
         // ══════════════════════════════════════════════════════════
@@ -306,6 +377,7 @@ namespace GaMo.BlenderEditorTools
         private void BuildClothLinks()
         {
             clothLinks.Clear();
+            _clothEnforcementRoots.Clear();
 
             if (!enableClothLinks || rootNodes.Count < 2) return;
 
@@ -365,6 +437,59 @@ namespace GaMo.BlenderEditorTools
                     }
                 }
             }
+
+            ComputeClothEnforcementRoots();
+        }
+
+        /// <summary>
+        /// [1.3][A3] Precompute tập NODE TỐI THIỂU cần gọi EnforceBoneLength() từ đó mỗi
+        /// cloth iteration, thay vì luôn duyệt lại TOÀN BỘ cây từ rootNodes.
+        ///
+        /// Lý do đúng: ngay sau SimulatePhysics, MỌI node (kể cả không liên quan cloth link)
+        /// đã thỏa length constraint với parent (SimulatePhysics tự enforce length khi tích
+        /// hợp). SolveClothLinks() sau đó CHỈ dịch chuyển đúng những node là 2 đầu của 1
+        /// ClothLink — các node khác hoàn toàn không bị đụng tới, position của chúng vẫn còn
+        /// hợp lệ, nên không cần enforce lại.
+        ///
+        /// Với mỗi node bị "touched" (là link.a hoặc link.b của ít nhất 1 ClothLink), enforce
+        /// phải chạy từ nó xuống TOÀN BỘ subtree con (vì con của nó vẫn đang neo theo vị trí
+        /// CŨ của nó, giờ nó dịch chuyển → con phải cascade theo) — quy tắc này giữ nguyên,
+        /// KHÔNG bị rút gọn. Cái được rút gọn là: nếu node A bị touched và node B (con/cháu
+        /// của A) cũng bị touched, ta chỉ cần bắt đầu traversal từ A — nó sẽ tự cascade qua B
+        /// và toàn bộ nhánh dưới B, gọi enforce từ B riêng là dư thừa. Nên tập kết quả chỉ giữ
+        /// lại "tổ tiên touched cao nhất" của mỗi nhánh, không giữ node touched nào có tổ tiên
+        /// touched khác ở trên nó.
+        ///
+        /// Set này chỉ phụ thuộc CẤU TRÚC (node nào có link, không phải vị trí hiện tại), nên
+        /// chỉ cần tính lại khi topology đổi (đổi Root Bones/Cloth Link options → gọi lại
+        /// InitializeTrees()/BuildClothLinks()), KHÔNG cần tính lại mỗi frame.
+        /// </summary>
+        private void ComputeClothEnforcementRoots()
+        {
+            if (clothLinks.Count == 0) return;
+
+            _clothTouchedScratch.Clear();
+            foreach (var link in clothLinks)
+            {
+                if (link.a != null) _clothTouchedScratch.Add(link.a);
+                if (link.b != null) _clothTouchedScratch.Add(link.b);
+            }
+
+            foreach (var node in _clothTouchedScratch)
+            {
+                bool ancestorAlsoTouched = false;
+                for (BoneNode p = node.parent; p != null; p = p.parent)
+                {
+                    if (_clothTouchedScratch.Contains(p))
+                    {
+                        ancestorAlsoTouched = true;
+                        break;
+                    }
+                }
+
+                if (!ancestorAlsoTouched)
+                    _clothEnforcementRoots.Add(node);
+            }
         }
 
         private static List<BoneNode> GetLevel(List<List<BoneNode>> levels, int depth)
@@ -417,7 +542,10 @@ namespace GaMo.BlenderEditorTools
             dragDirection = transform.position - lastManagerPosition;
             lastManagerPosition = transform.position;
 
-            float dt = Time.deltaTime;
+            // [0.1][B1] Clamp dt: một frame hitch (ví dụ do load asset, GC spike) không
+            // còn khiến gravity/spring bị nhân vọt lên và làm bone "nổ" ra xa rest pose.
+            // 1/30s là ngưỡng an toàn (vẫn mượt ở 30 FPS trở lên, chặn được spike nặng).
+            float dt = Mathf.Min(Time.deltaTime, 1f / 30f);
 
             // 1. Mô phỏng từng chain độc lập
             foreach (var rootNode in rootNodes)
@@ -491,10 +619,15 @@ namespace GaMo.BlenderEditorTools
                     }
                 }
 
-                // Liên kết ngang vừa làm lệch khoảng cách tới parent → ép lại
-                foreach (var rootNode in rootNodes)
-                    if (rootNode != null)
-                        EnforceBoneLength(rootNode);
+                // Liên kết ngang vừa làm lệch khoảng cách tới parent → ép lại.
+                // [1.3][A3] Chỉ traverse từ _clothEnforcementRoots (các node "gốc bị ảnh
+                // hưởng", xem ComputeClothEnforcementRoots()) thay vì duyệt lại TOÀN BỘ cây
+                // từ rootNodes mỗi iteration — nhánh nào không có cloth link (và không phải
+                // chain con của node có link) thì vị trí vẫn đang hợp lệ từ SimulatePhysics,
+                // không cần enforce lại. Cùng kết quả, ít traversal hơn khi cloth link không
+                // phủ hết toàn bộ chiều sâu của mọi chain.
+                for (int r = 0; r < _clothEnforcementRoots.Count; r++)
+                    EnforceBoneLength(_clothEnforcementRoots[r]);
             }
         }
 
@@ -554,7 +687,14 @@ namespace GaMo.BlenderEditorTools
                     restDir = (node.parent.localRotation * node.restDirectionLocal).normalized;
 
                 Vector3 restOnSphere = node.parent.position + restDir * node.length;
-                float springT = Mathf.Clamp01(springStiffness * springForceMultiplier * dt);
+
+                // [0.2][A5] Exponential response thay vì tuyến tính: springStiffness*mult*dt
+                // tuyến tính sẽ cho hành vi lệ thuộc frame rate (ở FPS thấp, springT có thể
+                // vọt qua 1 trong khi ở FPS cao lại quá nhỏ). Công thức mũ hội tụ về cùng
+                // một "half-life" bất kể dt, nên spring cảm giác giống nhau ở mọi frame rate.
+                // Lưu ý: giá trị mặc định của 3 preset (SoftFabric/Spring/RigidForm) nên được
+                // artist review lại một lượt vì "cảm giác" spring sẽ đổi nhẹ so với công thức cũ.
+                float springT = 1f - Mathf.Exp(-springStiffness * springForceMultiplier * dt);
                 nextPos = Vector3.Lerp(nextPos, restOnSphere, springT);
 
                 toNext = nextPos - node.parent.position;
@@ -576,7 +716,17 @@ namespace GaMo.BlenderEditorTools
                 if (enableColliders && colliders.Count > 0)
                 {
                     Vector3 beforeCollision = node.position;
-                    SolveCollisions(ref node.position);
+
+                    // [5.5][B4] Nhiều vòng lặp thay vì single-pass: khi 2 collider chồng nhau,
+                    // 1 pass duy nhất cho kết quả phụ thuộc thứ tự trong danh sách colliders
+                    // (đẩy ra khỏi collider A trước có thể lại đẩy vào trong collider B).
+                    // Lặp lại N lần giúp particle hội tụ dần về vị trí hợp lệ với TẤT CẢ
+                    // collider, giống kiểu Gauss-Seidel relaxation — không tuyệt đối
+                    // order-independent nhưng giảm mạnh sai khác giữa các thứ tự add.
+                    int collisionIterations = Mathf.Max(1, collisionSolveIterations);
+                    for (int i = 0; i < collisionIterations; i++)
+                        SolveCollisions(ref node.position);
+
                     Vector3 correction = node.position - beforeCollision;
 
                     // Nếu có va chạm thật sự thì truyền correction ngược lên parent chain
@@ -616,6 +766,20 @@ namespace GaMo.BlenderEditorTools
             {
                 if (col == null || !col.enabled || !col.gameObject.activeInHierarchy) continue;
 
+                // [1.1][A1] Broadphase: Bounds check trước khi làm test hình học chính xác.
+                // col.bounds là AABB world-space Unity tự maintain sẵn cho collider (đọc property
+                // này rẻ hơn RẤT NHIỀU so với closest-point-on-segment + sqrt của exact test).
+                // Coi particle như có 1 AABB nhỏ quanh vị trí hiện tại (bán kính = particleRadius);
+                // nếu 2 AABB không giao nhau thì CHẮC CHẮN không va chạm — bỏ qua exact test luôn.
+                // Đây là phần cắt giảm chi phí lớn nhất của A1: character có N collider nhưng
+                // một bone tóc/đuôi thường chỉ thực sự cần test với 1-2 collider gần nó (Head/Neck),
+                // các collider còn lại (tay, chân, hông...) bị loại ngay ở bước này mỗi frame.
+                Bounds b = col.bounds;
+                if (particlePos.x < b.min.x - particleRadius || particlePos.x > b.max.x + particleRadius ||
+                    particlePos.y < b.min.y - particleRadius || particlePos.y > b.max.y + particleRadius ||
+                    particlePos.z < b.min.z - particleRadius || particlePos.z > b.max.z + particleRadius)
+                    continue;
+
                 if (col is SphereCollider sphere)
                 {
                     Vector3 center = sphere.transform.TransformPoint(sphere.center);
@@ -628,8 +792,9 @@ namespace GaMo.BlenderEditorTools
                 }
                 else if (col is CapsuleCollider capsule)
                 {
+                    CapsuleLocalData capsuleData = GetCapsuleLocalData(capsule);
                     GetCapsuleWorldPoints(capsule, out Vector3 p1, out Vector3 p2);
-                    float radius = capsule.radius * GetCapsuleMaxScale(capsule) + particleRadius;
+                    float radius = capsuleData.radiusUnscaled * GetCapsuleMaxScale(capsule, capsuleData) + particleRadius;
                     Vector3 closestPoint = ClosestPointOnSegment(p1, p2, particlePos);
                     Vector3 delta = particlePos - closestPoint;
                     float distSqr = delta.sqrMagnitude;
@@ -643,15 +808,32 @@ namespace GaMo.BlenderEditorTools
         {
             if (node.children.Count > 0)
             {
-                BoneNode childNode = node.children[0];
                 node.transform.localRotation = node.localRotation;
 
-                Vector3 defaultDir = node.transform.TransformDirection(childNode.localPosition);
-                Vector3 targetDir = childNode.position - node.position;
+                // [1.4][B2] Trung bình hướng của TẤT CẢ children thay vì chỉ children[0].
+                // Trước đây node có > 1 con (branching) sẽ bị méo rotation ở điểm chia nhánh
+                // vì các child khác ngoài children[0] không hề ảnh hưởng hướng xoay của cha.
+                // Weighted theo rest length (node.length) của từng nhánh để nhánh dài hơn
+                // (ảnh hưởng thị giác lớn hơn) đóng góp nhiều hơn vào hướng trung bình.
+                // Với node chỉ có 1 con (trường hợp phổ biến: chain thẳng tóc/đuôi/dải áo),
+                // kết quả giống hệt công thức cũ vì chỉ có một số hạng trong tổng.
+                Vector3 defaultDirSum = Vector3.zero;
+                Vector3 targetDirSum = Vector3.zero;
 
-                if (defaultDir != Vector3.zero && targetDir != Vector3.zero)
+                foreach (var childNode in node.children)
                 {
-                    Quaternion aimRotation = Quaternion.FromToRotation(defaultDir, targetDir);
+                    Vector3 defaultDir = node.transform.TransformDirection(childNode.localPosition);
+                    Vector3 targetDir = childNode.position - node.position;
+                    if (defaultDir == Vector3.zero || targetDir == Vector3.zero) continue;
+
+                    float weight = Mathf.Max(childNode.length, 0.0001f);
+                    defaultDirSum += defaultDir.normalized * weight;
+                    targetDirSum += targetDir.normalized * weight;
+                }
+
+                if (defaultDirSum != Vector3.zero && targetDirSum != Vector3.zero)
+                {
+                    Quaternion aimRotation = Quaternion.FromToRotation(defaultDirSum, targetDirSum);
                     node.transform.rotation = aimRotation * node.transform.rotation;
                 }
             }
@@ -672,27 +854,33 @@ namespace GaMo.BlenderEditorTools
 
         private void GetCapsuleWorldPoints(CapsuleCollider capsule, out Vector3 p1, out Vector3 p2)
         {
-            Vector3 center = capsule.transform.TransformPoint(capsule.center);
-            Vector3 dir = capsule.direction == 0 ? Vector3.right :
-                capsule.direction == 2 ? Vector3.forward : Vector3.up;
-            dir = capsule.transform.TransformDirection(dir);
-            float scale = GetCapsuleDirectionScale(capsule);
-            float height = Mathf.Max(0f, (capsule.height * scale) / 2f - capsule.radius * GetCapsuleMaxScale(capsule));
+            CapsuleLocalData data = GetCapsuleLocalData(capsule);
+            Transform t = capsule.transform;
+
+            Vector3 center = t.TransformPoint(capsule.center);
+            Vector3 dir = t.TransformDirection(data.localAxis);
+
+            float scale = GetCapsuleDirectionScale(capsule, data);
+            float height = Mathf.Max(0f, (data.heightUnscaled * scale) / 2f -
+                                          data.radiusUnscaled * GetCapsuleMaxScale(capsule, data));
             p1 = center + dir * height;
             p2 = center - dir * height;
         }
 
-        private float GetCapsuleDirectionScale(CapsuleCollider c)
+        // [0.3][A4] direction/radius/height giờ đọc từ cache thay vì từ capsule.* mỗi lần;
+        // phần lossyScale vẫn phải đọc mỗi frame vì transform (kể cả scale) có thể đổi lúc
+        // runtime (collider gắn theo bone animation), nhưng ternary chọn trục đã được cache.
+        private float GetCapsuleDirectionScale(CapsuleCollider c, CapsuleLocalData data)
         {
             Vector3 s = c.transform.lossyScale;
-            return c.direction == 0 ? s.x : c.direction == 1 ? s.y : s.z;
+            return data.localAxis == Vector3.right ? s.x : data.localAxis == Vector3.forward ? s.z : s.y;
         }
 
-        private float GetCapsuleMaxScale(CapsuleCollider c)
+        private float GetCapsuleMaxScale(CapsuleCollider c, CapsuleLocalData data)
         {
             Vector3 s = c.transform.lossyScale;
-            return c.direction == 0 ? Mathf.Max(s.y, s.z) :
-                c.direction == 1 ? Mathf.Max(s.x, s.z) : Mathf.Max(s.x, s.y);
+            return data.localAxis == Vector3.right ? Mathf.Max(s.y, s.z) :
+                data.localAxis == Vector3.forward ? Mathf.Max(s.x, s.y) : Mathf.Max(s.x, s.z);
         }
 
         // ══════════════════════════════════════════════════════════

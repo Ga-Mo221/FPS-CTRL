@@ -301,6 +301,8 @@ public class NCharMovementHandler : NetworkBehaviour
         
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Jump))
         {
+            if (_hpHandler.IsDead) return;
+            
             if (state.IsSlide)
             {
                 _stateLogic.StopSlide(ref state, _constraintManager);

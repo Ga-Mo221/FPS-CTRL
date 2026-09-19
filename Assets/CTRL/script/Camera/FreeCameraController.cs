@@ -1,3 +1,4 @@
+using System;
 using GaMo.BlenderEditorTools;
 using UnityEngine;
 
@@ -30,61 +31,16 @@ public class FreeCameraController : MonoBehaviour
     private NHPHandler _hpHandler;
     private Transform _rootRotate;
     private bool _lastOnUI;
-    private GameManager _gameManager;
-    private NetworkGameState _gamestate;
 
     private void Awake()
     {
         _componentManager = GetComponent<CharComponentManager>();
         _movementHandler = _componentManager.NCharMovementHandler;
         _hpHandler = _componentManager.NHPHandler;
-        _gameManager = GameManager.Instance;
-        _gamestate = NetworkGameState.Instance;
 
         if (_cameraConstraint == null) return;
         _rootRotate = _cameraConstraint.transform;
     }
-    
-    // private void Start()
-    // {
-    //     Cursor.lockState = CursorLockMode.None;
-    //     Cursor.visible = false;
-    // }
-
-    // private void Update()
-    // {
-    //     if (!_movementHandler.Object.HasInputAuthority) return;
-    //     
-    //     if (_gameManager != null && _gameManager.OnUILoadout())
-    //     {
-    //         Cursor.lockState = CursorLockMode.None;
-    //         Cursor.visible = true;
-    //         return;
-    //     }
-    //     
-    //     if (_gamestate != null && _gamestate.IsMatchOver())
-    //     {
-    //         Cursor.lockState = CursorLockMode.None;
-    //         Cursor.visible = true;
-    //         return;
-    //     }
-    //     
-    //     bool onUI = _gameManager.OnUIOption();
-    //     if (onUI != _lastOnUI)
-    //     {
-    //         _lastOnUI = onUI;
-    //         if (onUI)
-    //         {
-    //             Cursor.lockState = CursorLockMode.None;
-    //             Cursor.visible = true;
-    //         }
-    //         else
-    //         {
-    //             Cursor.lockState = CursorLockMode.Locked;
-    //             Cursor.visible = false;
-    //         }
-    //     }
-    // }
 
     // Quan trọng: Phải xoay xương trong LateUpdate để ghi đè lên Animator
     private void LateUpdate()

@@ -821,7 +821,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.1299305}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -1757,7 +1757,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.1299305}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -2017,7 +2017,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.1299305}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -2376,7 +2376,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.1299305}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -2510,6 +2510,7 @@ GameObject:
   - component: {fileID: 5453166249019164711}
   - component: {fileID: 7264252785649397550}
   - component: {fileID: 5222644563061577268}
+  - component: {fileID: 603999362380951179}
   m_Layer: 0
   m_Name: Network Gost
   m_TagString: Untagged
@@ -2969,6 +2970,7 @@ MonoBehaviour:
   - {fileID: 4882823662986902394}
   - {fileID: 4163734707332490592}
   - {fileID: 7264252785649397550}
+  - {fileID: 603999362380951179}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &4882823662986902394
 MonoBehaviour:
@@ -3060,6 +3062,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e73c894e5e7513449a5bc4ac3db444dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalInputController
+--- !u!114 &603999362380951179
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7253983300743050296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 692db1985fb123147b97e1b4f6d8ffda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NOutOfBoundsHandler
 --- !u!1 &7417674935246286073
 GameObject:
   m_ObjectHideFlags: 0
@@ -3212,7 +3226,7 @@ MonoBehaviour:
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 2
+  m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -3679,7 +3693,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.1299305}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}

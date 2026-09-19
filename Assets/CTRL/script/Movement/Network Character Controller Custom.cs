@@ -21,6 +21,8 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     new ref NetworkCCData Data => ref ReinterpretState<NetworkCCData>();
 
     private NCharMovementHandler _movementHandler;
+
+    private NHPHandler _nhpHandler;
     
     private PlayerData _data;
 
@@ -90,6 +92,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     public override void Spawned()
     {
         _movementHandler = GetComponent<NCharMovementHandler>();
+        _nhpHandler = GetComponent<NHPHandler>(); // _nhpHandler.IsDead
         _initial = default;
         _visualYawInited = false;  // ← reset flag
         _localSmoothVel = 0f;
@@ -116,6 +119,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
             _localVisualYaw = Data.TargetYaw;
             _visualYawInited = true;
         }
+        
+        if (_nhpHandler == null) return;
+        if (_nhpHandler.IsDead) return;
 
         // Bước 3: smooth visual yaw local — frame rate độc lập với ping
         // Dùng SmoothDampAngle để xử lý wrap-around 360→0 tự động
@@ -309,6 +315,35 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         var deltaTime    = Runner.DeltaTime;
         var previousPos  = transform.position;
         var moveVelocity = Data.Velocity;
+
+        // Nếu đã chết: chỉ áp dụng gravity, bỏ qua direction và lực ngang
+        bool isDead = _nhpHandler != null && _nhpHandler.IsDead;
+        if (isDead)
+        {
+            if (Grounded && moveVelocity.y < 0)
+                moveVelocity.y = 0f;
+
+            moveVelocity.y += _data.Gravity * deltaTime;
+
+            // Hãm ngang về 0 (không nhận thêm lực, chỉ braking)
+            moveVelocity.x = Mathf.Lerp(moveVelocity.x, 0f, _data.Braking * deltaTime);
+            moveVelocity.z = Mathf.Lerp(moveVelocity.z, 0f, _data.Braking * deltaTime);
+            if (new Vector2(moveVelocity.x, moveVelocity.z).sqrMagnitude < 0.0001f)
+            {
+                moveVelocity.x = 0f;
+                moveVelocity.z = 0f;
+            }
+
+            _controller.Move(moveVelocity * deltaTime);
+
+            Vector3 deadDisplacement = transform.position - previousPos;
+            Data.Velocity = new Vector3(
+                deadDisplacement.x / deltaTime,
+                moveVelocity.y,
+                deadDisplacement.z / deltaTime
+            );
+            return;
+        }
 
         direction = direction.normalized;
 

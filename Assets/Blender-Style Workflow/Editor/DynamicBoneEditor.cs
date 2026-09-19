@@ -21,6 +21,7 @@ namespace GaMo.BlenderEditorTools
         private GUIContent _gcEnableColliders;
         private GUIContent _gcParticleRadius;
         private GUIContent _gcColliders;
+        private GUIContent _gcCollisionSolveIterations;
         private GUIContent _gcEnableClothLinks;
         private GUIContent _gcClothClosedLoop;
         private GUIContent _gcClothStiffness;
@@ -45,6 +46,7 @@ namespace GaMo.BlenderEditorTools
         private SerializedProperty enableCollidersProp;
         private SerializedProperty particleRadiusProp;
         private SerializedProperty collidersProp;
+        private SerializedProperty collisionSolveIterationsProp;
 
         private SerializedProperty enableClothLinksProp;
         private SerializedProperty clothLinkClosedLoopProp;
@@ -73,6 +75,7 @@ namespace GaMo.BlenderEditorTools
             enableCollidersProp = serializedObject.FindProperty("enableColliders");
             particleRadiusProp  = serializedObject.FindProperty("particleRadius");
             collidersProp       = serializedObject.FindProperty("colliders");
+            collisionSolveIterationsProp = serializedObject.FindProperty("collisionSolveIterations");
 
             enableClothLinksProp    = serializedObject.FindProperty("enableClothLinks");
             clothLinkClosedLoopProp = serializedObject.FindProperty("clothLinkClosedLoop");
@@ -97,6 +100,7 @@ namespace GaMo.BlenderEditorTools
             _gcEnableColliders    = new GUIContent("Enable Colliders", enableCollidersProp.tooltip);
             _gcParticleRadius     = new GUIContent("Particle Radius", particleRadiusProp.tooltip);
             _gcColliders          = new GUIContent("Colliders List", collidersProp.tooltip);
+            _gcCollisionSolveIterations = new GUIContent("Solve Iterations", collisionSolveIterationsProp.tooltip);
             _gcEnableClothLinks   = new GUIContent("Enable Cloth Links", enableClothLinksProp.tooltip);
             _gcClothClosedLoop    = new GUIContent("Closed Loop", clothLinkClosedLoopProp.tooltip);
             _gcClothStiffness     = new GUIContent("Link Stiffness", clothLinkStiffnessProp.tooltip);
@@ -122,25 +126,39 @@ namespace GaMo.BlenderEditorTools
             SetComponentIcon();
         }
         
+        // [0.4][A9] static -> dùng chung cho MỌI instance của editor này trong cả session,
+        // nên AssetDatabase.FindAssets() (quét toàn bộ project) chỉ chạy đúng 1 lần duy nhất
+        // thay vì mỗi lần OnEnable (mỗi lần chọn object trong Project lớn sẽ không còn giật).
+        private static Texture2D _cachedIcon;
+        private static bool _iconSearchAttempted;
+
         private void SetComponentIcon()
         {
-            // Chỉ tìm đúng file có tên là "CopyTransform" (icon của bạn) để tối ưu tốc độ quét
-            string[] guids = AssetDatabase.FindAssets("spring t:Texture2D");
-
-            foreach (var guid in guids)
+            if (!_iconSearchAttempted)
             {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
+                _iconSearchAttempted = true;
 
-                if (path.Contains("Editor/Icon") || path.Contains("Blender-Style Workflow"))
+                // Chỉ tìm đúng file có tên là "CopyTransform" (icon của bạn) để tối ưu tốc độ quét
+                string[] guids = AssetDatabase.FindAssets("spring t:Texture2D");
+
+                foreach (var guid in guids)
                 {
-                    Texture2D icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+
+                    if (path.Contains("Editor/Icon") || path.Contains("Blender-Style Workflow"))
                     {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
+                        Texture2D icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                        if (icon != null)
+                        {
+                            _cachedIcon = icon;
+                            break;
+                        }
                     }
                 }
             }
+
+            if (_cachedIcon != null)
+                EditorGUIUtility.SetIconForObject(target, _cachedIcon);
         }
 
         // ── Wrapped Toolbar ───────────────────────────────────────────────────────
@@ -357,6 +375,8 @@ namespace GaMo.BlenderEditorTools
             {
                 EditorGUILayout.Space(5);
                 EditorGUILayout.PropertyField(particleRadiusProp, _gcParticleRadius);
+                EditorGUILayout.Space(4);
+                EditorGUILayout.PropertyField(collisionSolveIterationsProp, _gcCollisionSolveIterations);
                 EditorGUILayout.Space(4);
                 EditorGUILayout.PropertyField(collidersProp, _gcColliders, true);
             }
