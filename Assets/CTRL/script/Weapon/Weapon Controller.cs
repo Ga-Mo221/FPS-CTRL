@@ -162,6 +162,7 @@ public class WeaponController : NetworkBehaviour
     
     private Transform _ads_Pivot_transform;
     private bool _isCrouch;
+    private bool _lastCrouchState;
     
     private AudioManager _audio;
     
@@ -388,16 +389,28 @@ public class WeaponController : NetworkBehaviour
         {
             _ads = !_lastAdsState;
         }
+
+        Vector3 pivotOffset = GetPivotOffset(_ads, _isCrouch);
+        
         if (_ads != _lastAdsState)
         {
+            _lastCrouchState = _isCrouch;
             _lastAdsState = _ads;
             if (_ads_Pivot_transform != null &&
                 _ads_Pivot.targets[0] != null)
-                ADSBlend(_ads);
+                ADSBlend(_ads, pivotOffset);
+        }
+        else if (_ads && _isCrouch != _lastCrouchState)
+        {
+            _lastCrouchState = _isCrouch;
+            _lastAdsState = _ads;
+            if (_ads_Pivot_transform != null &&
+                _ads_Pivot.targets[0] != null)
+                ADSBlend(_ads, pivotOffset);
         }
     }
 
-    private void ADSBlend(bool ads)
+    private void ADSBlend(bool ads, Vector3 PivotOffset)
     {
         SniperADS(ads);
         
@@ -409,11 +422,19 @@ public class WeaponController : NetworkBehaviour
         float target = ads ? 1f : 0f;
         float zoom = ads ? _data.ADS_Zoom : _data.Stand_Zoom;
         float zoom_z = ads ? _data.ADS_Zoom_Z : _data.Stamd_Zoom_Z;
-        float Pivot_Height = ads && _isCrouch ? _data.Ads_Pivot_Height : _data.Stand_Pivot_Height;
-        _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Height, _data.ADS_duration));
+        Vector3 Pivot_Offset = PivotOffset;
+        _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Offset, _data.ADS_duration));
     }
 
-    private IEnumerator ADSBlend(float targetWeight, float zoomTarget, float zoomZ, float pivotHeight, float duration = 0.25f)
+    private Vector3 GetPivotOffset(bool ads, bool crouch)
+    {
+        if (ads)
+            return crouch? _data.AdsCrouchPivotOffset : _data.AdsStandPivotOffset;
+        
+        return _data.AdsOriginPivotOffset;
+    }
+
+    private IEnumerator ADSBlend(float targetWeight, float zoomTarget, float zoomZ, Vector3 pivotOffset, float duration = 0.25f)
     {
         //float start = _ads_Pivot.targets[0].weight;
         float start = 0;
@@ -431,9 +452,9 @@ public class WeaponController : NetworkBehaviour
         }
 
         //float startHeight = _ads_Pivot_transform.localPosition.z;
-        float startHeight = 0;
+        Vector3 startOffset = Vector3.zero;
         if (_ads_Pivot_transform != null)
-            startHeight = _ads_Pivot_transform.localPosition.z;
+            startOffset = _ads_Pivot_transform.localPosition;
     
         float time = 0f;
         Vector3 _zoomYtarget = _camera_Zoom.transform.localPosition; // Lấy vị trí hiện tại thay vì Vector3.zero để giữ lại trục X và Z
@@ -450,7 +471,11 @@ public class WeaponController : NetworkBehaviour
         
             // Giữ nguyên X và Z của camera, chỉ blend trục Y
             _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, _zoomYtarget.y, Mathf.Lerp(startzoom_z, zoomZ, progress));
-            _ads_Pivot_transform.localPosition = new Vector3(PivotHeight.x, PivotHeight.y, Mathf.Lerp(startHeight, pivotHeight, progress));
+            
+            _ads_Pivot_transform.localPosition = new Vector3(
+                Mathf.Lerp(startOffset.x, pivotOffset.x, progress),
+                Mathf.Lerp(startOffset.y, pivotOffset.y, progress),
+                Mathf.Lerp(startOffset.z, pivotOffset.z, progress));
         
             yield return null;
         }
@@ -460,7 +485,7 @@ public class WeaponController : NetworkBehaviour
         _sway.SetWeight(targetWeight);
         _camera_Zoom.fieldOfView = zoomTarget;
         _camera_Zoom.transform.localPosition = new Vector3(_zoomYtarget.x, _zoomYtarget.y, zoomZ);
-        _ads_Pivot_transform.transform.localPosition = new Vector3(PivotHeight.x, PivotHeight.y, pivotHeight);
+        _ads_Pivot_transform.transform.localPosition = new Vector3(pivotOffset.x, pivotOffset.y, pivotOffset.z);
         _blendRoutine = null;
     }
 

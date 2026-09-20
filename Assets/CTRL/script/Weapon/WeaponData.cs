@@ -82,12 +82,15 @@ public class WeaponData : ScriptableObject
     [TabGroup("Weapon Data/Attack/SubGroup/Weapon/SubGroup", "Gun")]
     [Range(0,1f)]
     [SerializeField] private float _aDS_duration = 0.25f;
+
+    [TabGroup("Weapon Data/Attack/SubGroup/Weapon/SubGroup", "Gun")] 
+    [SerializeField] private Vector3 _ads_Origin_Pivot_Offset;
+
+    [TabGroup("Weapon Data/Attack/SubGroup/Weapon/SubGroup", "Gun")] 
+    [SerializeField] private Vector3 _ads_stand_Pivot_Offset;
     
-    [TabGroup("Weapon Data/Attack/SubGroup/Weapon/SubGroup", "Gun")]
-    [SerializeField] private float _ads_Pivot_Height = 0f;
-    
-    [TabGroup("Weapon Data/Attack/SubGroup/Weapon/SubGroup", "Gun")]
-    [SerializeField] private float _stand_Pivot_Height = 0f;
+    [TabGroup("Weapon Data/Attack/SubGroup/Weapon/SubGroup", "Gun")] 
+    [SerializeField] private Vector3 _ads_crouch_Pivot_Offset;
     
     //========================== ATTACK/WEAPON/MELEE ====================================
     
@@ -200,8 +203,9 @@ public class WeaponData : ScriptableObject
     public int SpreadAngle => _spreadAngle;
     public int BulletPlusCount => _bulletPlusCount;
     public GunRecoilData RecoilData => _recoilData;
-    public float Ads_Pivot_Height => _ads_Pivot_Height;
-    public float Stand_Pivot_Height => _stand_Pivot_Height;
+    public Vector3 AdsOriginPivotOffset => _ads_Origin_Pivot_Offset;
+    public Vector3 AdsStandPivotOffset => _ads_stand_Pivot_Offset;
+    public Vector3 AdsCrouchPivotOffset => _ads_crouch_Pivot_Offset;
     
     public AudioClip[] FireClip => _fire_clip;
     public float Volume_Fire => _volume_fire;

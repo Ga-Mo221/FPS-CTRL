@@ -113,7 +113,7 @@ public class UIMainMenuHandler : MonoBehaviour
         {
             HideAllPanels();
             
-            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), SceneName._SHORT_MAP_1);
+            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), SceneName._LONG_MAP_1);
             
             _statusPanel?.SetActive(true);
         }
