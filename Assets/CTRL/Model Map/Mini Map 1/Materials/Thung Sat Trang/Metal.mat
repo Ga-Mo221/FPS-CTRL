@@ -63,7 +63,6 @@ Material:
   - DR_RIM_ON
   - DR_SPECULAR_ON
   - _DETAILMAPBLENDINGMODE_MULTIPLY
-  - _NORMALMAP
   - _TEXTUREBLENDINGMODE_MULTIPLY
   - _UNITYSHADOW_OCCLUSION
   m_InvalidKeywords: []
@@ -88,7 +87,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: f4000ec9edc6b484fa6241312c4f0d0d, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -183,6 +182,7 @@ Material:
     - _GradientEnabled: 1
     - _GradientSize: 10
     - _LightContribution: 1
+    - _LightInfluence: 1
     - _LightmapDirectionPitch: 0
     - _LightmapDirectionYaw: 0
     - _Metallic: 0

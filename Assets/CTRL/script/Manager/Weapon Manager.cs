@@ -21,6 +21,7 @@ public class WeaponManager : NetworkBehaviour
     // Weapon One
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponOneRef { get; set; }
+    
     [Networked] public NetworkString<_16> _weaponOneID { get; set; }
     public WeaponController Weapon_One_CTRL;
     
@@ -32,6 +33,17 @@ public class WeaponManager : NetworkBehaviour
     
     // Active Weapon
     [Networked] public byte _weapon_Active { get; set; } = 0;
+
+    // ── Tracking local (không networked) ─────────────────────────────────────
+    // NetworkId của weapon mà Weapon_X_CTRL đang trỏ tới (set lúc resolve).
+    // Dùng để callback OnWeaponRefsChanged biết slot nào đã bị thay.
+    private NetworkId _slotNetIdOne;
+    private NetworkId _slotNetIdTwo;
+
+    // ID đã đăng ký vào ConstraintManager (set lúc AddNewWeapon).
+    // Dùng để RemoveWeapon đúng ID, không phụ thuộc _weaponXID đã sync kịp hay chưa.
+    private string _registeredIDOne;
+    private string _registeredIDTwo;
     
     [TabGroup("Weapon Manager", "Components")]
     [SerializeField] private CharComponentManager _componentManager;
@@ -73,6 +85,48 @@ public class WeaponManager : NetworkBehaviour
         InitWeapon();
     }
 
+    #region Register / Unregister ConstraintManager
+
+    /// <summary>
+    /// Đăng ký weapon vào ConstraintManager và nhớ ID đã đăng ký.
+    /// </summary>
+    private void RegisterWeapon(int slot, WeaponController ctrl, string id)
+    {
+        _componentManager.ConstraintManager.AddNewWeapon(ctrl, id);
+
+        if (slot == 1) _registeredIDOne = id;
+        else           _registeredIDTwo = id;
+    }
+
+    /// <summary>
+    /// Gỡ weapon slot One khỏi ConstraintManager (nếu đã đăng ký) và reset tracking.
+    /// Dùng chung cho host (SpawnWeaponOne) và client (OnWeaponRefsChanged).
+    /// </summary>
+    private void UnregisterSlotOne()
+    {
+        if (!_registeredIDOne.IsNullOrEmpty())
+            _componentManager.ConstraintManager.RemoveWeapon(_registeredIDOne);
+
+        _registeredIDOne = null;
+        _slotNetIdOne = default;
+        Weapon_One_CTRL = null;
+    }
+
+    /// <summary>
+    /// Gỡ weapon slot Two khỏi ConstraintManager (nếu đã đăng ký) và reset tracking.
+    /// </summary>
+    private void UnregisterSlotTwo()
+    {
+        if (!_registeredIDTwo.IsNullOrEmpty())
+            _componentManager.ConstraintManager.RemoveWeapon(_registeredIDTwo);
+
+        _registeredIDTwo = null;
+        _slotNetIdTwo = default;
+        Weapon_Two_CTRL = null;
+    }
+
+    #endregion
+
     #region Get Prefab weapon Local
 
     /// <summary>
@@ -95,12 +149,15 @@ public class WeaponManager : NetworkBehaviour
             SpawnWeaponTwo(weaponName);
     }
 
+    // Chỉ chạy trên StateAuthority (được gọi từ RPC InputAuthority -> StateAuthority).
+    // Client sẽ tự remove trong OnWeaponRefsChanged khi ref đổi.
     private void SpawnWeaponOne(string weaponOne)
     {
         if (Weapon_One_CTRL != null)
         {
+            UnregisterSlotOne();
+            
             Runner.Despawn(_weaponOneRef);
-            Weapon_One_CTRL = null;
             _weaponOneRef = null;
         }
         
@@ -111,8 +168,9 @@ public class WeaponManager : NetworkBehaviour
     {
         if (Weapon_Two_CTRL != null)
         {
+            UnregisterSlotTwo();
+            
             Runner.Despawn(_weaponTwoRef);
-            Weapon_Two_CTRL = null;
             _weaponTwoRef = null;
         }
         
@@ -273,6 +331,9 @@ public class WeaponManager : NetworkBehaviour
             if (Object.HasStateAuthority)
                 SwitchWeaponActive(0);
             SwitchWeapon();
+            
+            if (GameManager.Instance != null)
+                GameManager.Instance.setCurrentBalo(Weapon_One_CTRL.Data.WeaponName, Weapon_Two_CTRL.Data.WeaponName);
         }
     }
 
@@ -468,35 +529,32 @@ public class WeaponManager : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Callback chung cho cả _weaponOneRef và _weaponTwoRef.
+    /// So sánh NetworkId của ref hiện tại với weapon mà slot đang trỏ tới:
+    /// nếu khác → weapon cũ đã bị thay/despawn → gỡ khỏi ConstraintManager trước khi resolve weapon mới.
+    /// Trên host, SpawnWeaponOne/Two đã Unregister sẵn (tracking đã reset) nên nhánh này bị bỏ qua,
+    /// tránh gọi RemoveWeapon hai lần.
+    /// </summary>
     void OnWeaponRefsChanged()
     {
-        // FIX: cleanup phải dựa trên _weapon_X_CTRL / ID ĐANG CACHE (giá trị cũ), KHÔNG phụ
-        // thuộc _weaponXRef mới. Điều kiện cũ check "_weaponOneRef != null" — tức là ref MỚI
-        // vẫn còn — nên khi despawn thật sự (_weaponOneRef chuyển thành null), khối cleanup
-        // không bao giờ chạy: _weapon_One_CTRL giữ tham chiếu dangling tới object đã despawn,
-        // và entry cũ trong ConstraintManager không bao giờ được remove (leak). Kiểm tra
-        // _weapon_One_CTRL != null (cache cũ) mới đúng ý định "vừa có 1 controller cũ cần dọn".
-        if (Weapon_One_CTRL != null)
-        {
-            var idOne = _weaponOneID.ToString();
-            if (!idOne.IsNullOrEmpty())
-                _componentManager.ConstraintManager.RemoveWeapon(idOne);
-            Weapon_One_CTRL = null;
-        }
-        if (Weapon_Two_CTRL != null)
-        {
-            var idTwo = _weaponTwoID.ToString();
-            if (!idTwo.IsNullOrEmpty())
-                _componentManager.ConstraintManager.RemoveWeapon(idTwo);
-            Weapon_Two_CTRL = null;
-        }
+        NetworkId curOne = _weaponOneRef != null ? _weaponOneRef.Id : default;
+        if (_slotNetIdOne.IsValid && curOne != _slotNetIdOne)
+            UnregisterSlotOne();
 
-        // Non-authority: ResolveWeaponControllers trả về true nếu có weapon đang chờ ID sync.
-        // SwitchWeapon sẽ được gọi bên trong coroutine sau khi AddNewWeapon hoàn tất.
-        // Authority: trả về false — AddNewWeapon đã xong đồng bộ, gọi SwitchWeapon ngay.
+        NetworkId curTwo = _weaponTwoRef != null ? _weaponTwoRef.Id : default;
+        if (_slotNetIdTwo.IsValid && curTwo != _slotNetIdTwo)
+            UnregisterSlotTwo();
+
         bool pendingAsync = ResolveWeaponControllers();
         if (!pendingAsync)
             SwitchWeapon();
+
+        if (GameManager.Instance != null && Object.HasInputAuthority)
+        {
+            GameManager.Instance.SetCurrentWeapon(1, Weapon_One_CTRL.Data.ID);
+            GameManager.Instance.SetCurrentWeapon(2, Weapon_Two_CTRL.Data.ID);
+        }
     }
     
     /// <summary>
@@ -513,12 +571,14 @@ public class WeaponManager : NetworkBehaviour
             Weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
             if (Weapon_One_CTRL != null)
             {
+                _slotNetIdOne = _weaponOneRef.Id;
+
                 if (Object.HasStateAuthority)
                 {
                     // Authority: set ID ngay, add đồng bộ luôn.
                     Weapon_One_CTRL.Respawn();
                     _weaponOneID = new NetworkString<_16>(Weapon_One_CTRL.Data.ID + "_STTWP1");
-                    _componentManager.ConstraintManager.AddNewWeapon(Weapon_One_CTRL, _weaponOneID.ToString());
+                    RegisterWeapon(1, Weapon_One_CTRL, _weaponOneID.ToString());
                 }
                 else
                 {
@@ -527,6 +587,7 @@ public class WeaponManager : NetworkBehaviour
                     hasPending = true;
                     var ctrl = Weapon_One_CTRL;
                     StartCoroutine(WaitForIDThenAdd(
+                        1,
                         ctrl,
                         ctrl.Data.ID + "_STTWP1",
                         () => _weaponOneID.ToString(),
@@ -542,11 +603,13 @@ public class WeaponManager : NetworkBehaviour
             Weapon_Two_CTRL = _weaponTwoRef.GetComponent<WeaponController>();
             if (Weapon_Two_CTRL != null)
             {
+                _slotNetIdTwo = _weaponTwoRef.Id;
+
                 if (Object.HasStateAuthority)
                 {
                     Weapon_Two_CTRL.Respawn();
                     _weaponTwoID = new NetworkString<_16>(Weapon_Two_CTRL.Data.ID + "_STTWP2");
-                    _componentManager.ConstraintManager.AddNewWeapon(Weapon_Two_CTRL, _weaponTwoID.ToString());
+                    RegisterWeapon(2, Weapon_Two_CTRL, _weaponTwoID.ToString());
                 }
                 else
                 {
@@ -556,6 +619,7 @@ public class WeaponManager : NetworkBehaviour
                     hasPending = true;
                     var ctrl = Weapon_Two_CTRL;
                     StartCoroutine(WaitForIDThenAdd(
+                        2,
                         ctrl,
                         ctrl.Data.ID + "_STTWP2",
                         () => _weaponTwoID.ToString(),
@@ -575,6 +639,7 @@ public class WeaponManager : NetworkBehaviour
     /// Nếu isLast == true, gọi SwitchWeapon sau khi add xong.
     /// </summary>
     private System.Collections.IEnumerator WaitForIDThenAdd(
+        int slot,
         WeaponController ctrl,
         string expectedID,
         System.Func<string> getID,
@@ -597,7 +662,7 @@ public class WeaponManager : NetworkBehaviour
 
         var id = getID();
         if (!id.IsNullOrEmpty())
-            _componentManager.ConstraintManager.AddNewWeapon(ctrl, id);
+            RegisterWeapon(slot, ctrl, id);
 
         // Chỉ coroutine "cuối cùng" mới gọi SwitchWeapon để tránh gọi nhiều lần
         if (isLast)

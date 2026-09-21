@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3178801326996445088}
   - component: {fileID: 5585462831435833592}
+  - component: {fileID: 7317898083723353884}
   m_Layer: 3
   m_Name: Box Wood 1
   m_TagString: Untagged
@@ -54,6 +55,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.045303, y: 1.052662, z: 1.0427862}
   m_Center: {x: 0.000000059604645, y: 0.5198228, z: -0.0012584329}
+--- !u!205 &7317898083723353884
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 223420354208532349}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0, z: 0}
+  m_Size: 5
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.99999994
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 8405589528365712504}
+  - screenRelativeHeight: 0.858437
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 1374027347114171382}
+  - screenRelativeHeight: 0.5021116
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 8896034187768098799}
+  - screenRelativeHeight: 0.11352843
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 1509945976714298623}
+  m_Enabled: 1
 --- !u!1001 &1968602345631091154
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -62,6 +94,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3178801326996445088}
     m_Modifications:
+    - target: {fileID: -8934616210918817010, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -76,23 +112,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7071068
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.7071068
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: -90
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
@@ -115,8 +151,28 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
+--- !u!23 &1374027347114171382 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -8628782602947522012, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
+  m_PrefabInstance: {fileID: 1968602345631091154}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1509945976714298623 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -8095916619034686163, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
+  m_PrefabInstance: {fileID: 1968602345631091154}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &2079352522827034169 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
+  m_PrefabInstance: {fileID: 1968602345631091154}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &8405589528365712504 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -1155377525440066134, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
+  m_PrefabInstance: {fileID: 1968602345631091154}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &8896034187768098799 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -2295447595512601027, guid: 38a880d89ec37ec4a9749bad8b77c347, type: 3}
   m_PrefabInstance: {fileID: 1968602345631091154}
   m_PrefabAsset: {fileID: 0}

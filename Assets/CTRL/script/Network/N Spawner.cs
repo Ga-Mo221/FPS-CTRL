@@ -108,8 +108,11 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
                 WeaponManager weaponManager = obj.GetComponent<WeaponManager>();
 
+                // can truyen tu ben ngoai
+                // ===========================================================================================
                 if (weaponManager != null)
                     weaponManager.SpawnWeapon(WeaponName._M4, WeaponName._9MM_DEMON);
+                // ===========================================================================================
                 
                 if (SpawnManager.Instance != null)
                 {

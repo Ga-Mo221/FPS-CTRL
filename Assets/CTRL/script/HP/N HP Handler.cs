@@ -49,6 +49,7 @@ public class NHPHandler : NetworkBehaviour
     private NInGameMessagesHandler _inGameMessagesHandler;
     private NPlayer _nPlayer;
     private DissolvingController _dissolvingController;
+    private WeaponManager _weaponManager;
 
     private float _lastDamageTime = float.MinValue;
     private float _nextRegenTime;
@@ -69,6 +70,7 @@ public class NHPHandler : NetworkBehaviour
         _inGameMessagesHandler = _componentManager.NInGameMessagesHandler;
         _nPlayer               = _componentManager.NPlayer;
         _dissolvingController  = _componentManager.DissolvingController;
+        _weaponManager         = _componentManager.WeaponManager;
     }
 
     private void Start()
@@ -229,6 +231,19 @@ public class NHPHandler : NetworkBehaviour
         }
         else
         {
+            if (Object.HasInputAuthority)
+            {
+                if (GameManager.Instance != null && _weaponManager != null)
+                {
+                    var (change, weaponOne, weaponTwo) = GameManager.Instance.GetCurrentBalo();
+                    if (change)
+                    {
+                        _weaponManager.Rpc_RequestChangeWeapon(weaponOne, weaponTwo);
+                        Debug.Log($"<color=green>[NCharMovementHandler]</color> Reset Balo");
+                    }
+                }
+            }
+            
             _dissolvingController?.ResetMaterials();
 
             if (_nPlayer != null && _componentManager != null && !_nPlayer.IsLocalPlayer)

@@ -163,6 +163,13 @@ namespace GaMo.BlenderEditorTools
             {
                 if (targets[i].id == id)
                 {
+                    // Dừng coroutine chuyển Target đang chạy, tránh nó duyệt list đã bị thu nhỏ / lệch index
+                    if (_switchTargetCoroutine != null)
+                    {
+                        StopCoroutine(_switchTargetCoroutine);
+                        _switchTargetCoroutine = null;
+                    }
+
                     targets.RemoveAt(i);
                     return true;
                 }
@@ -308,6 +315,8 @@ namespace GaMo.BlenderEditorTools
             int finalCount = targets.Count;
             for (int i = 0; i < finalCount; i++)
                 targets[i].weight = (targets[i].id == targetId) ? 1f : 0f;
+
+            _switchTargetCoroutine = null;
         }
 
         // ══════════════════════════════ PUBLIC API — POLE TARGET ══════════════════════════════
@@ -346,6 +355,13 @@ namespace GaMo.BlenderEditorTools
             {
                 if (poleTargets[i].id == id)
                 {
+                    // Dừng coroutine chuyển Pole Target đang chạy, tránh nó duyệt list đã bị thu nhỏ / lệch index
+                    if (_switchPoleTargetCoroutine != null)
+                    {
+                        StopCoroutine(_switchPoleTargetCoroutine);
+                        _switchPoleTargetCoroutine = null;
+                    }
+
                     poleTargets.RemoveAt(i);
                     return true;
                 }
@@ -432,6 +448,8 @@ namespace GaMo.BlenderEditorTools
             int finalCount = poleTargets.Count;
             for (int i = 0; i < finalCount; i++)
                 poleTargets[i].weight = (poleTargets[i].id == poleTargetId) ? 1f : 0f;
+
+            _switchPoleTargetCoroutine = null;
         }
 
         // ══════════════════════════════ PUBLIC API — PAIRED ══════════════════════════════

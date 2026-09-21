@@ -193,6 +193,12 @@ public class WeaponController : NetworkBehaviour
     public override void Spawned()
     {
         AttachToOwner();
+
+        if (_type == WeaponType.Sniper && !Object.HasInputAuthority)
+        {
+            if (_zoomCamera != null)
+                Destroy(_zoomCamera.gameObject);
+        }
         
         switch (_type)
         {
@@ -491,6 +497,7 @@ public class WeaponController : NetworkBehaviour
 
     private void SniperADS(bool ads)
     {
+        if (!Object.HasInputAuthority) return;
         if (_type != WeaponType.Sniper) return;
         if (_glass != null)
             _glass.gameObject.SetActive(!ads);

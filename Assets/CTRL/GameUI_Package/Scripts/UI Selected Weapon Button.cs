@@ -48,7 +48,10 @@ public class UISelectedWeaponButton : MonoBehaviour
             parent.gameObject.SetActive(false);
 
         if (GameManager.Instance != null)
+        {
             GameManager.Instance.SetOnuiLoadout(false);
+            GameManager.Instance.setCurrentBalo(weapon1name, weapon2name);
+        }
     }
 
     public void SetWeapon(WeaponData weaponOneData, WeaponData weaponTwoData)

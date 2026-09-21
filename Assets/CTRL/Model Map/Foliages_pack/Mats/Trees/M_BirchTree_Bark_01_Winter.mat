@@ -48,7 +48,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseNormal:
-        m_Texture: {fileID: 2800000, guid: 2a706fcdb98561f4295144d5ed0410ee, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseNormalMap:
@@ -68,7 +68,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseSMAE:
-        m_Texture: {fileID: 2800000, guid: f357b1abfc6b4f345a1ee33f9eef5617, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -174,6 +174,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _ASPT_TopLayerContrast: 1
+    - _AddPrecomputedVelocity: 1
+    - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _BaseAOIntensity: 0.491
     - _BaseAlbedoBrightness: 1
@@ -272,6 +274,7 @@ Material:
     - _WindTreeFlexibility: 1
     - _WindTreeFlexibility1: 1
     - _WindTreeSpeed: 5
+    - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     - __dirty: 1
     m_Colors:
@@ -289,3 +292,4 @@ Material:
     - _TopColor: {r: 1, g: 1, b: 1, a: 0}
     - _TopLayerAlbedoColor: {r: 0.7924528, g: 0.7924528, b: 0.7924528, a: 0.5019608}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

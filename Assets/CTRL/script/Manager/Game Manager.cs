@@ -95,6 +95,24 @@ public class GameManager : MonoBehaviour
     [TabGroup("GameManager", "Runtime")]
     [SerializeField] private DropItemWeapon _dropItemWeapon;
     
+    [Header("Current Balo")]
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private string _weaponOne;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private string _weaponTwo;
+    
+    [Header("Current Weapon")]
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private string _currentWeaponOne;
+    
+    [Sirenix.OdinInspector.ReadOnly]
+    [TabGroup("GameManager", "Runtime")]
+    [SerializeField] private string _cureentWeaponTwo;
+    
     private byte[] connectionToken;
 
     private void Awake()
@@ -216,6 +234,36 @@ public class GameManager : MonoBehaviour
     public void SetCanDragItem(bool canDragItem) => _canDragItem = canDragItem;
     public DropItemWeapon GetDropItemWeapon => _dropItemWeapon;
     public void SetDropItemWeapon(DropItemWeapon item) => _dropItemWeapon = item;
+    
+    public void setCurrentBalo(string weaponOne, string weaponTwo)
+    {
+        _weaponOne = weaponOne;
+        _currentWeaponOne = _weaponOne;
+        _weaponTwo = weaponTwo;
+        _cureentWeaponTwo = _weaponTwo;
+    }
+
+    public void SetCurrentWeapon(int index, string name)
+    {
+        if (index == 1)
+            _currentWeaponOne = name;
+        else if (index == 2)
+            _cureentWeaponTwo =  name;
+        else Debug.LogWarning("<color=yellow>[GameManager]</color> Set Current weapon Out Index");
+    }
+
+    public (bool, string, string) GetCurrentBalo()
+    {
+        bool change = false;
+        if (_weaponOne != _currentWeaponOne || _weaponTwo != _cureentWeaponTwo)
+        {
+            change = true;
+            _currentWeaponOne = _weaponOne;
+            _cureentWeaponTwo = _weaponTwo;
+        }
+
+        return (change, _weaponOne, _weaponTwo);
+    }
 
     private void SetMouseVisible(bool state = false)
     {

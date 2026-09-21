@@ -51,7 +51,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseNormal:
-        m_Texture: {fileID: 2800000, guid: b9ebb68078f1f9d4c972315e3fe13550, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseNormalMap:
@@ -180,6 +180,8 @@ Material:
     - _ASP_GlobalTreeAO: 1
     - _ASP_GlobalTreeSSSAOInfluence: 1
     - _ASP_GlobalTreeSSSIntensity: 1
+    - _AddPrecomputedVelocity: 1
+    - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _BaseAOIntensity: 0.491
     - _BaseAlbedoBrightness: 1
@@ -336,6 +338,7 @@ Material:
     - _WindTreeFlexibility: 0
     - _WindTreeFlexibility1: 1
     - _WindTreeSpeed: 1
+    - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     - __dirty: 1
     m_Colors:
@@ -364,3 +367,4 @@ Material:
     - _Vector3: {r: 1, g: 0, b: 0, a: 0}
     - _Vector4: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

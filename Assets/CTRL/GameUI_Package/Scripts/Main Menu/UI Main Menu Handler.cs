@@ -12,7 +12,15 @@ public class UIMainMenuHandler : MonoBehaviour
     [SerializeField] private TMP_InputField _player_Name_InputField;
     [SerializeField] private TMP_InputField _session_Name_InputField;
     [SerializeField] private TMP_InputField _killTarget_InputField;
+    
+    [Header("Game Mode")]
     public GamePlayMode GameMode = GamePlayMode.Solo;
+    [SerializeField] private TextMeshProUGUI _selected_Mode;
+    
+    [Header("map")]
+    [SerializeField] private TextMeshProUGUI _selected_Map;
+
+    private string _mapName = SceneName._SHORT_MAP_1;
     
     private void Start()
     {
@@ -26,6 +34,12 @@ public class UIMainMenuHandler : MonoBehaviour
             PlayerPrefs.DeleteKey("ReturnToSessionList");
             OnFindGameClicked(1f);
         }
+        
+        if (_selected_Mode != null && GameManager.Instance != null)
+            _selected_Mode.text = $"Selected Mode: {GameManager.Instance.GetGamePlayMode().ToString()}";
+        
+        if (_selected_Map != null)
+            _selected_Map.text = $"Selected Map: {_mapName}";
     }
 
     private void HideAllPanels()
@@ -83,6 +97,7 @@ public class UIMainMenuHandler : MonoBehaviour
         else if (modeindex == 1)
             GameMode = GamePlayMode.Team;
         GameManager.Instance.SetGamePlayMode(GameMode);
+        _selected_Mode.text = $"Selected Mode: {GameManager.Instance.GetGamePlayMode().ToString()}";
     }
 
     public string GetLobbyName(GamePlayMode mode)
@@ -113,7 +128,7 @@ public class UIMainMenuHandler : MonoBehaviour
         {
             HideAllPanels();
             
-            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), SceneName._LONG_MAP_1);
+            NRunnerHandler.CreateGame(_session_Name_InputField.text, GetLobbyName(GameMode), _mapName);
             
             _statusPanel?.SetActive(true);
         }
@@ -136,6 +151,16 @@ public class UIMainMenuHandler : MonoBehaviour
             HideAllPanels();
             DisplayPanel(_sessionListPanel, 1);
         }
+    }
+
+    public void OnSelectMap(int mapIndex)
+    {
+        if (mapIndex == 2)
+            _mapName = SceneName._SHORT_MAP_1;
+        else if (mapIndex == 1)
+            _mapName = SceneName._LONG_MAP_1;
+        
+        _selected_Map.text = $"Selected Map: {_mapName}";
     }
 
     public void OnJoiningServer()

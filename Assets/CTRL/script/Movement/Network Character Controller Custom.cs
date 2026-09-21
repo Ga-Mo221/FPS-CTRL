@@ -29,6 +29,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     Tick                _initial;
     [SerializeField] private CharacterController _controller;
     [SerializeField] private Transform _groundCheckPoint;
+
+    [Header("Air Control")]
+    [Tooltip("Mức điều khiển khi ở trên không (0 = giữ nguyên quán tính hoàn toàn, 1 = điều khiển như dưới đất). " +
+             "0.3 = 70% quán tính / 30% do input move.")]
+    [SerializeField, Range(0f, 1f)] private float _airControl = 0.3f;
     
     private float _currentAngularVelocity;
 
@@ -78,7 +83,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     /// Lấy vòng quay hiện tại của nhân vật từ dữ liệu mạng TRSP.
     /// </summary>
     /// <returns>Góc quay Quaternion trong không gian mạng.</returns>
-    public Quaternion GetNetworkRotation() => Data.TRSPData.Rotation;
+    public Quaternion GetNetworkRotation() => Quaternion.Euler(0f, Data.TargetYaw, 0f);
 
     // ── LOCAL ONLY — không networked, không tốn bandwidth ──
     private float _localVisualYaw;   // yaw visual đang hiển thị (smooth)
@@ -121,20 +126,24 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         }
         
         if (_nhpHandler == null) return;
-        if (_nhpHandler.IsDead) return;
 
         // Bước 3: smooth visual yaw local — frame rate độc lập với ping
         // Dùng SmoothDampAngle để xử lý wrap-around 360→0 tự động
-        _localVisualYaw = Mathf.SmoothDampAngle(
-            _localVisualYaw,
-            Data.TargetYaw,
-            ref _localSmoothVel,
-            smoothTime: 0.04f,      // ~40ms: snappy nhưng không giật
-            maxSpeed: float.MaxValue,
-            deltaTime: Time.deltaTime
-        );
+        // Khi đã chết: KHÔNG smooth nữa (đóng băng yaw hiện tại) nhưng vẫn phải
+        // áp rotation ở Bước 4, nếu không NetworkTRSP.Render sẽ kéo nhân vật về hướng cũ.
+        if (!_nhpHandler.IsDead)
+        {
+            _localVisualYaw = Mathf.SmoothDampAngle(
+                _localVisualYaw,
+                Data.TargetYaw,
+                ref _localSmoothVel,
+                smoothTime: 0.04f,      // ~40ms: snappy nhưng không giật
+                maxSpeed: float.MaxValue,
+                deltaTime: Time.deltaTime
+            );
+        }
 
-        // Bước 4: apply lên visual transform
+        // Bước 4: apply lên visual transform (luôn chạy, kể cả khi chết)
         // Vì NetworkTRSP.Render() đã set position, chỉ cần override rotation
         Quaternion currentRot = transform.rotation;
         transform.rotation = Quaternion.Euler(
@@ -181,7 +190,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
     // vì rotation giờ được quản lý riêng qua TargetYaw
     void CopyToBuffer() {
         Data.TRSPData.Position = transform.position;
-        // Data.TRSPData.Rotation = transform.rotation; ← BỎ DÒNG NÀY
+        // Ghi rotation từ TargetYaw (không dùng transform.rotation) để NetworkTRSP.Render
+        // và GetNetworkRotation() luôn có giá trị yaw đúng.
+        Data.TRSPData.Rotation = Quaternion.Euler(0f, Data.TargetYaw, 0f);
     }
 
     /// <summary>
@@ -347,22 +358,42 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
 
         direction = direction.normalized;
 
-        if (Grounded && moveVelocity.y < 0) {
+        // Cache 1 lần (CheckSphere khá tốn). Tính "inAir" TRƯỚC khi reset Y / cộng gravity:
+        // - !grounded         : đang rơi / lơ lửng
+        // - velocity.y > 0    : vừa nhảy (CheckSphere có thể vẫn còn chạm đất 1-2 tick đầu)
+        bool grounded = Grounded;
+        bool inAir    = !grounded || moveVelocity.y > 0f;
+
+        if (grounded && moveVelocity.y < 0f) {
             moveVelocity.y = 0f;
         }
 
-        moveVelocity.y += _data.Gravity * Runner.DeltaTime;
+        moveVelocity.y += _data.Gravity * deltaTime;
 
         var horizontalVel = default(Vector3);
         horizontalVel.x = moveVelocity.x;
         horizontalVel.z = moveVelocity.z;
 
+        // Trên không: input chỉ tác động _airControl (mặc định 30%), phần còn lại là quán tính.
+        float control        = inAir ? _airControl : 1f;
+        float currentAccel   = acceleration * control;
+        float currentBraking = _data.Braking * control;
+
         if (direction == default) {
-            horizontalVel = Vector3.Lerp(horizontalVel, default, _data.Braking * deltaTime);
+            // Thả phím: dưới đất phanh bình thường, trên không gần như giữ nguyên đà.
+            horizontalVel = Vector3.Lerp(horizontalVel, default, currentBraking * deltaTime);
             if (horizontalVel.sqrMagnitude < 0.0001f)
                 horizontalVel = Vector3.zero;
         } else {
-            horizontalVel = Vector3.ClampMagnitude(horizontalVel + direction * acceleration * deltaTime, maxSpeed);
+            float previousSpeed = horizontalVel.magnitude;
+
+            horizontalVel += direction * currentAccel * deltaTime;
+
+            // Trên không: không kẹp xuống maxSpeed của state hiện tại nếu đà đang lớn hơn
+            // (vd: nhảy lúc sprint/slide nhưng state sau khi nhảy có maxSpeed thấp hơn).
+            // Input vẫn bẻ hướng được nhưng không làm tăng tốc vượt mức đà hiện có.
+            float speedCap = inAir ? Mathf.Max(maxSpeed, previousSpeed) : maxSpeed;
+            horizontalVel = Vector3.ClampMagnitude(horizontalVel, speedCap);
         }
 
         moveVelocity.x = horizontalVel.x;

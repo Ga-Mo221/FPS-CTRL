@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2190135587571046579}
   - component: {fileID: 8587782821335572550}
+  - component: {fileID: -8726409631009564738}
   m_Layer: 0
   m_Name: Wood Box Set
   m_TagString: Untagged
@@ -54,6 +55,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.84186804, y: 0.7643883, z: 0.6930938}
   m_Center: {x: -0.0008150935, y: 0.38104367, z: -0.0042435527}
+--- !u!205 &-8726409631009564738
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6707050625566286705}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0, z: 0}
+  m_Size: 5
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.99999994
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 1289736601645725383}
+  - screenRelativeHeight: 0.858437
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 1389381356294904183}
+  - screenRelativeHeight: 0.5021116
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 2268392519474185452}
+  - screenRelativeHeight: 0.11352843
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 5709634670596031223}
+  m_Enabled: 1
 --- !u!1001 &1177703785067234144
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -64,11 +96,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalScale.x
-      value: 99.999985
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalScale.z
-      value: 99.999985
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalPosition.x
@@ -84,19 +116,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.27268228
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.000000010293469
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.96210414
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.000000036318426
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -112,15 +144,35 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
       propertyPath: m_Name
-      value: Wood_Box_Set (1)
+      value: Wood_Box_Set
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
+--- !u!23 &1289736601645725383 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 125568356789613991, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
+  m_PrefabInstance: {fileID: 1177703785067234144}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1389381356294904183 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 220704561962342935, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
+  m_PrefabInstance: {fileID: 1177703785067234144}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1716630289380123787 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
+  m_PrefabInstance: {fileID: 1177703785067234144}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &2268392519474185452 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -8132663511186061428, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
+  m_PrefabInstance: {fileID: 1177703785067234144}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &5709634670596031223 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -2349549553428905577, guid: 292998bbc3acaa34aaabe79736203adf, type: 3}
   m_PrefabInstance: {fileID: 1177703785067234144}
   m_PrefabAsset: {fileID: 0}

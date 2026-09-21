@@ -43,13 +43,13 @@ namespace Game.UI
         [FoldoutGroup("Base/Base/UI Drag Item")] 
         [SerializeField] private GameObject _dragItemImage;
 
-        // public NPlayer nPlayer;
-        //
-        // private void Awake()
-        // {
-        //     nPlayer = GetComponentInParent<NPlayer>();
-        // }
-        
+        private void Update()
+        {
+            if (GameManager.Instance.OnUILoadout())
+            {
+                _loadout.gameObject.SetActive(true);
+            }
+        }
 
         // ---- Các setter dùng chung ----
         
