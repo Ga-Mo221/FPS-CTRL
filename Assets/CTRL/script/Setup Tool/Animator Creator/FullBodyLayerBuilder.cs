@@ -142,12 +142,7 @@ public class FullBodyLayerBuilder : LayerBuilder
         standState.motion = BuildBlendTree2D(ac, "Stand BlendTree",  StandChildren,  standClips);
 
         AutoFillCrouchClips();
-        // Slot [9–16] (fast) dùng cùng clip với slot [1–8] (slow), chỉ khác pos/timeScale
-        for (int i = 0; i < 8; i++)
-        {
-            if (crouchClips[9 + i] == null)
-                crouchClips[9 + i] = crouchClips[1 + i];
-        }
+        CopyCrouchFastGroupFromSlow();
         var crouchState = locoSM.AddState("Crounch", new Vector3(400, 150));
         crouchState.motion = BuildBlendTree2D(ac, "Crouch BlendTree", CrouchChildren, crouchClips);
 
@@ -314,6 +309,20 @@ public class FullBodyLayerBuilder : LayerBuilder
                 if (standClips[20] == null) standClips[20] = clip;
                 continue;
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Slot [9–16] (fast) dùng cùng clip với slot [1–8] (slow), chỉ
+    // khác pos/timeScale trong BlendTree. Chỉ điền slot fast nào
+    // đang null (không ghi đè clip fast đã gán tay riêng).
+    // ─────────────────────────────────────────────────────────
+    public void CopyCrouchFastGroupFromSlow()
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            if (crouchClips[9 + i] == null)
+                crouchClips[9 + i] = crouchClips[1 + i];
         }
     }
 

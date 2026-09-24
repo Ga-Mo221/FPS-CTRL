@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -147,15 +145,6 @@ namespace Game.UI
                 return _uiChatBox.SendMessageVisible(visible);
             return false;
         }
-        
-        public void SetBaloOne(string weapponOne, string weapponTwo)
-            => _loadout.SetBaloOne(weapponOne, weapponTwo);
-        
-        public void SetBaloTwo(string weapponOne, string weapponTwo)
-            => _loadout.SetBaloTwo(weapponOne, weapponTwo);
-        
-        public void SetBaloThree(string weapponOne, string weapponTwo)
-            => _loadout.SetBaloThree(weapponOne, weapponTwo);
         
         public void SetLoadoutVisible(bool visible) => _loadout?.gameObject.SetActive(visible);
         

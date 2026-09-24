@@ -48,6 +48,7 @@ public class TurnInPlace : MonoBehaviour
     [SerializeField] private LayerMask _groundLayer = ~0;
 
     // Internal state
+    [ReadOnly]
     [SerializeField] private bool _canTurn;
     private bool _lastIsTurn;
 
@@ -59,6 +60,7 @@ public class TurnInPlace : MonoBehaviour
 
     private CharComponentManager _componentManager;
     private NHPHandler _hpHandler;
+    private NetworkCharacterControllerCustom _networkController;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -66,9 +68,28 @@ public class TurnInPlace : MonoBehaviour
     {
         _componentManager = GetComponent<CharComponentManager>();
         _hpHandler = _componentManager.NHPHandler;
+        _networkController = GetComponent<NetworkCharacterControllerCustom>();
 
-        _late_root_Rot_Y = _root.rotation.eulerAngles.y;
+        _late_root_Rot_Y = GetSmoothedYaw();
         _lastPosition = transform.position;
+    }
+
+    /// <summary>
+    /// Yaw ổn định để dùng cho mọi tính toán turn-in-place. Ưu tiên
+    /// NetworkCharacterControllerCustom.SmoothedYaw (giá trị đã qua SmoothDamp
+    /// trong Render(), không bao giờ bị AccumulateYaw() snap thô kể cả khi có
+    /// resimulation). KHÔNG đọc _root.rotation.eulerAngles.y trực tiếp trong lúc
+    /// đang chạy vì nó bị ghi đè 2 lần/frame với timing khác nhau (raw tick +
+    /// smoothed render) → đó chính là nguồn gây giật/step sai nhịp trước đây.
+    /// Fallback về _root.rotation chỉ dùng khi không có network controller
+    /// (ví dụ test offline / nhân vật không networked).
+    /// </summary>
+    private float GetSmoothedYaw()
+    {
+        if (_networkController != null)
+            return _networkController.SmoothedYaw;
+
+        return _root.rotation.eulerAngles.y;
     }
 
     private void Update()
@@ -83,21 +104,45 @@ public class TurnInPlace : MonoBehaviour
             else TurnOff();
             _lastIsTurn = isTurnInPlace;
         }
+    }
 
+    /// <summary>
+    /// Toàn bộ phần GHI vị trí/rotation của Owner (ToggleTurn quyết định có bắt
+    /// đầu bước mới không, Move animate, Lock ghim khi đứng yên) được đặt ở
+    /// LateUpdate, KHÔNG phải Update.
+    ///
+    /// Lý do: Owner là con (qua LegTurn/IK) của chính root network. Dù ta gán
+    /// world-position cho Owner bằng giá trị đã tính ổn định, Unity chỉ quy đổi
+    /// giá trị đó sang local offset MỘT LẦN tại thời điểm gán. Nếu SAU đó, trong
+    /// cùng frame, root còn bị ghi rotation thêm lần nữa (CopyToEngine() snap
+    /// thô trong BeforeAllTicks, hoặc Render() smooth lại — cả hai đều có thể
+    /// chạy sau Update() của các MonoBehaviour thường), Owner sẽ "trôi" theo vì
+    /// local offset không đổi trong khi world-matrix của parent vừa đổi.
+    ///
+    /// LateUpdate() của MỌI script luôn chạy sau Update() của MỌI script (và
+    /// sau khi NetworkRunner của Fusion đã gọi xong Render() cho frame đó, vì
+    /// Render() được Fusion dispatch trong pha Update, trước LateUpdate). Nên
+    /// tới lúc LateUpdate này chạy, root coi như đã chốt rotation cuối cùng của
+    /// frame — Owner gán ở đây sẽ không còn bị ghi đè thêm trước khi render.
+    /// </summary>
+    private void LateUpdate()
+    {
         if (!_canTurn) return;
 
-        ToggleTurn();
+        float smoothedYaw = GetSmoothedYaw();
+
+        ToggleTurn(smoothedYaw);
 
         bool movedL = false, movedR = false;
         if (!_left)
         {
-            movedL = Move(_flowerSetup_L);
-            if (!movedL) movedR = Move(_flowerSetup_R);
+            movedL = Move(_flowerSetup_L, smoothedYaw);
+            if (!movedL) movedR = Move(_flowerSetup_R, smoothedYaw);
         }
         else
         {
-            movedR = Move(_flowerSetup_R);
-            if (!movedR) movedL = Move(_flowerSetup_L);
+            movedR = Move(_flowerSetup_R, smoothedYaw);
+            if (!movedR) movedL = Move(_flowerSetup_L, smoothedYaw);
         }
 
         if (!movedL) MoveAndRotate.Lock(_flowerSetup_L);
@@ -154,23 +199,24 @@ public class TurnInPlace : MonoBehaviour
     [Button]
     public void Setup()
     {
-        TurnInPlaceSetup.Setup(transform, ref _flowerSetup_L, ref _flowerSetup_R);
+        TurnInPlaceSetup.Setup(transform, _root, ref _flowerSetup_L, ref _flowerSetup_R);
     }
 
-    private void ToggleTurn()
+    private void ToggleTurn(float smoothedYaw)
     {
-        MoveAndRotate.ToggleTurn(_flowerSetup_L, _flowerSetup_R, _root, ref _late_root_Rot_Y, _angle, ref _left, offset);
+        MoveAndRotate.ToggleTurn(_flowerSetup_L, _flowerSetup_R, _root, ref _late_root_Rot_Y, _angle, ref _left, smoothedYaw, offset);
     }
 
-    private bool Move(FlowerSetup flowerSetup)
+    private bool Move(FlowerSetup flowerSetup, float smoothedYaw)
     {
-        return MoveAndRotate.Move(flowerSetup, jumpHeight, duration, offset);
+        return MoveAndRotate.Move(flowerSetup, _root, smoothedYaw, jumpHeight, duration, offset);
     }
 
     private void OnEnable()
     {
-        MoveAndRotate.StartMoving(_flowerSetup_L);
-        MoveAndRotate.StartMoving(_flowerSetup_R);
+        float smoothedYaw = GetSmoothedYaw();
+        MoveAndRotate.StartMoving(_flowerSetup_L, _root, smoothedYaw);
+        MoveAndRotate.StartMoving(_flowerSetup_R, _root, smoothedYaw);
     }
 
     private void TurnOff(float time = 0.1f)
@@ -194,11 +240,13 @@ public class TurnInPlace : MonoBehaviour
 
     private void TurnOn(float time = 0.3f)
     {
+        float smoothedYaw = GetSmoothedYaw();
+
         MoveAndRotate.resetFree(_flowerSetup_L);
         MoveAndRotate.resetFree(_flowerSetup_R);
 
-        MoveAndRotate.ForceStartMoving(_flowerSetup_L);
-        MoveAndRotate.ForceStartMoving(_flowerSetup_R);
+        MoveAndRotate.ForceStartMoving(_flowerSetup_L, _root, smoothedYaw);
+        MoveAndRotate.ForceStartMoving(_flowerSetup_R, _root, smoothedYaw);
 
         _flowerSetup_L.IKconstraint.TurnOn(time);
         _flowerSetup_R.IKconstraint.TurnOn(time);

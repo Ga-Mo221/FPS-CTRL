@@ -49,6 +49,8 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         get => Data.Velocity;
         set => Data.Velocity = value;
     }
+    
+    public float SmoothedYaw => _localVisualYaw;
 
     /// <summary>
     /// Trạng thái chạm đất hiện tại của nhân vật (được đồng bộ qua mạng).

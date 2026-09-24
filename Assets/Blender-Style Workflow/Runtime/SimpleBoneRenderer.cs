@@ -9,12 +9,16 @@ namespace GaMo.BlenderEditorTools
         public Transform rootBone;
 
         public List<Transform> bones = new List<Transform>();
-        public Color boneColor = Color.darkBlue;
-        [Range(0.01f, 0.5f)] public float boneSize = 0.05f;
+        public Color boneColor = Color.pink;
+        [Range(0.01f, 0.5f)] public float boneSize = 0.02f;
 
-        public bool drawJoints = true;
-        public Color jointColor = Color.darkOrange;
-        [Range(0.01f, 0.5f)] public float jointSize = 0.03f;
+        public bool drawJoints = false;
+        public Color jointColor = Color.white;
+        [Range(10, 36)] public int jointFontSize = 10;
+
+        // Show / Hide khung xương trong Scene view — áp dụng ở MỌI chế độ (Edit lẫn Play),
+        // có hiệu lực ngay lập tức khi bấm nút trong Inspector.
+        public bool show = true;
 
         // --- Cache tra cứu nhanh O(1) thay cho bones.Contains() O(n) ---
         private HashSet<Transform> _boneSet;

@@ -5,7 +5,10 @@ using UnityEngine;
 public class NPlayer : NetworkBehaviour, IPlayerLeft
 {
     // ======================= Network field ==============================
-
+    [Header("Character Name")] [SerializeField]
+    public string Name;
+    
+    [Header("Setting")]
     [Networked] public PlayerTeam NetworkedTeam { get; set; } = PlayerTeam.Zero;
     
     [Networked] public GamePlayMode GamePlayMode { get; set; }
@@ -86,11 +89,25 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
             var parrentCamera = ComponentManager.Camera.transform.parent.gameObject;
             parrentCamera.SetActive(true);
-            parrentCamera.transform.parent.parent.parent = null;
-            _uiPlayerNickName.gameObject.SetActive(false);
 
-            // ✅ Cache ngay sau khi reparent - đây là GameObject "mồ côi" cần tự Destroy() sau này.
-            _detachedCameraRoot = parrentCamera;
+            // ✅ InitPlayer() có thể chạy 2 lần trên cùng object (Spawned() rồi OnHostMigrated()).
+            // Chỉ tách camera ra khỏi hierarchy 1 lần duy nhất - nếu tách lại lần 2, ta sẽ
+            // touch vào transform.parent của chính cái root đã bị set null trước đó
+            // (parrentCamera.transform.parent.parent lúc này không còn trỏ đúng chỗ),
+            // dẫn tới cache lệch đối tượng như bug cũ.
+            if (_detachedCameraRoot == null)
+            {
+                GameObject cameraRoot = parrentCamera.transform.parent.parent.gameObject;
+                cameraRoot.name = $"{Object.Id}-Camera-Root";
+                cameraRoot.transform.parent = null;
+
+                // ✅ Cache ĐÚNG object đã bị tách ra ngoài (cameraRoot), không phải con của nó
+                // (parrentCamera). Trước đây cache nhầm parrentCamera khiến OnDestroy() chỉ
+                // Destroy() được phần con, còn cái vỏ "[Id]-Camera-Root" rỗng bị leak lại trong scene.
+                _detachedCameraRoot = cameraRoot;
+            }
+
+            _uiPlayerNickName.gameObject.SetActive(false);
             
             Rpc_SetNickName(GameManager.Instance.GetPlayerNickName());
             _movementHandler.RPC_SetCameraSpeed(SettingManager.Instance.SettingData.MouseSensitivity);
@@ -98,14 +115,14 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
             // ConnectionToken ở transport-level (không đáng tin cậy qua Photon Relay).
             // Server sẽ dùng token này để nhận diện: player mới hay đang reconnect / resume sau host migration.
-            byte[] myToken = GameManager.Instance.GetConnectionToken();
+            byte[] myToken = GameManager.Instance.GetIdentityToken();
             if (myToken != null && myToken.Length == 16)
             {
                 Rpc_RegisterToken(myToken);
             }
             else
             {
-                Debug.LogWarning("<color=green>[NPlayer]</color> Local connection token invalid, cannot register.", this);
+                Debug.LogWarning("<color=green>[NPlayer]</color> Identity token invalid, cannot register.", this);
             }
             
             Debug.Log("<color=green>[NPlayer]</color> Spawned Local Player.", this);
@@ -131,8 +148,11 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         // Việc sync token về client giờ được kích hoạt từ NSpawner.ResolvePlayerToken,
         // đúng lúc RawToken đã thực sự được ghi.
 
-        // set player này là player object
-        Runner.SetPlayerObject(Object.InputAuthority, Object);
+        // set player này là player object (chỉ khi thực sự có input authority)
+        if (!Object.InputAuthority.IsNone)
+        {
+            Runner.SetPlayerObject(Object.InputAuthority, Object);
+        }
 
         transform.name = $"Player_{Object.Id}";
     }
@@ -279,6 +299,11 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         if (_detachedCameraRoot != null)
         {
             Destroy(_detachedCameraRoot);
+        }
+
+        if (Local == this)
+        {
+            Local = null;
         }
     }
 }

@@ -11,26 +11,62 @@ public static class MoveAndRotate
     private const float ROT_THRESHOLD = 1f;       // độ
 
     /// <summary>
+    /// Tính lại world-pose "ổn định" của Target dựa trên smoothedYawDeg (yaw đã
+    /// qua SmoothDampAngle trong NetworkCharacterControllerCustom.Render(), KHÔNG
+    /// đọc Target.transform hay root.rotation sống.
+    ///
+    /// Lý do: Target là con (gián tiếp) của root network. root.transform.rotation
+    /// bị ghi 2 lần/frame với timing khác nhau — AccumulateYaw() snap thô ngay
+    /// lập tức trong tick simulation (có thể chạy nhiều lần/frame khi
+    /// resimulate), rồi Render() ghi đè lại bằng giá trị đã smooth. Vì vậy world
+    /// pose của Target (và root.rotation.eulerAngles.y) có thể "rung" giữa 2 giá
+    /// trị này tùy thời điểm đọc trong frame → chân IK giật rồi bị kéo ngược lại.
+    ///
+    /// Cách khắc phục: dùng offset cục bộ CỐ ĐỊNH (chụp 1 lần lúc Setup, xem
+    /// TurnInPlaceSetup) + smoothedYawDeg (giá trị DUY NHẤT không bao giờ bị
+    /// AccumulateYaw ghi thô) để tự dựng lại world pose ổn định.
+    /// root.position và root.eulerAngles (X/Z) vẫn đọc trực tiếp vì không bị
+    /// double-write theo kiểu trên.
+    /// </summary>
+    public static void GetStableTargetPose(
+        FlowerSetup flowerSetup,
+        Transform root,
+        float smoothedYawDeg,
+        float offset,
+        out Vector3 worldPos,
+        out Quaternion worldRot)
+    {
+        Vector3 rootEuler = root.eulerAngles;
+        Quaternion stableRootRot = Quaternion.Euler(rootEuler.x, smoothedYawDeg, rootEuler.z);
+
+        worldPos = root.position + stableRootRot * flowerSetup.TargetLocalOffsetPos;
+        worldRot = stableRootRot * flowerSetup.TargetLocalOffsetRot;
+
+        worldPos += Vector3.up * offset;
+    }
+
+    /// <summary>
     /// Trả về true nếu Owner đã ở đúng vị trí/rotation của Target (tính cả offset).
     /// Dùng để bỏ qua lần kích hoạt dư thừa khi owner đã khớp target rồi.
     /// </summary>
-    public static bool IsAtTarget(FlowerSetup flowerSetup, float offset)
+    public static bool IsAtTarget(FlowerSetup flowerSetup, Transform root, float smoothedYawDeg, float offset)
     {
         if (flowerSetup.Target == null || flowerSetup.Owner == null) return true;
 
-        Vector3 targetPos = flowerSetup.Target.position + Vector3.up * offset;
+        GetStableTargetPose(flowerSetup, root, smoothedYawDeg, offset, out Vector3 targetPos, out Quaternion targetRot);
+
         bool posMatch = Vector3.Distance(flowerSetup.Owner.position, targetPos) < POS_THRESHOLD;
-        bool rotMatch = Quaternion.Angle(flowerSetup.Owner.rotation, flowerSetup.Target.rotation) < ROT_THRESHOLD;
+        bool rotMatch = Quaternion.Angle(flowerSetup.Owner.rotation, targetRot) < ROT_THRESHOLD;
         return posMatch && rotMatch;
     }
 
-    public static void StartMoving(FlowerSetup flowerSetup, float offset = 0f)
+    public static void StartMoving(FlowerSetup flowerSetup, Transform root, float smoothedYawDeg, float offset = 0f)
     {
         if (flowerSetup.CanMove || flowerSetup.Target == null)
             return;
 
         // Nếu Owner đã ở đúng Target rồi → không cần animate, bỏ qua
-        if (IsAtTarget(flowerSetup, offset))
+        if (IsAtTarget(flowerSetup, root, smoothedYawDeg, offset))
             return;
 
         // Snap về freeze để StartPosition không bị IK làm lệch
@@ -42,12 +78,12 @@ public static class MoveAndRotate
         flowerSetup.StartPosition = flowerSetup.Owner.position;
         flowerSetup.StartRotation = flowerSetup.Owner.rotation;
     }
-    
+
     /// <summary>
     /// Giống StartMoving nhưng KHÔNG check CanMove — dùng khi cần
     /// force reset về target (ví dụ khi TurnOn sau khi owner đã lệch).
     /// </summary>
-    public static void ForceStartMoving(FlowerSetup flowerSetup)
+    public static void ForceStartMoving(FlowerSetup flowerSetup, Transform root, float smoothedYawDeg)
     {
         if (flowerSetup.Target == null) return;
 
@@ -83,6 +119,7 @@ public static class MoveAndRotate
         ref float lateRootRotY,
         float angle,
         ref bool left,
+        float smoothedYawDeg,
         float offset = 0f        // <-- thêm offset để IsAtTarget kiểm tra đúng
         )
     {
@@ -96,23 +133,29 @@ public static class MoveAndRotate
         if (sequenceInProgress)
             return;
 
-        // Dùng Mathf.DeltaAngle để tránh lỗi wrap-around khi eulerAngles.y nhảy
-        // qua mốc 0/360 độ.
-        float delta = Mathf.DeltaAngle(lateRootRotY, root.rotation.eulerAngles.y);
+        // Dùng smoothedYawDeg (yaw đã qua SmoothDampAngle trong Render(), KHÔNG
+        // bao giờ bị AccumulateYaw() snap thô) thay vì root.rotation.eulerAngles.y
+        // để tính delta. Đọc root.rotation trực tiếp ở đây từng gây delta giả:
+        // root.rotation bị ghi thô trong tick simulation rồi Render() mới smooth
+        // lại, nên Update() có thể bắt được giá trị "giữa chừng" chưa ổn định,
+        // gây bắn StartMoving sai nhịp rồi bị kéo/lùi lại ngay sau đó (giật).
+        // Dùng Mathf.DeltaAngle để tránh lỗi wrap-around khi giá trị nhảy qua
+        // mốc 0/360 độ.
+        float delta = Mathf.DeltaAngle(lateRootRotY, smoothedYawDeg);
 
         if (delta <= -angle)
         {
-            lateRootRotY = root.rotation.eulerAngles.y;
+            lateRootRotY = smoothedYawDeg;
             left = false;
-            StartMoving(flowerSetup_R, offset);
-            StartMoving(flowerSetup_L, offset);
+            StartMoving(flowerSetup_R, root, smoothedYawDeg, offset);
+            StartMoving(flowerSetup_L, root, smoothedYawDeg, offset);
         }
         else if (delta >= angle)
         {
-            lateRootRotY = root.rotation.eulerAngles.y;
+            lateRootRotY = smoothedYawDeg;
             left = true;
-            StartMoving(flowerSetup_L, offset);
-            StartMoving(flowerSetup_R, offset);
+            StartMoving(flowerSetup_L, root, smoothedYawDeg, offset);
+            StartMoving(flowerSetup_R, root, smoothedYawDeg, offset);
         }
         // Lưu ý: nếu root xoay quá nhanh trong 1 frame (delta có thể vượt nhiều
         // lần angle liên tiếp), logic này vẫn chỉ bắt được 1 lần "quẹo" mỗi
@@ -127,6 +170,8 @@ public static class MoveAndRotate
     // không di chuyển được xử lý riêng ở Lock(), chạy độc lập mỗi frame.
     public static bool Move(
         FlowerSetup flowerSetup,
+        Transform root,
+        float smoothedYawDeg,
         float jumpHeight,
         float duration,
         float offset
@@ -137,8 +182,6 @@ public static class MoveAndRotate
 
         if (!flowerSetup.CanMove)
             return false;
-        
-        //Debug.Log($"{flowerSetup.Owner.position} and {flowerSetup.Target.position}");
 
         // Đánh dấu "đang thực sự animate frame này" để Lock() (chạy trong
         // Update, trước LateUpdate) biết mà KHÔNG ghi đè freeze lên bông hoa
@@ -150,9 +193,11 @@ public static class MoveAndRotate
 
         float t = Mathf.Clamp01(flowerSetup.Timer / duration);
 
-        Vector3 targetPos = flowerSetup.Target.position + Vector3.up * offset;
-        Quaternion targetRot = flowerSetup.Target.rotation;
-        
+        // Đích của lerp/slerp là world-pose ỔN ĐỊNH (tính lại từ offset cố định
+        // + smoothedYawDeg), không đọc Target.transform sống — nếu không, đích
+        // sẽ "rung" theo rotation chưa ổn định của root ngay trong lúc đang lerp.
+        GetStableTargetPose(flowerSetup, root, smoothedYawDeg, offset, out Vector3 targetPos, out Quaternion targetRot);
+
         Vector3 pos = Vector3.Lerp(flowerSetup.StartPosition, targetPos, t);
         
         pos.y += jumpHeight * 4f * t * (1f - t);

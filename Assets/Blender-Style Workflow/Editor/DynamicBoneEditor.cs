@@ -39,6 +39,10 @@ namespace GaMo.BlenderEditorTools
         private GUIContent _gcNodeGizmoSize;
         private GUIContent _gcArrowLength;
 
+        private GUIContent _gcEnableCollisionLogging;
+        private GUIContent _gcCollisionLogCapacity;
+        private GUIContent _gcCollisionLogFileName;
+
         // ── Properties ──────────────────────────────────────────────────────────
         private SerializedProperty clothPresetProp;
 
@@ -66,6 +70,10 @@ namespace GaMo.BlenderEditorTools
         private SerializedProperty showGizmosProp;
         private SerializedProperty nodeGizmoSizeProp;
         private SerializedProperty arrowLengthMultiplierProp;
+
+        private SerializedProperty enableCollisionLoggingProp;
+        private SerializedProperty collisionLogCapacityProp;
+        private SerializedProperty collisionLogFileNameProp;
 
         private void OnEnable()
         {
@@ -96,6 +104,10 @@ namespace GaMo.BlenderEditorTools
             nodeGizmoSizeProp         = serializedObject.FindProperty("nodeGizmoSize");
             arrowLengthMultiplierProp = serializedObject.FindProperty("arrowLengthMultiplier");
 
+            enableCollisionLoggingProp = serializedObject.FindProperty("enableCollisionLogging");
+            collisionLogCapacityProp   = serializedObject.FindProperty("collisionLogCapacity");
+            collisionLogFileNameProp   = serializedObject.FindProperty("collisionLogFileName");
+
             _gcRootBones          = new GUIContent("Root Bones", rootBonesProp.tooltip);
             _gcEnableColliders    = new GUIContent("Enable Colliders", enableCollidersProp.tooltip);
             _gcParticleRadius     = new GUIContent("Particle Radius", particleRadiusProp.tooltip);
@@ -117,6 +129,10 @@ namespace GaMo.BlenderEditorTools
             _gcShowGizmos         = new GUIContent("Show Gizmos", showGizmosProp.tooltip);
             _gcNodeGizmoSize      = new GUIContent("Node Gizmo Size", nodeGizmoSizeProp.tooltip);
             _gcArrowLength        = new GUIContent("Arrow Length Multiplier", arrowLengthMultiplierProp.tooltip);
+
+            _gcEnableCollisionLogging = new GUIContent("Enable Logging", enableCollisionLoggingProp.tooltip);
+            _gcCollisionLogCapacity   = new GUIContent("Log Capacity", collisionLogCapacityProp.tooltip);
+            _gcCollisionLogFileName   = new GUIContent("CSV File Name", collisionLogFileNameProp.tooltip);
 
             presetValues = (ClothPreset[])System.Enum.GetValues(typeof(ClothPreset));
             presetLabels = new string[presetValues.Length];
@@ -157,7 +173,9 @@ namespace GaMo.BlenderEditorTools
                 }
             }
 
-            if (_cachedIcon != null)
+            // Chỉ gán khi icon thực sự khác — tránh ghi lại icon (và có thể kích hoạt import lại
+            // script/meta) mỗi lần chọn object trong Hierarchy.
+            if (_cachedIcon != null && EditorGUIUtility.GetIconForObject(target) != _cachedIcon)
                 EditorGUIUtility.SetIconForObject(target, _cachedIcon);
         }
 
@@ -486,6 +504,66 @@ namespace GaMo.BlenderEditorTools
             {
                 EditorGUILayout.HelpBox(
                     "Bone tree chỉ được dựng khi vào Play Mode (Start). Ngoài Play Mode, Gizmo vẽ trực tiếp từ hierarchy của Root Bones.",
+                    MessageType.None);
+            }
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(6);
+
+            // ── COLLISION LOGGING ────────────────────────────────────────────────
+            EditorGUILayout.LabelField("Collision Logging (Debug)", EditorStyles.boldLabel);
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.PropertyField(enableCollisionLoggingProp, _gcEnableCollisionLogging);
+
+            EditorGUI.BeginDisabledGroup(!enableCollisionLoggingProp.boolValue);
+            {
+                EditorGUILayout.Space(5);
+                EditorGUILayout.PropertyField(collisionLogCapacityProp, _gcCollisionLogCapacity);
+                EditorGUILayout.PropertyField(collisionLogFileNameProp, _gcCollisionLogFileName);
+            }
+            EditorGUI.EndDisabledGroup();
+
+            if (enableCollisionLoggingProp.boolValue)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox(
+                    "Ghi lại mỗi lần va chạm đẩy node ra khỏi collider (trực tiếp lẫn truyền lên qua parent). " +
+                    "Tốn thêm CPU/RAM cho ring buffer — nên tắt trước khi build release.",
+                    MessageType.None);
+            }
+
+            EditorGUILayout.Space(6);
+
+            EditorGUI.BeginDisabledGroup(!Application.isPlaying);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("💾  Export CSV", GUILayout.Height(24f)))
+                {
+                    foreach (var obj in targets)
+                    {
+                        var manager = obj as DynamicBone;
+                        if (manager != null) manager.ExportCollisionLogToCsv();
+                    }
+                }
+
+                if (GUILayout.Button("🗑  Clear Log", GUILayout.Height(24f)))
+                {
+                    foreach (var obj in targets)
+                    {
+                        var manager = obj as DynamicBone;
+                        if (manager != null) manager.ClearCollisionLog();
+                    }
+                }
+            }
+            EditorGUI.EndDisabledGroup();
+
+            if (!Application.isPlaying)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox(
+                    "Export/Clear chỉ khả dụng trong Play Mode — log chỉ tồn tại trong RAM lúc chạy. " +
+                    "File CSV được lưu vào Application.persistentDataPath.",
                     MessageType.None);
             }
 

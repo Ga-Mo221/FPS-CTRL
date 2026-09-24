@@ -37,6 +37,11 @@ public class AnimatorControllerCreator : EditorWindow
     private string  savePath       = "Assets/Animations/Controllers";
     private Vector2 scroll;
 
+    // ── Existing Controller Slot (gán clip vào controller có sẵn) ──
+    [SerializeField] private AnimatorController existingController;
+    private enum ClipApplyMode { FillEmptyOnly, OverwriteAll }
+    private ClipApplyMode clipApplyMode = ClipApplyMode.FillEmptyOnly;
+
     // ── Rename Clips State (Tab 2) ────────────────────────────
     [SerializeField] private List<AnimationClip> renameClips = new List<AnimationClip>();
     private string  removePrefix = "";
@@ -150,6 +155,41 @@ public class AnimatorControllerCreator : EditorWindow
                     "Weapon mode: Spine layer dùng state đơn RELOAD / SWITCH OUT / SWITCH IN.",
                     MessageType.None);
             }
+        }
+        EditorGUILayout.EndVertical();
+        EditorGUILayout.Space(6);
+
+        // ── Animator Controller có sẵn (tùy chọn) ──────────────
+        EditorGUILayout.LabelField("Animator Controller có sẵn (tùy chọn)", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        existingController = (AnimatorController)EditorGUILayout.ObjectField(
+            "Controller có sẵn", existingController, typeof(AnimatorController), false);
+
+        if (existingController != null)
+        {
+            EditorGUILayout.Space(4);
+            clipApplyMode = (ClipApplyMode)GUILayout.Toolbar(
+                (int)clipApplyMode,
+                new[] { "Chỉ điền state trống", "Ghi đè tất cả" },
+                GUILayout.Height(22));
+
+            EditorGUILayout.HelpBox(
+                clipApplyMode == ClipApplyMode.FillEmptyOnly
+                    ? "Sẽ tìm mọi state (mọi layer, mọi Sub State Machine, kể cả các ô trong BlendTree " +
+                      "Locomotion Stand/Crouch) đang KHÔNG có clip, và gán clip phù hợp từ danh sách " +
+                      "Clips + slot Stand/Crouch bên dưới. Chỗ nào đã có clip sẽ được giữ nguyên."
+                    : "Sẽ thay clip của TẤT CẢ state (mọi layer, mọi Sub State Machine) VÀ tất cả ô trong " +
+                      "BlendTree Stand/Crouch bằng clip phù hợp tìm được, kể cả chỗ đã có clip từ trước.\n" +
+                      "Không tạo state/BlendTree mới, không tạo/sửa transition — chỉ thay motion.",
+                MessageType.Info);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox(
+                "Để trống ô này để tạo Controller mới như bình thường.\n" +
+                "Nếu kéo một Controller có sẵn vào đây, nút bên dưới sẽ chuyển thành " +
+                "\"Gán Clip vào Controller\" — chỉ tìm state và gán clip, không tạo layer/transition mới.",
+                MessageType.None);
         }
         EditorGUILayout.EndVertical();
         EditorGUILayout.Space(6);
@@ -299,19 +339,39 @@ public class AnimatorControllerCreator : EditorWindow
         EditorGUILayout.BeginVertical(GUILayout.Height(footerHeight));
         GUILayout.FlexibleSpace();
 
-        bool nameOk = !string.IsNullOrWhiteSpace(controllerName);
-        bool pathOk = !string.IsNullOrWhiteSpace(savePath);
-        if (!nameOk) EditorGUILayout.HelpBox("Hãy nhập tên controller.", MessageType.Warning);
-        if (!pathOk) EditorGUILayout.HelpBox("Hãy chọn đường dẫn lưu.", MessageType.Warning);
+        bool usingExisting = existingController != null;
 
-        GUI.enabled = nameOk && pathOk;
+        bool nameOk = usingExisting || !string.IsNullOrWhiteSpace(controllerName);
+        bool pathOk = usingExisting || !string.IsNullOrWhiteSpace(savePath);
+        bool clipsOk = singleClips != null && singleClips.Count > 0;
+
+        if (!usingExisting && !nameOk) EditorGUILayout.HelpBox("Hãy nhập tên controller.", MessageType.Warning);
+        if (!usingExisting && !pathOk) EditorGUILayout.HelpBox("Hãy chọn đường dẫn lưu.", MessageType.Warning);
+        if (usingExisting && !clipsOk) EditorGUILayout.HelpBox("Hãy kéo Animation Clips vào danh sách để có clip mà gán.", MessageType.Warning);
+
+        GUI.enabled = usingExisting ? clipsOk : (nameOk && pathOk);
         var createBtn = new GUIStyle(GUI.skin.button)
             { fontSize = 14, fontStyle = FontStyle.Bold,
               fixedHeight = Mathf.Clamp(footerHeight - 16f, 28f, 80f) };
 
-        string modeLabel = controllerMode == ControllerMode.Character ? " (Character)" : " (Weapon)";
-        if (GUILayout.Button($"Tạo Controller{modeLabel}", createBtn))
-            CreateController();
+        string btnLabel;
+        if (usingExisting)
+        {
+            btnLabel = clipApplyMode == ClipApplyMode.FillEmptyOnly
+                ? "Gán Clip vào Controller (chỉ state trống)"
+                : "Gán Clip vào Controller (ghi đè tất cả)";
+        }
+        else
+        {
+            string modeLabel = controllerMode == ControllerMode.Character ? " (Character)" : " (Weapon)";
+            btnLabel = $"Tạo Controller{modeLabel}";
+        }
+
+        if (GUILayout.Button(btnLabel, createBtn))
+        {
+            if (usingExisting) ApplyClipsToExistingController();
+            else                CreateController();
+        }
 
         GUI.enabled = true;
         GUILayout.FlexibleSpace();
@@ -335,6 +395,58 @@ public class AnimatorControllerCreator : EditorWindow
         weaponClipsScroll = EditorGUILayout.BeginScrollView(weaponClipsScroll);
         weaponClipsTab.Draw();
         EditorGUILayout.EndScrollView();
+    }
+
+    // =========================================================
+    // GÁN CLIP VÀO CONTROLLER CÓ SẴN
+    // (không tạo layer/state/transition mới — chỉ tìm state theo
+    //  tên và gán AnimationClip phù hợp từ singleClips)
+    // =========================================================
+    private void ApplyClipsToExistingController()
+    {
+        if (existingController == null) return;
+
+        var mode = clipApplyMode == ClipApplyMode.FillEmptyOnly
+            ? ControllerClipInjector.FillMode.FillEmptyOnly
+            : ControllerClipInjector.FillMode.OverwriteAll;
+
+        // ── State thường (không phải BlendTree) ────────────────
+        var stateResult = ControllerClipInjector.ApplyClips(existingController, singleClips, mode);
+
+        // ── BlendTree Stand / Crouch ────────────────────────────
+        // Dùng đúng các slot [21]/[17] hiện có trên UI (đã auto-fill
+        // theo tên clip), rồi bơm vào BlendTree tìm thấy trong controller.
+        fullBodyBuilder.Init(singleClips);
+        fullBodyBuilder.AutoFillStandClips();
+        fullBodyBuilder.AutoFillCrouchClips();
+        fullBodyBuilder.CopyCrouchFastGroupFromSlow();
+
+        var btResult = ControllerClipInjector.ApplyBlendTreeClips(
+            existingController, fullBodyBuilder.standClips, fullBodyBuilder.crouchClips, mode);
+
+        EditorUtility.SetDirty(existingController);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        EditorUtility.FocusProjectWindow();
+        Selection.activeObject = existingController;
+
+        string modeStr = clipApplyMode == ClipApplyMode.FillEmptyOnly
+            ? "Chỉ điền state trống"
+            : "Ghi đè tất cả state";
+
+        int totalMatched = stateResult.matched + btResult.matched;
+        int totalSkipped = stateResult.skipped + btResult.skipped;
+        int totalNoMatch = stateResult.noMatch + btResult.noMatch;
+
+        EditorUtility.DisplayDialog(
+            "Hoàn thành!",
+            $"Controller: {existingController.name}\n" +
+            $"Chế độ: {modeStr}\n\n" +
+            $"Đã gán clip: {totalMatched}  (state thường: {stateResult.matched}, BlendTree slot: {btResult.matched})\n" +
+            $"Bỏ qua: {totalSkipped}\n" +
+            $"Không tìm thấy clip phù hợp: {totalNoMatch}",
+            "OK");
     }
 
     // =========================================================

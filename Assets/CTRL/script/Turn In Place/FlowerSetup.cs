@@ -13,11 +13,16 @@ public class FlowerSetup
     [HorizontalGroup("Turn In Place/Leg/row")]
     [HideLabel] [SerializeField] private Transform _foot;
     
+    [ReadOnly]
     [SerializeField] private Transform _target;
+    [ReadOnly]
     [SerializeField] private Transform _owner;
+    [ReadOnly]
     [SerializeField] private bool _isMoving;
+    [ReadOnly]
     [SerializeField] private bool _canMove;
     
+    [ReadOnly]
     public IKConstraint IKconstraint;
 
     private float _timer; // Timer là của riêng từng FlowerSetup, không dùng chung
@@ -29,6 +34,17 @@ public class FlowerSetup
     [SerializeField] private Vector3 _freezePos;
     [ReadOnly]
     [SerializeField] private Quaternion _freezeRot;
+
+    // Offset cục bộ của Target so với root nhân vật, chụp 1 lần lúc Setup và
+    // KHÔNG đổi theo thời gian (hierarchy IK là static sau khi tạo). Dùng để
+    // tự tính lại world-pose ổn định thay vì đọc Target.transform sống —
+    // Target là con (gián tiếp) của root network, nên world pose của nó bị
+    // "rung" theo rotation chưa ổn định của root (double-write giữa tick raw
+    // và render đã smooth) nếu đọc trực tiếp mỗi frame.
+    [ReadOnly]
+    [SerializeField] private Vector3 _targetLocalOffsetPos;
+    [ReadOnly]
+    [SerializeField] private Quaternion _targetLocalOffsetRot;
 
     public Transform UpperLeg => _upper_Leg;
     public Transform LowerLeg => _Lower_Leg;
@@ -86,5 +102,17 @@ public class FlowerSetup
     {
         get { return _freezeRot; }
         set { _freezeRot = value; }
+    }
+
+    public Vector3 TargetLocalOffsetPos
+    {
+        get { return _targetLocalOffsetPos; }
+        set { _targetLocalOffsetPos = value; }
+    }
+
+    public Quaternion TargetLocalOffsetRot
+    {
+        get { return _targetLocalOffsetRot; }
+        set { _targetLocalOffsetRot = value; }
     }
 }

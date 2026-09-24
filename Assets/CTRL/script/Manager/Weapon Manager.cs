@@ -18,21 +18,43 @@ public class WeaponManager : NetworkBehaviour
     [SerializeField] private Transform _weapon_Parrent;
     
     
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     // Weapon One
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponOneRef { get; set; }
     
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     [Networked] public NetworkString<_16> _weaponOneID { get; set; }
+    
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     public WeaponController Weapon_One_CTRL;
     
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     // Weapon Two
     [Networked, OnChangedRender(nameof(OnWeaponRefsChanged))]
     public NetworkObject _weaponTwoRef { get; set; }
+    
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     [Networked] public NetworkString<_16> _weaponTwoID { get; set; }
+    
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     public WeaponController Weapon_Two_CTRL;
     
+    [TabGroup("Debug", "Debug")]
+    [ReadOnly]
     // Active Weapon
     [Networked] public byte _weapon_Active { get; set; } = 0;
+
+    #if UNITY_EDITOR
+    [TabGroup("Debug", "Debug")]
+    [SerializeField] private bool _debug;
+    #endif
 
     // ── Tracking local (không networked) ─────────────────────────────────────
     // NetworkId của weapon mà Weapon_X_CTRL đang trỏ tới (set lúc resolve).
@@ -162,6 +184,11 @@ public class WeaponManager : NetworkBehaviour
         }
         
         _weapon_One_Prefab = GameManager.Instance.GetWeapon(weaponOne);
+
+#if UNITY_EDITOR
+        if (_debug && _weapon_One_Prefab == null)
+            Debug.LogError($"<color=green>[WeaponManager][Spawn Weapon One]</color> Weapon One == NULL, ID {weaponOne}");
+#endif
     }
 
     private void SpawnWeaponTwo(string weaponTwo)
@@ -175,6 +202,11 @@ public class WeaponManager : NetworkBehaviour
         }
         
         _weapon_Two_Prefab = GameManager.Instance.GetWeapon(weaponTwo);
+        
+#if UNITY_EDITOR
+        if (_debug && _weapon_Two_Prefab == null)
+            Debug.LogError($"<color=green>[WeaponManager][Spawn Weapon Two]</color> Weapon Two == NULL, ID {weaponTwo}");
+#endif
     }
     
     #endregion
@@ -234,7 +266,13 @@ public class WeaponManager : NetworkBehaviour
     private void CreateWeapon(GameObject prefab, out NetworkObject instan)
     {
         instan = null;
-        if (prefab == null) return;
+        if (prefab == null)
+        {
+#if UNITY_EDITOR
+            if (_debug) Debug.LogError("<color=green>[WeaponManager][Create Weapon]</color> Prefab == NULL");
+#endif
+            return;
+        }
         
         instan = Runner.Spawn(
             prefab,
@@ -258,7 +296,11 @@ public class WeaponManager : NetworkBehaviour
     {
         ResolveWeaponControllers();
         SwitchWeapon();
-        Debug.Log($"<color=green>[WeaponManager]</color> ResolveWeaponControllers after migration: {name}", this);
+        
+#if UNITY_EDITOR
+        if (_debug)
+            Debug.Log($"<color=green>[WeaponManager]</color> ResolveWeaponControllers after migration: {name}", this);
+#endif
     }
     
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
@@ -331,9 +373,6 @@ public class WeaponManager : NetworkBehaviour
             if (Object.HasStateAuthority)
                 SwitchWeaponActive(0);
             SwitchWeapon();
-            
-            if (GameManager.Instance != null)
-                GameManager.Instance.setCurrentBalo(Weapon_One_CTRL.Data.WeaponName, Weapon_Two_CTRL.Data.WeaponName);
         }
     }
 
@@ -408,7 +447,10 @@ public class WeaponManager : NetworkBehaviour
     {
         if (_weaponOneRef != null)
         {
-            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon One", this);
+#if UNITY_EDITOR
+            if (_debug)
+                Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon One", this);
+#endif
             _componentManager.ConstraintManager?.SwitchWeapon(_weaponOneID.ToString());
             _weaponOneRef?.gameObject.SetActive(true);
             _weaponTwoRef?.gameObject.SetActive(false);
@@ -420,7 +462,10 @@ public class WeaponManager : NetworkBehaviour
     {
         if (_weaponTwoRef != null)
         {
-            Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
+#if UNITY_EDITOR
+            if (_debug)
+                Debug.Log("<color=green>[WeaponManager]</color> Switch to Weapon Two", this);
+#endif
             _componentManager.ConstraintManager?.SwitchWeapon(_weaponTwoID.ToString());
             _weaponOneRef?.gameObject.SetActive(false);
             _weaponTwoRef?.gameObject.SetActive(true);
@@ -552,8 +597,10 @@ public class WeaponManager : NetworkBehaviour
 
         if (GameManager.Instance != null && Object.HasInputAuthority)
         {
-            GameManager.Instance.SetCurrentWeapon(1, Weapon_One_CTRL.Data.ID);
-            GameManager.Instance.SetCurrentWeapon(2, Weapon_Two_CTRL.Data.ID);
+            if (Weapon_One_CTRL != null)
+                GameManager.Instance.SetCurrentWeapon(1, Weapon_One_CTRL.Data.ID);
+            if (Weapon_Two_CTRL != null)
+                GameManager.Instance.SetCurrentWeapon(2, Weapon_Two_CTRL.Data.ID);
         }
     }
     
@@ -577,7 +624,7 @@ public class WeaponManager : NetworkBehaviour
                 {
                     // Authority: set ID ngay, add đồng bộ luôn.
                     Weapon_One_CTRL.Respawn();
-                    _weaponOneID = new NetworkString<_16>(Weapon_One_CTRL.Data.ID + "_STTWP1");
+                    _weaponOneID = new NetworkString<_16>(Weapon_One_CTRL.Data.ID + "_W1");
                     RegisterWeapon(1, Weapon_One_CTRL, _weaponOneID.ToString());
                 }
                 else
@@ -589,7 +636,7 @@ public class WeaponManager : NetworkBehaviour
                     StartCoroutine(WaitForIDThenAdd(
                         1,
                         ctrl,
-                        ctrl.Data.ID + "_STTWP1",
+                        ctrl.Data.ID + "_W1",
                         () => _weaponOneID.ToString(),
                         () => Weapon_One_CTRL == ctrl,   // hủy nếu weapon đã bị thay
                         isLast: true                      // coroutine này chịu trách nhiệm gọi SwitchWeapon
@@ -608,7 +655,7 @@ public class WeaponManager : NetworkBehaviour
                 if (Object.HasStateAuthority)
                 {
                     Weapon_Two_CTRL.Respawn();
-                    _weaponTwoID = new NetworkString<_16>(Weapon_Two_CTRL.Data.ID + "_STTWP2");
+                    _weaponTwoID = new NetworkString<_16>(Weapon_Two_CTRL.Data.ID + "_W2");
                     RegisterWeapon(2, Weapon_Two_CTRL, _weaponTwoID.ToString());
                 }
                 else
@@ -621,7 +668,7 @@ public class WeaponManager : NetworkBehaviour
                     StartCoroutine(WaitForIDThenAdd(
                         2,
                         ctrl,
-                        ctrl.Data.ID + "_STTWP2",
+                        ctrl.Data.ID + "_W2",
                         () => _weaponTwoID.ToString(),
                         () => Weapon_Two_CTRL == ctrl,
                         isLast: twoIsLast

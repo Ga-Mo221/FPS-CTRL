@@ -355,6 +355,13 @@ public class WeaponController : NetworkBehaviour
     {
         if (!Object.HasInputAuthority) return;
         if (_type == WeaponType.Melee) return;
+
+        if (_type == WeaponType.Sniper && _isDead && GameManager.Instance != null)
+        {
+            _ads = false;
+            GameManager.Instance.VolumeController.TriggerADS(false, 0.25f);
+        }
+        
         ADSHandler();
     }
 
@@ -393,7 +400,7 @@ public class WeaponController : NetworkBehaviour
     {
         if (_isDead)
         {
-            _ads = !_lastAdsState;
+            _ads = false;
         }
 
         Vector3 pivotOffset = GetPivotOffset(_ads, _isCrouch);

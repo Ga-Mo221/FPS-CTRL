@@ -46,7 +46,7 @@ public class MotionCall : StateMachineBehaviour
         var dis = animator.GetComponent<DisplayObject>();
         var shoot = animator.GetComponentInParent<NShootHandler>();
         if (shoot != null)
-            shoot.ThrowFrag();
+            shoot.ThrowGrenade(true);
         if (dis == null) return;
         dis.DisableObj(0);
     }
@@ -56,7 +56,7 @@ public class MotionCall : StateMachineBehaviour
         var dis = animator.GetComponent<DisplayObject>();
         var shoot = animator.GetComponentInParent<NShootHandler>();
         if (shoot != null)
-            shoot.ThrowFlash();
+            shoot.ThrowGrenade(false);
         if (dis == null) return;
         dis.DisableObj(1);
     }

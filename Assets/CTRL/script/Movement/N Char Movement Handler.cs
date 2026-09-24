@@ -133,6 +133,9 @@ public class NCharMovementHandler : NetworkBehaviour
             if (_hpHandler.IsDead)
             {
                 IsFiring = false;
+                // Chết → thoát ADS
+                if (StateFl.IsADS)
+                    ResetADS();
                 if (_ncc.Controller.enabled)
                     _ncc.Move(Vector3.zero, 0, 0);
 
@@ -647,6 +650,7 @@ public class NCharMovementHandler : NetworkBehaviour
         if (!HasStateAuthority) return;
         IsControllerEnabled = false;
         CanTakeDamage = false;
+        ResetADS(); // Chết → thoát ADS
         Debug.Log("<color=green>[NCharMovementHandler]</color> Dead");
     }
     

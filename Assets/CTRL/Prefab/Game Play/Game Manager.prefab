@@ -50,7 +50,7 @@ MonoBehaviour:
   _playerId:
     Raw: 0
   _gamePlayMode: 1
-  FlashbangEffect: {fileID: 0}
+  VolumeController: {fileID: 0}
   _respawnTime: 5
   _canTakeDamageTime: 3
   _startGameDuration: 10
@@ -59,13 +59,20 @@ MonoBehaviour:
   PlayerList: []
   BulletParrent: {fileID: 6422889730410951229}
   BulletCaseParrent: {fileID: 7197346575917051144}
-  _fragSprite: {fileID: 21300000, guid: f7aa56ea8894eea49b1b94d714ef09e4, type: 3}
-  _weapons:
+  _character_Prefabs:
+  - {fileID: 6994213610445770504, guid: 0a0f94391eeabc04bb1d57d571fda20e, type: 3}
+  - {fileID: 5184761538601984074, guid: e97034d9e96b6f240a91904cd0ed8c70, type: 3}
+  _weapon_Prefabs:
   - _weapon_Prefab: {fileID: 315522073390347134, guid: 1b57bc58da8b83e42a5ac63241df1816, type: 3}
-  - _weapon_Prefab: {fileID: 1140873525885738155, guid: 22e79a94fa9fee5459c06239f10e82c6, type: 3}
   - _weapon_Prefab: {fileID: 582006340443541667, guid: d9a37fcd527e44c4e91e6513c7398138, type: 3}
-  - _weapon_Prefab: {fileID: 8864981764945690100, guid: 87e63a040a530a740bd63d706d351b86, type: 3}
+  - _weapon_Prefab: {fileID: 1140873525885738155, guid: 22e79a94fa9fee5459c06239f10e82c6, type: 3}
   - _weapon_Prefab: {fileID: 7295719118897535471, guid: ee6f482650ca7a249940844da75326dd, type: 3}
+  - _weapon_Prefab: {fileID: 8864981764945690100, guid: 87e63a040a530a740bd63d706d351b86, type: 3}
+  _fragSprite: {fileID: 21300000, guid: f7aa56ea8894eea49b1b94d714ef09e4, type: 3}
+  _grenade_Prefabs:
+  - {fileID: 2983917033844984590, guid: d4b302c24ce14914b9b9433f73bd2d3f, type: 3}
+  - {fileID: 52834420443135674, guid: f7e49178189355747a4f337fb37a0c4f, type: 3}
+  - {fileID: 8316430782400148506, guid: 3b815ab5fdbaa28489e8ebcbb53ff055, type: 3}
   _locaGameOverUI: 0
   _startHostMigration: 0
   NetworkRunnerHandler: {fileID: 0}
@@ -75,6 +82,30 @@ MonoBehaviour:
   _onUILoadout: 1
   _canDragItem: 0
   _dropItemWeapon: {fileID: 0}
+  _currentBalo:
+    Weapon_One: 9mm-Demon
+    Weapon_Two: 9mm-Demon
+    Grenade_Q: Frag-M67
+    Grenade_E: Flash-M84
+  _currentWeaponOne: 9mm-Demon
+  _cureentWeaponTwo: 9mm-Demon
+  _setupData:
+    CharacterName: Ghost
+    Balo_One:
+      Weapon_One: 9mm-Demon
+      Weapon_Two: 9mm-Demon
+      Grenade_Q: Frag-M67
+      Grenade_E: Flash-M84
+    Balo_Two:
+      Weapon_One: 9mm-Demon
+      Weapon_Two: 9mm-Demon
+      Grenade_Q: Frag-M67
+      Grenade_E: Flash-M84
+    Balo_Three:
+      Weapon_One: 9mm-Demon
+      Weapon_Two: 9mm-Demon
+      Grenade_Q: Frag-M67
+      Grenade_E: Flash-M84
 --- !u!1 &7688674044103331393
 GameObject:
   m_ObjectHideFlags: 0

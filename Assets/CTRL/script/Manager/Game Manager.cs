@@ -45,17 +45,23 @@ public class GameManager : MonoBehaviour
     [TabGroup("GameManager", "Player Settings")]
     public List<NShootHandler> PlayerList = new List<NShootHandler>();
 
-    [TabGroup("GameManager", "Weapon")] 
+    [TabGroup("GameManager", "Player")] 
     public Transform BulletParrent;
 
-    [TabGroup("GameManager", "Weapon")] 
+    [TabGroup("GameManager", "Player")] 
     public Transform BulletCaseParrent;
+
+    [TabGroup("GameManager", "Player")] 
+    [SerializeField] private NPlayer[] _character_Prefabs;
     
-    [TabGroup("GameManager", "Weapon")] 
+    [TabGroup("GameManager", "Player")]
+    [SerializeField] private WeaponInfo[] _weapon_Prefabs;
+
+    [FoldoutGroup("GameManager/Player/Grenade")] 
     [SerializeField] private Sprite _fragSprite;
     
-    [TabGroup("GameManager", "Weapon")]
-    [SerializeField] private WeaponInfo[] _weapons;
+    [FoldoutGroup("GameManager/Player/Grenade")] 
+    [SerializeField] private GrenadeHandler[] _grenade_Prefabs;
     
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Runtime")]
@@ -94,24 +100,31 @@ public class GameManager : MonoBehaviour
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Runtime")]
     [SerializeField] private DropItemWeapon _dropItemWeapon;
-    
-    [Header("Current Balo")]
-    [Sirenix.OdinInspector.ReadOnly]
-    [TabGroup("GameManager", "Runtime")]
-    [SerializeField] private string _weaponOne;
-    
-    [Sirenix.OdinInspector.ReadOnly]
-    [TabGroup("GameManager", "Runtime")]
-    [SerializeField] private string _weaponTwo;
-    
-    [Header("Current Weapon")]
-    [Sirenix.OdinInspector.ReadOnly]
-    [TabGroup("GameManager", "Runtime")]
-    [SerializeField] private string _currentWeaponOne;
+
+    [Header("Current Balo")] 
+    [Sirenix.OdinInspector.ReadOnly] 
+    [TabGroup("GameManager", "Runtime")] 
+    [SerializeField] private BaloData _currentBalo = new BaloData(
+        WeaponID._9MM_DEMON, WeaponID._9MM_DEMON, WeaponID._FRAG_M67, WeaponID._FLASH_M84
+        );
+
+    [Header("Current Weapon")] 
+    [Sirenix.OdinInspector.ReadOnly] 
+    [TabGroup("GameManager", "Runtime")] 
+    [SerializeField] private string _currentWeaponOne = WeaponID._9MM_DEMON;
     
     [Sirenix.OdinInspector.ReadOnly]
     [TabGroup("GameManager", "Runtime")]
-    [SerializeField] private string _cureentWeaponTwo;
+    [SerializeField] private string _cureentWeaponTwo = WeaponID._9MM_DEMON;
+
+    [Header("Current Loadout")] [Sirenix.OdinInspector.ReadOnly] 
+    [TabGroup("GameManager", "Runtime")] 
+    [SerializeField] private GamePlaySetupData _setupData = new GamePlaySetupData(
+        CharacterName._GHOST,
+        new BaloData(WeaponID._9MM_DEMON, WeaponID._9MM_DEMON, WeaponID._FRAG_M67, WeaponID._FLASH_M84),
+        new BaloData(WeaponID._9MM_DEMON, WeaponID._9MM_DEMON, WeaponID._FRAG_M67, WeaponID._FLASH_M84),
+        new BaloData(WeaponID._9MM_DEMON, WeaponID._9MM_DEMON, WeaponID._FRAG_M67, WeaponID._FLASH_M84)
+        );
     
     private byte[] connectionToken;
 
@@ -221,8 +234,36 @@ public class GameManager : MonoBehaviour
     public bool OnUI() => _onUIOption || _onUIChatBox || _onUILoadout;
 
     public void SetConnectionToken(byte[] token) => connectionToken = token;
-    
-    public byte[] GetConnectionToken() => connectionToken;
+
+    // ✅ Trả về đúng 16 byte identity gốc (không kèm payload loadout).
+    // Dùng để đăng ký danh tính (Rpc_RegisterToken) - nơi cần length == 16 chính xác.
+    // BuildConnectionToken() ở dưới trả về 16 byte này + payload nên length luôn > 16
+    // và không dùng được cho mục đích identity.
+    public byte[] GetIdentityToken() => connectionToken;
+
+    public byte[] BuildConnectionToken()
+    {
+        using var ms = new System.IO.MemoryStream();
+        using var bw = new System.IO.BinaryWriter(ms);
+
+        bw.Write(connectionToken); // 16 byte identity gốc, không đổi
+
+        WriteStr(bw, _setupData.CharacterName);
+        WriteStr(bw, _setupData.Balo_One.Weapon_One);
+        WriteStr(bw, _setupData.Balo_One.Weapon_Two);
+        WriteStr(bw, _setupData.Balo_One.Grenade_Q);
+        WriteStr(bw, _setupData.Balo_One.Grenade_E);
+
+        return ms.ToArray();
+    }
+
+    private static void WriteStr(System.IO.BinaryWriter bw, string s)
+    {
+        s ??= "";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(s);
+        bw.Write((byte)Mathf.Min(bytes.Length, 255));
+        bw.Write(bytes, 0, Mathf.Min(bytes.Length, 255));
+    }
 
     public GamePlayMode GetGamePlayMode() => _gamePlayMode;
     
@@ -235,12 +276,14 @@ public class GameManager : MonoBehaviour
     public DropItemWeapon GetDropItemWeapon => _dropItemWeapon;
     public void SetDropItemWeapon(DropItemWeapon item) => _dropItemWeapon = item;
     
-    public void setCurrentBalo(string weaponOne, string weaponTwo)
+    public GamePlaySetupData GetSetupData() => _setupData;
+    public void SetSetupData(GamePlaySetupData setupData) => _setupData = setupData;
+    
+    public void setCurrentBalo(BaloData data)
     {
-        _weaponOne = weaponOne;
-        _currentWeaponOne = _weaponOne;
-        _weaponTwo = weaponTwo;
-        _cureentWeaponTwo = _weaponTwo;
+        _currentBalo = data;
+        _currentWeaponOne = _currentBalo.Weapon_One;
+        _cureentWeaponTwo = _currentBalo.Weapon_Two;
     }
 
     public void SetCurrentWeapon(int index, string name)
@@ -255,14 +298,20 @@ public class GameManager : MonoBehaviour
     public (bool, string, string) GetCurrentBalo()
     {
         bool change = false;
-        if (_weaponOne != _currentWeaponOne || _weaponTwo != _cureentWeaponTwo)
+
+        if (!_currentWeaponOne.IsNullOrEmpty() && _currentBalo.Weapon_One != _currentWeaponOne)
         {
             change = true;
-            _currentWeaponOne = _weaponOne;
-            _cureentWeaponTwo = _weaponTwo;
+            _currentWeaponOne = _currentBalo.Weapon_One;
+        }
+        
+        if (!_cureentWeaponTwo.IsNullOrEmpty() && _currentBalo.Weapon_Two != _cureentWeaponTwo)
+        {
+            change = true;
+            _cureentWeaponTwo = _currentBalo.Weapon_Two;
         }
 
-        return (change, _weaponOne, _weaponTwo);
+        return (change, _currentBalo.Weapon_One, _currentBalo.Weapon_Two);
     }
 
     private void SetMouseVisible(bool state = false)
@@ -305,41 +354,67 @@ public class GameManager : MonoBehaviour
         SetMouseVisible(true);
     }
 
-    public GameObject GetWeapon(string name)
+    public GameObject GetWeapon(string ID)
     {
-        if (name.IsNullOrEmpty()) return null;
+        if (ID.IsNullOrEmpty()) return null;
         
-        if (_weapons == null || _weapons.Length == 0) return null;
-        foreach (var weapon in _weapons)
-            if (weapon.Name().Contains(name))
+        if (_weapon_Prefabs == null || _weapon_Prefabs.Length == 0) return null;
+        foreach (var weapon in _weapon_Prefabs)
+            if (weapon.ID().Contains(ID))
                 return weapon.Weapon;
         return null;
     }
 
-    public Sprite GetWeaponIcon(string name)
+    public Sprite GetWeaponIcon(string ID)
     {
-        if (name == "Frag")
+        if (ID == "Frag")
             return _fragSprite;
         
-        foreach (var weapon in _weapons)
+        foreach (var weapon in _weapon_Prefabs)
         {
-            if (weapon.Name().Contains(name))
+            if (weapon.ID().Contains(ID))
                 return weapon.Icon();
         }
         
         return null;
     }
 
-    public WeaponData GetWeaponData(string name)
+    public WeaponData GetWeaponData(string ID)
     {
-        foreach (var weapon in _weapons)
+        foreach (var weapon in _weapon_Prefabs)
         {
-            if (weapon.Name().Contains(name))
+            if (weapon.ID().Contains(ID))
                 return weapon.Data();
         }
         
         return null;
     }
+
+    public WeaponInfo[] GetWeaponDataList() => _weapon_Prefabs;
+
+    public GrenadeHandler GetGrenade(string name)
+    {
+        foreach (var gre in _grenade_Prefabs)
+        {
+            if (gre.ID.Contains(name))
+                return gre;
+        }
+        return null;
+    }
+    
+    public GrenadeHandler[]  GetGrenadeList() => _grenade_Prefabs;
+
+    public NPlayer GetCharacter(string name)
+    {
+        foreach (var character in _character_Prefabs)
+        {
+            if (character.Name.Contains(name))
+                return character;
+        }
+        return null;
+    }
+    
+    public NPlayer[] GetCharacterList() => _character_Prefabs;
 }
 
 public struct KillInfo
@@ -382,6 +457,13 @@ public struct WeaponInfo
         var data = ctrl.Data;
         return data.WeaponName;
     }
+    
+    public string ID()
+    {
+        var ctrl = _weapon_Prefab.GetComponent<WeaponController>();
+        var data = ctrl.Data;
+        return data.ID;
+    }
 
     public Sprite Icon()
     {
@@ -394,5 +476,22 @@ public struct WeaponInfo
     {
         var ctrl = _weapon_Prefab.GetComponent<WeaponController>();
         return ctrl.Data;
+    }
+}
+
+[System.Serializable]
+public struct GamePlaySetupData
+{
+    public string CharacterName;
+    public BaloData Balo_One;
+    public BaloData Balo_Two;
+    public BaloData Balo_Three;
+
+    public GamePlaySetupData(string charName, BaloData one, BaloData two, BaloData three)
+    {
+        CharacterName = charName;
+        Balo_One = one;
+        Balo_Two = two;
+        Balo_Three = three;
     }
 }

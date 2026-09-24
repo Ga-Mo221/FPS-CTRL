@@ -6,6 +6,20 @@ using UnityEngine;
 
 public class GrenadeHandler : NetworkBehaviour
 {
+    [TabGroup("Info", "Info")] 
+    [HorizontalGroup("Info/Info/Info", width: 0.2f)]
+    [PreviewField(50, ObjectFieldAlignment.Left)]
+    [HideLabel]
+    public Sprite Icon;
+    
+    [HorizontalGroup("Info/Info/Info")]
+    [VerticalGroup("Info/Info/Info/Info")]
+    public string ID;
+
+    [VerticalGroup("Info/Info/Info/Info")]
+    public string Name;
+    
+    [VerticalGroup("Info/Info/Info/Info")]
     [SerializeField] private GrenadeType _grenadeType;
 
     [TabGroup("Grenade", "Setiing")] 

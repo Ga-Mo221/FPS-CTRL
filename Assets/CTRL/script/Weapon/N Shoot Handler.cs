@@ -5,8 +5,8 @@ using UnityEngine;
 [DefaultExecutionOrder(25)] // sau NCharMovementHandler (20)
 public class NShootHandler : NetworkBehaviour
 {
-    [SerializeField] private GrenadeHandler _fragPrefab;
-    [SerializeField] private GrenadeHandler _flashPrefab;
+    private string _grenadeQ = WeaponID._FRAG_M67;
+    private string _grenadeE = WeaponID._FLASH_M84;
     [SerializeField] private Transform _throwPointRight;
     [SerializeField] private Transform _throwPointLeft;
     [Tooltip("lực ném")]
@@ -115,6 +115,12 @@ public class NShootHandler : NetworkBehaviour
     }
 
     public int GetDeathCount() => _nHPHandler.DeadCount;
+
+    public void SetGrenade(string grenade1, string grenade2)
+    {
+        _grenadeQ = grenade1;
+        _grenadeE = grenade2;
+    }
 
     // ── Simulation ─────────────────────────────────────────────────────────
     public override void FixedUpdateNetwork()
@@ -917,29 +923,16 @@ public class NShootHandler : NetworkBehaviour
     }
 
     // ── Grenade ───────────────────────────────────────────────────────────
-    public void ThrowFrag()
+    public void ThrowGrenade(bool Q)
     {
         if (!Object.HasStateAuthority) return;
+        var gm = GameManager.Instance;
+        if (gm == null) return;
 
-        Runner.Spawn(_fragPrefab, _throwPointRight.position + _aimForward, Quaternion.LookRotation(_aimForward),
-            Object.InputAuthority,
-            (runner, spawnedGrenade) =>
-            {
-                spawnedGrenade.GetComponent<GrenadeHandler>().Throw(
-                    _aimForward * _fore,
-                    Object.InputAuthority,
-                    nPlayer.Nickname.ToString(),
-                    _hitMask,
-                    Object.Id,
-                    this);
-            });
-    }
+        var grenade = Q ? gm.GetGrenade(_grenadeQ) : gm.GetGrenade(_grenadeE);
+        if (grenade == null) return;
 
-    public void ThrowFlash()
-    {
-        if (!Object.HasStateAuthority) return;
-
-        Runner.Spawn(_flashPrefab, _throwPointLeft.position + _aimForward, Quaternion.LookRotation(_aimForward),
+        Runner.Spawn(grenade, _throwPointRight.position + _aimForward, Quaternion.LookRotation(_aimForward),
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
             {

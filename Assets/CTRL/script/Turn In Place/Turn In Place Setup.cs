@@ -6,6 +6,7 @@ public static class TurnInPlaceSetup
     public static void Setup
     (
         Transform parrent,
+        Transform root,
         ref FlowerSetup flowerSetup_L,
         ref FlowerSetup flowerSetup_R
         )
@@ -13,13 +14,14 @@ public static class TurnInPlaceSetup
         GameObject LegTurn = new GameObject("Turn In Place Setup");
         LegTurn.transform.SetParent(parrent);
         
-        createIK(LegTurn.transform, "IK Leg Left", flowerSetup_L);
-        createIK(LegTurn.transform, "IK Leg Right", flowerSetup_R);
+        createIK(LegTurn.transform, root, "IK Leg Left", flowerSetup_L);
+        createIK(LegTurn.transform, root, "IK Leg Right", flowerSetup_R);
     }
 
     public static void createIK
     (
         Transform parrent,
+        Transform root,
         string name,
         FlowerSetup flowerSetup
         )
@@ -54,5 +56,17 @@ public static class TurnInPlaceSetup
         
         flowerSetup.Owner = Owner.transform;
         flowerSetup.Target = Target.transform;
+
+        // Chụp offset của Target so với root NGAY sau khi tạo (hierarchy này
+        // static sau setup, offset không đổi theo thời gian). Dùng để tính lại
+        // world-pose ổn định ở runtime (xem MoveAndRotate.GetStableTargetPose)
+        // thay vì đọc Target.transform sống — vì Target nằm dưới root network,
+        // world rotation của nó bị "rung" theo root mỗi khi AccumulateYaw()
+        // snap thô rồi Render() lại smooth về trong cùng 1 frame.
+        if (root != null)
+        {
+            flowerSetup.TargetLocalOffsetPos = root.InverseTransformPoint(Target.transform.position);
+            flowerSetup.TargetLocalOffsetRot = Quaternion.Inverse(root.rotation) * Target.transform.rotation;
+        }
     }
 }

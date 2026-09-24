@@ -6,6 +6,7 @@ public class UIMainMenuHandler : MonoBehaviour
 {
     [SerializeField] private CanvasGroup _playerDetaisPanel;
     [SerializeField] private CanvasGroup _sessionListPanel;
+    [SerializeField] private CanvasGroup _setupPanel;
     [SerializeField] private CanvasGroup _createSessionPanel;
     [SerializeField] private GameObject _statusPanel;
     
@@ -47,6 +48,7 @@ public class UIMainMenuHandler : MonoBehaviour
         DisplayPanel(_playerDetaisPanel, 0);
         DisplayPanel(_sessionListPanel,0);
         DisplayPanel(_createSessionPanel,0);
+        DisplayPanel(_setupPanel,0);
         _statusPanel?.SetActive(false);
     }
 
@@ -150,6 +152,12 @@ public class UIMainMenuHandler : MonoBehaviour
         {
             HideAllPanels();
             DisplayPanel(_sessionListPanel, 1);
+        }
+
+        if (index == 2)
+        {
+            HideAllPanels();
+            DisplayPanel(_setupPanel, 1);
         }
     }
 

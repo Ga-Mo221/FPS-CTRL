@@ -50,7 +50,7 @@ public class NetworkRunnerHandler : MonoBehaviour
                     GameMode.AutoHostOrClient,
                     "TestRoom",
                     "OurLobbyID",
-                    GameManager.Instance.GetConnectionToken(),
+                    GameManager.Instance.BuildConnectionToken(),
                     NetAddress.Any(),
                     scene
                 );
@@ -122,7 +122,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             SceneManager = sceneManager,
             HostMigrationToken = hostMigrationToken,
             HostMigrationResume = HostMigrationResume,
-            ConnectionToken = GameManager.Instance.GetConnectionToken(),
+            ConnectionToken = GameManager.Instance.BuildConnectionToken(),
             Scene = _lastSceneRef
         });
     }
@@ -333,7 +333,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             GameMode.AutoHostOrClient,
             sessionName,
             lobbyName,
-            GameManager.Instance.GetConnectionToken(),
+            GameManager.Instance.BuildConnectionToken(),
             NetAddress.Any(),
             sceneRef
         );
@@ -351,7 +351,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             GameMode.AutoHostOrClient,
             sessionInfo.Name,
             lobbyName,
-            GameManager.Instance.GetConnectionToken(),
+            GameManager.Instance.BuildConnectionToken(),
             NetAddress.Any(),
             SceneRef.None
         );
