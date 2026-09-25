@@ -73,10 +73,13 @@ namespace GaMo.BlenderEditorTools
         private SerializedProperty rootBoneProp;
         private SerializedProperty bonesProp;
         private SerializedProperty showProp;
+        private SerializedProperty boneAxisProp;
 
         // Properties - Bone Settings
         private SerializedProperty boneColorProp;
-        private SerializedProperty boneSizeProp;
+        private SerializedProperty boneLengthProp;
+        private SerializedProperty boneRadiusProp;
+        private SerializedProperty pingInHierarchyProp;
 
         // Properties - Joint Settings
         private SerializedProperty drawJointsProp;
@@ -94,9 +97,12 @@ namespace GaMo.BlenderEditorTools
             rootBoneProp = serializedObject.FindProperty("rootBone");
             bonesProp = serializedObject.FindProperty("bones");
             showProp = serializedObject.FindProperty("show");
+            boneAxisProp = serializedObject.FindProperty("boneAxis");
 
             boneColorProp = serializedObject.FindProperty("boneColor");
-            boneSizeProp = serializedObject.FindProperty("boneSize");
+            boneLengthProp = serializedObject.FindProperty("boneLength");
+            boneRadiusProp = serializedObject.FindProperty("boneRadius");
+            pingInHierarchyProp = serializedObject.FindProperty("pingInHierarchy");
 
             drawJointsProp = serializedObject.FindProperty("drawJoints");
             jointColorProp = serializedObject.FindProperty("jointColor");
@@ -208,6 +214,10 @@ namespace GaMo.BlenderEditorTools
                 SceneView.RepaintAll(); // cập nhật Scene view ngay, không chờ event kế tiếp
             }
 
+            // 3 nút X / Y / Z nằm thẳng hàng ngay dưới nút Show: chọn trục cục bộ để vẽ xương.
+            EditorGUILayout.Space(3);
+            DrawAxisButtons();
+
             EditorGUILayout.Space(3);
             currentTab = DrawWrappedToolbar(currentTab, tabTitles);
             EditorGUILayout.Space(10);
@@ -224,6 +234,37 @@ namespace GaMo.BlenderEditorTools
 
             EditorGUILayout.Space(5);
             serializedObject.ApplyModifiedProperties();
+        }
+
+        /// <summary>
+        /// 3 nút X / Y / Z cùng một hàng, hoạt động như radio: đúng 1 nút được nhấn tại một thời điểm.
+        /// Dùng cùng style "Button" với nút Show để nhìn đồng bộ.
+        /// </summary>
+        private void DrawAxisButtons()
+        {
+            int current = boneAxisProp.enumValueIndex;
+            int selected = current;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                for (int i = 0; i < Content.AxisLabels.Length; i++)
+                {
+                    bool isSelected = (current == i);
+                    bool clicked = GUILayout.Toggle(isSelected, Content.AxisLabels[i],
+                        "Button", GUILayout.Height(22), GUILayout.ExpandWidth(true));
+
+                    // Bấm lại nút đang chọn thì giữ nguyên (không cho bỏ chọn hết).
+                    if (clicked && !isSelected)
+                        selected = i;
+                }
+            }
+
+            if (selected != current)
+            {
+                boneAxisProp.enumValueIndex = selected;
+                serializedObject.ApplyModifiedProperties();
+                SceneView.RepaintAll();
+            }
         }
 
         private void DrawSetupTab(SimpleBoneRenderer boneRenderer)
@@ -254,7 +295,9 @@ namespace GaMo.BlenderEditorTools
             EditorGUILayout.LabelField("Bone Settings", EditorStyles.boldLabel);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.PropertyField(boneColorProp, Content.BoneColor);
-            EditorGUILayout.PropertyField(boneSizeProp, Content.BoneSize);
+            EditorGUILayout.PropertyField(boneLengthProp, Content.BoneLength);
+            EditorGUILayout.PropertyField(boneRadiusProp, Content.BoneRadius);
+            EditorGUILayout.PropertyField(pingInHierarchyProp, Content.PingInHierarchy);
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space(6);
@@ -264,13 +307,11 @@ namespace GaMo.BlenderEditorTools
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.PropertyField(drawJointsProp, Content.DrawJoints);
 
-            EditorGUI.BeginDisabledGroup(!drawJointsProp.boolValue);
-            {
-                EditorGUILayout.Space(5);
-                EditorGUILayout.PropertyField(jointColorProp, Content.JointColor);
-                EditorGUILayout.PropertyField(jointFontSizeProp, Content.FontSize);
-            }
-            EditorGUI.EndDisabledGroup();
+            // Không disable theo Draw Joints: màu/cỡ chữ này còn áp dụng cho tên của bone đang
+            // được chọn khi Draw Joints tắt.
+            EditorGUILayout.Space(5);
+            EditorGUILayout.PropertyField(jointColorProp, Content.JointColor);
+            EditorGUILayout.PropertyField(jointFontSizeProp, Content.FontSize);
             EditorGUILayout.EndVertical();
         }
 
@@ -289,9 +330,22 @@ namespace GaMo.BlenderEditorTools
                 "Đang hiển thị khung xương trong Scene view. Nhấn để ẩn.");
             public static readonly GUIContent Hide = new GUIContent("Hide",
                 "Đang ẩn khung xương trong Scene view. Nhấn để hiện.");
+            // Thứ tự phải khớp với enum BoneAxis (X = 0, Y = 1, Z = 2).
+            public static readonly GUIContent[] AxisLabels =
+            {
+                new GUIContent("X", "Vẽ xương dọc theo trục X cục bộ của bone."),
+                new GUIContent("Y", "Vẽ xương dọc theo trục Y cục bộ của bone (mặc định, kiểu Blender)."),
+                new GUIContent("Z", "Vẽ xương dọc theo trục Z cục bộ của bone.")
+            };
             public static readonly GUIContent Bones = new GUIContent("Bones");
             public static readonly GUIContent BoneColor = new GUIContent("Bone Color");
-            public static readonly GUIContent BoneSize = new GUIContent("Bone Size");
+            public static readonly GUIContent BoneLength = new GUIContent("Bone Length",
+                "Chiều dài mặc định của xương không có xương con nối tiếp (connected). " +
+                "Xương có con connected thì chiều dài lấy theo vị trí xương con.");
+            public static readonly GUIContent BoneRadius = new GUIContent("Bone Radius",
+                "Bán kính phần đế của xương (world unit), độc lập với chiều dài.");
+            public static readonly GUIContent PingInHierarchy = new GUIContent("Ping In Hierarchy",
+                "Khi click chọn bone trong Scene view, đồng thời hiển thị (ping) bone đó trong cửa sổ Hierarchy.");
             public static readonly GUIContent DrawJoints = new GUIContent("Draw Joints");
             public static readonly GUIContent JointColor = new GUIContent("Joint Color");
             public static readonly GUIContent FontSize = new GUIContent("Font Size",
@@ -299,19 +353,19 @@ namespace GaMo.BlenderEditorTools
         }
 
         // --- Dung sai xác định xương con có "connect" với xương cha hay không ---
-        // Xương con được coi là nối (connected) khi gốc của nó nằm trên trục Y của xương cha
-        // (phía trước, theo chiều +Y). Lệch trục quá dung sai -> xương con chỉ là "offset",
-        // không nối với cha. Dung sai = max(tuyệt đối, tỉ lệ * chiều dài đoạn dọc trục Y) để
+        // Xương con được coi là nối (connected) khi gốc của nó nằm trên trục đã chọn (X/Y/Z)
+        // của xương cha (phía trước, theo chiều dương của trục). Lệch trục quá dung sai -> xương
+        // con chỉ là "offset", không nối với cha.
+        // Dung sai = max(tuyệt đối, tỉ lệ * chiều dài đoạn dọc trục đã chọn) để
         // chịu được sai số float khi import từ Blender/FBX, mà vẫn đúng với xương nhỏ hay lớn.
         private const float ConnectMinAlong = 0.0001f;      // dưới mức này coi như trùng gốc
         private const float ConnectAbsTolerance = 0.0001f;  // sai số lệch trục tối thiểu (world unit)
         private const float ConnectRelTolerance = 0.01f;    // 1% chiều dài (~0.6°)
 
-        // --- Danh sách khớp cần vẽ dạng GUI Button (thay cho Handles.Button hình cầu) ---
-        // Handles.Button là handle 3D, hit-test của nó tranh chấp trực tiếp với gizmo
-        // Move/Rotate/Scale mặc định của Unity khi cùng nằm ở 1 vị trí trong màn hình,
-        // khiến gizmo bị "nuốt" click. Chuyển sang GUI.Button (vẽ ở không gian màn hình,
-        // trong Handles.BeginGUI/EndGUI) để tách biệt hoàn toàn với hit-test 3D của gizmo.
+        // --- Danh sách label tên xương (chỉ để HIỂN THỊ) ---
+        // Việc click chọn bone do HandleBonePicking (GetControlID + AddControl) đảm nhận, không
+        // phụ thuộc label. Label được gom ở đây rồi vẽ bằng GUI.Label ở pass GUI riêng
+        // (Handles.BeginGUI/EndGUI, không gian màn hình) và không bắt chuột.
         private struct JointGuiInfo
         {
             public Vector3 worldPos;
@@ -346,10 +400,43 @@ namespace GaMo.BlenderEditorTools
             return entry;
         }
 
-        // Handles.Draw* chỉ có tác dụng ở event Repaint. Các event khác (Layout, MouseMove,
-        // MouseDown...) vẫn cần gom danh sách label cho GUI.Button nhưng không cần tính hình
-        // học để vẽ thân xương -> bỏ qua phần đó ở các event này.
+        // Handles.Draw* và GUI.Label chỉ có tác dụng ở event Repaint. Các event khác (Layout,
+        // MouseMove, MouseDown...) chỉ cần chạy picking (HandleBonePicking) nên bỏ qua việc
+        // vẽ thân xương và gom label ở các event đó.
         private static bool _isRepaint;
+
+        // --- Cache hình học xương giữa Layout và Repaint ---
+        // IMGUI luôn gửi Layout rồi mới tới Repaint (hoặc event khác) trong cùng 1 lượt OnGUI.
+        // Hình học (start/end) chỉ tính ở Layout, Repaint đọc lại theo thứ tự "slot" (mỗi
+        // GetControlID = 1 slot) thay vì tính lần 2. Các event khác (MouseMove/Down/Up/Drag...)
+        // không cần hình học nên bỏ qua hoàn toàn.
+        private struct BoneSegment
+        {
+            public Transform bone; // dùng để kiểm chứng slot còn khớp bone hay không
+            public Vector3 start;
+            public Vector3 end;
+        }
+
+        private static readonly List<BoneSegment> _segments = new List<BoneSegment>(64);
+        private static int _segCursor;
+
+        // nearestControl / hotControl chỉ đọc 1 lần mỗi lần callback thay vì mỗi bone.
+        private static int _nearestControl;
+        private static int _hotControl;
+
+        // --- Picking bằng HandleUtility (cơ chế chọn của Scene view) ---
+        // Mỗi bone đăng ký 1 control (AddControl) với khoảng cách từ chuột tới đoạn xương.
+        // Unity chọn control có khoảng cách nhỏ nhất -> nearestControl. Cùng hệ thống với gizmo
+        // Move/Rotate nên không còn "tranh click" như GUI.Button.
+        private static readonly int BonePickHint = "GaMo.SimpleBoneRenderer.Pick".GetHashCode();
+
+        // Cộng thêm vài pixel vào khoảng cách của bone: khi đường xương trùng với tay gizmo
+        // (cùng khoảng cách 0) thì gizmo luôn thắng, bone chỉ thắng khi chuột ở ngoài gizmo.
+        private const float PickBias = 1f;
+
+        // Control của bone đang được rê chuột tới (0 = không có) — để chỉ Repaint khi đổi hover.
+        private static int _hoverControl;
+        private static readonly Color HoverColor = new Color(1f, 0.85f, 0.2f);
 
         private static void OnGlobalSceneGUI(SceneView sceneView)
         {
@@ -357,14 +444,25 @@ namespace GaMo.BlenderEditorTools
             if (renderers == null || renderers.Length == 0) return;
 
             Matrix4x4 originalMatrix = Handles.matrix;
-            _isRepaint = Event.current.type == EventType.Repaint;
+
+            EventType evType = Event.current.type;
+            _isRepaint = evType == EventType.Repaint;
+            bool isLayout = evType == EventType.Layout;
+
+            // Chỉ Layout (AddControl cần khoảng cách) và Repaint (vẽ) mới cần start/end.
+            bool needGeometry = isLayout || _isRepaint;
+
+            if (isLayout) _segments.Clear();
+            _segCursor = 0;
+
+            _nearestControl = HandleUtility.nearestControl;
+            _hotControl = GUIUtility.hotControl;
 
             // Cache một lần bên ngoài vòng lặp kép; truy cập Selection.activeTransform
             // mỗi xương mỗi frame tốn không đáng.
             Transform selectedTransform = Selection.activeTransform;
 
-            // Gom danh sách khớp cần vẽ button ở pass GUI riêng, thay vì vẽ Handles.Button
-            // ngay trong vòng lặp 3D — xem giải thích ở khai báo _reusableJointInfos.
+            // Gom danh sách label tên xương để vẽ ở pass GUI riêng — xem _reusableJointInfos.
             _reusableJointInfos.Clear();
 
             // true nếu đối tượng đang chọn là 1 bone thuộc bất kỳ SimpleBoneRenderer nào.
@@ -389,48 +487,47 @@ namespace GaMo.BlenderEditorTools
 
                 for (int i = 0; i < bones.Count; i++)
                 {
+                    // GetControlID PHẢI được gọi cho mọi phần tử ở mọi event, theo cùng thứ tự
+                    // (kể cả bone null bị bỏ qua bên dưới), để ID của từng bone ổn định giữa
+                    // Layout / MouseDown / Repaint. Vì vậy đặt nó TRƯỚC mọi lệnh continue.
+                    int controlID = GUIUtility.GetControlID(BonePickHint, FocusType.Passive);
+
                     Transform bone = bones[i];
-                    if (bone == null) continue;
+                    int slot = _segCursor++;
 
-                    // Mỗi xương là MỘT đoạn đi dọc trục Y cục bộ của chính nó (kiểu Blender).
-                    // Tail = gốc của xương con gần nhất mà nằm đúng trên trục Y đó (connected).
-                    // Xương con lệch trục chỉ là offset: KHÔNG kéo xương cha tới nó; xương cha
-                    // dùng chiều dài mặc định, còn xương con tự vẽ đoạn của riêng nó.
-                    Vector3 start = bone.position;
-                    Vector3 axis = bone.up;
-
-                    bool hasConnectedChild = false;
-                    float nearestAlong = float.MaxValue;
-                    Vector3 connectedTail = start;
-
-                    // Không dùng foreach trên Transform: nó cấp phát 1 enumerator mỗi lần gọi.
-                    int childCount = bone.childCount;
-                    for (int c = 0; c < childCount; c++)
+                    if (bone == null)
                     {
-                        Transform child = bone.GetChild(c);
-                        if (!boneSet.Contains(child)) continue;
-
-                        Vector3 toChild = child.position - start;
-                        float along = Vector3.Dot(toChild, axis);
-                        if (along <= ConnectMinAlong) continue; // nằm sau/trùng gốc -> không nối
-
-                        Vector3 perpendicular = toChild - axis * along;
-                        float tolerance = Mathf.Max(ConnectAbsTolerance, along * ConnectRelTolerance);
-                        if (perpendicular.sqrMagnitude > tolerance * tolerance) continue; // lệch trục -> offset
-
-                        if (along < nearestAlong)
-                        {
-                            nearestAlong = along;
-                            connectedTail = child.position;
-                            hasConnectedChild = true;
-                        }
+                        // Giữ slot đồng bộ giữa Layout và Repaint dù bone null.
+                        if (isLayout) _segments.Add(default);
+                        continue;
                     }
 
-                    Vector3 end = hasConnectedChild
-                        ? connectedTail
-                        : start + axis * (boneRenderer.boneSize * 2.5f);
+                    // MouseMove/MouseDown/MouseUp/MouseDrag...: picking chỉ cần controlID và
+                    // nearestControl, không cần start/end -> bỏ qua toàn bộ phần tính hình học.
+                    if (!needGeometry)
+                    {
+                        HandleBonePicking(bone, default, default, controlID, boneRenderer.pingInHierarchy);
+                        continue;
+                    }
 
-                    ProcessBone(boneRenderer, bone, start, end, selectedTransform);
+                    Vector3 start, end;
+                    if (_isRepaint && slot < _segments.Count && ReferenceEquals(_segments[slot].bone, bone))
+                    {
+                        // Dùng lại kết quả đã tính ở Layout cùng lượt OnGUI.
+                        BoneSegment seg = _segments[slot];
+                        start = seg.start;
+                        end = seg.end;
+                    }
+                    else
+                    {
+                        // Layout, hoặc Repaint không khớp cache (fallback an toàn).
+                        ComputeBoneSegment(boneRenderer, bone, boneSet, out start, out end);
+                    }
+
+                    if (isLayout)
+                        _segments.Add(new BoneSegment { bone = bone, start = start, end = end });
+
+                    ProcessBone(boneRenderer, bone, start, end, selectedTransform, controlID);
                 }
             }
 
@@ -440,22 +537,150 @@ namespace GaMo.BlenderEditorTools
             // Bỏ chọn bone (hoặc chọn đối tượng không phải bone) thì onlyBone = null -> hiện lại tất cả.
             Transform onlyBone = selectionIsBone ? selectedTransform : null;
 
-            // Pass GUI riêng, tách khỏi Handles 3D phía trên — không tranh chấp hit-test
-            // với gizmo Move/Rotate/Scale mặc định.
-            DrawJointGuiButtons(sceneView, onlyBone);
+            // Pass GUI riêng cho label tên xương (chỉ hiển thị, không bắt click).
+            DrawJointLabels(sceneView, onlyBone);
+        }
+
+        /// <summary>
+        /// Tính đoạn start-end (world space) của 1 bone.
+        /// Mỗi xương là MỘT đoạn đi dọc trục cục bộ do người dùng chọn (X/Y/Z, mặc định Y
+        /// kiểu Blender) của chính nó. Tail = gốc của xương con gần nhất nằm đúng trên trục đó
+        /// (connected). Xương con lệch trục chỉ là offset: KHÔNG kéo xương cha tới nó; xương
+        /// cha dùng chiều dài mặc định, còn xương con tự vẽ đoạn của riêng nó.
+        /// </summary>
+        private static void ComputeBoneSegment(SimpleBoneRenderer boneRenderer, Transform bone,
+            HashSet<Transform> boneSet, out Vector3 start, out Vector3 end)
+        {
+            start = bone.position;
+            Vector3 axis = GetBoneAxisDirection(bone, boneRenderer.boneAxis);
+
+            bool hasConnectedChild = false;
+            float nearestAlong = float.MaxValue;
+            Vector3 connectedTail = start;
+
+            // Không dùng foreach trên Transform: nó cấp phát 1 enumerator mỗi lần gọi.
+            int childCount = bone.childCount;
+            for (int c = 0; c < childCount; c++)
+            {
+                Transform child = bone.GetChild(c);
+                if (!boneSet.Contains(child)) continue;
+
+                Vector3 toChild = child.position - start;
+                float along = Vector3.Dot(toChild, axis);
+                if (along <= ConnectMinAlong) continue; // nằm sau/trùng gốc -> không nối
+
+                Vector3 perpendicular = toChild - axis * along;
+                float tolerance = Mathf.Max(ConnectAbsTolerance, along * ConnectRelTolerance);
+                if (perpendicular.sqrMagnitude > tolerance * tolerance) continue; // lệch trục -> offset
+
+                if (along < nearestAlong)
+                {
+                    nearestAlong = along;
+                    connectedTail = child.position;
+                    hasConnectedChild = true;
+                }
+            }
+
+            end = hasConnectedChild
+                ? connectedTail
+                : start + axis * boneRenderer.boneLength;
+        }
+
+        /// <summary>
+        /// Trả về hướng (world space) của trục cục bộ được chọn trên bone.
+        /// </summary>
+        private static Vector3 GetBoneAxisDirection(Transform bone, BoneAxis axis)
+        {
+            switch (axis)
+            {
+                case BoneAxis.X: return bone.right;
+                case BoneAxis.Z: return bone.forward;
+                default:         return bone.up; // BoneAxis.Y (mặc định)
+            }
         }
 
         private static void ProcessBone(SimpleBoneRenderer renderer, Transform bone,
-            Vector3 start, Vector3 end, Transform selectedTransform)
+            Vector3 start, Vector3 end, Transform selectedTransform, int controlID)
         {
-            if (_isRepaint)
-                Handles.color = (selectedTransform == bone) ? Color.green : renderer.boneColor;
+            // Picking chạy ở MỌI event (Layout: đăng ký control; MouseDown/Up: xử lý click).
+            HandleBonePicking(bone, start, end, controlID, renderer.pingInHierarchy);
 
-            DrawBoneGraphics(start, end, renderer, bone);
+            if (_isRepaint)
+            {
+                // Hover chỉ hiện khi không có control nào đang bị kéo (hotControl == 0),
+                // tránh sáng nhầm bone lúc người dùng đang kéo gizmo Move/Rotate.
+                bool hovered = _hotControl == 0 && _nearestControl == controlID;
+
+                if (selectedTransform == bone) Handles.color = Color.green;
+                else if (hovered) Handles.color = HoverColor;
+                else Handles.color = renderer.boneColor;
+            }
+
+            DrawBoneGraphics(start, end, renderer, bone, selectedTransform == bone);
+        }
+
+        /// <summary>
+        /// Scene View picking cho 1 bone:
+        ///  - Layout   : AddControl(id, khoảng cách pixel từ chuột tới đoạn start-end).
+        ///  - MouseDown: nếu bone này là nearestControl -> chọn nó (và ping trong Hierarchy nếu bật).
+        ///  - MouseUp  : nhả hotControl.
+        ///  - MouseMove: chỉ Repaint khi trạng thái hover của bone này đổi.
+        /// Handles.DrawLine chỉ là hình ảnh; AddControl mới là thứ cho Unity biết "có control ở đây".
+        /// </summary>
+        private static void HandleBonePicking(Transform bone, Vector3 start, Vector3 end, int controlID,
+            bool pingInHierarchy)
+        {
+            Event e = Event.current;
+
+            switch (e.GetTypeForControl(controlID))
+            {
+                case EventType.Layout:
+                    HandleUtility.AddControl(controlID,
+                        HandleUtility.DistanceToLine(start, end) + PickBias);
+                    break;
+
+                case EventType.MouseDown:
+                    // Bỏ qua Alt+click / chuột giữa / chuột phải (đang orbit, pan, fly...).
+                    if (e.button == 0 && !e.alt && !Tools.viewToolActive
+                        && GUIUtility.hotControl == 0
+                        && _nearestControl == controlID)
+                    {
+                        GUIUtility.hotControl = controlID;
+                        e.Use(); // chặn picking mặc định của Scene view (chọn mesh phía sau)
+                        Selection.activeTransform = bone;
+
+                        // Tùy chọn: cuộn/mở tới bone này trong cửa sổ Hierarchy và nháy sáng nó.
+                        if (pingInHierarchy)
+                            EditorGUIUtility.PingObject(bone);
+                    }
+                    break;
+
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == controlID)
+                    {
+                        GUIUtility.hotControl = 0;
+                        e.Use();
+                    }
+                    break;
+
+                case EventType.MouseMove:
+                    bool isNearest = _nearestControl == controlID;
+                    if (isNearest && _hoverControl != controlID)
+                    {
+                        _hoverControl = controlID;
+                        HandleUtility.Repaint();
+                    }
+                    else if (!isNearest && _hoverControl == controlID)
+                    {
+                        _hoverControl = 0;
+                        HandleUtility.Repaint();
+                    }
+                    break;
+            }
         }
 
         private static void DrawBoneGraphics(Vector3 start, Vector3 end, SimpleBoneRenderer renderer,
-            Transform bone)
+            Transform bone, bool isSelected)
         {
             Vector3 direction = end - start;
             float distance = direction.magnitude;
@@ -466,17 +691,16 @@ namespace GaMo.BlenderEditorTools
             // --- 1. VẼ THÂN XƯƠNG (chỉ ở Repaint) ---
             if (_isRepaint)
             {
-                float size = renderer.boneSize;
+                float radius = renderer.boneRadius;
                 originalColor = Handles.color;
 
                 Handles.DrawLine(start, end);
 
                 Quaternion lookRotation = Quaternion.LookRotation(direction);
-                float scaledSize = size * distance;
-                Handles.DrawWireDisc(start, direction, scaledSize);
+                Handles.DrawWireDisc(start, direction, radius);
 
-                Vector3 right = lookRotation * Vector3.right * scaledSize;
-                Vector3 up = lookRotation * Vector3.up * scaledSize;
+                Vector3 right = lookRotation * Vector3.right * radius;
+                Vector3 up = lookRotation * Vector3.up * radius;
 
                 Handles.DrawLine(start + right, end);
                 Handles.DrawLine(start - right, end);
@@ -484,11 +708,11 @@ namespace GaMo.BlenderEditorTools
                 Handles.DrawLine(start - up, end);
             }
 
-            // --- 2. GOM KHỚP ĐỂ VẼ BUTTON Ở PASS GUI RIÊNG ---
-            // Không dùng Handles.Button/SphereHandleCap nữa: chỉ enqueue vị trí + xương,
-            // việc vẽ và bắt click thực sự nằm ở DrawJointGuiButtons (không gian màn hình),
-            // nên sẽ không còn giành hit-test với gizmo Move/Rotate/Scale mặc định.
-            if (renderer.drawJoints)
+            // --- 2. GOM LABEL TÊN XƯƠNG ĐỂ VẼ Ở PASS GUI RIÊNG (chỉ ở Repaint) ---
+            // Chỉ enqueue vị trí + xương; việc vẽ nằm ở DrawJointLabels. Click chọn bone
+            // không đi qua label mà đi qua HandleBonePicking.
+            // Draw Joints tắt vẫn hiện tên của bone đang được chọn (vừa click vào).
+            if (_isRepaint && (renderer.drawJoints || isSelected))
             {
                 // Label nằm ở điểm GIỮA thân xương (mid), không phải đầu mút (tip).
                 Vector3 mid = (start + end) * 0.5f;
@@ -512,9 +736,10 @@ namespace GaMo.BlenderEditorTools
         // hình khối trên màn hình như button thường.
         private static GUIStyle _jointLabelStyle;
 
-        private static void DrawJointGuiButtons(SceneView sceneView, Transform onlyBone)
+        private static void DrawJointLabels(SceneView sceneView, Transform onlyBone)
         {
-            if (_reusableJointInfos.Count == 0) return;
+            // GUI.Label chỉ cần vẽ ở Repaint; các event khác không có gì để làm.
+            if (!_isRepaint || _reusableJointInfos.Count == 0) return;
 
             Handles.BeginGUI();
 
@@ -570,12 +795,9 @@ namespace GaMo.BlenderEditorTools
                 Vector2 size = label.size;
                 Rect rect = new Rect(guiPoint.x - size.x * 0.5f, guiPoint.y - size.y * 0.5f, size.x, size.y);
 
-                // GUI.Button với style không nền vẫn bắt click bình thường — chỉ khác là
-                // không vẽ khối nền/border, nên trực quan chỉ thấy đúng dòng chữ tên xương.
-                if (GUI.Button(rect, label.content, _jointLabelStyle))
-                {
-                    Selection.activeObject = info.bone;
-                }
+                // GUI.Label không bắt chuột -> click xuyên qua chữ, xuống control picking của bone
+                // (label nằm ngay giữa thân xương nên click vào chữ vẫn chọn được đúng bone).
+                GUI.Label(rect, label.content, _jointLabelStyle);
             }
 
             Handles.EndGUI();

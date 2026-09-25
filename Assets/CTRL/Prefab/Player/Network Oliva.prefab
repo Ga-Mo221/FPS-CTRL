@@ -10131,6 +10131,9 @@ MonoBehaviour:
   showGizmos: 1
   nodeGizmoSize: 0.03
   arrowLengthMultiplier: 5
+  enableCollisionLogging: 0
+  collisionLogCapacity: 4000
+  collisionLogFileName: DynamicBoneCollisionLog.csv
 --- !u!1 &3339634456182189208
 GameObject:
   m_ObjectHideFlags: 0
@@ -12102,6 +12105,9 @@ MonoBehaviour:
   showGizmos: 1
   nodeGizmoSize: 0.03
   arrowLengthMultiplier: 5
+  enableCollisionLogging: 0
+  collisionLogCapacity: 4000
+  collisionLogFileName: DynamicBoneCollisionLog.csv
 --- !u!1 &8819644554150518151
 GameObject:
   m_ObjectHideFlags: 0
@@ -13958,6 +13964,9 @@ MonoBehaviour:
   showGizmos: 1
   nodeGizmoSize: 0.03
   arrowLengthMultiplier: 5
+  enableCollisionLogging: 0
+  collisionLogCapacity: 4000
+  collisionLogFileName: DynamicBoneCollisionLog.csv
 --- !u!1 &142659848080545625 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: f8e7b6622210c0c47a042b7ac66848ed, type: 3}
@@ -14177,8 +14186,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d36d346a3176c8246a59aa0eea35685f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.SimpleBoneRenderer
-  rootBone: {fileID: 4206672322922721445}
+  rootBone: {fileID: 5130965628860838586}
   bones:
+  - {fileID: 4206672322922721445}
   - {fileID: 1059532175569471547}
   - {fileID: 7862612714282016450}
   - {fileID: 7911875310019688529}
@@ -14269,7 +14279,6 @@ MonoBehaviour:
   - {fileID: 2083931920908772819}
   - {fileID: 2287023099421662047}
   - {fileID: 4386988189426643130}
-  - {fileID: 9175223243367780336}
   - {fileID: 2356829817763221851}
   - {fileID: 7267124240721528331}
   - {fileID: 2917589410032877371}
@@ -14295,7 +14304,6 @@ MonoBehaviour:
   - {fileID: 3510439899661638390}
   - {fileID: 5292740580014466833}
   - {fileID: 4833875332714446818}
-  - {fileID: 4596035457323363088}
   - {fileID: 4626801013096764561}
   - {fileID: 3361634611369704655}
   - {fileID: 3509595908874409663}
@@ -14303,9 +14311,6 @@ MonoBehaviour:
   - {fileID: 3641538779451138731}
   - {fileID: 7802983855456294283}
   - {fileID: 8253445864809327255}
-  - {fileID: 7840108528365046131}
-  - {fileID: 1039056278461107838}
-  - {fileID: 3824915674379719556}
   - {fileID: 9074777210499754593}
   - {fileID: 3144384484551874677}
   - {fileID: 1568546184301239362}
@@ -14313,15 +14318,15 @@ MonoBehaviour:
   - {fileID: 2420322762032365253}
   - {fileID: 2764029945365949260}
   - {fileID: 6330329156445354472}
-  - {fileID: 5233649410697373858}
-  - {fileID: 6496763655494995943}
-  - {fileID: 9039642984974958139}
   boneColor: {r: 1, g: 0.7529413, b: 0.7960785, a: 1}
-  boneSize: 0.02
+  boneLength: 0.05
+  boneRadius: 0.01
   drawJoints: 0
   jointColor: {r: 1, g: 1, b: 1, a: 1}
-  jointFontSize: 10
-  show: 1
+  jointFontSize: 15
+  show: 0
+  boneAxis: 1
+  pingInHierarchy: 0
 --- !u!4 &171005087497130362 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8114301765223089294, guid: f8e7b6622210c0c47a042b7ac66848ed, type: 3}
@@ -15852,6 +15857,11 @@ MonoBehaviour:
   gizmoColorX: {r: 1, g: 0, b: 0, a: 1}
   gizmoColorY: {r: 0, g: 1, b: 0, a: 1}
   gizmoColorZ: {r: 0, g: 0, b: 1, a: 1}
+--- !u!4 &5130965628860838586 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3886773894996207438, guid: f8e7b6622210c0c47a042b7ac66848ed, type: 3}
+  m_PrefabInstance: {fileID: 953564316785732104}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5141045082833554317 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5360151011452281221, guid: f8e7b6622210c0c47a042b7ac66848ed, type: 3}

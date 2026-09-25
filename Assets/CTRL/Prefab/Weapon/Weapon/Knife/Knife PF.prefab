@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5847656356170707574}
   - component: {fileID: 5291386316690845630}
   - component: {fileID: 2818116090449679080}
+  - component: {fileID: 4683804010318035740}
   m_Layer: 0
   m_Name: Knife PF
   m_TagString: Untagged
@@ -64,6 +65,8 @@ MonoBehaviour:
   _sound_shoot: {fileID: 2282574190097172704}
   _sound_Slider: {fileID: 2282574190097172704}
   _bulletController: {fileID: 0}
+  _glass: {fileID: 0}
+  _zoomCamera: {fileID: 0}
   _list_Bone_Body:
   - {fileID: 142375628801783083}
   - {fileID: 6593327849896279650}
@@ -196,6 +199,80 @@ MonoBehaviour:
   debugChestRayHit: 1
   enableDebugLogs: 0
   isEnabled: 1
+--- !u!114 &4683804010318035740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 582006340443541667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d36d346a3176c8246a59aa0eea35685f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.SimpleBoneRenderer
+  rootBone: {fileID: 8449659040931506343}
+  bones:
+  - {fileID: 6688699761053737232}
+  - {fileID: 4464358461728880546}
+  - {fileID: 751296357359355187}
+  - {fileID: 3878731265504817663}
+  - {fileID: 4258523338982812239}
+  - {fileID: 5954232535688810266}
+  - {fileID: 8442537263859265978}
+  - {fileID: 4953651502001931256}
+  - {fileID: 2790992271144124056}
+  - {fileID: 8630896679104559324}
+  - {fileID: 142375628801783083}
+  - {fileID: 6593327849896279650}
+  - {fileID: 2892363836573170419}
+  - {fileID: 4998916962084769348}
+  - {fileID: 4400230922331026781}
+  - {fileID: 6580484987697721139}
+  - {fileID: 8914768403669707237}
+  - {fileID: 7654235475922509631}
+  - {fileID: 4473699591418162294}
+  - {fileID: 8657471141428309338}
+  - {fileID: 2644367072158562230}
+  - {fileID: 7516158690050255836}
+  - {fileID: 4427914190584741179}
+  - {fileID: 1722452941219511392}
+  - {fileID: 6825428798326243766}
+  - {fileID: 2534760813379870474}
+  - {fileID: 2276240235448222528}
+  - {fileID: 1441349287550875411}
+  - {fileID: 2065234205323563112}
+  - {fileID: 133632767162941806}
+  - {fileID: 2495381207720530494}
+  - {fileID: 4895420417628144079}
+  - {fileID: 7831922315912626353}
+  - {fileID: 3113260851503461250}
+  - {fileID: 6505361998274909159}
+  - {fileID: 8348945694813917035}
+  - {fileID: 2321536855042307346}
+  - {fileID: 4984294918136917260}
+  - {fileID: 4645573297674153754}
+  - {fileID: 1886506785903660989}
+  - {fileID: 8640248725361585604}
+  - {fileID: 7052684017200377240}
+  - {fileID: 7635322100883058469}
+  - {fileID: 7633889322260702211}
+  - {fileID: 8850317972274065515}
+  - {fileID: 3978109770369568362}
+  - {fileID: 3489880215611445698}
+  - {fileID: 6269239216248684645}
+  - {fileID: 4880487245453973846}
+  - {fileID: 5908672612134842179}
+  - {fileID: 1691228817110044267}
+  boneColor: {r: 1, g: 0.7529413, b: 0.7960785, a: 1}
+  boneLength: 0.05
+  boneRadius: 0.01
+  drawJoints: 0
+  jointColor: {r: 1, g: 1, b: 1, a: 1}
+  jointFontSize: 15
+  show: 0
+  boneAxis: 1
+  pingInHierarchy: 0
 --- !u!1 &2124273167687428161
 GameObject:
   m_ObjectHideFlags: 0
@@ -1473,6 +1550,11 @@ Transform:
 --- !u!4 &8442537263859265978 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -3016222719572411847, guid: e1707ada8d034f744b9b405d7fed067b, type: 3}
+  m_PrefabInstance: {fileID: 2525907529833646979}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8449659040931506343 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3004204816686914780, guid: e1707ada8d034f744b9b405d7fed067b, type: 3}
   m_PrefabInstance: {fileID: 2525907529833646979}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &8630896679104559324 stripped
