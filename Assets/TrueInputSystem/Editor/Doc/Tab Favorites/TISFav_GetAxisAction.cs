@@ -3,7 +3,7 @@
 //  Favorites Sub-Tab Module: GetAxisAction
 // ============================================================
 #if UNITY_EDITOR
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public class TISFav_GetAxisAction : IFavSubTabModule
     {

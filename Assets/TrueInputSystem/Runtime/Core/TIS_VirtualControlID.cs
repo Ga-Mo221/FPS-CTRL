@@ -1,4 +1,4 @@
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Tập hợp hằng số string dùng làm ID cho mobile binding.

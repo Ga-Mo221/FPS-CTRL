@@ -11,13 +11,14 @@
 // ============================================================
 
 #if UNITY_EDITOR
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     using System.Collections.Generic;
     using UnityEditor;
     using UnityEngine;
 
     [CustomEditor(typeof(TISDirectionalSkillButton))]
+    [InitializeOnLoad]
     public class TISDirectionalSkillButtonEditor : UnityEditor.Editor
     {
         // ── Tab state ─────────────────────────────────────────
@@ -115,6 +116,16 @@ namespace TrueInputSystem
         private static readonly Color _cancelColor  = new Color(1.00f, 0.30f, 0.30f);
 
         // ─────────────────────────────────────────────────────
+        
+        static TISDirectionalSkillButtonEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISDirectionalSkillButton>("directionbuttton");
+
 
         private void OnEnable()
         {
@@ -173,26 +184,10 @@ namespace TrueInputSystem
             _profilePrefKey = $"TIS_DirBtn_{target.GetInstanceID()}_ProfileGUID";
             RestoreLinkedProfileFromPrefs();
 
-            SetComponentIcon();
+            //SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            string[] guids = AssetDatabase.FindAssets("directionbuttton t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "directionbuttton");
 
         // ── Styles init ───────────────────────────────────────
         private void InitStyles()

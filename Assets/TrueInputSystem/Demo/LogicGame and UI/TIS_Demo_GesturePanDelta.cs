@@ -1,6 +1,6 @@
 using TMPro;
 using UnityEngine;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 /// <summary>
 /// Demo: GestureTwoFingerPanDelta (GesturePanDelta)

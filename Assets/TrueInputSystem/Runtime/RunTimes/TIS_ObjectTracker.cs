@@ -5,7 +5,7 @@ using UnityEngine.InputSystem.EnhancedTouch;
 using NewTouch      = UnityEngine.InputSystem.EnhancedTouch.Touch;
 using NewTouchPhase = UnityEngine.InputSystem.TouchPhase;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Plain class theo dõi touch vào GameObject, double-tap object và double-tap màn hình.

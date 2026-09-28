@@ -12,7 +12,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public partial class TISDocWindow : EditorWindow
     {

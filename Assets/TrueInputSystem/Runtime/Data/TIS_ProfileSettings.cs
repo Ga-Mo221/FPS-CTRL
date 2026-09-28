@@ -6,7 +6,7 @@
 using System;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     // ══════════════════════════════════════════════════════════
     //  MOBILE SETTINGS

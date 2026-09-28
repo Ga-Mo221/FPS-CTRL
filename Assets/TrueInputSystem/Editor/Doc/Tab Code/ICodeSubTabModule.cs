@@ -12,7 +12,7 @@
 // ============================================================
 
 #if UNITY_EDITOR
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     /// <summary>
     /// Interface mỗi module sub-tab phải implement.

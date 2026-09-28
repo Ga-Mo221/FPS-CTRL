@@ -1,14 +1,15 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     public static class TISHierarchyMenu
     {
         // Priority dưới 10 để hiện trong nhóm đầu của context menu
-        private const int MENU_PRIORITY = 10;
+        private const int MENU_PRIORITY = -1000;
 
-        [MenuItem("GameObject/True Input System/TIS Setup", false, MENU_PRIORITY)]
+        [MenuItem("GameObject/GaMo ToolKit/True Input System/TIS Setup", false, MENU_PRIORITY)]
         public static void CreateTISSetup(MenuCommand menuCommand)
         {
             // Tạo GameObject rỗng
@@ -31,7 +32,7 @@ namespace TrueInputSystem
             Selection.activeObject = go;
         }
 
-        [MenuItem("GameObject/True Input System/Mobile Input Setup", false, MENU_PRIORITY)]
+        [MenuItem("GameObject/GaMo ToolKit/True Input System/Mobile Input Setup", false, MENU_PRIORITY)]
         public static void CreateMobileInputSetup(MenuCommand menuCommand)
         {
             // Tạo GameObject rỗng
@@ -68,3 +69,4 @@ namespace TrueInputSystem
         }
     }
 }
+#endif

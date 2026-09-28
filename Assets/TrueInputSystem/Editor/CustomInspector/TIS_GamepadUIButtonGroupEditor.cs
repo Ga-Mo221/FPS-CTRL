@@ -1,15 +1,27 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [CustomEditor(typeof(TISGamepadUIButtonGroup))]
+    [InitializeOnLoad]
     public class TISGamepadUIButtonGroupEditor : UnityEditor.Editor
     {
         private SerializedProperty layoutTypeProp;
         private SerializedProperty gridColumnsProp;
         private SerializedProperty gridVerticalWrapProp;
+        
+        static TISGamepadUIButtonGroupEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISGamepadUIButtonGroup>("GridGamepadButton");
+
 
         private void OnEnable()
         {
@@ -17,29 +29,10 @@ namespace TrueInputSystem
             gridColumnsProp = serializedObject.FindProperty("gridColumns");
             gridVerticalWrapProp = serializedObject.FindProperty("gridVerticalWrap");
 
-            SetComponentIcon();
+            //SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            // Tìm file icon theo tên, không cần biết nằm ở folder nào
-            string[] guids = AssetDatabase.FindAssets("GridGamepadButton t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-
-                // Lọc đúng icon của package TrueInputSystem
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "GridGamepadButton");
 
         public override void OnInspectorGUI()
         {
@@ -139,3 +132,4 @@ namespace TrueInputSystem
         }
     }
 }
+#endif

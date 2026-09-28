@@ -3,7 +3,7 @@
 //  Favorites Sub-Tab Module: IsAttacking
 // ============================================================
 #if UNITY_EDITOR
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public class TISFav_IsAttacking : IFavSubTabModule
     {

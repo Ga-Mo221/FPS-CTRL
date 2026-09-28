@@ -85,6 +85,8 @@ public class GrenadeHandler : NetworkBehaviour
         if (!Object.HasStateAuthority)
             Runner.SetIsSimulated(Object, false);
     }
+    
+    public GrenadeType GrenadeType => _grenadeType;
 
     public void Throw(Vector3 throwForce, PlayerRef throwByPlayerRef, string thrownByPlayerName,
         LayerMask collisionLayer, NetworkId id, NShootHandler nShootHandler = null)
@@ -261,6 +263,7 @@ public class GrenadeHandler : NetworkBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
+        if (_grenadeType == GrenadeType.Smoke) return;
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, _radius);
     }

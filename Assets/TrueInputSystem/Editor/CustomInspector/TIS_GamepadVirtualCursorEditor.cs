@@ -1,37 +1,29 @@
 #if UNITY_EDITOR
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     using UnityEditor;
     using UnityEngine;
 
     [CustomEditor(typeof(TISGamepadVirtualCursor))]
+    [InitializeOnLoad]
     public class TISGamepadVirtualCursorEditor : UnityEditor.Editor
     {
-        private void OnEnable()
+        
+        static TISGamepadVirtualCursorEditor()
         {
-            SetComponentIcon();
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
         }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISGamepadVirtualCursor>("gamepadmouse");
 
-        private void SetComponentIcon()
-        {
-            // Tìm file icon theo tên, không cần biết nằm ở folder nào
-            string[] guids = AssetDatabase.FindAssets("gamepadmouse t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-
-                // Lọc đúng icon của package TrueInputSystem
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        // private void OnEnable()
+        // {
+        //     SetComponentIcon();
+        // }
+        //
+        // private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "gamepadmouse");
     }
 }
 #endif

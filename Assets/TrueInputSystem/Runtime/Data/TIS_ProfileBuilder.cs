@@ -17,7 +17,7 @@ using UnityEngine.InputSystem;
 
 using UISActionType = UnityEngine.InputSystem.InputActionType;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Kết quả trả về sau khi build xong.

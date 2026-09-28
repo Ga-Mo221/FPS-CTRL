@@ -1,8 +1,8 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-using TrueInputSystem.Readme;
 
-namespace TrueInputSystem.Readme.Editor
+namespace GaMo.TrueInputSystem.Readme.Editor
 {
     /// <summary>
     /// Custom inspector for TISReadme.
@@ -160,3 +160,4 @@ namespace TrueInputSystem.Readme.Editor
         }
     }
 }
+#endif

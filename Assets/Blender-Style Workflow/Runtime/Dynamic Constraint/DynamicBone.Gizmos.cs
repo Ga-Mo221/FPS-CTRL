@@ -7,87 +7,82 @@ namespace GaMo.BlenderEditorTools
 #if UNITY_EDITOR
         // ══════════════════════════════════════════════════════════
         //  GIZMOS (chỉ biên dịch trong Editor)
+        //  Chỉ còn ĐÚNG 3 loại gizmo, dùng chung 1 vòng lặp cho cả Edit lẫn Play
+        //  mode (không còn nhánh DrawTransformGizmos() riêng cho Edit mode nữa):
+        //    1) Node sphere — trắng khi CHƯA Play; khi Play: đỏ = node "đứng yên"
+        //       (root của chain, không bị mô phỏng), xanh lá = node "bị di chuyển"
+        //       (được simulate). Màu suy TRỰC TIẾP từ node.parent — field này chỉ
+        //       được set 1 LẦN lúc InitializeTrees() build cây và KHÔNG đổi trong
+        //       lúc mô phỏng, nên đây không phải màu "chuyển runtime", chỉ là đọc
+        //       lại giá trị tĩnh đã cache sẵn từ topology của cây.
+        //    2) Bán kính va chạm — wire sphere cam, y như cũ.
+        //    3) Line parent -> node — y như cũ, màu vàng.
+        //  Đã bỏ: wire sphere rest-pose (xanh lá cũ) và 2 mũi tên drag/inertia, để
+        //  gộp còn đúng 3 loại theo yêu cầu.
         // ══════════════════════════════════════════════════════════
         private void OnDrawGizmos()
         {
-            if (!showGizmos) return;
+            if (!showGizmos || _nodeCount == 0) return;
 
-            if (Application.isPlaying && _nodeCount > 0)
+            bool isPlaying = Application.isPlaying;
+            bool drawParticleRadius = enableColliders && particleRadius > 0f;
+
+            // [FIX] Không tin _nodeCount một mình: OnDrawGizmos có thể chạy khi _nodes/_tf chưa khớp
+            // _nodeCount (sau reload script, lúc cây đang dựng lại, hoặc bone bị xoá) → dùng độ dài thật
+            // của mảng để không bao giờ IndexOutOfRange.
+            int count = Mathf.Min(_nodeCount, _nodes.Length);
+            if (!isPlaying) count = Mathf.Min(count, _tf.Length);
+
+            for (int i = 0; i < count; i++)
             {
-                bool drawParticleRadius = enableColliders && particleRadius > 0f;
+                if (!isPlaying && _tf[i] == null) continue; // bone đã bị xoá khỏi scene
+                int parent = _nodes[i].parent;
+                if (parent >= count || (!isPlaying && parent >= 0 && _tf[parent] == null)) parent = -1;
 
-                for (int i = 0; i < _nodeCount; i++)
+                // Lúc Edit (chưa Play): đọc thẳng _tf[i].position (Transform thật) để
+                // gizmo LUÔN bám theo vị trí bone hiện tại trong Scene, kể cả khi user
+                // kéo bone sau lần "Cache Bones" gần nhất.
+                // Lúc Play: dùng _nodes[i].position — đã được
+                // DynamicBoneManager.CopyGizmoSnapshot() cập nhật mỗi frame sau khi job
+                // mô phỏng chạy xong — để thấy đúng kết quả mô phỏng.
+                Vector3 pos = isPlaying ? (Vector3)_nodes[i].position : _tf[i].position;
+
+                // 1) Node sphere
+                Gizmos.color = !isPlaying ? Color.white : (parent < 0 ? Color.red : Color.green);
+                Gizmos.DrawSphere(pos, nodeGizmoSize);
+
+                // 2) Bán kính va chạm
+                if (drawParticleRadius)
                 {
-                    Vector3 pos = _nodes[i].position;
-
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawSphere(pos, nodeGizmoSize);
-
-                    if (drawParticleRadius)
-                    {
-                        Gizmos.color = new Color(1f, 0.5f, 0f, 0.4f);
-                        Gizmos.DrawWireSphere(pos, particleRadius);
-                    }
-
-                    int p = _nodes[i].parent;
-                    if (p >= 0)
-                    {
-                        Gizmos.color = Color.yellow;
-                        Gizmos.DrawLine(_nodes[p].position, pos);
-                        Vector3 restPos = _tf[p].TransformPoint(_nodes[i].localPosition);
-                        Gizmos.color = Color.green;
-                        Gizmos.DrawWireSphere(restPos, nodeGizmoSize * 0.8f);
-                    }
+                    Gizmos.color = new Color(1f, 0.5f, 0f, 0.4f);
+                    Gizmos.DrawWireSphere(pos, particleRadius);
                 }
 
-                if (enableClothLinks)
+                // 3) Line parent -> node
+                if (parent >= 0)
                 {
-                    Gizmos.color = Color.magenta;
-                    for (int i = 0; i < _linkCount; i++)
-                        Gizmos.DrawLine(_nodes[_links[i].a].position, _nodes[_links[i].b].position);
-                }
-
-                if (dragDirection.sqrMagnitude > 0.00001f)
-                {
-                    Vector3 origin = transform.position;
-                    Vector3 dragVector = dragDirection.normalized * arrowLengthMultiplier;
-                    DrawArrowGizmo(origin, origin + dragVector, Color.cyan);
-                    DrawArrowGizmo(origin, origin - dragVector * inertia, Color.green);
+                    Vector3 parentPos = isPlaying ? (Vector3)_nodes[parent].position : _tf[parent].position;
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawLine(parentPos, pos);
                 }
             }
-            else if (rootBones.Count > 0)
-            {
-                foreach (var rootBone in rootBones)
-                    if (rootBone != null)
-                        DrawTransformGizmos(rootBone);
-            }
-        }
 
-        private void DrawTransformGizmos(Transform current)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawSphere(current.position, nodeGizmoSize);
-            foreach (Transform child in current)
+            // 4) Cross Links (chỉ có khi bật Cross Links) — đường cyan nối các cặp node liên kết ngang,
+            //    giúp kiểm tra thứ tự Root Bones có nối đúng chain kề nhau hay không.
+            if (_links.Length > 0)
             {
-                Gizmos.color = Color.gray;
-                Gizmos.DrawLine(current.position, child.position);
-                DrawTransformGizmos(child);
+                Gizmos.color = Color.cyan;
+                for (int li = 0; li < _links.Length; li++)
+                {
+                    int a = _links[li].a, b = _links[li].b;
+                    if (a < 0 || b < 0 || a >= count || b >= count) continue;
+                    if (!isPlaying && (_tf[a] == null || _tf[b] == null)) continue;
+                    Vector3 pa = isPlaying ? (Vector3)_nodes[a].position : _tf[a].position;
+                    Vector3 pb = isPlaying ? (Vector3)_nodes[b].position : _tf[b].position;
+                    Gizmos.DrawLine(pa, pb);
+                }
             }
-        }
-
-        private void DrawArrowGizmo(Vector3 from, Vector3 to, Color color)
-        {
-            Gizmos.color = color;
-            Gizmos.DrawLine(from, to);
-            Vector3 direction = to - from;
-            if (direction.sqrMagnitude < 0.0001f) return;
-            Vector3 right = Quaternion.LookRotation(direction) * Quaternion.Euler(0, 200, 0) * Vector3.forward;
-            Vector3 left = Quaternion.LookRotation(direction) * Quaternion.Euler(0, 160, 0) * Vector3.forward;
-            float arrowHeadSize = Mathf.Clamp(direction.magnitude * 0.2f, 0.05f, 0.5f);
-            Gizmos.DrawLine(to, to + right * arrowHeadSize);
-            Gizmos.DrawLine(to, to + left * arrowHeadSize);
         }
 #endif
-
     }
 }

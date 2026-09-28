@@ -625,7 +625,7 @@ namespace GaMo.BlenderEditorTools
                     if (t.target == null || t.weight <= 0f) continue;
 
                     Quaternion targetWorldRot = ConstraintMath.ComputeWorldAbsoluteRotation(
-                        t.target, constraintObject, currentWorldRot, rotCopyX, rotCopyY, rotCopyZ);
+                        t.target, currentWorldRot, rotCopyX, rotCopyY, rotCopyZ);
 
                     float w = t.weight * invTotalWeight;
 
@@ -675,13 +675,13 @@ namespace GaMo.BlenderEditorTools
                     if (isDelta)
                     {
                         targetLocalRot = ConstraintMath.ComputeLocalDeltaRotation(
-                            t.target, constraintObject, t.initialLocalRot, currentLocalRot,
+                            t.target, t.initialLocalRot, currentLocalRot,
                             rotCopyX, rotCopyY, rotCopyZ);
                     }
                     else
                     {
                         targetLocalRot = ConstraintMath.ComputeLocalAbsoluteRotation(
-                            t.target, constraintObject, currentLocalRot, rotCopyX, rotCopyY, rotCopyZ);
+                            t.target, currentLocalRot, rotCopyX, rotCopyY, rotCopyZ);
                     }
 
                     float w = t.weight * invTotalWeight;
@@ -716,6 +716,7 @@ namespace GaMo.BlenderEditorTools
         }
 
         #region Gizmos
+#if UNITY_EDITOR
 
         void OnDrawGizmos()
         {
@@ -788,6 +789,7 @@ namespace GaMo.BlenderEditorTools
             Gizmos.DrawLine(end, p4);
         }
 
+#endif
         #endregion
     }
 }

@@ -1,6 +1,6 @@
 using System.Collections;
 using Sirenix.OdinInspector;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 
 /// <summary>

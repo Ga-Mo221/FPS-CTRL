@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 /// <summary>
 /// Demo: ApplyPreset

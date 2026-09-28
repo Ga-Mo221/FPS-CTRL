@@ -80,7 +80,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     // ══════════════════════════════════════════════════════════
     //  ENUMS & DATA

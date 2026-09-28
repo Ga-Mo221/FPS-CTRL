@@ -3,9 +3,10 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [CustomEditor(typeof(TISMobileInputSetup))]
+    [InitializeOnLoad]
     public class TISMobileInputSetupEditor : UnityEditor.Editor
     {
         // ── Tab state ─────────────────────────────────────────────────────────
@@ -47,6 +48,16 @@ namespace TrueInputSystem
         SerializedProperty _batZoom;
         SerializedProperty _tocDoZoom;
         SerializedProperty _nguongPinchPx;
+        
+        static TISMobileInputSetupEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISMobileInputSetup>("mobileinput");
+
 
         private void OnEnable()
         {
@@ -88,29 +99,10 @@ namespace TrueInputSystem
             _tocDoZoom           = serializedObject.FindProperty("_tocDoZoom");
             _nguongPinchPx       = serializedObject.FindProperty("_nguongPinchPx");
             
-            SetComponentIcon();
+            //SetComponentIcon();
         }
         
-        private void SetComponentIcon()
-        {
-            // Tìm file icon theo tên, không cần biết nằm ở folder nào
-            string[] guids = AssetDatabase.FindAssets("mobileinput t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-
-                // Lọc đúng icon của package TrueInputSystem
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "mobileinput");
 
         // ── Wrapped Toolbar ───────────────────────────────────────────────────────
 

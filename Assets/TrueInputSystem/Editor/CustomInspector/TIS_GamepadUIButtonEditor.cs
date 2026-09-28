@@ -1,11 +1,13 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [CustomEditor(typeof(TISGamepadUIButton))]
     [CanEditMultipleObjects]
+    [InitializeOnLoad]
     public class TISGamepadUIButtonEditor : UnityEditor.Editor
     {
         private int currentTab = 0;
@@ -34,9 +36,21 @@ namespace TrueInputSystem
         private SerializedProperty colorBlockProp;
         private SerializedProperty spriteStateProp;
         private SerializedProperty animationTriggersProp;
+        
+        static TISGamepadUIButtonEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISGamepadUIButton>("GamepadButton");
+
 
         private void OnEnable()
         {
+            if (target == null) return;
+            
             navigationModeProp = serializedObject.FindProperty("navigationMode");
             inputSourceProp = serializedObject.FindProperty("inputSource");
             layerProp = serializedObject.FindProperty("layer");
@@ -61,26 +75,10 @@ namespace TrueInputSystem
             spriteStateProp = serializedObject.FindProperty("m_SpriteState");
             animationTriggersProp = serializedObject.FindProperty("m_AnimationTriggers");
 
-            SetComponentIcon();
+            //SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            string[] guids = AssetDatabase.FindAssets("GamepadButton t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "GamepadButton");
 
         // ══════════════════════════════════════════════════════
         //  WRAPPED TOOLBAR
@@ -134,6 +132,8 @@ namespace TrueInputSystem
 
         public override void OnInspectorGUI()
         {
+            if (target == null || navigationModeProp == null) return;
+            
             serializedObject.Update();
 
             currentTab = DrawWrappedToolbar(currentTab, tabLabels);
@@ -451,3 +451,4 @@ namespace TrueInputSystem
         }
     }
 }
+#endif

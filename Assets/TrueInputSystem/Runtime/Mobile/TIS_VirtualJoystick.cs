@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/Virtual Joystick")]
     [RequireComponent(typeof(Image))]

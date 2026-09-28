@@ -1,16 +1,9 @@
-// ============================================================
-//  TrueInputSystem — TIS_VirtualJoystickEditorBridge.cs
-//
-//  KHÔNG build vào Runtime DLL.
-//  Inject OnGUI debug preview vào TISVirtualJoystick.EditorOnGUIOverride
-//  bằng [InitializeOnLoad] để hoạt động trước khi Play Mode bắt đầu.
-// ============================================================
-
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     [InitializeOnLoad]
     public static class TISVirtualJoystickEditorBridge
@@ -182,3 +175,4 @@ namespace TrueInputSystem.Editor
         }
     }
 }
+#endif

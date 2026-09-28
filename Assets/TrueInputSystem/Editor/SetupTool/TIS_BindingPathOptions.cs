@@ -8,9 +8,9 @@
 
 #if UNITY_EDITOR
 using System.Collections.Generic;
-using TrueInputSystem; // Cần thiết cho TISVirtualControlID và TISInputActionType
+using GaMo.TrueInputSystem; // Cần thiết cho TISVirtualControlID và TISInputActionType
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     /// <summary>
     /// Cấu trúc thay thế cho ValueDropdownItem của Odin.

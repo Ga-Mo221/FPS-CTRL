@@ -2,33 +2,29 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [CustomEditor(typeof(TISInputProfileConfig))]
+    [InitializeOnLoad]
     public class TISInputProfileConfigEditor : UnityEditor.Editor
     {
+        
+        static TISInputProfileConfigEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISInputProfileConfig>("Profile");
+
+        
         private void OnEnable()
         {
             SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            string[] guids = AssetDatabase.FindAssets("Profile t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "Profile");
 
         public override void OnInspectorGUI()
         {

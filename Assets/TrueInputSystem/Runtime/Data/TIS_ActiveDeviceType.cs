@@ -3,7 +3,7 @@
 //  Enum xác định loại thiết bị input đang được sử dụng.
 // ============================================================
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Loại thiết bị input đang được người chơi sử dụng tích cực.

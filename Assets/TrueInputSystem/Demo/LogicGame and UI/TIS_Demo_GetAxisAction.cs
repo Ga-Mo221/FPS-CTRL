@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using UnityEngine;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 /// <summary>
 /// Demo: GetAxisAction(name)

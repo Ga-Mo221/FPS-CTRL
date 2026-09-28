@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/TIS Gamepad UI Button")]
     [DefaultExecutionOrder(-50)]

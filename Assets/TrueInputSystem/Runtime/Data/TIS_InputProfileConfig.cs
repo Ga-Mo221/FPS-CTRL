@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [CreateAssetMenu(
         menuName = "TrueInputSystem/Input Profile",

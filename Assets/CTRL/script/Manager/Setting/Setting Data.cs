@@ -1,5 +1,5 @@
 using UnityEngine;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 [CreateAssetMenu(fileName = "SettingData", menuName = "CTRL/Setting Data", order = 1)]
 public class SettingData : ScriptableObject

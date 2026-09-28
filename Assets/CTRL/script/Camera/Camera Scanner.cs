@@ -1,4 +1,4 @@
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 
 public class CameraScanner : MonoBehaviour

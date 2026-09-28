@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 /// <summary>
 /// Demo: GetPointerScreenPosition() — Drag & Drop item trong Canvas UI

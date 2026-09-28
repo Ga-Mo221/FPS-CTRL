@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Custom Editor cho UINavigationContext.
     /// Hiển thị 3 tab: Overview, Tab Mapping, SubTab Mapping.
     /// </summary>
     [CustomEditor(typeof(TISUINavigationContext))]
+    [InitializeOnLoad]
     public class TISUINavigationContextEditor : UnityEditor.Editor
     {
         // ── Tab state ─────────────────────────────────────────────────────────────
@@ -40,6 +41,16 @@ namespace TrueInputSystem
         private static readonly Color ColAdd = new Color(0.20f, 0.60f, 0.40f, 1f); // green
 
         // ─────────────────────────────────────────────────────────────────────────
+        
+        static TISUINavigationContextEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISUINavigationContext>("UIbuttongamepadmanager");
+
 
         private void OnEnable()
         {
@@ -50,26 +61,10 @@ namespace TrueInputSystem
             _defaultContent = serializedObject.FindProperty("defaultContent");
 
             SyncFoldouts();
-            SetComponentIcon();
+            //SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            string[] guids = AssetDatabase.FindAssets("UIbuttongamepadmanager t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "UIbuttongamepadmanager");
 
         private void SyncFoldouts()
         {

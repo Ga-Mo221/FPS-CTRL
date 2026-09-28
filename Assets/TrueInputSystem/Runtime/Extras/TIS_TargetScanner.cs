@@ -19,7 +19,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/TIS Target Scanner")]
     [DefaultExecutionOrder(-90)]

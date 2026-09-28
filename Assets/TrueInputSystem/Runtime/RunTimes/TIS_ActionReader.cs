@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Đọc và cache tất cả Input Actions. Plain class — không phải MonoBehaviour.

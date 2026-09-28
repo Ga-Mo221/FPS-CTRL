@@ -1,17 +1,11 @@
-// ============================================================
-//  TrueInputSystem — TISTargetScannerEditor.cs
-//
-//  Custom Inspector cho TISTargetScanner.
-//  Đặt file này trong thư mục Editor/ bất kỳ trong project.
-//  Ví dụ: Assets/TrueInputSystem/Editor/TISTargetScannerEditor.cs
-// ============================================================
-
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [CustomEditor(typeof(TISTargetScanner))]
+    [InitializeOnLoad]
     public class TISTargetScannerEditor : UnityEditor.Editor
     {
         // ── Tab state ────────────────────────────────────────
@@ -53,6 +47,16 @@ namespace TrueInputSystem
         private static readonly Color _dangerColor   = new Color(1.00f, 0.35f, 0.35f);
 
         // ─────────────────────────────────────────────────────
+        
+        static TISTargetScannerEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISTargetScanner>("targetDetec");
+
 
         private void OnEnable()
         {
@@ -79,29 +83,10 @@ namespace TrueInputSystem
             _showDebugOverlay = serializedObject.FindProperty("_showDebugOverlay");
             _overlayPosition  = serializedObject.FindProperty("_overlayPosition");
             
-            SetComponentIcon();
+            //SetComponentIcon();
         }
         
-        private void SetComponentIcon()
-        {
-            // Tìm file icon theo tên, không cần biết nằm ở folder nào
-            string[] guids = AssetDatabase.FindAssets("targetDetec t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-
-                // Lọc đúng icon của package TrueInputSystem
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "targetDetec");
 
         // ── Styles init (delayed — requires GUISkin) ──────────
         private void InitStyles()
@@ -552,3 +537,4 @@ namespace TrueInputSystem
         }
     }
 }
+#endif

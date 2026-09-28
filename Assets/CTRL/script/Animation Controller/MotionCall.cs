@@ -27,38 +27,46 @@ public class MotionCall : StateMachineBehaviour
         animHandler?.LocalStopSwitch();
     }
 
-    public void DisplayFrag(Animator animator)
+    public void DisplayGrenade(Animator animator)
     {
         var dis = animator.GetComponent<DisplayObject>();
         if (dis == null) return;
-        dis.EnableObj(0);
+        var shoot = animator.GetComponentInParent<NShootHandler>();
+        if (shoot == null) return;
+
+        int index = GetIDGrenade(shoot);
+        dis.EnableObj(index);
     }
 
-    public void DisplayFlash(Animator animator)
-    {
-        var dis = animator.GetComponent<DisplayObject>();
-        if (dis == null) return;
-        dis.EnableObj(1);
-    }
-
-    public void HideFrag(Animator animator)
+    public void HideGrenade(Animator animator)
     {
         var dis = animator.GetComponent<DisplayObject>();
         var shoot = animator.GetComponentInParent<NShootHandler>();
         if (shoot != null)
-            shoot.ThrowGrenade(true);
+            shoot.ThrowGrenade();
         if (dis == null) return;
-        dis.DisableObj(0);
+        int index = GetIDGrenade(shoot);
+        dis.DisableObj(index);
     }
 
-    public void HideFlash(Animator animator)
+    private int GetIDGrenade(NShootHandler handler)
     {
-        var dis = animator.GetComponent<DisplayObject>();
-        var shoot = animator.GetComponentInParent<NShootHandler>();
-        if (shoot != null)
-            shoot.ThrowGrenade(false);
-        if (dis == null) return;
-        dis.DisableObj(1);
+        switch (handler._grende_ID)
+        {
+            case 1: return GetGrenadeIndex(handler.GrenadeQ.ToString());
+            case 2: return  GetGrenadeIndex(handler.GrenadeE.ToString());
+            default: return 0;
+        }
+    }
+
+    private int GetGrenadeIndex(string id)
+    {
+        switch (id)
+        {
+            case WeaponID._SMOKE_AN_M8_HC: return 2;
+            case WeaponID._FLASH_M84: return 1;
+            default: return 0;
+        }
     }
 
     // Char

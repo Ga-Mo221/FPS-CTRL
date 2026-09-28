@@ -10,8 +10,10 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public PlayerStateFlags StateFl {get; set;}
     private PlayerStateFlags _newState;
     [Networked] public int GrenadeID {get; private set;}
-    [Networked] public NetworkBool Frag { get; set; }
-    [Networked] public NetworkBool Flash { get; set; }
+    [Networked] public NetworkBool Grenade_Q { get; set; }
+    [Networked] public NetworkBool Grenade_E { get; set; }
+    public bool QKey = false;
+    public bool EKey = false;
     [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
     [Networked] public NetworkBool IsJump { get; set; }
     [Networked] public float NetworkedPitch { get; private set; }
@@ -81,6 +83,7 @@ public class NCharMovementHandler : NetworkBehaviour
     private PlayerMotionController _playerMotionController;
     private NHPHandler  _hpHandler;
     private WeaponManager _weaponManager;
+    private NShootHandler _nShootHandler;
     
     // ── helpers cho NShootHandler ──────────────────────────────────────────
     public void IncrementFireCount()
@@ -113,6 +116,7 @@ public class NCharMovementHandler : NetworkBehaviour
             _playerMotionController = _componentManager.PlayerMotionController;
             _hpHandler = _componentManager.NHPHandler;
             _weaponManager = _componentManager.WeaponManager;
+            _nShootHandler = _componentManager.NShootHandler;
         }
         _stateLogic = new CharacterState();
     }
@@ -591,21 +595,27 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         if (state.IsSwitching || state.IsSlide) return;
 
-        bool fragPressed  = input.Buttons.WasPressed(_previousButtons, InputButtons.ThrowFrag);
-        bool flashPressed = input.Buttons.WasPressed(_previousButtons, InputButtons.ThrowFlash);
-        bool fragReleased  = input.Buttons.WasReleased(_previousButtons, InputButtons.ThrowFrag);
-        bool flashReleased = input.Buttons.WasReleased(_previousButtons, InputButtons.ThrowFlash);
+        bool QKey_Pressed  = input.Buttons.WasPressed(_previousButtons, InputButtons.ThrowFrag);
+        bool EKey_Pressed = input.Buttons.WasPressed(_previousButtons, InputButtons.ThrowFlash);
+        bool QKey_Released  = input.Buttons.WasReleased(_previousButtons, InputButtons.ThrowFrag);
+        bool EKey_Released = input.Buttons.WasReleased(_previousButtons, InputButtons.ThrowFlash);
 
-        if ((fragPressed || flashPressed) && !state.IsThrow)
+        if ((QKey_Pressed || EKey_Pressed) && !state.IsThrow)
         {
-            if (fragPressed && !Frag)
+            if (QKey_Pressed && !Grenade_Q)
             {
-                GrenadeID = 1;
+                GrenadeID = GetIDGrenade(true);
+                QKey = true;
+                _nShootHandler.SetGrenadeQ_E(1);
+                Debug.Log("<color=green>[NCharMovementHandler][Pressed Q]</color> Grenade ID: " + GrenadeID);
                 _stateLogic.StartThrow(ref state, _constraintManager);
             }
-            else if (flashPressed && !Flash)
+            else if (EKey_Pressed && !Grenade_E)
             {
-                GrenadeID = 2;
+                GrenadeID = GetIDGrenade(false);
+                EKey = true;
+                _nShootHandler.SetGrenadeQ_E(2);
+                Debug.Log("<color=green>[NCharMovementHandler][Pressed E]</color> Grenade ID: " + GrenadeID);
                 _stateLogic.StartThrow(ref state, _constraintManager);
             }
             
@@ -615,17 +625,51 @@ public class NCharMovementHandler : NetworkBehaviour
         if (state.IsThrow)
         {
             bool shouldStop =
-                (GrenadeID == 1 && fragReleased) ||
-                (GrenadeID == 2 && flashReleased);
+                (QKey && QKey_Released) ||
+                (EKey && EKey_Released);
 
             if (shouldStop)
             {
-                if (GrenadeID == 1) Frag = true;
-                if (GrenadeID == 2) Flash = true;
+                if (QKey)
+                {
+                    QKey = false;
+                    Grenade_Q = true;
+                }
+                if (EKey)
+                {
+                    EKey = false;
+                    Grenade_E = true;
+                }
                 GrenadeID = 0;
                 _stateLogic.StopThrow(ref state);
             }
         }
+    }
+
+    private int GetIDGrenade(bool Q)
+    {
+        string grenadeQ = _nShootHandler.GrenadeQ.ToString();
+        string grenadeE = _nShootHandler.GrenadeE.ToString();
+        if (Q)
+        {
+            switch (grenadeQ)
+            {
+                case WeaponID._SMOKE_AN_M8_HC:
+                case WeaponID._FRAG_M67: return 1;
+                case WeaponID._FLASH_M84: return 2;
+            }
+        }
+        else
+        {
+            switch (grenadeE)
+            {
+                case WeaponID._SMOKE_AN_M8_HC:
+                case WeaponID._FRAG_M67: return 1;
+                case WeaponID._FLASH_M84: return 2;
+            }
+        }
+
+        return 0;
     }
 
     private void ModeSwitchHandler(NInputData input)
@@ -692,8 +736,10 @@ public class NCharMovementHandler : NetworkBehaviour
         
         _respawnInvincibleTimer = TickTimer.CreateFromSeconds(Runner, cantakedamageTime);
         _weaponManager.Rpc_SwitchWeapon();
-        Flash = false;
-        Frag = false;
+        Grenade_E = false;
+        Grenade_Q = false;
+        QKey = false;
+        EKey = false;
     }
 #endregion
 }

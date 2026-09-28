@@ -17,7 +17,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Kênh override cho Move / Look / Zoom input đến từ mobile controls.

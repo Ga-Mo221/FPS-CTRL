@@ -4,7 +4,7 @@ using System.Linq;
 using Fusion;
 using Game.UI;
 using Sirenix.OdinInspector;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 using GaMo.BlenderEditorTools;
 

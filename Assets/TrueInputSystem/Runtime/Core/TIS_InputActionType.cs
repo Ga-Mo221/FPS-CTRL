@@ -3,7 +3,7 @@
 //  Định nghĩa loại dữ liệu mà một InputAction trả về.
 // ============================================================
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Loại giá trị mà một action trả về khi được đọc.

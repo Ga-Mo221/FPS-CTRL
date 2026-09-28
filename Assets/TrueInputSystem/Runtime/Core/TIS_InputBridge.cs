@@ -24,7 +24,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/TIS Input Bridge")]
     [DefaultExecutionOrder(-100)]
@@ -806,7 +806,7 @@ namespace TrueInputSystem
 //  TISInputBuffer — P2 FIX #14
 //  Input buffer window để không miss action khi frame drop.
 // ============================================================
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Input buffer với window time cho phép action không bị miss khi frame drop.

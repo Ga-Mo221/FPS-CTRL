@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.UI;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [DefaultExecutionOrder(-80)]
     [AddComponentMenu("TIS/Demo/TIS Gamepad Virtual Cursor")]

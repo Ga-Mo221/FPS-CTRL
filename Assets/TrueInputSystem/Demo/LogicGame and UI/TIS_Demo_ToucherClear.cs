@@ -1,5 +1,5 @@
 using UnityEngine;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 /// <summary>
 /// Demo: ToucherClearList / ToucherClearAll / ToucherClearTouchCount

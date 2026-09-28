@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/TIS Gamepad UI Button Group")]
     public class TISGamepadUIButtonGroup : MonoBehaviour

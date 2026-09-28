@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     public class TISInputDeadzone
     {

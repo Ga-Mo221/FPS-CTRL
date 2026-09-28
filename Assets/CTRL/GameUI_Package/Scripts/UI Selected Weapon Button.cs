@@ -27,7 +27,7 @@ public class UISelectedWeaponButton : MonoBehaviour
     [TabGroup("WeaponButton/Weapon/SubTab", "TWO")]
     [SerializeField] private TextMeshProUGUI _Weapon_two_default_max_mg_text;
     
-    [TabGroup("weaponButton", "Grenade")]
+    [TabGroup("WeaponButton", "Grenade")]
     [TabGroup("WeaponButton/Grenade/SubTab", "Q")]
     [SerializeField] private Image _grenade_Q_image;
     [TabGroup("WeaponButton/Grenade/SubTab", "Q")]
@@ -69,7 +69,7 @@ public class UISelectedWeaponButton : MonoBehaviour
             GameManager.Instance.setCurrentBalo(data);
         }
         
-        nshootHandler.SetGrenade(_grenade_Q.ID, _grenade_E.ID);
+        nshootHandler.RPC_SetGrenadeOnUI(_grenade_Q.ID, _grenade_E.ID);
     }
 
     public void SetWeapon(WeaponData weaponOneData, WeaponData weaponTwoData, GrenadeHandler grenade_Q, GrenadeHandler grenade_E)
@@ -117,6 +117,34 @@ public class UISelectedWeaponButton : MonoBehaviour
             _weapon_two_name_text.gameObject.SetActive(false);
             _Weapon_two_default_mg_text.gameObject.SetActive(false);
             _Weapon_two_default_max_mg_text.gameObject.SetActive(false);
+        }
+
+        if (grenade_Q != null)
+        {
+            _grenade_Q_image.sprite = grenade_Q.Icon;
+            _grenade_Q_text.text = grenade_Q.Name;
+            
+            _grenade_Q_image.gameObject.SetActive(true);
+            _grenade_Q_text.gameObject.SetActive(true);
+        }
+        else
+        {
+            _grenade_Q_image.gameObject.SetActive(false);
+            _grenade_Q_text.gameObject.SetActive(false);
+        }
+
+        if (grenade_E != null)
+        {
+            _grenade_E_image.sprite = grenade_E.Icon;
+            _grenade_E_text.text = grenade_E.Name;
+            
+            _grenade_E_image.gameObject.SetActive(true);
+            _grenade_E_text.gameObject.SetActive(true);
+        }
+        else
+        {
+            _grenade_E_image.gameObject.SetActive(false);
+            _grenade_E_text.gameObject.SetActive(false);
         }
     }
 }

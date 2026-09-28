@@ -1,4 +1,4 @@
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Chế độ đọc trạng thái của một Button action.

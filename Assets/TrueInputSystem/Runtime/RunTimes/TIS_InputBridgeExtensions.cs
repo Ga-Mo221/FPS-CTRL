@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Extension methods thêm mobile button support cho TISInputBridge.

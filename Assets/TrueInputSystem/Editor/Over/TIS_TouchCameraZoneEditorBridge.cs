@@ -1,18 +1,9 @@
-// ============================================================
-//  TrueInputSystem — TIS_TouchCameraZoneEditorBridge.cs
-//
-//  KHÔNG build vào Runtime DLL.
-//  Đặt file này ngoài csproj Runtime — chỉ dùng trong Unity Editor.
-//
-//  Inject HandleMouseFallback vào TISTouchCameraZone.EditorUpdateOverride
-//  bằng [InitializeOnLoad] để hoạt động trước khi Play Mode bắt đầu.
-// ============================================================
-
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEditor;
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     [InitializeOnLoad]
     public static class TISTouchCameraZoneEditorBridge
@@ -116,3 +107,4 @@ namespace TrueInputSystem.Editor
         }
     }
 }
+#endif

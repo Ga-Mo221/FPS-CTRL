@@ -10,7 +10,7 @@
 //      int max = TISConstants.MaxAnalogTriggers;
 // ============================================================
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Hằng số toàn hệ thống TrueInputSystem.

@@ -14,7 +14,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [InitializeOnLoad]
     internal static class TISActionReaderEditorHooks

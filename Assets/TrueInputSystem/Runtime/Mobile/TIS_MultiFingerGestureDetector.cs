@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem.EnhancedTouch;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/Multi Finger Gesture Detector")]
     [DefaultExecutionOrder(-85)] // chạy sau TISTouchCameraZone (-90) để đọc IsPinching đúng

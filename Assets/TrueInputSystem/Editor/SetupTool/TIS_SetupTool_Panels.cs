@@ -14,7 +14,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public struct BindingOption
     {

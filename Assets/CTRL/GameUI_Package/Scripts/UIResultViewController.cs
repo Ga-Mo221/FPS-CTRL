@@ -3,7 +3,7 @@ using System.Collections;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using TMPro;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 
 namespace Game.UI
 {

@@ -5,10 +5,18 @@ using UnityEngine;
 [DefaultExecutionOrder(25)] // sau NCharMovementHandler (20)
 public class NShootHandler : NetworkBehaviour
 {
-    private string _grenadeQ = WeaponID._FRAG_M67;
-    private string _grenadeE = WeaponID._FLASH_M84;
+    [Networked] public NetworkString<_16> GrenadeQ {private set; get; } = WeaponID._FRAG_M67;
+    [Networked] public NetworkString<_16> GrenadeE {private set; get;} = WeaponID._FLASH_M84;
+    
     [SerializeField] private Transform _throwPointRight;
     [SerializeField] private Transform _throwPointLeft;
+
+    /// <summary>
+    /// dung de phan biet nem Q hay E, 0 la khong nem, 1 la Q va 2 la E
+    /// </summary>
+    [Networked]
+    public byte _grende_ID { private set; get; } = 0;
+    
     [Tooltip("lực ném")]
     [SerializeField] private float _fore = 10f;
 
@@ -118,9 +126,15 @@ public class NShootHandler : NetworkBehaviour
 
     public void SetGrenade(string grenade1, string grenade2)
     {
-        _grenadeQ = grenade1;
-        _grenadeE = grenade2;
+        GrenadeQ = grenade1;
+        GrenadeE = grenade2;
     }
+
+    /// <summary>
+    /// dung de set la dang nem q hay e. 0 = khong nem, 1 = Q, 2 = E
+    /// </summary>
+    /// <param name="index"></param>
+    public void SetGrenadeQ_E(byte index) => _grende_ID = index;
 
     // ── Simulation ─────────────────────────────────────────────────────────
     public override void FixedUpdateNetwork()
@@ -896,6 +910,12 @@ public class NShootHandler : NetworkBehaviour
             HUD.CrosshairHit();
     }
 
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_SetGrenadeOnUI(string grenadeQ, string grenadeE)
+    {
+        SetGrenade(grenadeQ, grenadeE);
+    }
+
     // ── Grenade Exp Integration ───────────────────────────────────────────
 
     /// <summary>
@@ -923,16 +943,34 @@ public class NShootHandler : NetworkBehaviour
     }
 
     // ── Grenade ───────────────────────────────────────────────────────────
-    public void ThrowGrenade(bool Q)
+    public void ThrowGrenade()
     {
         if (!Object.HasStateAuthority) return;
         var gm = GameManager.Instance;
         if (gm == null) return;
 
-        var grenade = Q ? gm.GetGrenade(_grenadeQ) : gm.GetGrenade(_grenadeE);
+        GrenadeHandler grenade = null;
+        Vector3 throwPoint = Vector3.zero;
+        switch (_grende_ID)
+        {
+            case 1: grenade = gm.GetGrenade(GrenadeQ.ToString()); break;
+            case 2: grenade = gm.GetGrenade(GrenadeE.ToString()); break;
+        }
+
+        switch (grenade.GrenadeType)
+        {
+            case GrenadeType.Smoke:
+            case GrenadeType.Frag:
+                throwPoint = _throwPointRight.position;
+                break;
+            case GrenadeType.Flash:
+                throwPoint = _throwPointLeft.position;
+                break;
+        }
+            
         if (grenade == null) return;
 
-        Runner.Spawn(grenade, _throwPointRight.position + _aimForward, Quaternion.LookRotation(_aimForward),
+        Runner.Spawn(grenade, throwPoint + _aimForward, Quaternion.LookRotation(_aimForward),
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
             {
@@ -944,6 +982,8 @@ public class NShootHandler : NetworkBehaviour
                     Object.Id,
                     this);
             });
+
+        _grende_ID = 0;
     }
 
     // ── OnChanged callbacks ────────────────────────────────────────────────

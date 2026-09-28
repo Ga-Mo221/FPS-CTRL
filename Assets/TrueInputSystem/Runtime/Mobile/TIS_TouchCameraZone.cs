@@ -5,7 +5,7 @@ using UnityEngine.InputSystem.EnhancedTouch;
 using Touch      = UnityEngine.InputSystem.EnhancedTouch.Touch;
 using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [AddComponentMenu("TIS/Demo/Touch Camera Zone")]
     [DefaultExecutionOrder(-90)]

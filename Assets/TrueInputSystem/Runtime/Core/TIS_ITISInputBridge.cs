@@ -28,7 +28,7 @@
 
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Interface đọc input — tất cả game script nên type-hint qua đây.

@@ -5,7 +5,7 @@
 #if UNITY_EDITOR
 using UnityEngine;
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public class TISFav_MoveDirection : IFavSubTabModule
     {

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [Serializable]
     public class TISInputActionDefinition : ISerializationCallbackReceiver

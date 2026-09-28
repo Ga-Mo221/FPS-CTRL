@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     /// <summary>
     /// Nền tảng được phép áp dụng Aim Assist.

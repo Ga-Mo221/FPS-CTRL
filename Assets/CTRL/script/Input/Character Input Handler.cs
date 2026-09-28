@@ -1,5 +1,5 @@
 using Fusion;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 
 public class CharacterInputHandler : MonoBehaviour

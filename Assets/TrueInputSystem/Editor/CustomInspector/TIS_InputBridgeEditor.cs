@@ -1,7 +1,5 @@
-using UnityEngine;
-
 #if UNITY_EDITOR
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     using UnityEditor;
     using UnityEngine;
@@ -10,6 +8,7 @@ namespace TrueInputSystem
     using UnityEngine.InputSystem;
 
     [CustomEditor(typeof(TISInputBridge))]
+    [InitializeOnLoad]
     public class TISInputBridgeEditor : UnityEditor.Editor
     {
         private int           _tab = 0;
@@ -28,30 +27,24 @@ namespace TrueInputSystem
             public string Source;
             public bool   ActiveBool;
         }
+        
+        static TISInputBridgeEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISInputBridge>("input");
+
 
         private void OnEnable()
         {
             EditorApplication.update += OnEditorUpdate;
-            SetComponentIcon();
+            //SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            string[] guids = AssetDatabase.FindAssets("input t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "input");
         
         private void OnDisable() => EditorApplication.update -= OnEditorUpdate;
 

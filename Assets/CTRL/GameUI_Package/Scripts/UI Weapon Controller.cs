@@ -1,6 +1,6 @@
 using Sirenix.OdinInspector;
 using TMPro;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 using UnityEngine.UI;
 

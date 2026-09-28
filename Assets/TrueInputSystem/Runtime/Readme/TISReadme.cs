@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace TrueInputSystem.Readme
+namespace GaMo.TrueInputSystem.Readme
 {
     /// <summary>
     /// Data container for the TrueInputSystem package Readme.

@@ -1,5 +1,5 @@
 using Game.UI;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 
 public class LocalInputController : MonoBehaviour
@@ -117,7 +117,7 @@ public class LocalInputController : MonoBehaviour
                     if (Weapons.Weapon_Two_CTRL != null)
                         W2 = Weapons.Weapon_Two_CTRL.CanSwitchLayout();
                     
-                    if (W1 && W2 && !Grenade.Frag && !Grenade.Flash)
+                    if (W1 && W2 && !Grenade.Grenade_Q && !Grenade.Grenade_E)
                         _gameHudController.SetLoadoutVisible(true);
                     else gm.SetOnuiLoadout(false);
                 }

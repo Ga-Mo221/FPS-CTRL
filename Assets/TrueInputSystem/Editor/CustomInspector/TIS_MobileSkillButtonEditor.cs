@@ -13,7 +13,7 @@
 // ============================================================
 
 #if UNITY_EDITOR
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     using System.Collections.Generic;
     using UnityEditor;
@@ -21,6 +21,7 @@ namespace TrueInputSystem
     using UnityEngine.UI;
 
     [CustomEditor(typeof(TISMobileSkillButton))]
+    [InitializeOnLoad]
     public class TISMobileSkillButtonEditor : UnityEditor.Editor
     {
         // ── Tab state ─────────────────────────────────────────
@@ -85,6 +86,16 @@ namespace TrueInputSystem
         private static readonly Color _dangerColor  = new Color(1.00f, 0.35f, 0.35f);
 
         // ─────────────────────────────────────────────────────
+        
+        static TISMobileSkillButtonEditor()
+        {
+            EditorApplication.delayCall += ApplyIconToAll;
+            EditorApplication.hierarchyChanged -= ApplyIconToAll;
+            EditorApplication.hierarchyChanged += ApplyIconToAll;
+        }
+        private static void ApplyIconToAll()
+            => ComponentIconApplier.ApplyToAll<TISMobileSkillButton>("button");
+
 
         private void OnEnable()
         {
@@ -118,26 +129,10 @@ namespace TrueInputSystem
             _profilePrefKey = $"TIS_SkillBtn_{target.GetInstanceID()}_ProfileGUID";
             RestoreLinkedProfileFromPrefs();
 
-            SetComponentIcon();
+            //SetComponentIcon();
         }
 
-        private void SetComponentIcon()
-        {
-            string[] guids = AssetDatabase.FindAssets("button t:Texture2D");
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.Contains("TrueInputSystem") && path.Contains("Editor/Icon"))
-                {
-                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                    if (icon != null)
-                    {
-                        EditorGUIUtility.SetIconForObject(target, icon);
-                        break;
-                    }
-                }
-            }
-        }
+        //private void SetComponentIcon() => ComponentIconApplier.ApplyToObject(target, "button");
 
         // ── Styles init ───────────────────────────────────────
         private void InitStyles()

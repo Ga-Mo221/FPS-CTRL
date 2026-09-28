@@ -16,7 +16,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace TrueInputSystem
+namespace GaMo.TrueInputSystem
 {
     [InitializeOnLoad]
     internal static class TISMobileInputSetupEditorHooks

@@ -1,5 +1,6 @@
+#if UNITY_EDITOR
 using UnityEditor;
-using TrueInputSystem;
+using GaMo.TrueInputSystem;
 using UnityEngine;
 
 [InitializeOnLoad]
@@ -11,3 +12,4 @@ public static class TISSimulatorCheckerInjector
             SystemInfo.deviceType != UnityEngine.Device.SystemInfo.deviceType;
     }
 }
+#endif

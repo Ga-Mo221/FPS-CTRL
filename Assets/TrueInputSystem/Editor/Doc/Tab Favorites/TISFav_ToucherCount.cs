@@ -3,7 +3,7 @@
 //  Favorites Sub-Tab Module: ToucherCount
 // ============================================================
 #if UNITY_EDITOR
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public class TISFav_ToucherCount : IFavSubTabModule
     {

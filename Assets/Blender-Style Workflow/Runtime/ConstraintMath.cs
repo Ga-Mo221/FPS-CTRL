@@ -100,7 +100,7 @@ namespace GaMo.BlenderEditorTools
         /// Trong thực tế FPS với weapon luôn align gần với world axis, sự khác biệt này thường nhỏ.
         /// </summary>
         public static Quaternion ComputeWorldAbsoluteRotation(
-            Transform target, Transform constraintObject, Quaternion currentBRot,
+            Transform target, Quaternion currentBRot,
             bool copyX, bool copyY, bool copyZ)
         {
             if (copyX && copyY && copyZ) return target.rotation;
@@ -152,7 +152,7 @@ namespace GaMo.BlenderEditorTools
         }
 
         public static Quaternion ComputeLocalDeltaRotation(
-            Transform target, Transform constraintObject, Quaternion targetInitialLocalRot, Quaternion currentLocalRot,
+            Transform target, Quaternion targetInitialLocalRot, Quaternion currentLocalRot,
             bool copyX, bool copyY, bool copyZ)
         {
             // Tính delta rotation trong local space của target.
@@ -195,7 +195,7 @@ namespace GaMo.BlenderEditorTools
         }
 
         public static Quaternion ComputeLocalAbsoluteRotation(
-            Transform target, Transform constraintObject, Quaternion currentBLocalRot,
+            Transform target, Quaternion currentBLocalRot,
             bool copyX, bool copyY, bool copyZ)
         {
             // BUG CŨ: lấy eulerAngles của cả target lẫn currentBLocalRot, trộn theo trục, rồi

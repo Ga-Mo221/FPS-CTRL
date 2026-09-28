@@ -6,7 +6,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public class TISCode_TargetScanner : ICodeSubTabModule
     {

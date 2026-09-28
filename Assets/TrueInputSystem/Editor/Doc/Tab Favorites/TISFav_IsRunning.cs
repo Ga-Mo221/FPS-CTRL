@@ -3,7 +3,7 @@
 //  Favorites Sub-Tab Module: IsRunning
 // ============================================================
 #if UNITY_EDITOR
-namespace TrueInputSystem.Editor
+namespace GaMo.TrueInputSystem.Editor
 {
     public class TISFav_IsRunning : IFavSubTabModule
     {
