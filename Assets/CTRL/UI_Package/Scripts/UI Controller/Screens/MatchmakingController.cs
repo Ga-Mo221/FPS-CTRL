@@ -95,8 +95,38 @@ namespace Game.UI
         public void SetTimeText(string text) => Set(_timeLabel, text);
         public void SetTeamHeaders(string team1, string team2)
         {
+            SetTeamHeaders(team1, team2, null, null);
+        }
+
+        // [Aemy 2026-10-17] Tieu de cot (tu tao neu scene chua co) + mau doi: xanh = doi minh, do = doi dich.
+        public void SetTeamHeaders(string team1, string team2, Color? color1, Color? color2)
+        {
+            if (_team1HeaderLabel == null) _team1HeaderLabel = CreateHeader(_team1Slots, "Team1Header");
+            if (_team2HeaderLabel == null) _team2HeaderLabel = CreateHeader(_team2Slots, "Team2Header");
             Set(_team1HeaderLabel, team1);
             Set(_team2HeaderLabel, team2);
+            if (_team1HeaderLabel != null) { _team1HeaderLabel.gameObject.SetActive(!string.IsNullOrEmpty(team1)); _team1HeaderLabel.color = color1 ?? new Color(0.85f, 0.88f, 0.9f, 1f); }
+            if (_team2HeaderLabel != null) { _team2HeaderLabel.gameObject.SetActive(!string.IsNullOrEmpty(team2)); _team2HeaderLabel.color = color2 ?? new Color(0.85f, 0.88f, 0.9f, 1f); }
+        }
+
+        private TMP_Text CreateHeader(RosterSlot[] slots, string name)
+        {
+            var root = SlotRoot(slots, 0);
+            if (root == null) return null;
+            var rt0 = root.transform as RectTransform;
+            if (rt0 == null || rt0.parent == null) return null;
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(rt0.parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt0.anchorMin; rt.anchorMax = rt0.anchorMax; rt.pivot = rt0.pivot;
+            rt.sizeDelta = new Vector2(rt0.rect.width, 30f);
+            rt.anchoredPosition = rt0.anchoredPosition + new Vector2(0f, rt0.rect.height * (1f - rt0.pivot.y) + 22f);
+            var t = go.AddComponent<TextMeshProUGUI>();
+            var src = slots[0].nameLabel;
+            if (src != null) { t.font = src.font; t.fontSharedMaterial = src.fontSharedMaterial; }
+            t.fontSize = 18; t.fontStyle = FontStyles.Bold; t.raycastTarget = false; t.enableWordWrapping = false;
+            t.alignment = TextAlignmentOptions.MidlineLeft;
+            return t;
         }
 
         public void SetTeam1Member(int index, string name, Sprite avatar, string status = "")

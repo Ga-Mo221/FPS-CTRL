@@ -24,6 +24,7 @@ namespace Game.UI
             public string title;
             [TextArea] public string description;
             public MatchMode mode;   // FFA / TDM -> dùng khi bắt đầu tìm trận
+            public bool custom;      // [Aemy 2026-10-17] PHONG TUY CHINH (phong rieng co ma) -> luat lay tu CustomRoomPanel
         }
 
         [Header("Views (kéo thả trong MenuShell)")]
@@ -73,6 +74,7 @@ namespace Game.UI
             // [Aemy 2026-10-10] anh + mo ta map (o chon map, vung VAO TRAN, man Matchmaking)
             public Sprite icon; public Sprite background;
             [TextArea(2, 4)] public string description;
+            public bool random;      // [Aemy 2026-10-17] NGAU NHIEN: chon 1 map co san luc vao tran
         }
         [Tooltip("Map theo thu tu o BAN DO. available=false -> khoa 'coming soon'.")]
         [SerializeField] private MapInfo[] _maps = new MapInfo[]
@@ -177,6 +179,8 @@ namespace Game.UI
             // -> vao tran la da co so moi, KHONG can build lai.
             Backend.PlayfabImpl.WeaponSpecService.LoadAndApply();
             RefreshLoadout(); // [UI-INTEGRATION] cache loadout slot active -> GameManager (cum B)
+            Game.UI.CustomRoomSession.Clear(); // [Aemy 2026-10-17] ve menu: tra moc ha guc mac dinh
+            HookCustomRoom();
             ApplyModeInfo(_selectedModeIndex);
             ConfigureMaps(); // [MAP 2026-09-28 Aemy]
             WirePartyLeaveButton(); // [PARTY-FIX #69] nut Roi to doi
@@ -460,7 +464,9 @@ namespace Game.UI
 
         private Backend.Models.PartySettings CurrentPartySettings()
         {
-            return new Backend.Models.PartySettings { modeIndex = _selectedModeIndex, mapIndex = _selectedMapIndex };
+            var s = new Backend.Models.PartySettings { modeIndex = _selectedModeIndex, mapIndex = _selectedMapIndex };
+            if (_customRoom != null) { s.killTarget = _customRoom.KillTarget; s.customRule = _customRoom.Rule.ToString(); }
+            return s;
         }
 
         // Truong nhom (hoac nguoi chua co nhom - de khi tao nhom thi ghi luon) phat cai dat hien tai.
@@ -486,6 +492,12 @@ namespace Game.UI
                 if (GameManager.Instance != null && !string.IsNullOrEmpty(_maps[s.mapIndex].sceneName)) GameManager.Instance.SetSelectedMapScene(_maps[s.mapIndex].sceneName);
                 ApplySelectedMap(s.mapIndex);
             }
+            if (_customRoom != null)
+            {
+                if (s.killTarget > 0) _customRoom.SetKillTarget(s.killTarget);
+                if (!string.IsNullOrEmpty(s.customRule)) _customRoom.SetRule(s.customRule == "TDM" ? MatchMode.TDM : MatchMode.FFA, false);
+                _customRoom.SetLocked(true);
+            }
             if (_play != null) _play.SetChoiceLocked(true, "THEO TRƯỞNG NHÓM");
         }
 
@@ -503,6 +515,7 @@ namespace Game.UI
         {
             bool member = IsPartyMember();
             if (_play != null) _play.SetChoiceLocked(member, member ? "THEO TRƯỞNG NHÓM" : null);
+            if (_customRoom != null) _customRoom.SetLocked(member);
             if (st == null) { RefreshProfile(); return; }          // roi doi / bi da: o 1 ve lai la minh
             if (!member) PublishPartySettings();                    // vua thanh truong nhom -> phat cai dat cua minh
         }
@@ -518,6 +531,102 @@ namespace Game.UI
             if (_play == null || _modes == null || _modes.Length == 0) return;
             int i = Mathf.Clamp(index, 0, _modes.Length - 1);
             _play.SetModeDescription(_modes[i].title, _modes[i].description);
+            bool custom = _modes[i].custom;
+            if (_customRoom != null) _customRoom.gameObject.SetActive(custom);
+            _play.SetDefaultStartLabel(custom ? "TẠO PHÒNG" : "VÀO TRẬN");
+        }
+
+        // ===== [Aemy 2026-10-17] PHONG TUY CHINH =====
+        private CustomRoomPanel _customRoom;
+        private void HookCustomRoom()
+        {
+            if (_customRoom == null) _customRoom = FindFirstObjectByType<CustomRoomPanel>(FindObjectsInactive.Include);
+            if (_customRoom == null) return;
+            _customRoom.Changed -= OnCustomChanged; _customRoom.Changed += OnCustomChanged;
+            _customRoom.JoinRequested -= JoinCustomRoom; _customRoom.JoinRequested += JoinCustomRoom;
+            _customRoom.SetStatus("Bấm TẠO PHÒNG để lấy mã gửi bạn bè, hoặc nhập mã để vào phòng.");
+        }
+        private bool IsCustomSelected()
+        {
+            return _modes != null && _modes.Length > 0 && _modes[Mathf.Clamp(_selectedModeIndex, 0, _modes.Length - 1)].custom;
+        }
+        private void OnCustomChanged()
+        {
+            if (IsPartyMember()) { RevertToLeaderSettings(); return; }
+            if (_partyController != null) _partyController.PendingMode = CurrentMode();
+            PublishPartySettings();
+        }
+
+        // Chu phong (khong o to doi): tao phong Host + sao chep ma.
+        private void StartCustomHost()
+        {
+            if (_customRoom == null) return;
+            var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
+            if (ho == null) { Debug.LogWarning("[MenuShellBinder] Khong co FusionMatchHandoff."); return; }
+            ResolveRandomMap();
+            var rule = _customRoom.Rule;
+            string code = Game.UI.CustomRoomSession.NewCode(rule);
+            Game.UI.CustomRoomSession.Begin(code, _customRoom.KillTarget, true);
+            GUIUtility.systemCopyBuffer = code;
+            _customRoom.SetStatus("Đang tạo phòng " + code + "… (mã đã sao chép)");
+            if (_play != null) _play.SetStartInteractable(false);
+            ho.HandOffCustom(code, rule, true, (ok, why) =>
+            {
+                if (ok) return;
+                Game.UI.CustomRoomSession.Clear();
+                if (_play != null) _play.SetStartInteractable(true);
+                if (_customRoom != null) _customRoom.SetStatus("Không tạo được phòng (" + why + "). Thử lại?");
+            });
+        }
+
+        // Ban be: nhap ma -> vao phong (Client). Phong chua co -> bao loi, khong tao phong moi.
+        private void JoinCustomRoom(string raw)
+        {
+            if (_customRoom == null) return;
+            if (_partyController != null && _partyController.InParty)
+            { _customRoom.SetStatus("Rời tổ đội trước khi vào phòng bằng mã."); return; }
+            string code = Game.UI.CustomRoomSession.Normalize(raw);
+            if (code == null) { _customRoom.SetStatus("Mã phòng gồm 6 ký tự (bắt đầu bằng T hoặc F)."); return; }
+            JoinCustomRoomCode(code, 0);
+        }
+
+        private void JoinCustomRoomCode(string code, int retriesLeft)
+        {
+            var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
+            if (ho == null) return;
+            Game.UI.CustomRoomSession.Begin(code, 0, false);
+            if (_customRoom != null) _customRoom.SetStatus("Đang vào phòng " + code + "…");
+            ho.HandOffCustom(code, Game.UI.CustomRoomSession.RuleOf(code), false, (ok, why) =>
+            {
+                if (ok) return;
+                if (retriesLeft > 0 && this != null) { StartCoroutine(RetryJoinCustom(code, retriesLeft - 1)); return; }
+                Game.UI.CustomRoomSession.Clear();
+                if (_customRoom != null) _customRoom.SetStatus("Không tìm thấy phòng " + code + ". Kiểm tra mã hoặc chờ chủ phòng tạo phòng.");
+            });
+        }
+        private IEnumerator RetryJoinCustom(string code, int retriesLeft)
+        {
+            yield return new WaitForSeconds(2.5f);
+            JoinCustomRoomCode(code, retriesLeft);
+        }
+
+        // ===== [Aemy 2026-10-17] MAP NGAU NHIEN =====
+        private bool IsRandomMapSelected()
+        {
+            return _maps != null && _selectedMapIndex >= 0 && _selectedMapIndex < _maps.Length && _maps[_selectedMapIndex].random;
+        }
+        /// <summary>Dang chon NGAU NHIEN -> boc 1 map co san (khong phai o ngau nhien) va dat vao GameManager. Tra index map that.</summary>
+        private int ResolveRandomMap()
+        {
+            if (!IsRandomMapSelected()) return _selectedMapIndex;
+            var pool = new List<int>();
+            for (int i = 0; i < _maps.Length; i++) if (_maps[i].available && !_maps[i].random && !string.IsNullOrEmpty(_maps[i].sceneName)) pool.Add(i);
+            if (pool.Count == 0) return _selectedMapIndex;
+            int pick = pool[UnityEngine.Random.Range(0, pool.Count)];
+            if (GameManager.Instance != null) GameManager.Instance.SetSelectedMapScene(_maps[pick].sceneName);
+            if (_matchmakingScreen != null) _matchmakingScreen.SetMap(_maps[pick].displayName, "Ngẫu nhiên · " + _maps[pick].description, _maps[pick].background);
+            Debug.Log("[MenuShellBinder] Map ngau nhien -> " + _maps[pick].displayName);
+            return pick;
         }
 
         // [MAP 2026-09-28 Aemy] Khoa o map chua co (coming soon) + chon map dau tien co san.
@@ -546,7 +655,7 @@ namespace Game.UI
         {
             if (IsPartyMember()) { RevertToLeaderSettings(); return; } // [Aemy 2026-10-17]
             if (_maps == null || index < 0 || index >= _maps.Length || !_maps[index].available) return;
-            if (GameManager.Instance != null) GameManager.Instance.SetSelectedMapScene(_maps[index].sceneName);
+            if (GameManager.Instance != null && !_maps[index].random) GameManager.Instance.SetSelectedMapScene(_maps[index].sceneName);
             ApplySelectedMap(index); // [Aemy 2026-10-10]
             PublishPartySettings();
         }
@@ -569,6 +678,7 @@ namespace Game.UI
 
         private MatchMode CurrentMode()
         {
+            if (IsCustomSelected() && _customRoom != null) return _customRoom.Rule; // [Aemy 2026-10-17]
             if (_modes != null && _modes.Length > 0)
                 return _modes[Mathf.Clamp(_selectedModeIndex, 0, _modes.Length - 1)].mode;
             return MatchMode.FFA;
@@ -609,6 +719,22 @@ namespace Game.UI
             FillLobbyRoster(list, team);
             bool isLeader = _partyController != null && _partyController.IsLeader;
             Debug.Log("[Party-DIAG] HANDOFF session=" + session + " isLeader=" + isLeader);
+            // [Aemy 2026-10-17] Phong tuy chinh cua to doi: truong nhom = Host, thanh vien = Client (thu lai toi khi phong san sang).
+            string extra = _partyController != null ? _partyController.LastMatchExtra : null;
+            if (Game.UI.CustomRoomSession.IsCustomSession(session) && extra != null && extra.StartsWith(Game.UI.CustomRoomSession.PartyExtra))
+            {
+                string code = Game.UI.CustomRoomSession.CodeOfSession(session);
+                int kill = 0; int colon = extra.IndexOf(':'); if (colon >= 0) int.TryParse(extra.Substring(colon + 1), out kill);
+                StartLobbyHold(() =>
+                {
+                    var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
+                    if (ho == null) return;
+                    Game.UI.CustomRoomSession.Begin(code, kill, isLeader);
+                    if (isLeader) ho.HandOffCustom(code, mode, true, (ok, why) => { if (!ok) Debug.LogWarning("[Party] Tao phong tuy chinh loi: " + why); });
+                    else StartCoroutine(RetryJoinCustom(code, 6));
+                });
+                return;
+            }
             StartLobbyHold(() =>
             {
                 if (BackendBootstrap.MatchHandoff == null) return;
@@ -626,6 +752,10 @@ namespace Game.UI
         private void OnStartClicked()
         {
             var mode = CurrentMode();
+            bool inParty = _partyController != null && _partyController.InParty;
+            // [Aemy 2026-10-17] Phong tuy chinh khong o to doi -> tao phong rieng (Host) ngay, khong qua ghep tran.
+            if (IsCustomSelected() && !inParty) { StartCustomHost(); return; }
+            if (!inParty || _partyController.IsLeader) ResolveRandomMap(); // NGAU NHIEN -> boc map that truoc khi vao
             // [PARTY-FIX] Trong party: chi leader bat dau, va phai TAT CA san sang.
             if (_partyController != null && _partyController.InParty)
             {
@@ -636,7 +766,14 @@ namespace Game.UI
                 { if (ModalDialog.Instance != null) ModalDialog.Instance.Info("Chưa sẵn sàng", "Vẫn còn thành viên chưa sẵn sàng."); return; }
                 _partyController.PendingMode = mode;
                 // [Aemy 2026-10-17] Gui kem map cua truong nhom -> moi may load dung 1 map.
-                _partyController.StartPartyMatch(mode, GameManager.Instance != null ? GameManager.Instance.GetSelectedMapScene() : null);
+                string scene = GameManager.Instance != null ? GameManager.Instance.GetSelectedMapScene() : null;
+                if (IsCustomSelected() && _customRoom != null)
+                {
+                    // To doi + phong tuy chinh: truong nhom lam chu phong, thanh vien vao bang ma (qua MatchId party).
+                    string code = Game.UI.CustomRoomSession.NewCode(_customRoom.Rule);
+                    _partyController.StartPartyMatch(mode, scene, Game.UI.CustomRoomSession.SessionOf(code), Game.UI.CustomRoomSession.PartyExtra + ":" + _customRoom.KillTarget);
+                }
+                else _partyController.StartPartyMatch(mode, scene);
                 return;
             }
             RefreshLoadout(); // [UI-INTEGRATION] nap loadout MOI NHAT tu PlayFab ngay khi bam Vao tran
@@ -769,33 +906,49 @@ namespace Game.UI
             if (onDone != null) onDone();
         }
 
-        // Do roster vao man hinh matchmaking. Team: chia 2 doi theo TeamId; FFA: 1 danh sach lien, bo ten doi.
-        // [Aemy 2026-09-17] Roster hop nhat (da bo chia 2 doi). Local len dau (slot on dinh),
-        // giu nguyen thu tu nguoi khac (khong 'day' player), o trong de TRANG.
+        // [Aemy 2026-10-17] Roster man ghep tran:
+        //  - FFA: xep XEN KE trai / phai (nguoi 1 trai, nguoi 2 phai, nguoi 3 trai...), minh luon o dau.
+        //  - TDM: theo DOI - doi cua minh ben trai, doi dich ben phai (TeamId tu PlayFab). Chua biet doi (to doi / solo)
+        //    thi van xen ke 2 cot va ghi "chia doi khi vao tran".
         private void FillLobbyRoster(List<LobbyMember> members, bool team)
         {
             if (_matchmakingScreen == null || members == null) return;
             const int SZ = 5;
 
-            // Local truoc, con lai giu thu tu goc.
             var ordered = new List<LobbyMember>();
-            foreach (var m in members) if (m != null && m.IsLocal) ordered.Add(m);
-            foreach (var m in members) if (m != null && !m.IsLocal) ordered.Add(m);
+            LobbyMember me = null;
+            foreach (var m in members) if (m != null && m.IsLocal) { ordered.Add(m); me = m; break; }
+            foreach (var m in members) if (m != null && m != me) ordered.Add(m);
 
-            int fill = 0;
-            foreach (var mem in ordered)
+            var left = new List<LobbyMember>();
+            var right = new List<LobbyMember>();
+            bool hasTeams = false;
+            if (team) foreach (var m in ordered) if (!string.IsNullOrEmpty(m.TeamId)) { hasTeams = true; break; }
+
+            if (hasTeams)
             {
-                if (fill >= SZ * 2) break;
-                string st = mem.IsLocal ? "BẠN" : "";
-                if (fill < SZ) { _matchmakingScreen.SetTeam1Member(fill, mem.Name, null, st); LoadAvatarInto(mem, 1, fill); }
-                else { _matchmakingScreen.SetTeam2Member(fill - SZ, mem.Name, null, st); LoadAvatarInto(mem, 2, fill - SZ); }
-                fill++;
+                string myTeam = me != null && !string.IsNullOrEmpty(me.TeamId) ? me.TeamId : null;
+                if (myTeam == null) foreach (var m in ordered) if (!string.IsNullOrEmpty(m.TeamId)) { myTeam = m.TeamId; break; }
+                foreach (var m in ordered) (m.TeamId == myTeam ? left : right).Add(m);
             }
-            // O trong: de TRANG (giong o roster trong), khong 'Dang cho...'.
-            for (int i = (fill < SZ ? fill : SZ); i < SZ; i++) _matchmakingScreen.SetTeam1Member(i, "", null, "");
-            int rs = fill - SZ; if (rs < 0) rs = 0;
-            for (int i = rs; i < SZ; i++) _matchmakingScreen.SetTeam2Member(i, "", null, "");
-            _matchmakingScreen.SetTeamHeaders("NGƯỜI CHƠI (" + fill + ")", "");
+            else
+            {
+                for (int i = 0; i < ordered.Count; i++) (i % 2 == 0 ? left : right).Add(ordered[i]);
+            }
+
+            for (int i = 0; i < SZ; i++)
+            {
+                if (i < left.Count) { var m = left[i]; _matchmakingScreen.SetTeam1Member(i, m.Name, null, m.IsLocal ? "BẠN" : ""); LoadAvatarInto(m, 1, i); }
+                else _matchmakingScreen.SetTeam1Member(i, "", null, "");
+                if (i < right.Count) { var m = right[i]; _matchmakingScreen.SetTeam2Member(i, m.Name, null, m.IsLocal ? "BẠN" : ""); LoadAvatarInto(m, 2, i); }
+                else _matchmakingScreen.SetTeam2Member(i, "", null, "");
+            }
+
+            int total = Mathf.Min(ordered.Count, SZ * 2);
+            if (hasTeams) _matchmakingScreen.SetTeamHeaders("ĐỘI CỦA BẠN (" + left.Count + ")", "ĐỘI ĐỊCH (" + right.Count + ")",
+                new Color(0.31f, 0.84f, 0.79f, 1f), new Color(0.92f, 0.30f, 0.27f, 1f));
+            else if (team) _matchmakingScreen.SetTeamHeaders("NGƯỜI CHƠI (" + total + ")", "CHIA ĐỘI KHI VÀO TRẬN");
+            else _matchmakingScreen.SetTeamHeaders("NGƯỜI CHƠI (" + total + ")", "");
         }
 
         private void LoadAvatarInto(LobbyMember mem, int teamCol, int index)

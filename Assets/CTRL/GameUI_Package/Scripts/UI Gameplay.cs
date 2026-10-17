@@ -14,6 +14,7 @@ public class UIGameplay : MonoBehaviour
     {
         // [Aemy 2026-10-01] reset so lieu dau tran (hygiene cho pipeline stats).
         Game.Match.MatchStatsReporter.Instance.ResetMatch();
+        Game.UI.CustomRoomSession.AttachHudLabel(transform); // [Aemy 2026-10-17] hien ma phong tuy chinh tren HUD
     }
 
     private void Update()

@@ -345,6 +345,58 @@ public class NetworkRunnerHandler : MonoBehaviour
         );
     }
 
+    // [Aemy 2026-10-17] PHONG TUY CHINH (ma phong): chu phong = GameMode.Host, ban be = GameMode.Client.
+    // Session an khoi danh sach phong (IsVisible=false) -> chi ai co ma moi vao duoc, khong ghep nguoi la.
+    // Client vao ma khong ton tai -> StartGame tra loi (khong tu tao phong moi nhu AutoHostOrClient).
+    public void StartCustomGame(string sessionName, string lobbyName, string sceneName, bool asHost, Action<bool, string> onResult)
+    {
+        var task = StartCustomGameAsync(sessionName, lobbyName, sceneName, asHost, onResult);
+    }
+
+    private async Task StartCustomGameAsync(string sessionName, string lobbyName, string sceneName, bool asHost, Action<bool, string> onResult)
+    {
+        var runner = GetNetworkRunner();
+        var sceneManager = GetSceneManager(runner);
+        runner.ProvideInput = true;
+        SceneRef sceneRef = SceneRef.None;
+        if (asHost)
+        {
+            int buildIndex = SceneUtility.GetBuildIndexByScenePath(SceneName.GetPath(sceneName));
+            sceneRef = SceneRef.FromIndex(buildIndex);
+        }
+        Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Custom {(asHost ? "HOST" : "JOIN")} session {sessionName} scene {sceneName}");
+        StartGameResult res;
+        try
+        {
+            res = await runner.StartGame(new StartGameArgs
+            {
+                GameMode = asHost ? GameMode.Host : GameMode.Client,
+                Address = NetAddress.Any(),
+                Scene = sceneRef,
+                SessionName = sessionName,
+                CustomLobbyName = lobbyName,
+                SceneManager = sceneManager,
+                ConnectionToken = GameManager.Instance.BuildConnectionToken(),
+                IsVisible = false,
+                IsOpen = true,
+                PlayerCount = 10,
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[NetworkRunnerHandler] Custom StartGame loi: " + ex.Message);
+            SpawnNetworkRunner = null;
+            if (onResult != null) onResult(false, ex.Message);
+            return;
+        }
+        if (!res.Ok)
+        {
+            Debug.LogWarning($"[NetworkRunnerHandler] Custom StartGame that bai: {res.ShutdownReason}");
+            SpawnNetworkRunner = null; // runner hong tu huy -> lan sau GetNetworkRunner tao moi
+        }
+        if (onResult != null) onResult(res.Ok, res.Ok ? null : res.ShutdownReason.ToString());
+    }
+
     public void JoinGame(SessionInfo sessionInfo, string lobbyName)
     {
         Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> Join Game {sessionInfo.Name}");

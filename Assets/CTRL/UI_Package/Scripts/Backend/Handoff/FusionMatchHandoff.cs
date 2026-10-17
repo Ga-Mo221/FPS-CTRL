@@ -64,6 +64,26 @@ namespace Backend.Handoff
                 runner.CreateGame(sessionName, lobby, gm.GetSelectedMapScene());
         }
 
+        // [Aemy 2026-10-17] Phong tuy chinh: chu phong tao (Host), ban be vao bang ma (Client). onResult(ok, lyDo).
+        public void HandOffCustom(string code, MatchMode rule, bool asHost, System.Action<bool, string> onResult)
+        {
+            GameManager gm = GameManager.Instance;
+            if (gm == null || gm.NetworkRunnerHandler == null) { if (onResult != null) onResult(false, "NoRunner"); return; }
+            NetworkRunnerHandler runner = gm.NetworkRunnerHandler;
+            GamePlayMode mode = MapMode(rule);
+            gm.SetGamePlayMode(mode);
+            EnsureNickname(gm);
+            gm.NewGame();
+            string session = Game.UI.CustomRoomSession.SessionOf(code);
+            System.Action<bool, string> done = (ok, why) =>
+            {
+                if (!ok && Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeIn();
+                if (onResult != null) onResult(ok, why);
+            };
+            System.Action go = () => runner.StartCustomGame(session, "Custom", gm.GetSelectedMapScene(), asHost, done);
+            if (Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeOut(go); else go();
+        }
+
         // FFA -> Solo (không chia team) ; TDM -> Team.
         private static GamePlayMode MapMode(MatchMode mode)
         {

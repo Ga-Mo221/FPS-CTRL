@@ -149,6 +149,14 @@ namespace Game.UI
         // [UI-INTEGRATION] Doi text nut Start (dung cho dong ho mm:ss) + khoi phuc lai text mac dinh.
         public void SetStartLabel(string text) { if (_startLabel != null) _startLabel.text = text; }
         public void RestoreStartLabel() { if (_startLabel != null) _startLabel.text = _startDefaultText; }
+        // [Aemy 2026-10-17] Doi chu mac dinh nut chinh (VAO TRAN / TAO PHONG) theo che do.
+        public void SetDefaultStartLabel(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            bool showingDefault = _startLabel == null || _startLabel.text == _startDefaultText;
+            _startDefaultText = text;
+            if (showingDefault && _startLabel != null) _startLabel.text = text;
+        }
 
         // ================= [Aemy 2026-10-10] ANH MAP =================
         [Header("Anh map (Aemy 2026-10-10)")]
