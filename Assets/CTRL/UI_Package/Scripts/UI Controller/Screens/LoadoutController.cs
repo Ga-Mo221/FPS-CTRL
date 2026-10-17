@@ -80,8 +80,18 @@ namespace Game.UI
             {
                 var it = _weaponGroup.GetItem(i); if (it == null) continue;
                 int idx = i; it.LockedClicked += _ => { if (LockedWeaponClicked != null) LockedWeaponClicked(idx); };
+                HookRightClick(it.gameObject, idx); // [Aemy 2026-10-17]
             }
             _lockClicksHooked = true;
+        }
+
+        /// <summary>[Aemy 2026-10-17] Chuot phai vao o sung -> chi XEM model + chon skin, KHONG doi lua chon trang bi.</summary>
+        public event Action<int> WeaponRightClicked;
+        private void HookRightClick(GameObject go, int idx)
+        {
+            var relay = RightClickRelay.On(go);
+            if (relay == null) return;
+            relay.RightClicked += _ => { if (WeaponRightClicked != null) WeaponRightClicked(idx); };
         }
 
         /// <summary>[Aemy 2026-10-12] O utility (de LoadoutGamepadNav noi cot sung <-> cot utility).</summary>
@@ -327,6 +337,7 @@ namespace Game.UI
             var btn = ov.GetComponent<Button>(); btn.transition = Selectable.Transition.None;
             int idx = index;
             btn.onClick.AddListener(delegate { if (LockedWeaponClicked != null) LockedWeaponClicked(idx); });
+            HookRightClick(ov, idx); // [Aemy 2026-10-17] sung khoa: chuot phai van xem duoc model truoc khi mua
 
             var srcFont = item.GetComponentInChildren<TMP_Text>(true);
 

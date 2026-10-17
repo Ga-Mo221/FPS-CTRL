@@ -101,6 +101,9 @@ namespace Game.UI
             if (_shop != null)
                 _shop.PurchaseConfirmed += OnPurchaseConfirmed;
             Backend.Bootstrap.ProfileCache.Changed += OnProfileChanged; // doi avatar/ten -> refresh top bar
+            // [Aemy 2026-10-17] Doi trang bi / skin la cap nhat 3 balo vao GameManager NGAY (khong doi bam LUU / Vao tran).
+            Game.UI.LoadoutDraftStore.Changed += OnLoadoutDraftChanged;
+            Game.Skins.WeaponSkinService.Changed += OnSkinsChanged;
         }
 
         private void OnDestroy()
@@ -118,6 +121,24 @@ namespace Game.UI
             if (_shop != null)
                 _shop.PurchaseConfirmed -= OnPurchaseConfirmed;
             Backend.Bootstrap.ProfileCache.Changed -= OnProfileChanged;
+            Game.UI.LoadoutDraftStore.Changed -= OnLoadoutDraftChanged;
+            Game.Skins.WeaponSkinService.Changed -= OnSkinsChanged;
+        }
+
+        // [Aemy 2026-10-17] Bo 3 slot dung lan cuoi -> dung lai khi skin doi (truoc day skin tai tu server XONG SAU khi
+        // da dung balo => vao tran mat skin; doi skin sau khi vao menu cung khong ap dung).
+        private LoadoutConfig[] _lastLoadoutArr;
+        private void OnLoadoutDraftChanged()
+        {
+            LoadoutConfig[] d;
+            if (!Game.UI.LoadoutDraftStore.TryGet(out d)) return;
+            _lastLoadoutArr = d;
+            ApplyLoadoutToGame(d);
+        }
+        private void OnSkinsChanged()
+        {
+            if (_lastLoadoutArr != null) ApplyLoadoutToGame(_lastLoadoutArr);
+            else RefreshLoadout();
         }
 
         // [Aemy 2026-09-28] Ho so doi (avatar/ten) -> nap lai top bar ngay, khong can vao lai menu.
@@ -303,8 +324,20 @@ namespace Game.UI
         {
             var svc = BackendBootstrap.LoadoutService;
             if (svc == null || GameManager.Instance == null) return;
-            svc.LoadAllLoadouts(arr =>
+            svc.LoadAllLoadouts(arr0 =>
             {
+                // [Aemy 2026-10-17] Con ban nhap chua dong bo -> ban nhap moi la lua chon moi nhat cua nguoi choi.
+                LoadoutConfig[] _draft;
+                var arr = Game.UI.LoadoutDraftStore.TryGet(out _draft) ? _draft : arr0;
+                if (arr != null) _lastLoadoutArr = arr;
+                ApplyLoadoutToGame(arr);
+            },
+            e => Debug.LogWarning("[MenuShellBinder] LoadLoadout loi: " + e.ErrorMessage));
+        }
+
+        /// <summary>[Aemy 2026-10-17] Dung 3 balo (ALPHA/BRAVO/CHARLIE) + skin dang trang bi -> GameManager.</summary>
+        private void ApplyLoadoutToGame(LoadoutConfig[] arr)
+        {
                 if (arr == null || GameManager.Instance == null) return;
                 var _gmi = GameManager.Instance;
                 var _sd  = _gmi.GetSetupData();
@@ -349,8 +382,6 @@ namespace Game.UI
                 _gmi.setCurrentBalo(_b1);
                 _gmi.SetLoadout(_b1.Weapon_One, _b1.Weapon_Two, _b1.Grenade_Q, _b1.Grenade_E);
                 Debug.Log("[MenuShellBinder] Loadout 3 balo (Alpha/Bravo/Charlie): B1=" + _b1.Weapon_One + "/" + _b1.Weapon_Two + "|" + _b1.Grenade_Q + "/" + _b1.Grenade_E + " B2=" + _others[0].Weapon_One + "/" + _others[0].Weapon_Two + " B3=" + _others[1].Weapon_One + "/" + _others[1].Weapon_Two);
-            },
-            e => Debug.LogWarning("[MenuShellBinder] LoadLoadout loi: " + e.ErrorMessage));
         }
 
         // Mua xong o Shop -> cap nhat lai so du coins tren TopBar.

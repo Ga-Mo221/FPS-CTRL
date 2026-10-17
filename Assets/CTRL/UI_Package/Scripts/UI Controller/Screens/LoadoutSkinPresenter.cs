@@ -61,6 +61,7 @@ namespace Game.UI
                 _loadout.WeaponSelectionChanged += OnWeaponSelection;
                 _loadout.WeaponsApplied += OnWeaponsApplied;          // [Aemy 2026-10-11] doi slot ALPHA/BRAVO/CHARLIE, tai du lieu
                 _loadout.FocusedWeaponChanged += ShowWeapon;           // model + chi so cung 1 nguon
+                _loadout.WeaponRightClicked += FocusWeapon;            // [Aemy 2026-10-17] chuot phai = chi xem
             }
             HookItemFocus();
             RefreshOwnership();
@@ -106,6 +107,7 @@ namespace Game.UI
                 _loadout.WeaponSelectionChanged -= OnWeaponSelection;
                 _loadout.WeaponsApplied -= OnWeaponsApplied;
                 _loadout.FocusedWeaponChanged -= ShowWeapon;
+                _loadout.WeaponRightClicked -= FocusWeapon;
             }
         }
 

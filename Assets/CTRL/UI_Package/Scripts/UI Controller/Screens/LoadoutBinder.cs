@@ -24,6 +24,9 @@ namespace Game.UI
         private LoadoutConfig[] _slots;                 // cache phien theo slot
         private int _currentSlot = 0;                   // slot (tab) dang chon
         private bool _loaded;                            // da tai xong tu PlayFab chua
+        // [Aemy 2026-10-17] Thay doi chua dong bo len PlayFab (ban nhap da luu NGAY tren may qua LoadoutDraftStore).
+        private bool _dirty;
+        private int _editVersion;                        // tang moi lan sua -> chi xoa ban nhap neu khong sua them trong luc dang luu
 
         // Bang tra ten <-> index (dung nhan item cua UI).
         private readonly Dictionary<string, int> _weaponIndex = new Dictionary<string, int>();
@@ -66,6 +69,12 @@ private void Start()
         private void OnEnable()
         {
             ApplyOwnershipLocks();
+        }
+
+        // [Aemy 2026-10-17] Roi tab Trang bi (sang tab khac / vao tran) ma chua bam LUU -> tu dong bo len PlayFab.
+        private void OnDisable()
+        {
+            if (_loaded && _dirty) SaveAllToCloud(false);
         }
 
         /// <summary>Doc cap do nguoi choi tu PlayFab roi ap khoa/mo cac slot sung khoa theo level.</summary>
@@ -116,6 +125,14 @@ private void Start()
             {
                 for (int i = 0; i < _slots.Length; i++)
                     _slots[i] = (arr != null && i < arr.Length) ? arr[i] : null;
+                // [Aemy 2026-10-17] Con ban nhap chua dong bo (lan truoc thoat game/vao tran truoc khi luu) -> uu tien ban nhap.
+                LoadoutConfig[] draft;
+                if (LoadoutDraftStore.TryGet(out draft))
+                {
+                    for (int i = 0; i < _slots.Length && i < draft.Length; i++) _slots[i] = draft[i];
+                    _dirty = true;
+                    Debug.Log("[LoadoutBinder] Dung ban nhap loadout chua dong bo.");
+                }
                 _loaded = true;
                 ApplySlot(_currentSlot);   // do slot dang chon (co data thi hien, khong thi trong)
             },
@@ -128,6 +145,24 @@ private void Start()
             _currentSlot = index;
             UnityEngine.PlayerPrefs.SetInt("ActiveLoadoutSlot", index); // [UI-INTEGRATION] nho slot dang chon de vao tran dung loadout
             if (_loaded) { ApplySlot(index); WriteActiveLoadoutPrefs(index >= 0 && index < _slots.Length ? _slots[index] : null); } // [LOADOUT-FIX 2026-09-28 Aemy]
+            if (_loaded && _dirty) PersistDraft(); // [Aemy 2026-10-17] chuyen tab -> luu tam
+        }
+
+        // [Aemy 2026-10-17] Luu NGAY tren may moi lan sua (khong can bam LUU): PlayerPrefs + ban nhap theo tai khoan.
+        // MenuShellBinder nghe LoadoutDraftStore.Changed -> cap nhat 3 balo vao GameManager ngay
+        // => truong nhom tim thay tran luc minh dang chon do van vao dung trang bi.
+        private void MarkEdited()
+        {
+            _dirty = true;
+            _editVersion++;
+            PersistDraft();
+        }
+
+        private void PersistDraft()
+        {
+            WriteActiveLoadoutPrefs(_currentSlot >= 0 && _currentSlot < _slots.Length ? _slots[_currentSlot] : null);
+            WriteAllSlotsPrefs();
+            LoadoutDraftStore.Put(_slots);
         }
 
         // Do cau hinh slot index len UI (theo ten -> index). Slot rong -> xoa lua chon.
@@ -165,12 +200,14 @@ private void Start()
             slot.Weapons = NamesFromIndices(indices, true);
             slot.WeaponTypes = TypesFromIndices(indices);   // luu them loai sung
             // [Aemy 2026-10-11] chi so theo sung dang xem (LoadoutSkinPresenter -> FocusWeapon)
+            MarkEdited();
         }
 
         private void OnUtilsChanged(IReadOnlyList<int> indices)
         {
             if (!_loaded) return;
             EnsureSlot(_currentSlot).Utilities = NamesFromIndices(indices, false);
+            MarkEdited();
         }
 
         // Bam Save -> luu slot dang chon len PlayFab.
@@ -181,25 +218,52 @@ private void Start()
             cfg.WeaponTypes = TypesFromIndices(weapons);   // luu them loai sung
             cfg.Utilities = NamesFromIndices(utils, false);
             UnityEngine.PlayerPrefs.SetInt("ActiveLoadoutSlot", _currentSlot); // [LOADOUT-FIX 2026-09-28 Aemy]
-            WriteActiveLoadoutPrefs(cfg); // [LOADOUT-FIX 2026-09-28 Aemy]
-            WriteAllSlotsPrefs(); // [LOADOUT 2026-09-28 Aemy] ghi ca 3 slot -> panel doi trang bi trong tran doc dung
+            _editVersion++;
+            PersistDraft(); // [Aemy 2026-10-17] ghi prefs + ban nhap (GameManager cap nhat ngay)
+            SaveAllToCloud(true);
+        }
 
+        // [Aemy 2026-10-17] Tach tu OnSave: luu TAT CA slot co du lieu len PlayFab. Thanh cong het -> xoa ban nhap.
+        private void SaveAllToCloud(bool fromButton)
+        {
             var svc = BackendBootstrap.LoadoutService;
             if (svc == null) { Debug.LogWarning("[LoadoutBinder] Chua co LoadoutService."); return; }
+            int version = _editVersion;
+            System.Action allSaved = () =>
+            {
+                if (version != _editVersion) return; // sua them trong luc dang luu -> giu ban nhap
+                _dirty = false;
+                LoadoutDraftStore.Clear();
+            };
+            if (!fromButton)
+            {
+                int left = 0, failed = 0;
+                for (int i = 0; i < _slots.Length; i++) if (_slots[i] != null) left++;
+                if (left == 0) return;
+                for (int i = 0; i < _slots.Length; i++)
+                {
+                    if (_slots[i] == null) continue;
+                    int idx = i;
+                    svc.SaveLoadoutSlot(idx, _slots[idx],
+                        () => { left--; if (left == 0 && failed == 0) { Debug.Log("[LoadoutBinder] Tu dong luu loadout len PlayFab."); allSaved(); } },
+                        err => { left--; failed++; Debug.LogWarning("[LoadoutBinder] Tu luu slot " + idx + " loi: " + err.ErrorMessage); });
+                }
+                return;
+            }
 
             _loadout.SetSaveInteractable(false);
             // [SAVE-ALL 2026-09-28 Aemy] 1 lan bam Luu -> luu TAT CA slot co du lieu.
             int pending = 0;
             for (int i = 0; i < _slots.Length; i++) if (_slots[i] != null) pending++;
             if (pending == 0) { _loadout.SetSaveInteractable(true); return; }
-            int done = 0;
+            int done = 0, errors = 0;
             for (int i = 0; i < _slots.Length; i++)
             {
                 if (_slots[i] == null) continue;
                 int idx = i;
                 svc.SaveLoadoutSlot(idx, _slots[idx],
-                    () => { done++; if (done >= pending) { Debug.Log("[LoadoutBinder] Da luu " + pending + " slot."); _loadout.SetSaveInteractable(true); } },
-                    err => { done++; Debug.LogWarning("[LoadoutBinder] Luu slot " + idx + " loi: " + err.ErrorMessage); if (done >= pending) _loadout.SetSaveInteractable(true); });
+                    () => { done++; if (done >= pending) { Debug.Log("[LoadoutBinder] Da luu " + pending + " slot."); _loadout.SetSaveInteractable(true); if (errors == 0) allSaved(); } },
+                    err => { done++; errors++; Debug.LogWarning("[LoadoutBinder] Luu slot " + idx + " loi: " + err.ErrorMessage); if (done >= pending) _loadout.SetSaveInteractable(true); });
             }
         }
 
