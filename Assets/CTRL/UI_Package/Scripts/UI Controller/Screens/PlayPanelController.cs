@@ -89,6 +89,38 @@ namespace Game.UI
             if (src != null && src.font != null) tmp.font = src.font;
         }
         public void SelectMap(int index, bool notify = false) { if (_mapGroup != null) _mapGroup.SelectByIndex(index, notify); }
+        // [Aemy 2026-10-17] Chon nut che do tu code (dong bo theo truong nhom).
+        public void SelectMode(int index, bool notify = false) { if (_modeGroup != null) _modeGroup.SelectByIndex(index, notify); }
+
+        // [Aemy 2026-10-17] Thanh vien to doi: khoa CHE DO + BAN DO (lam mo, khong bam duoc) + nhan "THEO TRUONG NHOM".
+        private TMP_Text _lockHint;
+        public void SetChoiceLocked(bool locked, string hint)
+        {
+            LockGroup(_modeGroup, locked);
+            LockGroup(_mapGroup, locked);
+            if (_lockHint == null && locked && _modeGroup != null)
+            {
+                var src = _modeGroup.GetComponent<TMP_Text>();
+                var go = new GameObject("PartyLockHint", typeof(RectTransform));
+                go.transform.SetParent(_modeGroup.transform.parent, false);
+                var rt = (RectTransform)go.transform;
+                var head = (RectTransform)_modeGroup.transform;
+                rt.anchorMin = head.anchorMin; rt.anchorMax = head.anchorMax; rt.pivot = new Vector2(1f, 0.5f);
+                rt.anchoredPosition = head.anchoredPosition + new Vector2(388f, 0f); rt.sizeDelta = new Vector2(300f, 30f);
+                _lockHint = go.AddComponent<TextMeshProUGUI>();
+                if (src != null) { _lockHint.font = src.font; }
+                _lockHint.fontSize = 15; _lockHint.alignment = TextAlignmentOptions.MidlineRight; _lockHint.raycastTarget = false;
+                _lockHint.color = new Color(0.31f, 0.84f, 0.79f, 1f); _lockHint.enableWordWrapping = false;
+            }
+            if (_lockHint != null) { _lockHint.gameObject.SetActive(locked); if (!string.IsNullOrEmpty(hint)) _lockHint.text = hint; }
+        }
+        private static void LockGroup(UISelectionGroup g, bool locked)
+        {
+            if (g == null) return;
+            var cg = g.GetComponent<CanvasGroup>();
+            if (cg == null) { if (!locked) return; cg = g.gameObject.AddComponent<CanvasGroup>(); }
+            cg.interactable = !locked; cg.blocksRaycasts = !locked; cg.alpha = locked ? 0.55f : 1f;
+        }
 
         // [MAP-SYNC 2026-10-01 Aemy] Set text ten o map (dong bo voi displayName trong code).
         public void SetMapName(int index, string name)

@@ -14,7 +14,8 @@ namespace Game.UI
 {
     public class CharacterSelectController : MonoBehaviour
     {
-        public const string PrefKey = "SelectedCharacter";
+        // [Aemy 2026-10-17] Luu nhan vat theo TAI KHOAN (truoc day key chung -> tai khoan khac tren cung may bi lay nhan vat cua nguoi truoc).
+        public static string PrefKey { get { return SessionCache.UserKey("SelectedCharacter"); } }
         private const float AutoSpinSpeed = 18f;
 
         private static CharacterSelectController _instance;

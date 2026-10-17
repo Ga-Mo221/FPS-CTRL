@@ -17,7 +17,8 @@ namespace Game.Skins
     /// </summary>
     public static class WeaponSkinService
     {
-        private const string Key = "EquippedSkins";
+        private const string Key = "EquippedSkins";                         // key PlayFab User Data
+        private static string PrefKey { get { return Game.UI.SessionCache.UserKey(Key); } } // [Aemy 2026-10-17] cache may theo tai khoan
         private static Dictionary<string, string> _equipped;
         public static event Action Changed;
 
@@ -25,7 +26,7 @@ namespace Game.Skins
         {
             get
             {
-                if (_equipped == null) _equipped = Parse(PlayerPrefs.GetString(Key, ""));
+                if (_equipped == null) _equipped = Parse(PlayerPrefs.GetString(PrefKey, ""));
                 return _equipped;
             }
         }
@@ -49,7 +50,7 @@ namespace Game.Skins
             if (string.IsNullOrEmpty(baseWeaponId)) return;
             if (string.IsNullOrEmpty(skinWeaponId)) Map.Remove(baseWeaponId); else Map[baseWeaponId] = skinWeaponId;
             string json = Serialize(Map);
-            PlayerPrefs.SetString(Key, json); PlayerPrefs.Save();
+            PlayerPrefs.SetString(PrefKey, json); PlayerPrefs.Save();
             if (PlayFabClientAPI.IsClientLoggedIn())
                 PlayFabClientAPI.UpdateUserData(new UpdateUserDataRequest { Data = new Dictionary<string, string> { { Key, json } } },
                     r => { }, e => Debug.LogWarning("[WeaponSkinService] Luu skin loi: " + e.ErrorMessage));
@@ -66,18 +67,25 @@ namespace Game.Skins
                 if (r.Data != null && r.Data.TryGetValue(Key, out rec) && rec != null && !string.IsNullOrEmpty(rec.Value))
                 {
                     _equipped = Parse(rec.Value);
-                    PlayerPrefs.SetString(Key, rec.Value); PlayerPrefs.Save();
+                    PlayerPrefs.SetString(PrefKey, rec.Value); PlayerPrefs.Save();
                     if (Changed != null) Changed();
                 }
                 else if (Map.Count > 0)
                 {
                     // Tai khoan nay chua trang bi skin nao -> xoa cache cua tai khoan truoc tren cung may (tranh spawn skin chua so huu).
                     _equipped = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    PlayerPrefs.DeleteKey(Key); PlayerPrefs.Save();
+                    PlayerPrefs.DeleteKey(PrefKey); PlayerPrefs.Save();
                     if (Changed != null) Changed();
                 }
                 if (onDone != null) onDone();
             }, e => { Debug.LogWarning("[WeaponSkinService] Tai skin loi: " + e.ErrorMessage); if (onDone != null) onDone(); });
+        }
+
+        /// <summary>[Aemy 2026-10-17] Doi tai khoan: bo skin dang nho trong bo nho (doc lai theo tai khoan moi).</summary>
+        public static void ResetCache()
+        {
+            _equipped = null;
+            if (Changed != null) Changed();
         }
 
         // JSON phang {"Umbra":"M4_DR",...} — tu viet de khong phu thuoc thu vien.

@@ -98,6 +98,13 @@ namespace Game.UI
             if (_party != null)
                 _party.ReadyClicked += OnPartyReady;
             if (_partyController != null) _partyController.OnPartyMatchReady += OnPartyMatchReady; // [PARTY-FIX] qua lobby
+            if (_partyController != null)
+            {
+                // [Aemy 2026-10-17] Thanh vien dong bo che do/map voi truong nhom; bi da / roi doi -> mo khoa lai.
+                _partyController.OnLeaderSettings += ApplyLeaderSettings;
+                _partyController.OnPartyChanged += OnPartyStateChanged;
+                _partyController.OnKicked += OnKickedFromParty;
+            }
             if (_shop != null)
                 _shop.PurchaseConfirmed += OnPurchaseConfirmed;
             Backend.Bootstrap.ProfileCache.Changed += OnProfileChanged; // doi avatar/ten -> refresh top bar
@@ -118,6 +125,12 @@ namespace Game.UI
             if (_party != null)
                 _party.ReadyClicked -= OnPartyReady;
             if (_partyController != null) _partyController.OnPartyMatchReady -= OnPartyMatchReady;
+            if (_partyController != null)
+            {
+                _partyController.OnLeaderSettings -= ApplyLeaderSettings;
+                _partyController.OnPartyChanged -= OnPartyStateChanged;
+                _partyController.OnKicked -= OnKickedFromParty;
+            }
             if (_shop != null)
                 _shop.PurchaseConfirmed -= OnPurchaseConfirmed;
             Backend.Bootstrap.ProfileCache.Changed -= OnProfileChanged;
@@ -167,6 +180,8 @@ namespace Game.UI
             ApplyModeInfo(_selectedModeIndex);
             ConfigureMaps(); // [MAP 2026-09-28 Aemy]
             WirePartyLeaveButton(); // [PARTY-FIX #69] nut Roi to doi
+            PartySlotContextMenu.Attach(_party, _partyController, () => _lastFriends, RefreshProfile); // [Aemy 2026-10-17] chuot phai o thanh vien
+            PublishPartySettings();
         }
 
         // ---------------- TopBar: hồ sơ + coins ----------------
@@ -377,7 +392,7 @@ namespace Game.UI
                 _others[0] = _buildBalo(arr.Length > 1 ? arr[1] : null, _def);    // BRAVO
                 _others[1] = _buildBalo(arr.Length > 2 ? arr[2] : null, _def);    // CHARLIE
 
-                string _selChar = UnityEngine.PlayerPrefs.GetString("SelectedCharacter", _sd.CharacterName); if (string.IsNullOrEmpty(_selChar)) _selChar = _sd.CharacterName; // [Aemy 2026-10-05] nhan vat da chon
+                string _selChar = UnityEngine.PlayerPrefs.GetString(CharacterSelectController.PrefKey, _sd.CharacterName); if (string.IsNullOrEmpty(_selChar)) _selChar = _sd.CharacterName; // [Aemy 2026-10-05] nhan vat da chon
                 _gmi.SetSetupData(new GamePlaySetupData(_selChar, _b1, _others[0], _others[1]));
                 _gmi.setCurrentBalo(_b1);
                 _gmi.SetLoadout(_b1.Weapon_One, _b1.Weapon_Two, _b1.Grenade_Q, _b1.Grenade_E);
@@ -433,9 +448,68 @@ namespace Game.UI
 
         private void OnModeSelected(int index)
         {
+            if (IsPartyMember()) { RevertToLeaderSettings(); return; } // [Aemy 2026-10-17] thanh vien khong tu chon
             _selectedModeIndex = index;
             ApplyModeInfo(index);
             if (_partyController != null) _partyController.PendingMode = CurrentMode(); // [Aemy]
+            PublishPartySettings();
+        }
+
+        // ===== [Aemy 2026-10-17] Dong bo che do / map trong to doi =====
+        private bool IsPartyMember() { return _partyController != null && _partyController.InParty && !_partyController.IsLeader; }
+
+        private Backend.Models.PartySettings CurrentPartySettings()
+        {
+            return new Backend.Models.PartySettings { modeIndex = _selectedModeIndex, mapIndex = _selectedMapIndex };
+        }
+
+        // Truong nhom (hoac nguoi chua co nhom - de khi tao nhom thi ghi luon) phat cai dat hien tai.
+        private void PublishPartySettings()
+        {
+            if (_partyController == null || IsPartyMember()) return;
+            _partyController.PublishSettings(CurrentPartySettings());
+        }
+
+        private void ApplyLeaderSettings(Backend.Models.PartySettings s)
+        {
+            if (s == null || !IsPartyMember()) return;
+            if (_modes != null && s.modeIndex >= 0 && s.modeIndex < _modes.Length)
+            {
+                _selectedModeIndex = s.modeIndex;
+                if (_play != null) _play.SelectMode(s.modeIndex, false);
+                ApplyModeInfo(s.modeIndex);
+                _partyController.PendingMode = CurrentMode();
+            }
+            if (_maps != null && s.mapIndex >= 0 && s.mapIndex < _maps.Length)
+            {
+                if (_play != null) _play.SelectMap(s.mapIndex, false);
+                if (GameManager.Instance != null && !string.IsNullOrEmpty(_maps[s.mapIndex].sceneName)) GameManager.Instance.SetSelectedMapScene(_maps[s.mapIndex].sceneName);
+                ApplySelectedMap(s.mapIndex);
+            }
+            if (_play != null) _play.SetChoiceLocked(true, "THEO TRƯỞNG NHÓM");
+        }
+
+        private void RevertToLeaderSettings()
+        {
+            var s = _partyController != null ? _partyController.LeaderSettings : null;
+            if (s != null) ApplyLeaderSettings(s);
+            else
+            {
+                if (_play != null) { _play.SelectMode(_selectedModeIndex, false); _play.SelectMap(_selectedMapIndex, false); }
+            }
+        }
+
+        private void OnPartyStateChanged(Backend.Models.PartyState st)
+        {
+            bool member = IsPartyMember();
+            if (_play != null) _play.SetChoiceLocked(member, member ? "THEO TRƯỞNG NHÓM" : null);
+            if (st == null) { RefreshProfile(); return; }          // roi doi / bi da: o 1 ve lai la minh
+            if (!member) PublishPartySettings();                    // vua thanh truong nhom -> phat cai dat cua minh
+        }
+
+        private void OnKickedFromParty()
+        {
+            if (ModalDialog.Instance != null) ModalDialog.Instance.Info("Tổ đội", "Bạn không còn trong tổ đội (bị mời ra hoặc tổ đội đã giải tán).");
         }
 
         // Cập nhật tiêu đề + mô tả mode đang chọn lên PlayPanel.
@@ -470,9 +544,11 @@ namespace Game.UI
 
         private void OnMapSelected(int index)
         {
+            if (IsPartyMember()) { RevertToLeaderSettings(); return; } // [Aemy 2026-10-17]
             if (_maps == null || index < 0 || index >= _maps.Length || !_maps[index].available) return;
             if (GameManager.Instance != null) GameManager.Instance.SetSelectedMapScene(_maps[index].sceneName);
             ApplySelectedMap(index); // [Aemy 2026-10-10]
+            PublishPartySettings();
         }
 
         // [Aemy 2026-10-10] Map dang chon (cho vung VAO TRAN + man Matchmaking).
@@ -512,8 +588,7 @@ namespace Game.UI
         }
         private void OnLeavePartyClicked()
         {
-            if (_partyController != null) _partyController.LeaveParty();
-            if (_party != null) { for (int i = 1; i < _party.SlotCount; i++) _party.SetEmpty(i); }
+            if (_partyController != null) _partyController.LeaveParty(); // [Aemy 2026-10-17] tu xoa o + bao OnPartyChanged(null)
             RefreshProfile();
         }
 
@@ -560,7 +635,8 @@ namespace Game.UI
                 if (pst == null || !pst.AllReady())
                 { if (ModalDialog.Instance != null) ModalDialog.Instance.Info("Chưa sẵn sàng", "Vẫn còn thành viên chưa sẵn sàng."); return; }
                 _partyController.PendingMode = mode;
-                _partyController.StartPartyMatch(mode);
+                // [Aemy 2026-10-17] Gui kem map cua truong nhom -> moi may load dung 1 map.
+                _partyController.StartPartyMatch(mode, GameManager.Instance != null ? GameManager.Instance.GetSelectedMapScene() : null);
                 return;
             }
             RefreshLoadout(); // [UI-INTEGRATION] nap loadout MOI NHAT tu PlayFab ngay khi bam Vao tran

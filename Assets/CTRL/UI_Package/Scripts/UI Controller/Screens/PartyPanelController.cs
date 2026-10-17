@@ -54,6 +54,19 @@ namespace Game.UI
         /// <summary>So o party co the trinh bay.</summary>
         public int SlotCount => _members != null ? _members.Length : 0;
 
+        /// <summary>[Aemy 2026-10-17] Node goc cua o party (de gan menu chuot phai).</summary>
+        public GameObject GetSlotRoot(int index)
+        {
+            if (_members == null || index < 0 || index >= _members.Length || _members[index] == null) return null;
+            return _members[index].root;
+        }
+        /// <summary>[Aemy 2026-10-17] O dang co nguoi (Filled) hay khong.</summary>
+        public bool IsSlotFilled(int index)
+        {
+            if (_members == null || index < 0 || index >= _members.Length || _members[index] == null) return false;
+            var g = _members[index].filledGroup; return g != null && g.activeSelf;
+        }
+
         /// <summary>So o avatar ban be co the trinh bay.</summary>
         public int FriendAvatarCount => _friendAvatars != null ? _friendAvatars.Length : 0;
 

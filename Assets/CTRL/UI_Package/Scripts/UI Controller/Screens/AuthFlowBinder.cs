@@ -103,6 +103,7 @@ namespace Game.UI
                 {
                     Debug.Log("[AuthFlowBinder] Đăng nhập OK: " + r.PlayerId);
                     RememberSave(remember, usernameOrEmail.Trim(), password); // [REMEMBER 2026-09-29 Aemy]
+                    SessionCache.ResetForNewSession(); // [Aemy 2026-10-17] khong lan du lieu tai khoan truoc
                     if (_notice != null) _notice.Hide();
                     SceneLoader.LoadWithLoading(_menuScene);
                 },
@@ -135,6 +136,7 @@ namespace Game.UI
                 _external.LoginWithGoogle(g,
                     r =>
                     {
+                        SessionCache.ResetForNewSession(); // [Aemy 2026-10-17]
                         if (_notice != null) _notice.Hide();
                         SceneLoader.LoadWithLoading(_menuScene);
                     },

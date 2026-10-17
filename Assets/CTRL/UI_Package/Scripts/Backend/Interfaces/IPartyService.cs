@@ -17,5 +17,7 @@ namespace Backend.Interfaces
         void ClearInvite(Action onOk, Action<AuthError> onError);
         void Touch(string code, bool ready, Action onOk, Action<AuthError> onError); // [PARTY-HB] heartbeat
         void KickMember(string code, string playFabId, Action onOk, Action<AuthError> onError); // [PARTY-HB] da member mat ket noi
+        void SetLeader(string code, string playFabId, Action onOk, Action<AuthError> onError);   // [Aemy 2026-10-17] chuyen truong nhom
+        void SetSettings(string code, string settingsJson, Action onOk, Action<AuthError> onError); // [Aemy 2026-10-17] che do/map cua truong nhom
     }
 }

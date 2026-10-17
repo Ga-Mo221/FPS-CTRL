@@ -24,6 +24,14 @@ namespace Game.UI
         public event Action<PartyInvite> OnInviteReceived;
         public event Action<PartyState> OnPartyChanged;
         public event Action<string, MatchMode> OnPartyMatchReady; // [PARTY-FIX] session, mode -> MenuShellBinder show lobby roi handoff
+        // [Aemy 2026-10-17] Thanh vien: nhan cai dat (che do/map) cua truong nhom. Bi da khoi doi -> OnKicked.
+        public event Action<PartySettings> OnLeaderSettings;
+        public event Action OnKicked;
+        /// <summary>Cai dat truong nhom dang dung (thanh vien dung de khoa + hien thi). null = chua co.</summary>
+        public PartySettings LeaderSettings { get; private set; }
+        /// <summary>[Aemy 2026-10-17] Tran party cuoi: scene map (dinh tu truong nhom) + chuoi phu (custom).</summary>
+        public string LastMatchScene { get; private set; }
+        public string LastMatchExtra { get; private set; }
 
         private Coroutine _pollCo, _inviteCo;
         private bool _handedOff;
@@ -42,10 +50,16 @@ namespace Game.UI
             if (_inviteCo != null) { StopCoroutine(_inviteCo); _inviteCo = null; }
         }
 
+        // [Aemy 2026-10-17] Ma party luu THEO TAI KHOAN (truoc day key chung "PartyCode" -> doi tai khoan tren cung may
+        // van khoi phuc party cua nguoi truoc).
+        private const string LegacyPartyKey = "PartyCode";
+        private static string PartyKey() { var id = SelfId(); return LegacyPartyKey + "_" + (string.IsNullOrEmpty(id) ? "local" : id); }
+
         private void Start()
         {
+            if (PlayerPrefs.HasKey(LegacyPartyKey)) { PlayerPrefs.DeleteKey(LegacyPartyKey); PlayerPrefs.Save(); }
             // [PARTY-FIX #5] Ve menu -> GIU party (khoi phuc), KHONG tu roi. Xoa MatchId cu de khong bi keo lai vao tran vua xong.
-            var leftover = PlayerPrefs.GetString("PartyCode", "");
+            var leftover = PlayerPrefs.GetString(PartyKey(), "");
             if (!string.IsNullOrEmpty(leftover) && !InParty)
             {
                 Code = leftover; _restoreArmed = true; _handedOff = false;
@@ -64,7 +78,8 @@ namespace Game.UI
             if (InParty) { svc.SendInvite(friendPlayFabId, Code, SendOk, SendErr); return; }
             svc.CreateParty(code =>
             {
-                Code = code; IsLeader = true; SelfReady = true; _handedOff = false; PlayerPrefs.SetString("PartyCode", code); StartPolling();
+                Code = code; IsLeader = true; SelfReady = true; _handedOff = false; PlayerPrefs.SetString(PartyKey(), code); StartPolling();
+                if (_pendingSettings != null) PublishSettings(_pendingSettings);
                 Debug.Log("[Party-DIAG] SEND: da tao party code=" + code + ", dang gui invite...");
                 svc.SendInvite(friendPlayFabId, code, SendOk, SendErr);
             }, LogErr);
@@ -77,7 +92,7 @@ namespace Game.UI
             Debug.Log("[Party-DIAG] ACCEPT: xoa invite + join code=" + code);
             svc.ClearInvite(null, null); // [PARTY-FIX] xoa NGAY -> khong spam popup du join loi
             svc.JoinParty(code,
-                () => { Code = code; IsLeader = false; SelfReady = false; _handedOff = false; PlayerPrefs.SetString("PartyCode", code); StartPolling(); Debug.Log("[Party-DIAG] ACCEPT: JOIN ok (da vao party)"); },
+                () => { Code = code; IsLeader = false; SelfReady = false; _handedOff = false; LeaderSettings = null; PlayerPrefs.SetString(PartyKey(), code); StartPolling(); Debug.Log("[Party-DIAG] ACCEPT: JOIN ok (da vao party)"); },
                 e => { Debug.LogWarning("[Party-DIAG] ACCEPT: JOIN LOI: " + (e != null ? e.ErrorMessage : "?")); });
         }
 
@@ -98,20 +113,75 @@ namespace Game.UI
         public void LeaveParty()
         {
             var svc = BackendBootstrap.PartyService;
-            if (svc != null && InParty) svc.LeaveParty(Code, null, LogErr);
-            Code = null; IsLeader = false; State = null; SelfReady = false;
-            _seenVal.Clear(); _seenAt.Clear();
-            PlayerPrefs.DeleteKey("PartyCode");
-            if (_pollCo != null) { StopCoroutine(_pollCo); _pollCo = null; }
+            if (svc != null && InParty)
+            {
+                // [Aemy 2026-10-17] Truong nhom roi -> giao truong nhom cho nguoi con lai truoc (khong de nhom "mo coi").
+                if (IsLeader && State != null && State.Members != null)
+                {
+                    string me = SelfId();
+                    foreach (var m in State.Members)
+                        if (m != null && !string.IsNullOrEmpty(m.PlayFabId) && m.PlayFabId != me) { svc.SetLeader(Code, m.PlayFabId, null, LogErr); break; }
+                }
+                svc.LeaveParty(Code, null, LogErr);
+            }
+            ClearLocalState();
         }
 
+        // [Aemy 2026-10-17] Xoa SACH du lieu party tren may (roi / bi da / khoi phuc that bai) + bao UI ve trang thai solo.
+        private void ClearLocalState()
+        {
+            Code = null; IsLeader = false; State = null; SelfReady = false; LeaderSettings = null;
+            _seenVal.Clear(); _seenAt.Clear(); _avatarShown.Clear();
+            _handedOff = false; _lastHandledMatch = null; _restoreArmed = false; _lastPublished = null;
+            PlayerPrefs.DeleteKey(PartyKey()); PlayerPrefs.Save();
+            if (_pollCo != null) { StopCoroutine(_pollCo); _pollCo = null; }
+            if (_party != null) for (int i = 1; i < _party.SlotCount; i++) _party.SetEmpty(i);
+            if (OnPartyChanged != null) OnPartyChanged(null);
+        }
+
+        // ===== [Aemy 2026-10-17] Truong nhom: da / chuyen truong nhom / dong bo cai dat =====
+        public void KickMember(string playFabId)
+        {
+            var svc = BackendBootstrap.PartyService;
+            if (svc == null || !InParty || !IsLeader || string.IsNullOrEmpty(playFabId) || playFabId == SelfId()) return;
+            svc.KickMember(Code, playFabId, () => Debug.Log("[Party] Da da " + playFabId), LogErr);
+            _seenVal.Remove(playFabId); _seenAt.Remove(playFabId);
+        }
+
+        public void TransferLeader(string playFabId)
+        {
+            var svc = BackendBootstrap.PartyService;
+            if (svc == null || !InParty || !IsLeader || string.IsNullOrEmpty(playFabId) || playFabId == SelfId()) return;
+            svc.SetLeader(Code, playFabId, null, LogErr);
+            IsLeader = false; SelfReady = false; // nguoi moi lam truong nhom; minh thanh thanh vien (phai bam san sang lai)
+            svc.SetReady(Code, false, null, LogErr);
+        }
+
+        private PartySettings _pendingSettings, _lastPublished;
+        /// <summary>Truong nhom doi che do / map -> ghi len party. Chua co party thi nho lai, tao party xong se ghi.</summary>
+        public void PublishSettings(PartySettings s)
+        {
+            if (s == null) return;
+            _pendingSettings = s;
+            if (!InParty || !IsLeader) return;
+            if (s.SameAs(_lastPublished)) return;
+            var svc = BackendBootstrap.PartyService; if (svc == null) return;
+            _lastPublished = new PartySettings { modeIndex = s.modeIndex, mapIndex = s.mapIndex, killTarget = s.killTarget, customRule = s.customRule };
+            svc.SetSettings(Code, JsonUtility.ToJson(s), null, LogErr);
+        }
+
+        public bool IsMember(string playFabId) { return State != null && State.HasMember(playFabId); }
+        public string MyId { get { return SelfId(); } }
+
         // Leader bat dau: chi khi TAT CA ready. Ghi match -> ca party queue chung.
-        public bool StartPartyMatch(MatchMode mode)
+        // [Aemy 2026-10-17] Kem scene map cua truong nhom ("MODE|scene|session|extra") -> ai lam host Fusion cung load DUNG map.
+        public bool StartPartyMatch(MatchMode mode, string sceneName = null, string session = null, string extra = null)
         {
             var svc = BackendBootstrap.PartyService;
             if (svc == null || !InParty || !IsLeader) return false;
             if (State == null || !State.AllReady()) { Debug.LogWarning("[Party] Chua du thanh vien san sang."); return false; }
-            string val = mode.ToString() + "|party_" + Code;
+            if (string.IsNullOrEmpty(session)) session = "party_" + Code + "_" + System.Guid.NewGuid().ToString("N").Substring(0, 4);
+            string val = mode.ToString() + "|" + (sceneName ?? "") + "|" + session + "|" + (extra ?? "");
             svc.SetMatchId(Code, val, null, LogErr);
             return true;
         }
@@ -130,6 +200,25 @@ namespace Game.UI
                     _hbTick++;
                     svc.GetParty(Code, st =>
                     {
+                        if (!InParty) return; // da roi party trong luc cho ket qua
+                        // [Aemy 2026-10-17] Khong con trong danh sach thanh vien -> bi truong nhom da (hoac nhom da giai tan).
+                        string meNow = SelfId();
+                        if (!_restoreArmed && st != null && st.Members != null && st.Members.Count > 0 && !st.HasMember(meNow))
+                        {
+                            Debug.Log("[Party] Minh khong con trong nhom -> bi da / nhom giai tan.");
+                            ClearLocalState();
+                            if (OnKicked != null) OnKicked();
+                            return;
+                        }
+                        // [Aemy 2026-10-17] Truong nhom da roi ma chua giao -> thanh vien dau tien nhan truong nhom.
+                        if (st != null && st.Members != null && st.Members.Count > 0 && !st.HasMember(st.LeaderId) && st.Members[0].PlayFabId == meNow)
+                        {
+                            var s3 = BackendBootstrap.PartyService; if (s3 != null) s3.SetLeader(Code, meNow, null, LogErr);
+                            st.LeaderId = meNow;
+                        }
+                        bool wasLeader = IsLeader;
+                        if (!_restoreArmed && st != null && !string.IsNullOrEmpty(st.LeaderId)) IsLeader = st.LeaderId == meNow; // nhan chuyen truong nhom
+                        if (IsLeader && !wasLeader) { SelfReady = true; if (_pendingSettings != null) { _lastPublished = null; PublishSettings(_pendingSettings); } }
                         State = st;
                         // [PARTY-FIX #5] Khoi phuc IsLeader/SelfReady + xoa MatchId cu (khong vao lai tran).
                         if (_restoreArmed && st != null)
@@ -139,6 +228,13 @@ namespace Game.UI
                             if (st.Members != null) foreach (var mm in st.Members) if (mm.PlayFabId == me) SelfReady = IsLeader ? true : mm.Ready;
                             _lastHandledMatch = st.MatchId; _restoreArmed = false;
                             if (IsLeader && !string.IsNullOrEmpty(st.MatchId)) { var s2 = BackendBootstrap.PartyService; if (s2 != null) s2.SetMatchId(Code, "", null, LogErr); }
+                        }
+                        // Thanh vien: ap cai dat cua truong nhom.
+                        if (!IsLeader && st != null && !string.IsNullOrEmpty(st.SettingsJson))
+                        {
+                            PartySettings ps = null;
+                            try { ps = JsonUtility.FromJson<PartySettings>(st.SettingsJson); } catch { ps = null; }
+                            if (ps != null && !ps.SameAs(LeaderSettings)) { LeaderSettings = ps; if (OnLeaderSettings != null) OnLeaderSettings(ps); }
                         }
                         if (OnPartyChanged != null) OnPartyChanged(st);
                         ApplyToPanel(st);
@@ -177,7 +273,7 @@ namespace Game.UI
                     }, e =>
                     {
                         LogErr(e);
-                        if (_restoreArmed) { Code = null; IsLeader = false; State = null; _restoreArmed = false; PlayerPrefs.DeleteKey("PartyCode"); if (_pollCo != null) { StopCoroutine(_pollCo); _pollCo = null; } }
+                        if (_restoreArmed) ClearLocalState(); // [Aemy 2026-10-17] khoi phuc that bai -> xoa sach
                     });
                 }
                 yield return wait;
@@ -204,8 +300,13 @@ namespace Game.UI
             var ho = BackendBootstrap.MatchHandoff;
             if (ho == null || string.IsNullOrEmpty(matchVal)) return;
             MatchMode mode = MatchMode.FFA; string session = matchVal;
-            int bar = matchVal.IndexOf('|');
-            if (bar >= 0) { var m = matchVal.Substring(0, bar); session = matchVal.Substring(bar + 1); if (m == "TDM") mode = MatchMode.TDM; }
+            // [Aemy 2026-10-17] "MODE|scene|session|extra" (moi) hoac "MODE|session" (cu).
+            var parts = matchVal.Split('|');
+            LastMatchScene = null; LastMatchExtra = null;
+            if (parts.Length >= 3) { session = parts[2]; LastMatchScene = parts[1]; LastMatchExtra = parts.Length > 3 ? parts[3] : null; }
+            else if (parts.Length == 2) session = parts[1];
+            if (parts.Length >= 2) { if (parts[0] == "TDM") mode = MatchMode.TDM; }
+            if (!string.IsNullOrEmpty(LastMatchScene) && GameManager.Instance != null) GameManager.Instance.SetSelectedMapScene(LastMatchScene);
             if (OnPartyMatchReady != null) OnPartyMatchReady(session, mode); // qua lobby matchmaking truoc
             else ho.HandOff(new MatchFoundResult { MatchId = session, Mode = mode, QueueName = "" });
         }

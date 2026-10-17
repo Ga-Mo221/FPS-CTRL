@@ -137,6 +137,7 @@ namespace Game.UI
             if (ModalDialog.Instance == null) return;
             ModalDialog.Instance.Confirm("ĐĂNG XUẤT", "Bạn có chắc muốn đăng xuất khỏi tài khoản?", () =>
             {
+                SessionCache.BeforeLogout(); // [Aemy 2026-10-17] roi to doi + don cache tai khoan
                 var auth = BackendBootstrap.AuthService;
                 if (auth != null) auth.Logout();
                 SceneLoader.LoadWithLoading(_loginScene);
@@ -156,6 +157,7 @@ namespace Game.UI
                     svc.DeleteMyAccount(
                         () =>
                         {
+                            SessionCache.ResetForNewSession(); // [Aemy 2026-10-17]
                             var auth = BackendBootstrap.AuthService;
                             if (auth != null) auth.Logout();
                             Info("Đã xóa tài khoản", "Tài khoản của bạn đã được xóa. Tạm biệt!");

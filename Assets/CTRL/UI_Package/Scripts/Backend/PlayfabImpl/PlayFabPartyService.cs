@@ -15,6 +15,7 @@ namespace Backend.PlayfabImpl
         private const string InviteKey = "PartyInvite";
         private const string LeaderKey = "leader";
         private const string MatchKey  = "match";
+        private const string SettingsKey = "cfg"; // [Aemy 2026-10-17]
 
         private static string SelfId() { return BackendBootstrap.AuthService != null ? BackendBootstrap.AuthService.CurrentUserId : null; }
         private static string SelfName() { var p = ProfileCache.Cached; return (p != null && !string.IsNullOrEmpty(p.DisplayName)) ? p.DisplayName : "PLAYER"; }
@@ -112,6 +113,26 @@ namespace Backend.PlayfabImpl
             e => { if (onError != null) onError(Map(e)); });
         }
 
+        // [Aemy 2026-10-17] Chuyen truong nhom (hoac thanh vien dau tien nhan lai khi truong nhom cu da roi).
+        public void SetLeader(string code, string playFabId, Action onOk, Action<AuthError> onError)
+        {
+            if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(playFabId)) { if (onError != null) onError(Err("Thieu code / id.")); return; }
+            PlayFabClientAPI.UpdateSharedGroupData(new UpdateSharedGroupDataRequest
+            { SharedGroupId = code, Permission = UserDataPermission.Public, Data = new Dictionary<string, string> { { LeaderKey, JS(playFabId) } } },
+            _ => { if (onOk != null) onOk(); },
+            e => { if (onError != null) onError(Map(e)); });
+        }
+
+        // [Aemy 2026-10-17] Truong nhom ghi che do / map / moc ha guc -> thanh vien doc qua GetParty.
+        public void SetSettings(string code, string settingsJson, Action onOk, Action<AuthError> onError)
+        {
+            if (string.IsNullOrEmpty(code)) { if (onError != null) onError(Err("Thieu code.")); return; }
+            PlayFabClientAPI.UpdateSharedGroupData(new UpdateSharedGroupDataRequest
+            { SharedGroupId = code, Permission = UserDataPermission.Public, Data = new Dictionary<string, string> { { SettingsKey, settingsJson ?? "" } } },
+            _ => { if (onOk != null) onOk(); },
+            e => { if (onError != null) onError(Map(e)); });
+        }
+
         public void GetParty(string code, Action<PartyState> onResult, Action<AuthError> onError)
         {
             if (string.IsNullOrEmpty(code)) { if (onError != null) onError(Err("Thieu code.")); return; }
@@ -123,6 +144,7 @@ namespace Backend.PlayfabImpl
                     {
                         if (res.Data.ContainsKey(LeaderKey)) st.LeaderId = UNJS(res.Data[LeaderKey].Value);
                         if (res.Data.ContainsKey(MatchKey)) st.MatchId = UNJS(res.Data[MatchKey].Value);
+                        if (res.Data.ContainsKey(SettingsKey)) st.SettingsJson = res.Data[SettingsKey].Value;
                     }
                     if (res.Members != null)
                     {
