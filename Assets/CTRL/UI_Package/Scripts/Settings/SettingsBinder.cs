@@ -106,6 +106,9 @@ public class SettingsBinder : MonoBehaviour
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Vignette",    () => Data.VignetteOn, v => Data.VignetteOn = v);
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Motion Blur", () => Data.MotionBlurOn, v => Data.MotionBlurOn = v);
         BindQuality("Do hoa Scroll/Content/CHAT LUONG/Chat luong tong the", () => Data.QualityLevel, v => Data.QualityLevel = v);
+        // [Aemy 2026-10-17] Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
+        BindCycler("Do hoa Scroll/Content/CHAT LUONG/Ket cau (Texture)", GraphicsQualityApplier.TextureOptions, () => Data.TextureQuality, v => Data.TextureQuality = v);
+        BindCycler("Do hoa Scroll/Content/CHAT LUONG/Khu rang cua (AA)", GraphicsQualityApplier.AAOptions, () => Data.AntiAliasing, v => Data.AntiAliasing = v);
 
         // ---- Tam ngam ----
         BindColor("Tam Ngam/HINH DANG/Mau sac", () => Data.CrosshairColorIndex, v => Data.CrosshairColorIndex = v);
@@ -254,6 +257,15 @@ public class SettingsBinder : MonoBehaviour
         if (g == null) { Missing(containerPath + " (UISelectionGroup)"); return; }
         g.SelectionChanged += sel => { if (Data != null && sel != null && sel.Count > 0) { set(sel[0].Index); MarkChanged(); } };
         _refreshers.Add(() => { if (Data != null) g.SelectByIndex(Mathf.Clamp(get(), 0, Mathf.Max(0, g.ItemCount - 1)), false); });
+    }
+
+    private void BindCycler(string containerPath, string[] options, Func<int> get, Action<int> set)
+    {
+        var t = Find(containerPath); if (t == null) { Missing(containerPath); return; }
+        var c = t.GetComponentInChildren<UIOptionCycler>(true); if (c == null) { Missing(containerPath + " (UIOptionCycler)"); return; }
+        if (options != null) c.SetOptions(options);
+        c.Changed += v => { if (Data != null) { set(v); MarkChanged(); } };
+        _refreshers.Add(() => { if (Data != null) c.SetIndex(get(), false); });
     }
 
     private void BindReset(string buttonPath)

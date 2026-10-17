@@ -58,6 +58,8 @@ public class SettingManager : MonoBehaviour
 
     // cached Volume overrides
     private ColorAdjustments _color; private Bloom _bloom; private Vignette _vignette; private MotionBlur _motionBlur;
+    private readonly System.Collections.Generic.Dictionary<VolumeComponent, bool> _volumeDefaults = new System.Collections.Generic.Dictionary<VolumeComponent, bool>();
+    private Camera _aaCamera; private float _aaCheckAt;
 
     private void Awake()
     {
@@ -88,6 +90,13 @@ public class SettingManager : MonoBehaviour
     private void Update()
     {
         if (_settingData == null) return;
+        // [Aemy 2026-10-17] Camera nguoi choi sinh sau khi vao tran -> ap khu rang cua cho camera moi.
+        if (Time.unscaledTime >= _aaCheckAt)
+        {
+            _aaCheckAt = Time.unscaledTime + 0.5f;
+            var cam = Camera.main;
+            if (cam != null && cam != _aaCamera) { _aaCamera = cam; GraphicsQualityApplier.ApplyAllCameras(); }
+        }
         var bridge = TISInputBridge.Instance;
         if (bridge == null) return;
         if (bridge != _keybindsLoadedFor) ApplyKeybinds();   // bridge sinh sau SettingManager -> van nap phim da luu
@@ -202,8 +211,9 @@ public class SettingManager : MonoBehaviour
     {
         if (_settingData == null) return; //  guard tranh NRE khi chua gan SettingData
         QualitySettings.vSyncCount = _settingData.VSync ? 1 : 0;
-        if (QualitySettings.names != null && QualitySettings.names.Length > 0)
-            QualitySettings.SetQualityLevel(Mathf.Clamp(_settingData.QualityLevel, 0, QualitySettings.names.Length - 1), true);
+        // [Aemy 2026-10-17] Project chi co 2 muc QualitySettings (Mobile/PC) -> tu ap bac THAP..TOI DA + texture + AA.
+        GraphicsQualityApplier.Apply(_settingData);
+        if (_postVolume != null && _postVolume.profile != null) GraphicsQualityApplier.ApplyVolumeTier(_postVolume.profile, _volumeDefaults);
         if (_color != null)
         {
             _color.postExposure.overrideState = true; _color.postExposure.value = _settingData.Brightness;
@@ -255,7 +265,7 @@ public class SettingManager : MonoBehaviour
             case "mouse":
                 _settingData.MouseSensitivity = d.MouseSensitivity; _settingData.RifleADSSensitivity = d.RifleADSSensitivity; _settingData.SniperADSSensitivity = d.SniperADSSensitivity; _settingData.InvertY = d.InvertY; _settingData.MouseAccel = d.MouseAccel; break;
             case "graphics":
-                _settingData.Fov = d.Fov; _settingData.VSync = d.VSync; _settingData.Brightness = d.Brightness; _settingData.Contrast = d.Contrast; _settingData.Saturation = d.Saturation; _settingData.BloomOn = d.BloomOn; _settingData.BloomIntensity = d.BloomIntensity; _settingData.VignetteOn = d.VignetteOn; _settingData.MotionBlurOn = d.MotionBlurOn; _settingData.QualityLevel = d.QualityLevel; break;
+                _settingData.Fov = d.Fov; _settingData.VSync = d.VSync; _settingData.Brightness = d.Brightness; _settingData.Contrast = d.Contrast; _settingData.Saturation = d.Saturation; _settingData.BloomOn = d.BloomOn; _settingData.BloomIntensity = d.BloomIntensity; _settingData.VignetteOn = d.VignetteOn; _settingData.MotionBlurOn = d.MotionBlurOn; _settingData.QualityLevel = d.QualityLevel; _settingData.TextureQuality = d.TextureQuality; _settingData.AntiAliasing = d.AntiAliasing; break;
             case "crosshair":
                 _settingData.CrosshairColorIndex = d.CrosshairColorIndex; _settingData.CrosshairThickness = d.CrosshairThickness; _settingData.CrosshairSize = d.CrosshairSize; _settingData.CrosshairGap = d.CrosshairGap; _settingData.CrosshairOpacity = d.CrosshairOpacity; _settingData.CrosshairCenterDot = d.CrosshairCenterDot; _settingData.CrosshairOutline = d.CrosshairOutline; break;
             case "privacy":

@@ -45,6 +45,11 @@ public class SettingData : ScriptableObject
     [SerializeField] private bool _vSync = false;
     [SerializeField] private int _qualityLevel = 2;   // index QualitySettings (0=Thap..3=Toi da)
     [SerializeField, Range(60f,120f)] private float _fov = 90f;
+    [SerializeField] private int _textureQuality = 2;  // [Aemy 2026-10-17] 0 Thap / 1 Vua / 2 Cao (globalTextureMipmapLimit)
+    [SerializeField] private int _antiAliasing = 2;    // [Aemy 2026-10-17] 0 Tat / 1 FXAA / 2 SMAA / 3 MSAA 4x / 4 TAA
+
+    [Header("Ngon ngu")]
+    [SerializeField] private int _language = 0;        // [Aemy 2026-10-17] 0 Tieng Viet / 1 English
 
     // ================= CHUOT (them) =================
     [Header("Mouse options")]
@@ -101,6 +106,9 @@ public class SettingData : ScriptableObject
     public bool  VSync        { get { return _vSync; }        set { _vSync = value; } }
     public int   QualityLevel { get { return _qualityLevel; } set { _qualityLevel = value; } }
     public float Fov          { get { return _fov; }          set { _fov = value; } }
+    public int   TextureQuality { get { return _textureQuality; } set { _textureQuality = Mathf.Clamp(value, 0, 2); } }
+    public int   AntiAliasing   { get { return _antiAliasing; }   set { _antiAliasing = Mathf.Clamp(value, 0, 4); } }
+    public int   Language       { get { return _language; }       set { _language = Mathf.Clamp(value, 0, 1); } }
 
     // -- Mouse --
     public bool InvertY    { get { return _invertY; }    set { _invertY = value; } }
@@ -119,6 +127,10 @@ public class SettingData : ScriptableObject
     public bool AllowFriendInvites { get { return _allowFriendInvites; } set { _allowFriendInvites = value; } }
     public bool ShowOnlineStatus   { get { return _showOnlineStatus; }   set { _showOnlineStatus = value; } }
 
+
+    // [Aemy 2026-10-17] Constructor rong: dam bao gia tri mac dinh (khoi tao truong) duoc dung khi Unity tao asset/
+    // CreateInstance (truoc day chi co constructor co tham so -> truong moi them vao bi 0: Texture "Thap", AA "Tat").
+    public SettingData() { }
 
     // Constructor tuong thich ban goc cua lead (it dung: SO thuong tao qua CreateInstance).
     public SettingData(AimAssistPlatform platform, float pcMouseSensitivity, float pcRifleADSSensitivity, float pcSniperADSSensitivity, float gamePadMouseSensitivity, float gamePadRifleADSSensitivity, float gamePadSniperADSSensitivity)
