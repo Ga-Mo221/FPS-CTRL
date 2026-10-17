@@ -168,18 +168,22 @@ namespace Game.UI
             _auth.Register(req,
                 r =>
                 {
-                    Debug.Log($"[AuthFlowBinder] Đăng ký OK: {r.PlayerId}. Vào thẳng game.");
+                    Debug.Log($"[AuthFlowBinder] Đăng ký OK: {r.PlayerId}. Quay về trang đăng nhập.");
                     if (_register != null) _register.Clear();
-                    // [REG-FIX 2026-09-29 Aemy] Dang ky xong -> set default + vao thang MenuShell (PlayFab da co session sau Register).
-                    System.Action goMenu = () => { if (_notice != null) _notice.Hide(); SceneLoader.LoadWithLoading(_menuScene); };
+                    // [Aemy 2026-10-17] Dang ky xong KHONG vao thang game nua:
+                    // dung session tam cua Register de dat ten hien thi + du lieu mac dinh, roi dang xuat
+                    // va quay ve trang Dang nhap (dien san ten) de nguoi choi tu dang nhap.
+                    if (_notice != null) _notice.Show("ĐANG TẠO TÀI KHOẢN…");
+                    string loginName = !string.IsNullOrWhiteSpace(operatorName) ? operatorName.Trim() : email;
+                    System.Action backToLogin = () => ReturnToLoginAfterRegister(loginName, email);
                     if (!_useMock && BackendBootstrap.PlayerProfileService != null)
                     {
-                        System.Action initThenGo = () => BackendBootstrap.PlayerProfileService.InitializeNewPlayer(goMenu, _ie => goMenu());
+                        System.Action initThenBack = () => BackendBootstrap.PlayerProfileService.InitializeNewPlayer(backToLogin, _ie => backToLogin());
                         if (!string.IsNullOrWhiteSpace(operatorName))
-                            BackendBootstrap.PlayerProfileService.SetDisplayName(operatorName, initThenGo, _de => initThenGo());
-                        else initThenGo();
+                            BackendBootstrap.PlayerProfileService.SetDisplayName(operatorName, initThenBack, _de => initThenBack());
+                        else initThenBack();
                     }
-                    else goMenu();
+                    else backToLogin();
                 },
                 e =>
                 {
@@ -188,6 +192,22 @@ namespace Game.UI
                     if (_register != null)
                         _register.SetAvailability(nameTaken ? "TÊN ĐÃ TỒN TẠI" : e.ErrorMessage, false);
                 });
+        }
+
+        // [Aemy 2026-10-17] Dang xuat session tam sau Register, ve form Dang nhap + thong bao kiem tra email.
+        private void ReturnToLoginAfterRegister(string loginName, string email)
+        {
+            if (this == null) return;
+            try { _auth.Logout(); } catch (System.Exception ex) { Debug.LogWarning("[AuthFlowBinder] Logout sau đăng ký lỗi: " + ex.Message); }
+            if (_shell != null) _shell.Show(AuthShellController.AuthScreen.Login);
+            if (_login != null) _login.PrefillAfterRegister(loginName);
+            if (_notice != null)
+            {
+                string msg = string.IsNullOrWhiteSpace(email)
+                    ? "ĐĂNG KÝ THÀNH CÔNG!\nHãy đăng nhập để vào game."
+                    : "ĐĂNG KÝ THÀNH CÔNG!\nĐã gửi email xác minh tới " + email + ".\nHãy đăng nhập để vào game.";
+                _notice.Show(msg, 6f);
+            }
         }
 
         // Live username availability while typing (debounced by the controller).

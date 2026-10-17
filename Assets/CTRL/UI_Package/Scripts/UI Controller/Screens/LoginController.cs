@@ -51,6 +51,18 @@ namespace Game.UI
             if (_remember != null) _remember.isOn = remember;
         }
 
+        // [Aemy 2026-10-17] Sau khi dang ky xong: dien san ten dang nhap, xoa mat khau, dua con tro vao o mat khau.
+        public void PrefillAfterRegister(string usernameOrEmail)
+        {
+            if (_email != null) _email.text = usernameOrEmail != null ? usernameOrEmail : "";
+            if (_password != null)
+            {
+                _password.text = "";
+                _password.Select();
+                _password.ActivateInputField();
+            }
+        }
+
         private void Submit()
         {
             string email = _email != null ? _email.text : string.Empty;
