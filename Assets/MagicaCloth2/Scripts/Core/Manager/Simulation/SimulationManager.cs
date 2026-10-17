@@ -654,6 +654,11 @@ namespace MagicaCloth2
                         // buffer
                         stepBasicPositionBuffer = stepBasicPositionBuffer,
                         stepBasicRotationBuffer = stepBasicRotationBuffer,
+                        // temp
+                        tempVectorBufferA = tempVectorBufferA,
+                        tempVectorBufferB = tempVectorBufferB,
+                        tempCountBuffer = tempCountBuffer,
+                        tempFloatBufferA = tempFloatBufferA,
                     };
                     splitClothJobHandle = splitStep_B_job.Schedule(splitClothTeamCount * workerCount, 1, splitClothJobHandle);
 
@@ -1120,6 +1125,10 @@ namespace MagicaCloth2
                     oldRotationArray = oldRotationArray.GetNativeArray(),
                     dispPosArray = dispPosArray.GetNativeArray(),
                     realVelocityArray = realVelocityArray.GetNativeArray(),
+
+                    // temp
+                    tempVectorBufferA = tempVectorBufferA,
+                    tempRotationBufferA = tempRotationBufferA,
                 };
                 splitClothJobHandle = splitPost_DisplayPos_job.Schedule(splitClothTeamCount * workerCount, 1, splitClothJobHandle);
 
@@ -1174,6 +1183,10 @@ namespace MagicaCloth2
                     vertexChildIndexArray = vm.vertexChildIndexArray.GetNativeArray(),
                     vertexChildDataArray = vm.vertexChildDataArray.GetNativeArray(),
                     baseLineFlags = vm.baseLineFlags.GetNativeArray(),
+
+                    // temp
+                    tempVectorBufferA = tempVectorBufferA,
+                    tempRotationBufferB = tempRotationBufferB,
                 };
                 splitClothJobHandle = splitPost_CalcProxy_job.Schedule(splitClothTeamCount * workerCount, 1, splitClothJobHandle);
 

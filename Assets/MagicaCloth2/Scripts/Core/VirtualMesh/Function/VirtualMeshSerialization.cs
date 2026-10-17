@@ -267,7 +267,7 @@ namespace MagicaCloth2
                 transformData?.GetUsedTransform(transformSet);
             }
 
-            public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+            public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
             {
                 transformData?.ReplaceTransform(replaceDict);
             }

@@ -159,12 +159,12 @@ namespace MagicaCloth2
             // 置換処理用の辞書を作成
             // key:置換対象トランスフォームのインスタンスID
             // value:入れ替えるトランスフォーム
-            var replaceDict = new Dictionary<int, Transform>();
+            var replaceDict = new Dictionary<MagicaObjectId, Transform>();
             foreach (var t in useTransformSet)
             {
                 if (t && targetTransformDict.ContainsKey(t.name))
                 {
-                    replaceDict.Add(t.GetInstanceID(), targetTransformDict[t.name]);
+                    replaceDict.Add(t.GetMagicaId(), targetTransformDict[t.name]);
                 }
             }
 
@@ -307,7 +307,7 @@ namespace MagicaCloth2
         {
             if (IsValid() == false || ren == null)
                 return null;
-            int handle = ren.GetInstanceID();
+            MagicaObjectId handle = ren.GetMagicaId();
             return MagicaManager.Render.GetRendererData(handle);
         }
 

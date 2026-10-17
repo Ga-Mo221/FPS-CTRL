@@ -534,7 +534,7 @@ public class WeaponManager : NetworkBehaviour
                     item.SetBullet(
                         ctrl.CurrentBulletvalue,
                         ctrl.CurrentMaxBullet,
-                        ctrl.Data.WeaponName,
+                        ctrl.Data.ID,
                         _componentManager.GameHudController());
                 }
             });

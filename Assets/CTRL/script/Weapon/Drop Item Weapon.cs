@@ -6,7 +6,7 @@ public class DropItemWeapon : NetworkBehaviour
 {
     [Networked] public int CurrentBullet { get; private set; }
     [Networked] public int MaxBullet { get; private set; }
-    [Networked] public NetworkString<_16> WeaponName { get; set; }
+    [Networked] public NetworkString<_16> WeaponID { get; private set; }
     [Networked] private TickTimer DespawnTimer { get; set; }
 
     private GameHudControllerBase _gameHudController;
@@ -54,11 +54,11 @@ public class DropItemWeapon : NetworkBehaviour
             _gameHudController.SetDragItemVisible(false, null);
     }
 
-    public void SetBullet(int current, int max, string weaponName, GameHudControllerBase hud)
+    public void SetBullet(int current, int max, string weaponID, GameHudControllerBase hud)
     {
         CurrentBullet = current;
         MaxBullet = max;
-        WeaponName = weaponName;
+        WeaponID = weaponID;
         _gameHudController = hud; // Vẫn giữ để host set luôn
     }
 

@@ -38,9 +38,9 @@ namespace MagicaCloth2
             public ClothInitSerializeData editInitSerializeData;
         }
 
-        static Dictionary<int, ClothInfo> editClothDict = new Dictionary<int, ClothInfo>();
+        static Dictionary<MagicaObjectId, ClothInfo> editClothDict = new Dictionary<MagicaObjectId, ClothInfo>();
 
-        static List<int> destroyList = new List<int>();
+        static List<MagicaObjectId> destroyList = new List<MagicaObjectId>();
         static List<ClothInfo> drawList = new List<ClothInfo>();
         static CancellationTokenSource cancelToken = new CancellationTokenSource();
 
@@ -170,7 +170,7 @@ namespace MagicaCloth2
             if (ClothPainter.IsPainting())
                 return;
 
-            int id = component.GetInstanceID();
+            MagicaObjectId id = component.GetMagicaId();
             MagicaCloth cloth = component as MagicaCloth;
 
             //if (cloth)
@@ -273,7 +273,7 @@ namespace MagicaCloth2
                 return null;
             if (comp == null)
                 return null;
-            int id = comp.GetInstanceID();
+            MagicaObjectId id = comp.GetMagicaId();
             VirtualMeshContainer cmesh = null;
             lock (editClothDict)
             {
@@ -291,7 +291,7 @@ namespace MagicaCloth2
         {
             if (comp == null)
                 return ResultCode.Empty;
-            int id = comp.GetInstanceID();
+            MagicaObjectId id = comp.GetMagicaId();
             lock (editClothDict)
             {
                 if (editClothDict.ContainsKey(id))
@@ -435,7 +435,7 @@ namespace MagicaCloth2
         /// <param name="createSelectionData"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        static async Task CreateOrUpdateEditMesh(int id, MagicaCloth cloth, CancellationToken ct)
+        static async Task CreateOrUpdateEditMesh(MagicaObjectId id, MagicaCloth cloth, CancellationToken ct)
         {
             // ■メインスレッド
             Develop.DebugLog($"Create and update edit meshes: {cloth.name}");
@@ -554,7 +554,7 @@ namespace MagicaCloth2
                 if (sdata.clothType == ClothProcess.ClothType.MeshCloth)
                 {
                     // MeshClothではクロストランスフォームを追加しておく
-                    editMesh.SetTransform(cloth.ClothTransform);
+                    editMesh.SetTransform(cloth.ClothTransform, null, MagicaObjectId.Invalid, MagicaObjectId.Invalid);
                 }
                 editMesh.result.SetProcess();
 
@@ -850,7 +850,7 @@ namespace MagicaCloth2
         {
             if (cloth == null)
                 return;
-            int id = cloth.GetInstanceID();
+            MagicaObjectId id = cloth.GetMagicaId();
             if (editClothDict.ContainsKey(id) == false)
                 return;
 
@@ -924,7 +924,7 @@ namespace MagicaCloth2
                 var connectionMode = sdata.clothType == ClothProcess.ClothType.BoneSpring ? RenderSetupData.BoneConnectionMode.Line : sdata.connectionMode;
                 var setupType = sdata.clothType == ClothProcess.ClothType.BoneSpring ? RenderSetupData.SetupType.BoneSpring : RenderSetupData.SetupType.BoneCloth;
                 using var setup = new RenderSetupData(null, setupType, cloth.ClothTransform, sdata.rootBones, null, connectionMode, cloth.name);
-                foreach (int id in setup.rootTransformIdList)
+                foreach (MagicaObjectId id in setup.rootTransformIdList)
                 {
                     int rootIndex = setup.GetTransformIndexFromId(id);
                     selectionData.attributes[rootIndex] = VertexAttribute.Fixed;

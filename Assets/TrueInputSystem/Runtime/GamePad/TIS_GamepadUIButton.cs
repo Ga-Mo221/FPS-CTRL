@@ -12,6 +12,9 @@ namespace GaMo.TrueInputSystem
     {
         // ── Enums ─────────────────────────────────────────────────────────────
 
+        // [Aemy 2026-10-05] >0 = dang co overlay (chon nhan vat/avatar) -> chan input menu phia sau.
+        public static int ExternalSuppress = 0;
+
         public enum NavMode     { FourDirectional, Horizontal, Vertical }
         public enum InputSource { Default, LB_RB, LT_RT }
 
@@ -90,6 +93,18 @@ namespace GaMo.TrueInputSystem
             base.Awake();
             parentScrollRect = GetComponentInParent<ScrollRect>();
             navigation = new Navigation { mode = Navigation.Mode.None };
+
+            // Log mỗi lần nhấn (Submit/Click) — chỉ đăng ký ở runtime
+            if (Application.isPlaying)
+                onClick.AddListener(LogPress);
+        }
+
+        private void LogPress()
+        {
+            if (context != null)
+                context.Log($"<color=#A5D6A7>[Press · {layer}]</color> \"{name}\"");
+            else
+                Debug.Log($"[TIS Nav] [Press · {layer}] \"{name}\"", this);
         }
 
         protected override void Start()
@@ -117,6 +132,8 @@ namespace GaMo.TrueInputSystem
 
         protected override void OnDestroy()
         {
+            if (Application.isPlaying)
+                onClick.RemoveListener(LogPress);
             base.OnDestroy();
             if (context != null)
                 context.UnregisterButton(this);
@@ -168,6 +185,8 @@ namespace GaMo.TrueInputSystem
         private void Update()
         {
             if (!isNavigationEnabled) return;
+            if (ExternalSuppress > 0) return;                                  // overlay dang mo
+            var _brg = TISInputBridge.Instance; if (_brg != null && !_brg.IsGamepad) return;  // controller-first
 
             bool isFocused = EventSystem.current != null
                              && EventSystem.current.currentSelectedGameObject == gameObject;

@@ -102,7 +102,7 @@ public class UIWeaponController : MonoBehaviour
         }
         
         _weaponIcon.sprite = ctrl.Data.Icon;
-        _weapon_name_Text.text = ctrl.Data.WeaponName;
+        Game.Skins.WeaponDisplayName.Apply(_weapon_name_Text, ctrl.Data); // [Aemy 2026-10-11] skin: ten goc + ten skin
         SetBullet(ctrl.CurrentBulletvalue, ctrl.CurrentMaxBullet);
         SetWeaponMode(ctrl.GetMode());
         

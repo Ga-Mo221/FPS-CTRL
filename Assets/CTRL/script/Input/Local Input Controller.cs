@@ -43,8 +43,20 @@ public class LocalInputController : MonoBehaviour
     {
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.SetOnUIOptions(!GameManager.Instance.OnUIOption());
+            var gm = GameManager.Instance;
+            if (gm != null)
+            {
+                // [Aemy 2026-10-10] Vao tran bang chon Balo tu mo -> SetOnUIOptions(true) bi tu choi khi loadout dang mo
+                // => ESC/Start khong mo duoc Pause. Dang mo bang Balo thi dong no (giu balo dang chon) roi mo Pause.
+                if (gm.OnUILoadout() && !gm.OnUIOption())
+                {
+                    if (_gameHudController != null) _gameHudController.SetLoadoutVisible(false);
+                    gm.SetOnuiLoadout(false);
+                }
+                gm.SetOnUIOptions(!gm.OnUIOption());
+                // [Aemy 2026-10-01, khoi phuc 2026-10-10 — bi mat khi gop code] hien/an panel Pause theo co
+                if (_gameHudController != null) _gameHudController.SetPauseVisible(gm.OnUIOption());
+            }
             //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
         }
     }
@@ -83,7 +95,7 @@ public class LocalInputController : MonoBehaviour
                 var item = gm.GetDropItemWeapon;
                 if (item != null)
                 {
-                    _weaponManager.Rpc_RequestChangeWeapon(item.WeaponName.ToString(), item.CurrentBullet, item.MaxBullet);
+                    _weaponManager.Rpc_RequestChangeWeapon(item.WeaponID.ToString(), item.CurrentBullet, item.MaxBullet);
                     item.Despawn();
                 }
             }

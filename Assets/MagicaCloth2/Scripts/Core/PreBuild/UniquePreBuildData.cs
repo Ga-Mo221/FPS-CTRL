@@ -39,7 +39,7 @@ namespace MagicaCloth2
             renderMeshList.ForEach(x => x?.GetUsedTransform(transformSet));
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             renderSetupDataList.ForEach(x => x?.ReplaceTransform(replaceDict));
             proxyMesh?.ReplaceTransform(replaceDict);

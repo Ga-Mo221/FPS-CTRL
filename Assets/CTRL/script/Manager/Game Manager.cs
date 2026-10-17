@@ -278,6 +278,8 @@ public class GameManager : MonoBehaviour
     
     public GamePlaySetupData GetSetupData() => _setupData;
     public void SetSetupData(GamePlaySetupData setupData) => _setupData = setupData;
+    // [Aemy 2026-10-05] Set nhan vat dang chon (-> _setupData -> token -> NSpawner spawn dung prefab).
+    public void SetCharacter(string name) { if (!string.IsNullOrEmpty(name)) _setupData.CharacterName = name; }
     
     public void setCurrentBalo(BaloData data)
     {
@@ -359,6 +361,8 @@ public class GameManager : MonoBehaviour
         if (ID.IsNullOrEmpty()) return null;
         
         if (_weapon_Prefabs == null || _weapon_Prefabs.Length == 0) return null;
+        WeaponInfo exact; // [Aemy 2026-10-11] uu tien khop dung ID (skin "Vesper_DR" chua chuoi "Vesper")
+        if (TryFindExactWeapon(ID, out exact)) return exact.Weapon;
         foreach (var weapon in _weapon_Prefabs)
             if (weapon.ID().Contains(ID))
                 return weapon.Weapon;
@@ -370,17 +374,30 @@ public class GameManager : MonoBehaviour
         if (ID == "Frag")
             return _fragSprite;
         
+        WeaponInfo exact; // [Aemy 2026-10-11]
+        if (TryFindExactWeapon(ID, out exact)) return exact.Icon();
         foreach (var weapon in _weapon_Prefabs)
         {
             if (weapon.ID().Contains(ID))
                 return weapon.Icon();
         }
         
+        // [Aemy 2026-10-11] Kill feed truyen WeaponName (vd "Vesper Dark Red") chu khong phai ID -> khop them theo ten.
+        if (!string.IsNullOrEmpty(ID))
+            foreach (var weapon in _weapon_Prefabs)
+            {
+                var d = weapon.Data();
+                if (d != null && string.Equals(d.WeaponName, ID, System.StringComparison.OrdinalIgnoreCase))
+                    return weapon.Icon();
+            }
+        
         return null;
     }
 
     public WeaponData GetWeaponData(string ID)
     {
+        WeaponInfo exact; // [Aemy 2026-10-11]
+        if (TryFindExactWeapon(ID, out exact)) return exact.Data();
         foreach (var weapon in _weapon_Prefabs)
         {
             if (weapon.ID().Contains(ID))
@@ -391,6 +408,17 @@ public class GameManager : MonoBehaviour
     }
 
     public WeaponInfo[] GetWeaponDataList() => _weapon_Prefabs;
+
+    // [Aemy 2026-10-11] Khop CHINH XAC ID (khong phan biet hoa thuong). Cac ham Get* van giu Contains lam du phong nhu cu.
+    private bool TryFindExactWeapon(string ID, out WeaponInfo found)
+    {
+        found = default(WeaponInfo);
+        if (string.IsNullOrEmpty(ID) || _weapon_Prefabs == null) return false;
+        foreach (var weapon in _weapon_Prefabs)
+            if (string.Equals(weapon.ID(), ID, System.StringComparison.OrdinalIgnoreCase))
+            { found = weapon; return true; }
+        return false;
+    }
 
     public GrenadeHandler GetGrenade(string name)
     {
@@ -415,6 +443,32 @@ public class GameManager : MonoBehaviour
     }
     
     public NPlayer[] GetCharacterList() => _character_Prefabs;
+    // [MERGE 2026-09-30 Aemy] Port tu EclipseStrike: map scene + loadout cache (client-side) cho UI_Package.
+    private string _selectedMapScene = "ShortMap1";
+    public void SetSelectedMapScene(string sceneName) { if (!string.IsNullOrEmpty(sceneName)) _selectedMapScene = sceneName; }
+    public string GetSelectedMapScene() => string.IsNullOrEmpty(_selectedMapScene) ? "ShortMap1" : _selectedMapScene;
+
+    private string[] _loadoutWeapons = new string[2];
+    private string[] _loadoutUtilities = new string[2];
+    public void SetLoadout(string w0, string w1, string u0, string u1)
+    {
+        _loadoutWeapons[0] = w0; _loadoutWeapons[1] = w1;
+        _loadoutUtilities[0] = u0; _loadoutUtilities[1] = u1;
+    }
+    public string GetLoadoutWeapon(int i)
+    {
+        if (i < 0 || i >= 2) return null;
+        if (!string.IsNullOrEmpty(_loadoutWeapons[i])) return _loadoutWeapons[i];
+        var pp = UnityEngine.PlayerPrefs.GetString("LoadoutActiveW" + i, "");
+        return string.IsNullOrEmpty(pp) ? null : pp;
+    }
+    public string GetLoadoutUtility(int i)
+    {
+        if (i < 0 || i >= 2) return null;
+        if (!string.IsNullOrEmpty(_loadoutUtilities[i])) return _loadoutUtilities[i];
+        var pp = UnityEngine.PlayerPrefs.GetString("LoadoutActiveU" + i, "");
+        return string.IsNullOrEmpty(pp) ? null : pp;
+    }
 }
 
 public struct KillInfo
@@ -433,7 +487,9 @@ public struct KillInfo
     
     public int Deaths { get; private set; }
 
-    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths, int assist, int totalExp)
+    public string AvatarUrl { get; private set; } // [MVP-AVATAR 2026-10-01 Aemy]
+
+    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths, int assist, int totalExp, string avatarUrl = "")
     {
         PlayerId = playerId;
         PlayerName = name;
@@ -442,6 +498,7 @@ public struct KillInfo
         Deaths = deaths;
         Assist = assist;
         TotalExp = totalExp;
+        AvatarUrl = avatarUrl;
     }
 }
 

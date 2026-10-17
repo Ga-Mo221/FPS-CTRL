@@ -41,6 +41,9 @@ namespace Game.UI
         [FoldoutGroup("Base/Base/UI Drag Item")] 
         [SerializeField] private GameObject _dragItemImage;
 
+        [FoldoutGroup("Base/Base/Pause Panel")]
+        [SerializeField] private GameObject _pausePanel;   // [Aemy 2026-10-01] panel Pause (ESC bat/tat)
+
         private void Update()
         {
             if (GameManager.Instance.OnUILoadout())
@@ -147,6 +150,9 @@ namespace Game.UI
         }
         
         public void SetLoadoutVisible(bool visible) => _loadout?.gameObject.SetActive(visible);
+
+        // [Aemy 2026-10-01] Bat/tat panel Pause (goi tu LocalInputController khi nhan ESC).
+        public void SetPauseVisible(bool visible) { if (_pausePanel != null) _pausePanel.SetActive(visible); }
         
         // ============================ ALL ======================================
         

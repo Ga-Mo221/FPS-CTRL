@@ -1479,8 +1479,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 08b3cbbde92ce8a4eba3bf73f35e57ac, type: 2}
+  m_sharedMaterial: {fileID: -8121810353892953096, guid: 08b3cbbde92ce8a4eba3bf73f35e57ac, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2650,10 +2650,12 @@ MonoBehaviour:
     IsThrow:
       _value: 0
   _GrenadeID: 0
-  _Frag:
+  _Grenade_Q:
     _value: 0
-  _Flash:
+  _Grenade_E:
     _value: 0
+  QKey: 0
+  EKey: 0
   _IsTurnInPlaceActive:
     _value: 0
   _IsJump:
@@ -2918,8 +2920,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c685340383c11a4c9097785b33b1217, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NShootHandler
+  _GrenadeQ:
+    _length: 8
+    _data:
+      Data: 460000007200000061000000670000002d0000004d00000036000000370000000000000000000000000000000000000000000000000000000000000000000000
+  _GrenadeE:
+    _length: 9
+    _data:
+      Data: 460000006c0000006100000073000000680000002d0000004d000000380000003400000000000000000000000000000000000000000000000000000000000000
   _throwPointRight: {fileID: 4870814209445416101}
   _throwPointLeft: {fileID: 4950083662886209044}
+  __grende_ID: 0
   _fore: 14
   _hitMask:
     serializedVersion: 2

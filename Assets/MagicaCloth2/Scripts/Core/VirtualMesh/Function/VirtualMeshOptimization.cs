@@ -94,8 +94,11 @@ namespace MagicaCloth2
                         if (edgeToTriangleList.ContainsKey(edge))
                         {
                             var tlist = edgeToTriangleList[edge];
-                            tlist.MC2Set(i);
-                            edgeToTriangleList[edge] = tlist;
+                            if (tlist.Length < tlist.Capacity) // Capacity check
+                            {
+                                tlist.MC2Set(i);
+                                edgeToTriangleList[edge] = tlist;
+                            }
                         }
                         else
                         {

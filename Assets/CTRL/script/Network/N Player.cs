@@ -17,6 +17,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     public NetworkString<_16> Nickname { get; private set; }
     
     [Networked] public int Token { get; set; }
+    [Networked] public NetworkString<_512> AvatarUrl { get; set; } // [MVP-AVATAR 2026-10-01 Aemy]
 
     // Lưu raw 16 bytes của Guid token để có thể restore sau host migration
     [Networked, Capacity(16)] public NetworkArray<byte> RawToken => default;
@@ -44,6 +45,10 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     private GameObject _detachedCameraRoot;
     
     public bool IsLocalPlayer {get; private set;}
+
+    // [Aemy 2026-10-09] Hook do nhay live: doi thiet bi (PC <-> tay cam) hoac keo slider -> gui lai CameraSpeed.
+    private bool _sensHooked;
+    private float _lastSentSens = -1f;
     
     // ============================== Public Field =====================================
     
@@ -110,7 +115,11 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             _uiPlayerNickName.gameObject.SetActive(false);
             
             Rpc_SetNickName(GameManager.Instance.GetPlayerNickName());
-            _movementHandler.RPC_SetCameraSpeed(SettingManager.Instance.SettingData.MouseSensitivity);
+            var _av = Backend.Bootstrap.ProfileCache.Cached != null ? Backend.Bootstrap.ProfileCache.Cached.AvatarUrl : null; // [MVP-AVATAR]
+            if (!string.IsNullOrEmpty(_av)) Rpc_SetAvatarUrl(_av);
+            _lastSentSens = SettingManager.Instance.SettingData.MouseSensitivity;
+            _movementHandler.RPC_SetCameraSpeed(_lastSentSens);
+            HookSensitivity(); // [Aemy 2026-10-09]
 
             // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
             // ConnectionToken ở transport-level (không đáng tin cậy qua Photon Relay).
@@ -235,6 +244,9 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     // Đây là nguồn "sự thật" duy nhất cho danh tính player, thay cho ConnectionToken
     // ở transport-level (không hoạt động qua Photon Relay).
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void Rpc_SetAvatarUrl(string url, RpcInfo info = default) { AvatarUrl = url; } // [MVP-AVATAR 2026-10-01]
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void Rpc_RegisterToken(byte[] rawToken, RpcInfo info = default)
     {
         if (!Object.HasStateAuthority) return;
@@ -291,8 +303,33 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         ComponentManager.UIPlayerNickName.SetNickName(Nickname.ToString());
     }
 
+    // [Aemy 2026-10-09] Dang ky 1 lan (InitPlayer co the chay 2 lan do host migration).
+    private void HookSensitivity()
+    {
+        if (_sensHooked || SettingManager.Instance == null) return;
+        SettingManager.Instance.OnSensitivityChanged += OnSensitivityChangedLive;
+        _sensHooked = true;
+    }
+
+    private void UnhookSensitivity()
+    {
+        if (!_sensHooked) return;
+        if (SettingManager.Instance != null) SettingManager.Instance.OnSensitivityChanged -= OnSensitivityChangedLive;
+        _sensHooked = false;
+    }
+
+    private void OnSensitivityChangedLive(float value)
+    {
+        if (this == null || Object == null || !Object.IsValid || !IsLocalPlayer || _movementHandler == null) return;
+        if (Mathf.Approximately(value, _lastSentSens)) return; // Apply() ban event moi lan doi setting -> bo qua neu khong doi
+        _lastSentSens = value;
+        _movementHandler.RPC_SetCameraSpeed(value);
+    }
+
     void OnDestroy()
     {
+        UnhookSensitivity(); // [Aemy 2026-10-09]
+
         // ✅ Chỉ local player mới có camera bị reparent ra ngoài (mồ côi, không tự despawn theo).
         // Remote player: camera vẫn là con của NetworkObject này -> Fusion/Unity tự destroy theo,
         // không cần xử lý thủ công.

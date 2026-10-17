@@ -51,6 +51,10 @@ namespace GaMo.TrueInputSystem
         public TISGamepadUIButton defaultSubTab;
         public TISGamepadUIButton defaultContent;
 
+        [Header("Debug")]
+        [Tooltip("Bật để log mỗi lần chuyển Tab / SubTab / Content và mỗi lần nhấn button.")]
+        public bool debugLog = true;
+
         // ── Internal state — Context là nơi DUY NHẤT giữ state này ───────────
 
         /// <summary>
@@ -75,6 +79,16 @@ namespace GaMo.TrueInputSystem
         // Lookup nhanh cho tab/subtab mapping
         private readonly Dictionary<TISGamepadUIButton, TabEntry>    tabLookup    = new();
         private readonly Dictionary<TISGamepadUIButton, SubTabEntry> subTabLookup = new();
+
+        // ── Debug ─────────────────────────────────────────────────────────────
+
+        internal void Log(string message)
+        {
+            if (debugLog)
+                Debug.Log($"[TIS Nav] {message}", this);
+        }
+
+        private static string N(TISGamepadUIButton btn) => btn != null ? btn.name : "null";
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
@@ -224,6 +238,8 @@ namespace GaMo.TrueInputSystem
             if (target == null || !target.gameObject.activeInHierarchy) return;
             if (EventSystem.current == null) return;
 
+            Log($"<color=#6EC6FF>[Content]</color> \"{N(from)}\" → \"{N(target)}\"");
+
             EventSystem.current.SetSelectedGameObject(target.gameObject);
             TISGamepadUIButton.s_NextMoveTime[TISGamepadUIButton.NavigationLayer.Content]
                 = Time.unscaledTime + from.holdDelay;
@@ -242,6 +258,8 @@ namespace GaMo.TrueInputSystem
             // Kiểm tra: button hiện tại trong layer có phải là 'from' không?
             // (tránh trường hợp stale button gửi request)
             if (!activeButtons.TryGetValue(layer, out var current) || current != from) return;
+
+            Log($"<color=#FFD54F>[{layer}]</color> \"{N(from)}\" → \"{N(target)}\"");
 
             // Thực hiện chuyển
             ActivateButtonInLayer(target);
@@ -293,7 +311,10 @@ namespace GaMo.TrueInputSystem
             activeButtons.Remove(TISGamepadUIButton.NavigationLayer.SubTab);
 
             if (entry.firstSubTab != null)
+            {
+                Log($"    ↳ auto <color=#FFD54F>[SubTab]</color> → \"{N(entry.firstSubTab)}\"");
                 ActivateButtonInLayer(entry.firstSubTab);
+            }
 
             // Redirect Content focus: ưu tiên firstContent của SubTab đầu tiên
             TISGamepadUIButton targetContent = entry.firstContent;
@@ -321,6 +342,8 @@ namespace GaMo.TrueInputSystem
         private void MoveContentFocus(TISGamepadUIButton newContent)
         {
             if (newContent == null || EventSystem.current == null) return;
+
+            Log($"    ↳ auto <color=#6EC6FF>[Content]</color> focus → \"{N(newContent)}\"");
 
             var currentGO = EventSystem.current.currentSelectedGameObject;
             if (currentGO != null && currentGO != newContent.gameObject)

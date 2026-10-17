@@ -31,6 +31,12 @@ public class NetworkRunnerHandler : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    // [MERGE 2026-10-01 Aemy] Scene menu: KHONG auto-start NetworkRunner (vao tran qua FusionMatchHandoff.CreateGame).
+    private static bool IsMenuScene(string n)
+    {
+        return n == "MainMenu_Test" || n == "Login_Register" || n == "Loading" || n == "MenuShell";
+    }
+
     private void Start()
     {
         if (SpawnNetworkRunner == null)
@@ -38,7 +44,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             SpawnNetworkRunner = Instantiate(_networkRunner_Prefab);
             SpawnNetworkRunner.name = "Network Runner";
 
-            if (SceneManager.GetActiveScene().name != "MainMenu_Test")
+            if (!IsMenuScene(SceneManager.GetActiveScene().name)) // [MERGE 2026-10-01 Aemy] khong auto-start tran trong scene menu (Login_Register/Loading/MenuShell)
             // lấy scene hiện tại rồi chuyển sang sceneref bằng convert của fusion.
             {
                 Scene UnityScene = SceneManager.GetActiveScene();
@@ -386,7 +392,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         SpawnNetworkRunner = null;
 
         // Chờ scene load xong hoàn toàn
-        var asyncLoad = SceneManager.LoadSceneAsync(SceneName.GetPath(SceneName._MAIN_MENU));
+        var asyncLoad = SceneManager.LoadSceneAsync("MenuShell") /* [MERGE 2026-10-01 Aemy] ve MenuShell thay vi MainMenu_Test */;
         while (!asyncLoad.isDone)
             await Task.Yield();
 
@@ -434,7 +440,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         await SpawnNetworkRunner.Shutdown();
         SpawnNetworkRunner = null;
         
-        var asyncLoad = SceneManager.LoadSceneAsync(SceneName.GetPath(SceneName._MAIN_MENU));
+        var asyncLoad = SceneManager.LoadSceneAsync("MenuShell") /* [MERGE 2026-10-01 Aemy] ve MenuShell thay vi MainMenu_Test */;
         while (!asyncLoad.isDone)
             await Task.Yield();
         
@@ -450,7 +456,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         if (SpawnNetworkRunner == null)
         {
             var oldRunner = FindAnyObjectByType<NetworkRunner>(FindObjectsInactive.Include);
-            Destroy(oldRunner.gameObject);
+            if (oldRunner != null) Destroy(oldRunner.gameObject); // [MERGE 2026-10-01 Aemy] null-check tranh NRE
             SpawnNetworkRunner = Instantiate(_networkRunner_Prefab);
             SpawnNetworkRunner.name = "Network Runner";
             Debug.Log("<color=orange>[NetworkRunnerHandler]</color> Create New Network Runner");

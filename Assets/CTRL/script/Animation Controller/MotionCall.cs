@@ -43,10 +43,14 @@ public class MotionCall : StateMachineBehaviour
         var dis = animator.GetComponent<DisplayObject>();
         var shoot = animator.GetComponentInParent<NShootHandler>();
         if (shoot != null)
+        {
+            if (dis != null)
+            {
+                int index = GetIDGrenade(shoot);
+                dis.DisableObj(index);
+            }
             shoot.ThrowGrenade();
-        if (dis == null) return;
-        int index = GetIDGrenade(shoot);
-        dis.DisableObj(index);
+        }
     }
 
     private int GetIDGrenade(NShootHandler handler)

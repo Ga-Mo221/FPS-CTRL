@@ -32,6 +32,12 @@ public class NetworkGameState : NetworkBehaviour
     // ── Kill Stats (networked) ────────────────────────────────────────────────
     [Networked] public int RedKill  { get; private set; }
     [Networked] public int BlueKill { get; private set; }
+    // [LAST-MAN 2026-10-01 Aemy] Con <=1 nguoi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
+    [Networked] public NetworkBool EndedByForfeit { get; private set; }
+    [Networked] public int ForfeitWinnerTeam { get; private set; }
+    [Networked] public NetworkId ForfeitWinnerId { get; private set; }
+    private bool _hadTwoPlayers;
+    private bool _hadBothTeams; // [Aemy 2026-10-11] che do Team: tung co ca 2 doi
     //[Networked] public int AllKill  { get; private set; }
 
     [Header("Kill Stats Settings")]
@@ -84,6 +90,10 @@ public class NetworkGameState : NetworkBehaviour
         _redKillAccumulated  = 0;
         _blueKillAccumulated = 0;
         _playerKillSnapshot.Clear();
+        EndedByForfeit = false;
+        ForfeitWinnerTeam = -1;
+        _hadTwoPlayers = false;
+        _hadBothTeams = false;
         StartCountdown();
     }
 
@@ -106,6 +116,47 @@ public class NetworkGameState : NetworkBehaviour
                 MatchEndedByKillTarget = true;
                 RoundEnded             = true;
                 CurrentRound           = _totalRounds + 1; // đảm bảo IsMatchOver() = true
+            }
+        }
+
+        // [LAST-MAN 2026-10-01 Aemy] Con <=1 nguoi choi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
+        if (GameStarted && !MatchEndedByKillTarget)
+        {
+            int active = 0; PlayerRef lastRef = default;
+            int blue = 0, red = 0;
+            foreach (var pr in Runner.ActivePlayers)
+            {
+                active++; lastRef = pr;
+                if (Runner.TryGetPlayerObject(pr, out var po) && po != null)
+                {
+                    var tp = po.GetComponent<NPlayer>();
+                    if (tp != null) { if (tp.NetworkedTeam == PlayerTeam.Blue) blue++; else if (tp.NetworkedTeam == PlayerTeam.Red) red++; }
+                }
+            }
+            if (active >= 2) _hadTwoPlayers = true;
+            if (blue > 0 && red > 0) _hadBothTeams = true;
+
+            // [Aemy 2026-10-11] Team: 1 doi khong con ai (doi kia van con nguoi) -> doi con lai thang.
+            bool isTeam = GameManager.Instance != null && GameManager.Instance.GetGamePlayMode() == GamePlayMode.Team;
+            if (isTeam && _hadBothTeams && active >= 1 && (blue == 0 || red == 0))
+            {
+                ForfeitWinnerTeam = blue > 0 ? (int)PlayerTeam.Blue : (int)PlayerTeam.Red;
+                EndedByForfeit = true;
+                MatchEndedByKillTarget = true;
+                RoundEnded = true;
+                CurrentRound = _totalRounds + 1;
+            }
+            else if (_hadTwoPlayers && active <= 1)
+            {
+                if (active == 1 && Runner.TryGetPlayerObject(lastRef, out var lastObj) && lastObj != null)
+                {
+                    var np = lastObj.GetComponent<NPlayer>();
+                    if (np != null) { ForfeitWinnerTeam = (int)np.NetworkedTeam; ForfeitWinnerId = np.Object.Id; }
+                }
+                EndedByForfeit = true;
+                MatchEndedByKillTarget = true;
+                RoundEnded = true;
+                CurrentRound = _totalRounds + 1;
             }
         }
 
@@ -212,7 +263,7 @@ public class NetworkGameState : NetworkBehaviour
             int deathcount = player.GetDeathCount();
             int assist = player.Assist;
             int totalEXP = player.TotalExp;
-            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.Nickname.ToString(), team, player._kill, deathcount,  assist, totalEXP);
+            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.Nickname.ToString(), team, player._kill, deathcount,  assist, totalEXP, player.nPlayer.AvatarUrl.ToString());
         }
 
         // ── Build leaderboard đã sort giảm dần theo kill ────────────────────────

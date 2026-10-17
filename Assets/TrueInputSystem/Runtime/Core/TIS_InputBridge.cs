@@ -168,6 +168,18 @@ namespace GaMo.TrueInputSystem
 
             InitialiseWithProfile(_profile);
             InitialiseObjectTracker();
+
+            // [Aemy 2026-10-10] Mo game khi dang cam tay cam -> bat dau o che do tay cam
+            // (menu/TopBar tu chon san, khong mat lan bam dau de "danh thuc" tay cam).
+            if (!_isMobileMode && Gamepad.current != null) _activeDevice = TISActiveDevice.Gamepad;
+            InputSystem.onDeviceChange += OnDeviceChangeAemy;
+        }
+
+        // [Aemy 2026-10-10] Cam tay cam vao luc dang chay -> chuyen sang che do tay cam ngay.
+        private void OnDeviceChangeAemy(InputDevice device, InputDeviceChange change)
+        {
+            if (_isMobileMode) return;
+            if (change == InputDeviceChange.Added && device is Gamepad) _activeDevice = TISActiveDevice.Gamepad;
         }
 
         private void OnEnable()  => _asset?.Enable();
@@ -183,6 +195,7 @@ namespace GaMo.TrueInputSystem
                 _asset = null;
             }
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            InputSystem.onDeviceChange -= OnDeviceChangeAemy; // [Aemy 2026-10-10]
             if (Instance == this) Instance = null;
         }
 
@@ -482,32 +495,44 @@ namespace GaMo.TrueInputSystem
         public bool IsGamepad       => _activeDevice == TISActiveDevice.Gamepad;
         public bool IsMobile        => _isMobileMode;
 
-        private void UpdateActiveDevice()
+private void UpdateActiveDevice()
         {
-          // Mobile không thay đổi — luôn ưu tiên cao nhất
-          if (_isMobileMode)
-          {
-              _activeDevice = TISActiveDevice.Mobile;
-              return;
-          }
+            // Mobile luon uu tien cao nhat
+            if (_isMobileMode) { _activeDevice = TISActiveDevice.Mobile; return; }
 
-          // Gamepad có input frame này → chuyển sang Gamepad
-          if (Gamepad.current != null && Gamepad.current.wasUpdatedThisFrame)
-          {
-              _activeDevice = TISActiveDevice.Gamepad;
-              return;
-          }
+            // [Aemy 2026-10-05] FIX: goi IsActuated() tren CA device khong dang tin
+            // (magnitude cap-device co the tra -1 => luon false), khien menu khong bao gio
+            // nhan ra tay cam => chan sach di chuyen (dpad/L1R1/L2R2) nhung nut A van chay.
+            // => Poll tung control cu the voi nguong (bo stick drift).
+            var gp = Gamepad.current;
+            if (gp != null && GamepadHasInput(gp)) { _activeDevice = TISActiveDevice.Gamepad; return; }
 
-          // Keyboard hoặc Mouse có input frame này → chuyển về KeyboardMouse
-          bool keyboardInput = Keyboard.current != null && Keyboard.current.wasUpdatedThisFrame;
-          bool mouseInput    = Mouse.current    != null && Mouse.current.wasUpdatedThisFrame;
-          if (keyboardInput || mouseInput)
-          {
-              _activeDevice = TISActiveDevice.KeyboardMouse;
-              return;
-          }
+            bool kbActive = Keyboard.current != null && Keyboard.current.anyKey.isPressed;
+            bool mouseActive = false;
+            var m = Mouse.current;
+            if (m != null)
+            {
+                if (m.leftButton.isPressed || m.rightButton.isPressed || m.middleButton.isPressed) mouseActive = true;
+                else if (m.delta.ReadValue().sqrMagnitude > 4f) mouseActive = true;        // di chuyen > ~2px
+                else if (Mathf.Abs(m.scroll.ReadValue().y) > 0.01f) mouseActive = true;
+            }
+            if (kbActive || mouseActive) { _activeDevice = TISActiveDevice.KeyboardMouse; return; }
 
-          // Không có input từ bất kỳ thiết bị nào → giữ nguyên thiết bị cũ
+            // Khong co input chu y -> giu nguyen thiet bi cu (hysteresis)
+        }
+
+        // [Aemy 2026-10-05] Poll input tay cam theo tung control (dang tin hon IsActuated cap-device).
+        private static bool GamepadHasInput(Gamepad gp)
+        {
+            if (gp.dpad.ReadValue().sqrMagnitude > 0.1f) return true;
+            if (gp.leftStick.ReadValue().sqrMagnitude > 0.25f) return true;
+            if (gp.rightStick.ReadValue().sqrMagnitude > 0.25f) return true;
+            if (gp.leftTrigger.ReadValue() > 0.3f || gp.rightTrigger.ReadValue() > 0.3f) return true;
+            if (gp.leftShoulder.isPressed || gp.rightShoulder.isPressed) return true;
+            if (gp.buttonSouth.isPressed || gp.buttonEast.isPressed || gp.buttonWest.isPressed || gp.buttonNorth.isPressed) return true;
+            if (gp.startButton.isPressed || gp.selectButton.isPressed) return true;
+            if (gp.leftStickButton.isPressed || gp.rightStickButton.isPressed) return true;
+            return false;
         }
 
         // ══════════════════════════════════════════════════════
