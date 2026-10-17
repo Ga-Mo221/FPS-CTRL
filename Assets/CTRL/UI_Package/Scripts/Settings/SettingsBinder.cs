@@ -96,6 +96,7 @@ public class SettingsBinder : MonoBehaviour
         BindSwitch("Chuot/TUY CHON/Gia toc chuot (Accel)",() => Data.MouseAccel, v => Data.MouseAccel = v);
 
         // ---- Do hoa (trong ScrollRect) ----
+        BindCycler("Do hoa Scroll/Content/HIEN THI/Ngon ngu", Game.UI.Loc.LanguageNames, () => Data.Language, v => Data.Language = v); // [Aemy 2026-10-17]
         BindSlider("Do hoa Scroll/Content/HIEN THI/Truong nhin (FOV)", () => Data.Fov, v => Data.Fov = v);
         BindSwitch("Do hoa Scroll/Content/CHAT LUONG/V-Sync", () => Data.VSync, v => Data.VSync = v);
         BindSlider("Do hoa Scroll/Content/HINH ANH/Do sang",     () => Data.Brightness, v => Data.Brightness = v);

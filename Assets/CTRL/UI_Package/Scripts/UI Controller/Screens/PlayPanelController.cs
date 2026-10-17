@@ -153,7 +153,7 @@ namespace Game.UI
         public void SetDefaultStartLabel(string text)
         {
             if (string.IsNullOrEmpty(text)) return;
-            bool showingDefault = _startLabel == null || _startLabel.text == _startDefaultText;
+            bool showingDefault = _startLabel == null || _startLabel.text == _startDefaultText || _startLabel.text == Loc.T(_startDefaultText);
             _startDefaultText = text;
             if (showingDefault && _startLabel != null) _startLabel.text = text;
         }

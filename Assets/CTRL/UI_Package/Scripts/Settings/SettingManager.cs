@@ -184,6 +184,7 @@ public class SettingManager : MonoBehaviour
     public void Apply()
     {
         if (_settingData == null) return;
+        Game.UI.Loc.SetLanguage(_settingData.Language); // [Aemy 2026-10-17] ngon ngu giao dien
         ApplyAudio();
         ApplyGraphics();
         ApplyKeybinds();
