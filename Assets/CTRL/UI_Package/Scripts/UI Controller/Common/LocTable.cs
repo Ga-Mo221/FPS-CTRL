@@ -288,7 +288,7 @@ namespace Game.UI
             { "Viền đen", "Outline" },
             { "THÔNG TIN", "PROFILE" },
             { "Tên hiển thị", "Display name" },
-            { "ĐỔI", "CHANGE" },
+            { "ĐỔI", "EDIT" },
             { "Email", "Email" },
             { "EMAIL", "EMAIL" },
             { "ĐỔI ẢNH ĐẠI DIỆN", "CHANGE AVATAR" },
@@ -376,6 +376,15 @@ namespace Game.UI
             { "CHUỖI", "STREAK" },
             { "PHÍM", "KEYS" },
             { "MUA", "BUY" },
+            // [Aemy 2026-10-18] nut san sang / huy tim + vao tran dang dien ra
+            { "HỦY SẴN SÀNG", "UNREADY" },
+            { "Trưởng nhóm đã hủy trận.", "The leader cancelled the match." },
+            { "Đã hủy trận của tổ đội.", "Party match cancelled." },
+            { "VÀO TRẬN ĐANG DIỄN RA", "JOINING MATCH IN PROGRESS" },
+            { "Đã tìm thấy trận đang diễn ra!", "Found a match in progress!" },
+            { "KHÔNG TÌM ĐƯỢC TRẬN (HẾT GIỜ)", "NO MATCH FOUND (TIMED OUT)" },
+            { "Lựu đạn", "Grenade" },
+            { "Tên", "Name" },
         };
 
         /// <summary>Chuoi ghep dong (co so / ten). $1, $2 = nhom bat duoc.</summary>
@@ -427,6 +436,12 @@ namespace Game.UI
             new KeyValuePair<Regex, string>(new Regex("^Mua \"(.+)\" với giá ([\\d,\\.]+) Vàng\\?$", RegexOptions.Compiled), "Buy \"$1\" for $2 Gold?"),
             new KeyValuePair<Regex, string>(new Regex("^Mua \"(.+)\" với giá (.+)\\?$", RegexOptions.Compiled), "Buy \"$1\" for $2?"),
             new KeyValuePair<Regex, string>(new Regex("^Bạn đã sở hữu \"(.+)\"!$", RegexOptions.Compiled), "You now own \"$1\"!"),
+            // [Aemy 2026-10-18] nut tim tran: dang tim -> bam de huy
+            new KeyValuePair<Regex, string>(new Regex("^HỦY · (\\d+:\\d+)$", RegexOptions.Compiled), "CANCEL · $1"),
+            new KeyValuePair<Regex, string>(new Regex("^MUA · (.+)$", RegexOptions.Compiled), "BUY · $1"),
+            new KeyValuePair<Regex, string>(new Regex("^BỘ SƯU TẬP · (.+)$", RegexOptions.Compiled), "COLLECTION · $1"),
+            new KeyValuePair<Regex, string>(new Regex("^LỖI: (.+)$", RegexOptions.Compiled), "ERROR: $1"),
+            new KeyValuePair<Regex, string>(new Regex("^ĐỘI (\\S+) · (\\d+/\\d+)$", RegexOptions.Compiled), "TEAM $1 · $2"),
         };
     }
 }

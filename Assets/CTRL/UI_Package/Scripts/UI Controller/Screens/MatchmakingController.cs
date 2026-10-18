@@ -75,6 +75,8 @@ namespace Game.UI
 
         // ---- Public setters ----
         public void SetTitle(string title) => Set(_titleLabel, title);
+        /// <summary>[Aemy 2026-10-18] An/hien nut HUY (vd thanh vien to doi khong duoc huy tran cua ca doi).</summary>
+        public void SetCancelVisible(bool visible) { if (_cancelButton != null) _cancelButton.gameObject.SetActive(visible); }
         public void SetMode(string mode) => Set(_modeLabel, mode);
         public void SetPing(int ping) => Set(_pingLabel, $"{ping} ms");
 

@@ -24,6 +24,9 @@ namespace Game.UI
         public event Action<PartyInvite> OnInviteReceived;
         public event Action<PartyState> OnPartyChanged;
         public event Action<string, MatchMode> OnPartyMatchReady; // [PARTY-FIX] session, mode -> MenuShellBinder show lobby roi handoff
+        public event Action OnPartyMatchCancelled; // [Aemy 2026-10-18] truong nhom huy tran vua bat dau (MatchId bi xoa)
+        private string _lastStartedMatch;   // gia tri MatchId truong nhom vua ghi
+        private string _ignoreMatch;        // MatchId da huy -> poll tre khong duoc vao tran nua
         // [Aemy 2026-10-17] Thanh vien: nhan cai dat (che do/map) cua truong nhom. Bi da khoi doi -> OnKicked.
         public event Action<PartySettings> OnLeaderSettings;
         public event Action OnKicked;
@@ -182,8 +185,19 @@ namespace Game.UI
             if (State == null || !State.AllReady()) { Debug.LogWarning("[Party] Chua du thanh vien san sang."); return false; }
             if (string.IsNullOrEmpty(session)) session = "party_" + Code + "_" + System.Guid.NewGuid().ToString("N").Substring(0, 4);
             string val = mode.ToString() + "|" + (sceneName ?? "") + "|" + session + "|" + (extra ?? "");
+            _lastStartedMatch = val; _ignoreMatch = null;
             svc.SetMatchId(Code, val, null, LogErr);
             return true;
+        }
+
+        /// <summary>[Aemy 2026-10-18] Truong nhom huy tran vua bat dau (trong luc dem nguoc) -> xoa MatchId cho ca to doi.</summary>
+        public void CancelPartyMatch()
+        {
+            var svc = BackendBootstrap.PartyService;
+            if (svc == null || !InParty || !IsLeader) return;
+            _ignoreMatch = _lastStartedMatch;
+            _handedOff = false;
+            svc.SetMatchId(Code, "", null, LogErr);
         }
 
         private void StartPolling() { if (_pollCo == null) { _partyStartRealtime = Time.unscaledTime; _pollCo = StartCoroutine(PartyPoll()); } }
@@ -268,8 +282,13 @@ namespace Game.UI
                             foreach (var k in _gone) { _seenVal.Remove(k); _seenAt.Remove(k); }
                         }
                         string mid = st != null ? st.MatchId : null;
-                        if (string.IsNullOrEmpty(mid)) { _handedOff = false; _lastHandledMatch = null; }
-                        else if (!_handedOff && mid != _lastHandledMatch) { _handedOff = true; _lastHandledMatch = mid; HandOffToPartyMatch(mid); }
+                        if (string.IsNullOrEmpty(mid))
+                        {
+                            // [Aemy 2026-10-18] MatchId bi xoa khi dang cho vao tran -> truong nhom da huy
+                            if (_handedOff && OnPartyMatchCancelled != null) OnPartyMatchCancelled();
+                            _handedOff = false; _lastHandledMatch = null; // _ignoreMatch giu lai: phan hoi poll tre mang MatchId cu van bi bo qua
+                        }
+                        else if (!_handedOff && mid != _lastHandledMatch && mid != _ignoreMatch) { _handedOff = true; _lastHandledMatch = mid; HandOffToPartyMatch(mid); }
                     }, e =>
                     {
                         LogErr(e);

@@ -100,6 +100,8 @@ namespace Game.UI
             if (_party != null)
                 _party.ReadyClicked += OnPartyReady;
             if (_partyController != null) _partyController.OnPartyMatchReady += OnPartyMatchReady; // [PARTY-FIX] qua lobby
+            if (_partyController != null) _partyController.OnPartyMatchCancelled += OnPartyMatchCancelled; // [Aemy 2026-10-18]
+            if (_matchmakingScreen != null) _matchmakingScreen.CancelClicked += OnLobbyCancelClicked;      // [Aemy 2026-10-18]
             if (_partyController != null)
             {
                 // [Aemy 2026-10-17] Thanh vien dong bo che do/map voi truong nhom; bi da / roi doi -> mo khoa lai.
@@ -127,6 +129,8 @@ namespace Game.UI
             if (_party != null)
                 _party.ReadyClicked -= OnPartyReady;
             if (_partyController != null) _partyController.OnPartyMatchReady -= OnPartyMatchReady;
+            if (_partyController != null) _partyController.OnPartyMatchCancelled -= OnPartyMatchCancelled;
+            if (_matchmakingScreen != null) _matchmakingScreen.CancelClicked -= OnLobbyCancelClicked;
             if (_partyController != null)
             {
                 _partyController.OnLeaderSettings -= ApplyLeaderSettings;
@@ -417,6 +421,7 @@ namespace Game.UI
                 _partyController.PendingMode = CurrentMode();
                 if (_partyController.IsLeader) return; // leader luon ready, khong toggle
                 _partyController.ToggleReady();
+                RefreshStartButton();
             }
             else
             {
@@ -516,6 +521,7 @@ namespace Game.UI
             bool member = IsPartyMember();
             if (_play != null) _play.SetChoiceLocked(member, member ? "THEO TRƯỞNG NHÓM" : null);
             if (_customRoom != null) _customRoom.SetLocked(member);
+            RefreshStartButton(); // [Aemy 2026-10-18] thanh vien: SAN SANG / HUY SAN SANG
             if (st == null) { RefreshProfile(); return; }          // roi doi / bi da: o 1 ve lai la minh
             if (!member) PublishPartySettings();                    // vua thanh truong nhom -> phat cai dat cua minh
         }
@@ -727,30 +733,113 @@ namespace Game.UI
                 int kill = 0; int colon = extra.IndexOf(':'); if (colon >= 0) int.TryParse(extra.Substring(colon + 1), out kill);
                 StartLobbyHold(() =>
                 {
+                    _partyLobbyPending = false;
                     var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
                     if (ho == null) return;
                     Game.UI.CustomRoomSession.Begin(code, kill, isLeader);
                     if (isLeader) ho.HandOffCustom(code, mode, true, (ok, why) => { if (!ok) Debug.LogWarning("[Party] Tao phong tuy chinh loi: " + why); });
-                    else StartCoroutine(RetryJoinCustom(code, 6));
+                    else _partyHandoffCo = StartCoroutine(RetryJoinCustom(code, 6));
                 });
                 return;
             }
             StartLobbyHold(() =>
             {
+                _partyLobbyPending = false;
                 if (BackendBootstrap.MatchHandoff == null) return;
                 if (isLeader) BackendBootstrap.MatchHandoff.HandOff(match); // leader vao truoc -> lam host
-                else StartCoroutine(DelayedHandoff(match, 3f)); // member vao SAU ~3s -> join phong host (tranh 2 host)
+                else _partyHandoffCo = StartCoroutine(DelayedHandoff(match, 3f)); // member vao SAU ~3s -> join phong host (tranh 2 host)
             });
+            if (_matchmakingScreen != null) _matchmakingScreen.SetCancelVisible(isLeader); // [Aemy 2026-10-18] chi truong nhom huy duoc
         }
 
         private IEnumerator DelayedHandoff(MatchFoundResult match, float delay)
         {
             float t = 0f; while (t < delay) { t += Time.unscaledDeltaTime; yield return null; }
+            _partyHandoffCo = null;
             if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOff(match);
+        }
+
+        // ===================== [Aemy 2026-10-18] NUT CHINH: SAN SANG / HUY SAN SANG / HUY TIM =====================
+        //  - Thanh vien to doi : "SAN SANG" <-> "HUY SAN SANG" (bam de doi trang thai).
+        //  - Ghep don dang tim  : "HUY · mm:ss" (bam de huy tim tran).
+        //  - Truong nhom vua bat dau (dang dem nguoc vao tran): "HUY" (bam de huy cho ca to doi).
+        private bool _partyLobbyPending;
+        private Coroutine _partyHandoffCo;
+
+        private void RefreshStartButton()
+        {
+            if (_play == null) return;
+            if (IsPartyMember())
+            {
+                _play.SetStartInteractable(true);
+                _play.SetStartLabel(_partyController.SelfReady ? "HỦY SẴN SÀNG" : "SẴN SÀNG");
+                return;
+            }
+            if (_searching) { _play.SetStartInteractable(!_joiningExisting); return; } // chu do SearchTimerCo ve
+            if (_partyLobbyPending) { _play.SetStartInteractable(true); _play.SetStartLabel("HỦY"); return; }
+            _play.SetStartInteractable(true);
+            _play.RestoreStartLabel();
+        }
+
+        /// <summary>Ghep don: huy tim tran (ca giai doan hoi lobby, ve PlayFab va theo doi phong).</summary>
+        private void CancelSoloSearch()
+        {
+            if (_joiningExisting) return; // dang vao phong roi -> khong huy giua chung
+            _searching = false;
+            StopBackfillWatch();
+            StopSearchTimer();
+            var mm = BackendBootstrap.MatchmakingService;
+            if (mm != null && mm.IsSearching) mm.CancelMatchmaking(null);
+            if (_play != null) _play.SetQueueStatus("Đã hủy tìm trận.");
+            RefreshStartButton();
+        }
+
+        /// <summary>Truong nhom huy tran vua bat dau -> xoa MatchId, thanh vien nhan qua OnPartyMatchCancelled.</summary>
+        private void CancelPartyMatchAsLeader()
+        {
+            if (_partyController != null) _partyController.CancelPartyMatch();
+            StopPartyLobby("Đã hủy trận của tổ đội.");
+        }
+
+        private void OnPartyMatchCancelled()
+        {
+            bool wasWaiting = _lobbyCo != null || _partyHandoffCo != null || _partyLobbyPending;
+            if (!wasWaiting) return;
+            bool leader = _partyController != null && _partyController.IsLeader;
+            StopPartyLobby(leader ? "Đã hủy trận của tổ đội." : "Trưởng nhóm đã hủy trận.");
+        }
+
+        private void StopPartyLobby(string status)
+        {
+            if (_lobbyCo != null) { StopCoroutine(_lobbyCo); _lobbyCo = null; }
+            if (_partyHandoffCo != null) { StopCoroutine(_partyHandoffCo); _partyHandoffCo = null; }
+            _partyLobbyPending = false;
+            if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);
+            if (_play != null) _play.SetQueueStatus(status);
+            RefreshStartButton();
+        }
+
+        /// <summary>Nut HUY tren man ghep tran (dem nguoc truoc khi vao).</summary>
+        private void OnLobbyCancelClicked()
+        {
+            if (_joiningExisting) return;
+            bool inParty = _partyController != null && _partyController.InParty;
+            if (inParty)
+            {
+                if (_partyController.IsLeader) CancelPartyMatchAsLeader();
+                return; // thanh vien: nut da an
+            }
+            // Ghep don: da ghep xong (dang dem nguoc) hoac dang tim -> huy, quay ve menu
+            if (_lobbyCo != null) { StopCoroutine(_lobbyCo); _lobbyCo = null; }
+            if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);
+            CancelSoloSearch();
         }
 
         private void OnStartClicked()
         {
+            // [Aemy 2026-10-18] Nut chinh dang o che do HUY
+            if (_searching) { CancelSoloSearch(); return; }
+            if (_partyLobbyPending && _partyController != null && _partyController.IsLeader) { CancelPartyMatchAsLeader(); return; }
             var mode = CurrentMode();
             bool inParty = _partyController != null && _partyController.InParty;
             // [Aemy 2026-10-17] Phong tuy chinh khong o to doi -> tao phong rieng (Host) ngay, khong qua ghep tran.
@@ -760,7 +849,7 @@ namespace Game.UI
             if (_partyController != null && _partyController.InParty)
             {
                 if (!_partyController.IsLeader)
-                { _partyController.ToggleReady(); if (_play != null) _play.SetQueueStatus(_partyController.SelfReady ? "Đã sẵn sàng" : "Chưa sẵn sàng"); return; } // [PARTY-FIX] member bam = toggle ready, khong popup
+                { _partyController.ToggleReady(); if (_play != null) _play.SetQueueStatus(_partyController.SelfReady ? "Đã sẵn sàng" : "Chưa sẵn sàng"); RefreshStartButton(); return; } // [PARTY-FIX] member bam = toggle ready, khong popup
                 var pst = _partyController.State;
                 if (pst == null || !pst.AllReady())
                 { if (ModalDialog.Instance != null) ModalDialog.Instance.Info("Chưa sẵn sàng", "Vẫn còn thành viên chưa sẵn sàng."); return; }
@@ -771,9 +860,10 @@ namespace Game.UI
                 {
                     // To doi + phong tuy chinh: truong nhom lam chu phong, thanh vien vao bang ma (qua MatchId party).
                     string code = Game.UI.CustomRoomSession.NewCode(_customRoom.Rule);
-                    _partyController.StartPartyMatch(mode, scene, Game.UI.CustomRoomSession.SessionOf(code), Game.UI.CustomRoomSession.PartyExtra + ":" + _customRoom.KillTarget);
+                    _partyLobbyPending = _partyController.StartPartyMatch(mode, scene, Game.UI.CustomRoomSession.SessionOf(code), Game.UI.CustomRoomSession.PartyExtra + ":" + _customRoom.KillTarget);
                 }
-                else _partyController.StartPartyMatch(mode, scene);
+                else _partyLobbyPending = _partyController.StartPartyMatch(mode, scene);
+                RefreshStartButton();
                 return;
             }
             RefreshLoadout(); // [UI-INTEGRATION] nap loadout MOI NHAT tu PlayFab ngay khi bam Vao tran
@@ -788,7 +878,7 @@ namespace Game.UI
 
             _searching = true;
             StartSearchTimer(); // [UI-INTEGRATION] nut Start bien thanh dong ho mm:ss
-            if (_play != null) { _play.SetQueueStatus("Đang tìm trận..."); _play.SetStartInteractable(false); }
+            if (_play != null) { _play.SetQueueStatus("Đang tìm trận..."); _play.SetStartInteractable(true); } // [Aemy 2026-10-18] bam lai = HUY
 
             // [MM-BACKFILL 2026-10-18 Aemy] Uu tien VAO TRAN DANG DIEN RA con cho (lobby Fusion) truoc khi tao ve PlayFab.
             bool anyMap = IsRandomMapSelected();
@@ -867,7 +957,7 @@ namespace Game.UI
             while (true)
             {
                 int total = Mathf.FloorToInt(Time.unscaledTime - startT);
-                if (_play != null) _play.SetStartLabel(string.Format("{0:00}:{1:00}", total / 60, total % 60));
+                if (_play != null) _play.SetStartLabel(string.Format("HỦY · {0:00}:{1:00}", total / 60, total % 60)); // [Aemy 2026-10-18] bam de huy
                 yield return new WaitForSeconds(1f);
             }
         }
@@ -950,6 +1040,7 @@ namespace Game.UI
             {
                 bool team = mode == MatchMode.TDM;
                 OpenLobbyScreen(team, "VÀO TRẬN ĐANG DIỄN RA");
+                _matchmakingScreen.SetCancelVisible(false); // dang vao phong -> khong huy giua chung
                 var me = new LobbyMember { IsLocal = true, TeamId = "", Name = "Player", AvatarUrl = "" };
                 var prof = ProfileCache.Cached;
                 if (prof != null) { if (!string.IsNullOrEmpty(prof.DisplayName)) me.Name = prof.DisplayName; if (!string.IsNullOrEmpty(prof.AvatarUrl)) me.AvatarUrl = prof.AvatarUrl; }
@@ -1004,6 +1095,7 @@ namespace Game.UI
         private void OpenLobbyScreen(bool team, string title)
         {
             _matchmakingScreen.gameObject.SetActive(true);
+            _matchmakingScreen.SetCancelVisible(true); // [Aemy 2026-10-18] mac dinh hien nut HUY (thanh vien to doi se an)
             _matchmakingScreen.StopTimer();
             _matchmakingScreen.SetTitle(title);
             _matchmakingScreen.SetMode(team ? "TEAM DEATHMATCH" : "FREE FOR ALL");
@@ -1026,6 +1118,7 @@ namespace Game.UI
                 t -= 0.25f;
             }
             if (_matchmakingScreen != null) _matchmakingScreen.SetTimeText("00:00");
+            _lobbyCo = null;
             if (onDone != null) onDone();
         }
 
