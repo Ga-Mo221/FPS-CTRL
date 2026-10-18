@@ -25,6 +25,7 @@ namespace GaMo.TrueInputSystem.Editor
             PageTitle("API Reference", "Toàn bộ public API — Properties, Methods, Events, Enums.");
 
             Draw_API_InputBridge();
+            Draw_API_Motion();
             Draw_API_RebindingSystem();
             Draw_API_MobileSkillButton();
             Draw_API_DirectionalSkillButton();

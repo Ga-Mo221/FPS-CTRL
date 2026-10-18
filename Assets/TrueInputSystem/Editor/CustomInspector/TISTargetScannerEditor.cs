@@ -4,6 +4,7 @@ using UnityEditor;
 
 namespace GaMo.TrueInputSystem
 {
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISTargetScanner))]
     [InitializeOnLoad]
     public class TISTargetScannerEditor : UnityEditor.Editor
@@ -206,7 +207,11 @@ namespace GaMo.TrueInputSystem
                     GUILayout.ExpandWidth(true));
 
                 // Badge: trạng thái runtime
-                if (Application.isPlaying)
+                if (targets.Length > 1)
+                {
+                    DrawColorBadge(targets.Length + " OBJECTS", _accentColor * 0.7f);
+                }
+                else if (Application.isPlaying)
                 {
                     bool hasTarget = scanner.CurrentTarget != null;
                     Color badgeCol = hasTarget ? _successColor : _dangerColor;
@@ -384,6 +389,13 @@ namespace GaMo.TrueInputSystem
             if (!Application.isPlaying)
             {
                 DrawHelpBox("Dữ liệu runtime chỉ hiển thị khi đang Play Mode.", MessageType.Info);
+                return;
+            }
+
+            // Multi-edit: dữ liệu runtime là của riêng từng object
+            if (targets.Length > 1)
+            {
+                DrawHelpBox("Đang chọn nhiều object: chọn 1 object để xem dữ liệu Runtime.", MessageType.Info);
                 return;
             }
 

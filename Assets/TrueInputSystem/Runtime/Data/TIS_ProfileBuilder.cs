@@ -12,6 +12,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -124,7 +125,13 @@ namespace GaMo.TrueInputSystem
             bool gamepadEnabled = isEditor || (profile.enableGamepad  );
 
             // ── PC / Keyboard + Mouse ─────────────────────────
-            if (!string.IsNullOrEmpty(def.bindingPC) && pcEnabled && (!isMobile || isEditor))
+            // Mobile vẫn giữ binding PC: bàn phím / chuột Bluetooth, Samsung DeX, ChromeOS.
+            // Riêng path <Pointer> / <Touchscreen> bị bỏ trên mobile vì chạm màn hình
+            // cũng là Pointer → sẽ kích hoạt nhầm action (đã có nút ảo / camera zone lo).
+            bool touchLikePath = def.bindingPC != null
+                && (def.bindingPC.StartsWith("<Pointer>",     StringComparison.OrdinalIgnoreCase)
+                 || def.bindingPC.StartsWith("<Touchscreen>", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(def.bindingPC) && pcEnabled && !(isMobile && !isEditor && touchLikePath))
             {
                 if (def.bindingPC.IndexOf("wasd", StringComparison.OrdinalIgnoreCase) >= 0)
                     AddWASDComposite(action);
@@ -167,13 +174,60 @@ namespace GaMo.TrueInputSystem
                     if (isVector2Path && IsStickPath(def.bindingGamepad) && !isDpad)
                     {
                         // Analog stick: apply deadzone processor để tránh drift
-                        float stickDeadzone = def.bindingGamepad.EndsWith(
-                            "/rightStick", StringComparison.OrdinalIgnoreCase)
+                        bool isRightStick = def.bindingGamepad.EndsWith(
+                            "/rightStick", StringComparison.OrdinalIgnoreCase);
+                        float stickDeadzone = isRightStick
                             ? (profile.gamepadSettings.rightStickDeadzone)
                             : (profile.gamepadSettings.leftStickDeadzone);
 
-                        action.AddBinding(def.bindingGamepad)
-                              .WithProcessor($"stickDeadzone(min={stickDeadzone:F3},max=1)");
+                        // InvariantCulture BẮT BUỘC: locale vi-VN / de / fr... format 0.12 thành "0,120"
+                        // → "stickDeadzone(min=0,120,max=1)" → Input System hiểu sai tham số,
+                        // deadzone mất tác dụng (stick drift).
+                        string dz = stickDeadzone.ToString("F3", CultureInfo.InvariantCulture);
+                        string stickProcessors = $"stickDeadzone(min={dz},max=1)";
+
+                        // stickCurve chỉ cho CẦN PHẢI (ngắm): nghiêng nhẹ chính xác hơn.
+                        // Cần trái (di chuyển) giữ tuyến tính để tốc độ đi không bị giảm.
+                        float curve = profile.gamepadSettings.stickCurve;
+                        if (isRightStick && !Mathf.Approximately(curve, 1f))
+                        {
+                            TISStickCurveProcessor.EnsureRegistered();
+                            stickProcessors += $",{TISStickCurveProcessor.Name}(exponent={F(curve)})";
+                        }
+
+                        // Luôn dựng part gyro / touchpad nếu action tick "+ Gyro / + Touchpad":
+                        // bật / tắt lúc chạy (Enable Gyro của profile, SetActionMotion...) có hiệu lực
+                        // ngay mà không cần rebuild — thiết bị ảo trả 0 hoặc part bị override tắt.
+                        var motion   = profile.motionSettings ?? new TISMotionSettings();
+                        bool mixGyro  = def.gamepadMixGyro;
+                        bool mixTouch = def.gamepadMixTouchpad;
+
+                        if (mixGyro || mixTouch)
+                        {
+                            // Cần + gyro + touchpad cộng lại trong 1 composite (mỗi part có processor riêng)
+                            TISMotionDevice.EnsureRegistered();
+                            Vector2 gs = MotionScale(def, profile, motion.gyroSensitivity);
+                            Vector2 ts = MotionScale(def, profile, motion.touchpadLookSensitivity);
+                            var comp = action.AddCompositeBinding(
+                                    $"{TISStickMotionComposite.Name}(gyroScaleX={F(gs.x)},gyroScaleY={F(gs.y)}," +
+                                    $"touchpadScaleX={F(ts.x)},touchpadScaleY={F(ts.y)})")
+                                .With("Stick", def.bindingGamepad, processors: stickProcessors);
+                            if (mixGyro)  comp.With("Gyro",     TISMotionPaths.Gyro);
+                            if (mixTouch) comp.With("Touchpad", TISMotionPaths.Touchpad);
+                        }
+                        else
+                        {
+                            action.AddBinding(def.bindingGamepad).WithProcessors(stickProcessors);
+                        }
+                    }
+                    else if (TISMotionPaths.IsMotionPath(def.bindingGamepad))
+                    {
+                        // Gyro / touchpad bind riêng. Với action "Look": áp độ nhạy Motion Settings
+                        // để cùng thang với LookDelta; action khác nhận đơn vị thô (độ/giây, bề rộng/giây).
+                        TISMotionDevice.EnsureRegistered();
+                        var bind = action.AddBinding(def.bindingGamepad);
+                        string scale = LookMotionScaleProcessor(def, profile);
+                        if (scale != null) bind.WithProcessor(scale);
                     }
                     else
                     {
@@ -199,6 +253,68 @@ namespace GaMo.TrueInputSystem
         // ══════════════════════════════════════════════════════
         //  HELPERS — path classification
         // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        //  HELPERS — gyro / touchpad (TISMotion)
+        // ══════════════════════════════════════════════════════
+
+        private const string LookActionName = "Look";
+
+        private static string F(float v) => v.ToString("0.#####", CultureInfo.InvariantCulture);
+
+        private static bool IsLook(TISInputActionDefinition def)
+            => string.Equals(def.actionName, LookActionName, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Hệ số gyro / touchpad trong composite (đơn vị "cần analog").
+        /// Look: LookDelta nhân gamepadSensitivity cho nguồn tay cầm → chia trước để kết quả cuối
+        /// = tốc độ × sensitivity của Motion Settings (đúng nghĩa thông số).
+        /// Action khác: sensitivity = số đơn vị cần trên mỗi đơn vị gyro / touchpad.
+        /// </summary>
+        private static Vector2 MotionScale(TISInputActionDefinition def, TISInputProfileConfig profile, Vector2 sensitivity)
+        {
+            if (!IsLook(def)) return sensitivity;
+            Vector2 pad = profile.cameraSettings.gamepadSensitivity;
+            return new Vector2(
+                Mathf.Approximately(pad.x, 0f) ? 0f : sensitivity.x / pad.x,
+                Mathf.Approximately(pad.y, 0f) ? 0f : sensitivity.y / pad.y);
+        }
+
+        /// <summary>Processor scale cho binding gyro / touchpad riêng của action Look (null = không cần).</summary>
+        private static string LookMotionScaleProcessor(TISInputActionDefinition def, TISInputProfileConfig profile)
+        {
+            var motion = profile.motionSettings;
+            if (!IsLook(def) || motion == null) return null;
+
+            string path = def.bindingGamepad;
+            Vector2 sens;
+            if (TISMotionPaths.IsGyroPath(path))                  sens = motion.gyroSensitivity;
+            else if (TISMotionPaths.IsTouchpadVelocityPath(path)) sens = motion.touchpadLookSensitivity;
+            else return null;
+
+            Vector2 s = MotionScale(def, profile, sens);
+            if (path.EndsWith("/x", StringComparison.OrdinalIgnoreCase)) return $"scale(factor={F(s.x)})";
+            if (path.EndsWith("/y", StringComparison.OrdinalIgnoreCase)) return $"scale(factor={F(s.y)})";
+            return $"scaleVector2(x={F(s.x)},y={F(s.y)})";
+        }
+
+        /// <summary>
+        /// Profile có binding nào dùng gyro / touchpad không (bind <TISMotion>/... hoặc "+ Gyro / + Touchpad").
+        /// TISInputBridge chỉ khởi động provider (SDL3...) khi cần.
+        /// </summary>
+        public static bool UsesMotion(TISInputProfileConfig profile)
+        {
+            if (profile?.actionMaps == null) return false;
+            foreach (var map in profile.actionMaps)
+            foreach (var def in map.actions)
+            {
+                if (TISMotionPaths.IsMotionPath(def.bindingGamepad)) return true;
+                if ((def.gamepadMixGyro || def.gamepadMixTouchpad) && IsStickPath(def.bindingGamepad)
+                    && !def.bindingGamepad.EndsWith("/dpad", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
 
         internal static bool IsStickPath(string path)
         {

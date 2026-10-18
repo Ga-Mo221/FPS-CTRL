@@ -9,7 +9,7 @@ namespace GaMo.TrueInputSystem
     [RequireComponent(typeof(Image))]
     [RequireComponent(typeof(CanvasGroup))]
     public class TISVirtualJoystick : MonoBehaviour,
-        IPointerDownHandler, IDragHandler, IPointerUpHandler
+        IPointerDownHandler, IInitializePotentialDragHandler, IDragHandler, IPointerUpHandler
     {
         // ══════════════════════════════════════════════════════════════════════
         //  INSPECTOR
@@ -113,15 +113,7 @@ namespace GaMo.TrueInputSystem
             // không thay đổi sau khi canvas được setup.
             _cachedEventCamera  = GetEventCamera();
             //_eventCameraCached  = true;
-            
-            if (!Application.isEditor)
-                UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
-        }
-        
-        private void OnDestroy()
-        {
-            if (!Application.isEditor)
-                UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
+            // (Bỏ EnhancedTouch: joystick nhận ngón hoàn toàn qua uGUI pointer.)
         }
 
         private void Start()
@@ -148,9 +140,16 @@ namespace GaMo.TrueInputSystem
 
         public void OnPointerDown(PointerEventData e)
         {
-            if (_isDragging || _dynamicMode) return;
-            StartDrag(e.pointerId, e.position);
+            if (_isDragging) return;
+
+            // Dynamic mode: nền joystick lúc idle (dù trong suốt) vẫn chặn raycast →
+            // chạm đúng chỗ joystick đang nằm phải bắt đầu kéo luôn, không "nuốt" ngón.
+            if (_dynamicMode) BeginTouch(e.pointerId, e.position);
+            else              StartDrag(e.pointerId, e.position);
         }
+
+        /// <summary>Bỏ drag threshold → knob bám ngón ngay từ pixel đầu tiên.</summary>
+        public void OnInitializePotentialDrag(PointerEventData e) => e.useDragThreshold = false;
 
         public void OnDrag(PointerEventData e)
         {
@@ -452,6 +451,8 @@ namespace GaMo.TrueInputSystem
         {
             _dynamicMode = dynamic;
             _dynamicModeSetExternally = true;
+            // Áp trạng thái chờ của chế độ mới ngay (cố định: về vị trí gốc, luôn hiện, nhận chạm)
+            if (!_isDragging && _bgRect != null) SetIdle();
         }
 
         /// <summary>
@@ -462,6 +463,7 @@ namespace GaMo.TrueInputSystem
         {
             _idleOpacity = Mathf.Clamp01(opacity);
             _idleOpacitySetExternally = true;
+            if (!_isDragging && _bgRect != null) SetIdle();
         }
 
         // Setter dùng bởi Editor DLL qua delegate — không cần #if UNITY_EDITOR
@@ -482,12 +484,14 @@ namespace GaMo.TrueInputSystem
         // Delegate để Editor DLL inject OnGUI logic mà không cần #if UNITY_EDITOR trong Runtime
         public static Action<TISVirtualJoystick> EditorOnGUIOverride = null;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void OnGUI()
         {
             if (!_debugPreview) return;
             if (!Application.isEditor) return;
             EditorOnGUIOverride?.Invoke(this);
         }
+#endif
 
         // Expose các field/method cần thiết cho Editor DLL qua Reflection
         private const float _referenceWidth  = 1920f;

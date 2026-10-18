@@ -765,6 +765,8 @@ namespace GaMo.TrueInputSystem
 
             ApplyOverridesToProfile(copy);
             bridge.SwapProfile(copy);
+            // SwapProfile tự tạo runtime copy riêng → bản tạm này không còn ai dùng
+            UnityEngine.Object.Destroy(copy);
         }
 
         // ══════════════════════════════════════════════════════

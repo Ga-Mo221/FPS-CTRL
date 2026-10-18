@@ -9,6 +9,7 @@ namespace GaMo.TrueInputSystem
     /// Custom Editor cho UINavigationContext.
     /// Hiển thị 3 tab: Overview, Tab Mapping, SubTab Mapping.
     /// </summary>
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISUINavigationContext))]
     [InitializeOnLoad]
     public class TISUINavigationContextEditor : UnityEditor.Editor
@@ -167,8 +168,8 @@ namespace GaMo.TrueInputSystem
             switch (_selectedTab)
             {
                 case 0: DrawOverviewTab(); break;
-                case 1: DrawTabMappingTab(); break;
-                case 2: DrawSubTabTab(); break;
+                case 1: if (targets.Length > 1) DrawMultiEditNotice(); else DrawTabMappingTab(); break;
+                case 2: if (targets.Length > 1) DrawMultiEditNotice(); else DrawSubTabTab(); break;
             }
 
             serializedObject.ApplyModifiedProperties();
@@ -200,8 +201,21 @@ namespace GaMo.TrueInputSystem
 
         // ── Tab 0: Overview ───────────────────────────────────────────────────────
 
+        // Danh sách Tab / SubTab là cấu hình riêng của từng object (thêm/xóa theo chỉ số) nên không chỉnh gộp được.
+        private void DrawMultiEditNotice()
+        {
+            EditorGUILayout.HelpBox(
+                "Đang chọn nhiều object: Tab / SubTab Mapping là danh sách riêng của từng object. Chọn 1 object để chỉnh.",
+                MessageType.Info);
+        }
+
         private void DrawOverviewTab()
         {
+            if (targets.Length > 1)
+                EditorGUILayout.HelpBox(
+                    "Đang chọn nhiều object: số liệu Tab / SubTab / Vấn đề bên dưới là của object đầu tiên.",
+                    MessageType.None);
+
             SectionLabel("TRẠNG THÁI HIỆN TẠI");
             EditorGUILayout.BeginVertical(_boxStyle);
 
@@ -228,17 +242,22 @@ namespace GaMo.TrueInputSystem
 
             if (GUILayout.Button("Scan Child Buttons", EditorStyles.toolbarButton, GUILayout.Height(22f)))
             {
-                var scanCtx = (TISUINavigationContext)target;
-                Undo.RecordObject(scanCtx, "Scan Child Buttons");
-                scanCtx.ScanChildButtons();
-                EditorUtility.SetDirty(scanCtx);
+                // Multi-edit: áp cho tất cả object đang chọn
+                Undo.RecordObjects(targets, "Scan Child Buttons");
+                foreach (var tg in targets)
+                {
+                    var scanCtx = tg as TISUINavigationContext;
+                    if (scanCtx == null) continue;
+                    scanCtx.ScanChildButtons();
+                    EditorUtility.SetDirty(scanCtx);
+                }
             }
 
             EditorGUILayout.EndVertical();
 
             // ── Runtime State (chỉ hiện khi đang Play) ───────────────────────────
             var ctx = (TISUINavigationContext)target;
-            if (Application.isPlaying && ctx != null)
+            if (Application.isPlaying && ctx != null && targets.Length == 1)
             {
                 EditorGUILayout.Space(8);
                 SectionLabel("RUNTIME STATE  —  button đang active theo từng layer");

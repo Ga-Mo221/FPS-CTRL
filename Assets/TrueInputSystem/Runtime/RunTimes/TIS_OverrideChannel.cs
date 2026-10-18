@@ -54,6 +54,7 @@ namespace GaMo.TrueInputSystem
         
         private TISCameraSettings _cameraSettings;
         private Func<TISActiveDevice> _getActiveDevice;
+        private TISMotionSystem   _motion;
 
         // ══════════════════════════════════════════════════════
         //  SETUP
@@ -68,8 +69,10 @@ namespace GaMo.TrueInputSystem
             bool lookActionIsMouseDelta,
             bool isMobileMode,
             TISCameraSettings cameraSettings,
-            Func<TISActiveDevice> getActiveDevice)
+            Func<TISActiveDevice> getActiveDevice,
+            TISMotionSystem motion = null)
         {
+            _motion                = motion;
             _moveAction            = moveAction;
             _lookAction            = lookAction;
             _lookActionIsMouseDelta = lookActionIsMouseDelta;
@@ -104,6 +107,9 @@ namespace GaMo.TrueInputSystem
         {
             get
             {
+                // Map chứa "Move" bị tắt (SetActionMapActive / DisableAllMaps) → mọi nguồn = 0,
+                // kể cả joystick ảo mobile (trước đây override bỏ qua trạng thái map).
+                if (_moveAction != null && !_moveAction.enabled) return Vector2.zero;
                 if (_useMoveOverride) return _moveOverride;
                 return _moveAction?.ReadValue<Vector2>() ?? Vector2.zero;
             }
@@ -117,41 +123,54 @@ namespace GaMo.TrueInputSystem
         /// Camera look delta frame này.
         /// Trên mobile: override từ TISTouchCameraZone.
         /// Trên PC: đọc từ Mouse/delta hoặc right stick.
+        /// Gyro / touchpad tay cầm: qua binding của action Look (Setup Tool › Gamepad).
         /// </summary>
-        // Sửa LookDelta getter
         public Vector2 LookDelta
         {
             get
             {
-                if (_useLookOverride)
-                    return _lookOverride * _cameraSettings.mobileSensitivity;
-
-                if (_lookAction == null) return Vector2.zero;
-
-                var raw = _lookAction.ReadValue<Vector2>();
-
-                bool isMouse =
-                    _lookAction.activeControl?.device is Mouse ||
-                    (_lookAction.activeControl == null && _lookActionIsMouseDelta);
-
-                if (isMouse)
-                {
-                    raw /= TISConstants.MouseDeltaNormalizeFactor;
-                    raw *= _cameraSettings.mouseSensitivity;
-                }
-                else if (_isMobileMode)
-                {
-                    // Mobile đọc từ action (không phải override) — ví dụ virtual joystick look
-                    raw *= _cameraSettings.mobileSensitivity;
-                }
-                else
-                {
-                    // Gamepad right stick
-                    raw *= _cameraSettings.gamepadSensitivity;
-                }
-
-                return raw;
+                // Map chứa "Look" bị tắt → camera đứng yên với MỌI nguồn: chuột / stick (action),
+                // vuốt màn hình (override) và gyro — trước đây override + gyro vẫn chạy khi mở menu.
+                if (!IsCameraMapEnabled) return Vector2.zero;
+                // Gyro / touchpad tay cầm KHÔNG cộng ở đây nữa: chúng là binding <TISMotion>/...
+                // hoặc "+ Gyro / + Touchpad" của binding stick → đã nằm trong action Look.
+                return ReadBaseLookDelta();
             }
+        }
+
+        /// <summary>Map chứa action "Look" đang bật (không có action Look → coi như bật).</summary>
+        private bool IsCameraMapEnabled => _lookAction == null || _lookAction.enabled;
+
+        private Vector2 ReadBaseLookDelta()
+        {
+            if (_useLookOverride)
+                return _lookOverride * _cameraSettings.mobileSensitivity;
+
+            if (_lookAction == null) return Vector2.zero;
+
+            var raw = _lookAction.ReadValue<Vector2>();
+
+            bool isMouse =
+                _lookAction.activeControl?.device is Mouse ||
+                (_lookAction.activeControl == null && _lookActionIsMouseDelta);
+
+            if (isMouse)
+            {
+                raw /= TISConstants.MouseDeltaNormalizeFactor;
+                raw *= _cameraSettings.mouseSensitivity;
+            }
+            else if (_isMobileMode)
+            {
+                // Mobile đọc từ action (không phải override) — ví dụ virtual joystick look
+                raw *= _cameraSettings.mobileSensitivity;
+            }
+            else
+            {
+                // Gamepad right stick
+                raw *= _cameraSettings.gamepadSensitivity;
+            }
+
+            return raw;
         }
 
         // ══════════════════════════════════════════════════════
@@ -167,6 +186,10 @@ namespace GaMo.TrueInputSystem
         {
             get
             {
+                // Zoom thuộc camera → tắt theo map chứa "Look" (scroll chuột đọc trực tiếp,
+                // trước đây vẫn zoom khi menu đã tắt action map).
+                if (!IsCameraMapEnabled) return 0f;
+
                 if (_isMobileMode)
                 {
                     if (!_useZoomOverride || _zoomConsumedThisFrame) return 0f;
@@ -174,7 +197,7 @@ namespace GaMo.TrueInputSystem
                     return _zoomDelta;
                 }
 
-                var mouse = Mouse.current;
+                var mouse = TISPhysicalMouse.Current;   // không đọc chuột ảo của virtual cursor (scroll luôn = 0)
                 return mouse != null ? mouse.scroll.ReadValue().y : 0f;
             }
         }

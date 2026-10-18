@@ -396,16 +396,17 @@ namespace GaMo.TrueInputSystem
             if (gamepad != null)
             {
                 if (gamepad.dpad.ReadValue().sqrMagnitude > 0.25f)   return true;
-                if (gamepad.leftStick.ReadValue().sqrMagnitude > 0.25f) return true;
+                // Virtual cursor đang bật → left stick dành cho cursor
+                if (!TISGamepadVirtualCursor.IsCursorActive
+                    && gamepad.leftStick.ReadValue().sqrMagnitude > 0.25f) return true;
             }
 
             var kb = Keyboard.current;
             if (kb != null)
             {
+                // Chỉ phím mũi tên — WASD là phím di chuyển, không được kéo focus UI về
                 if (kb.upArrowKey.isPressed    || kb.downArrowKey.isPressed)  return true;
                 if (kb.leftArrowKey.isPressed  || kb.rightArrowKey.isPressed) return true;
-                if (kb.wKey.isPressed || kb.sKey.isPressed)                   return true;
-                if (kb.aKey.isPressed || kb.dKey.isPressed)                   return true;
             }
 
             return false;
@@ -423,5 +424,22 @@ namespace GaMo.TrueInputSystem
         }
 
         public TISGamepadUIButton GetDefaultContent() => defaultContent;
+
+        /// <summary>
+        /// Focus lại Content button (last active → defaultContent) nếu selection hiện tại
+        /// không còn là button của context này — ví dụ sau khi tắt virtual cursor.
+        /// </summary>
+        public void RestoreFocusIfLost()
+        {
+            var es = EventSystem.current;
+            if (es == null) return;
+
+            var cur = es.currentSelectedGameObject;
+            if (cur != null && cur.activeInHierarchy
+                && cur.TryGetComponent<TISGamepadUIButton>(out var btn) && btn.context == this)
+                return;
+
+            RestoreContentSelection();
+        }
     }
 }

@@ -820,6 +820,11 @@ namespace GaMo.TrueInputSystem.Editor
                         MarkDirty(); }, "Binding Gamepad…",
                     "Nút trên tay cầm.\nVí dụ: <Gamepad>/buttonSouth (A/Cross), <Gamepad>/leftStick");
 
+                // Left / Right Stick: cộng thêm gyro / touchpad vào giá trị của cần
+                A_MotionMixRow(def);
+                // Path <TISMotion>/... khi gyro / touchpad đang tắt → báo lỗi
+                A_MotionBindingError(def);
+
                 // ← THÊM DÒNG NÀY
                 A_BindingRow("Modifier", def.bindingGamepadModifier, TISBindingPathOptions.GamepadModifier().ToArray(), C_Purple,
                     v => { SafeRecord("Đổi Gamepad Modifier"); def.bindingGamepadModifier = v; MarkDirty(); }, "Modifier…",
@@ -921,6 +926,119 @@ namespace GaMo.TrueInputSystem.Editor
         /// Group header cho binding section, hiển thị trạng thái ON/OFF của platform.
         /// Khi platform bị tắt: nền xám, sọc nhấn mờ, chip "OFF" màu cam.
         /// </summary>
+        /// <summary>
+        /// Hàng "+ Gyro" / "+ Touchpad" — chỉ hiện khi Gamepad binding là Left / Right Stick.
+        /// Bật → action = cần + gyro + touchpad (TISStickMotionComposite), độ nhạy ở Motion Settings.
+        /// </summary>
+        private void A_MotionMixRow(TISInputActionDefinition def)
+        {
+            string path = def.bindingGamepad ?? "";
+            bool isStick = path.EndsWith("/leftStick",  System.StringComparison.OrdinalIgnoreCase)
+                        || path.EndsWith("/rightStick", System.StringComparison.OrdinalIgnoreCase);
+            if (!isStick)
+            {
+                // Đổi sang path khác → bỏ cờ cũ để profile không giữ cấu hình vô nghĩa
+                if (def.gamepadMixGyro || def.gamepadMixTouchpad)
+                {
+                    SafeRecord("Bỏ Gyro / Touchpad mix");
+                    def.gamepadMixGyro = def.gamepadMixTouchpad = false;
+                    MarkDirty();
+                }
+                return;
+            }
+
+            var ms = _workingProfile.motionSettings;
+            bool gyroOn  = ms.enableGyro;
+            bool touchOn = ms.enableTouchpad;
+
+            // Tính năng đang tắt trong Gamepad Settings › Motion → không hiện ô bật / tắt.
+            // Action còn giữ cờ cũ (profile cũ, hoặc vừa tắt tính năng) → báo lỗi + nút sửa nhanh.
+            if (def.gamepadMixGyro && !gyroOn)
+                A_MotionDisabledError("Action đang cộng Gyro nhưng Gyro đã tắt trong Gamepad Settings › Motion.",
+                    () => ms.enableGyro = true, () => def.gamepadMixGyro = false);
+            if (def.gamepadMixTouchpad && !touchOn)
+                A_MotionDisabledError("Action đang cộng Touchpad nhưng Touchpad đã tắt trong Gamepad Settings › Motion.",
+                    () => ms.enableTouchpad = true, () => def.gamepadMixTouchpad = false);
+
+            if (!gyroOn && !touchOn) return;
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(8);
+            GUILayout.Label(new GUIContent("Cộng thêm",
+                    "Cộng gyro / touchpad tay cầm vào giá trị của cần analog.\n" +
+                    "Ví dụ Look = Right Stick + Gyro + Touchpad.\n" +
+                    "Độ nhạy: Cài Đặt Nền Tảng › Gamepad › Motion."),
+                new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = C_TextSecond } },
+                GUILayout.Width(70));
+
+            bool g  = def.gamepadMixGyro;
+            bool tp = def.gamepadMixTouchpad;
+            if (gyroOn && touchOn)
+            {
+                g  = GUILayout.Toggle(g,  " + Gyro",     EditorStyles.miniButtonLeft,  GUILayout.Width(80));
+                tp = GUILayout.Toggle(tp, " + Touchpad", EditorStyles.miniButtonRight, GUILayout.Width(90));
+            }
+            else if (gyroOn)
+                g  = GUILayout.Toggle(g,  " + Gyro",     EditorStyles.miniButton, GUILayout.Width(80));
+            else
+                tp = GUILayout.Toggle(tp, " + Touchpad", EditorStyles.miniButton, GUILayout.Width(90));
+
+            if (g != def.gamepadMixGyro || tp != def.gamepadMixTouchpad)
+            {
+                SafeRecord("Đổi Gyro / Touchpad mix");
+                def.gamepadMixGyro     = g;
+                def.gamepadMixTouchpad = tp;
+                MarkDirty();
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(2);
+        }
+
+        /// <summary>Binding Gamepad là &lt;TISMotion&gt;/... trong khi gyro / touchpad đang tắt → báo lỗi.</summary>
+        private void A_MotionBindingError(TISInputActionDefinition def)
+        {
+            string path = def.bindingGamepad ?? "";
+            if (!TISMotionPaths.IsMotionPath(path)) return;
+
+            var ms = _workingProfile.motionSettings;
+            if (TISMotionPaths.IsGyroPath(path))
+            {
+                if (!ms.enableGyro)
+                    A_MotionDisabledError($"Binding {path} cần Gyro, nhưng Gyro đang tắt trong Gamepad Settings › Motion — action sẽ không nhận giá trị.",
+                        () => ms.enableGyro = true, () => def.bindingGamepad = "");
+            }
+            else if (!ms.enableTouchpad)
+            {
+                A_MotionDisabledError($"Binding {path} cần Touchpad, nhưng Touchpad đang tắt trong Gamepad Settings › Motion — action sẽ không nhận giá trị.",
+                    () => ms.enableTouchpad = true, () => def.bindingGamepad = "");
+            }
+        }
+
+        private void A_MotionDisabledError(string message, System.Action enableFeature, System.Action removeBinding)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(8);
+            EditorGUILayout.HelpBox(message, MessageType.Error);
+            GUILayout.BeginVertical(GUILayout.Width(92));
+            GUILayout.Space(4);
+            if (GUILayout.Button("Bật tính năng", EditorStyles.miniButton))
+            {
+                SafeRecord("Bật Gyro / Touchpad");
+                enableFeature();
+                MarkDirty();
+            }
+            if (GUILayout.Button("Gỡ khỏi action", EditorStyles.miniButton))
+            {
+                SafeRecord("Gỡ binding Gyro / Touchpad");
+                removeBinding();
+                MarkDirty();
+            }
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(2);
+        }
+
         private void A_PlatformGroupHeader(string title, bool platformEnabled,
             Color accentCol, string tooltipOn, string tooltipOff)
         {

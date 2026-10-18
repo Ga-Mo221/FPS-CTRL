@@ -1,3 +1,20 @@
+// ============================================================
+//  TrueInputSystem — TIS_FullscreenTouchReceiver.cs
+//
+//  Lớp nền toàn màn hình — BỘ PHÂN PHỐI NGÓN TAY (mỗi ngón một chủ).
+//
+//  · Nằm DƯỚI mọi control (sibling đầu tiên, canvas sortingOrder thấp):
+//    EventSystem raycast giao ngón cho nút skill / joystick ở trên TRƯỚC.
+//    Ngón chỉ rơi xuống đây khi chạm vào vùng trống.
+//  · Lúc chạm xuống, chia theo vị trí:
+//        trái  (≤ tỉ lệ joystick) → TISVirtualJoystick
+//        phải                     → TISTouchCameraZone
+//  · Sau đó mọi OnDrag / OnPointerUp của ngón đó đi về ĐÚNG chủ đã chọn,
+//    dù ngón kéo sang nửa bên kia — không còn kiểm tra vùng mỗi frame.
+//  · Không vẽ gì (cullTransparentMesh) → không tốn fill-rate GPU,
+//    vẫn nhận raycast.
+// ============================================================
+
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -8,7 +25,7 @@ namespace GaMo.TrueInputSystem
     [AddComponentMenu("TIS/Demo/Fullscreen Touch Receiver")]
     [RequireComponent(typeof(Image))]
     public class TISFullscreenTouchReceiver : MonoBehaviour,
-        IPointerDownHandler, IDragHandler, IPointerUpHandler
+        IPointerDownHandler, IInitializePotentialDragHandler, IDragHandler, IPointerUpHandler
     {
         // ══════════════════════════════════════════════════════════════════════
         //  INSPECTOR
@@ -16,6 +33,7 @@ namespace GaMo.TrueInputSystem
 
         [Header("References")]
         [SerializeField] private TISVirtualJoystick _joystick;
+        [SerializeField] private TISTouchCameraZone _cameraZone;
 
         [Header("Debug")]
         [SerializeField] private bool _debugVisible = false;
@@ -24,10 +42,12 @@ namespace GaMo.TrueInputSystem
         //  RUNTIME
         // ══════════════════════════════════════════════════════════════════════
 
+        private enum Owner { Joystick, Camera }
+
         private Image _image;
 
-        // Pointer IDs đang được joystick xử lý
-        private readonly HashSet<int> _joystickPointers = new HashSet<int>();
+        // pointerId → chủ được giao lúc chạm xuống
+        private readonly Dictionary<int, Owner> _owners = new Dictionary<int, Owner>();
 
         // ══════════════════════════════════════════════════════════════════════
         //  LIFECYCLE
@@ -41,6 +61,10 @@ namespace GaMo.TrueInputSystem
                 : new Color(0f, 0f, 0f, 0f);
             _image.raycastTarget = true;
 
+            // Alpha 0 → CanvasRenderer bỏ qua khi vẽ (không overdraw toàn màn hình),
+            // raycast của Graphic vẫn hoạt động bình thường.
+            _image.canvasRenderer.cullTransparentMesh = !_debugVisible;
+
             var rect      = GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
@@ -53,7 +77,10 @@ namespace GaMo.TrueInputSystem
 
         private void OnDisable()
         {
-            _joystickPointers.Clear();
+            // Trả lại mọi ngón đang giữ
+            foreach (var kv in _owners)
+                Release(kv.Key, kv.Value);
+            _owners.Clear();
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -62,49 +89,62 @@ namespace GaMo.TrueInputSystem
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (_joystick == null) return;
-
-            // HIGH FIX H8: guard Screen.width == 0 (splash screen / Editor edge case).
             if (Screen.width <= 0) return;
+            if (_owners.ContainsKey(eventData.pointerId)) return;
 
-            // Chỉ xử lý nửa trái màn hình
             float normX = eventData.position.x / Screen.width;
-            if (normX > _joystick.ActivationZoneWidthRatio) return;
+            bool  joystickReady = _joystick != null && _joystick.isActiveAndEnabled && !_joystick.IsDragging;
 
-            if (!_joystick.IsDragging)
+            // Trái → joystick (nếu joystick đang rảnh). Joystick bận → ngón thứ 2 bên trái
+            // cũng được giao cho camera thay vì bị bỏ phí.
+            if (joystickReady && normX <= _joystick.ActivationZoneWidthRatio)
             {
                 _joystick.BeginTouch(eventData.pointerId, eventData.position);
-                _joystickPointers.Add(eventData.pointerId);
+                if (_joystick.IsDragging)
+                {
+                    _owners[eventData.pointerId] = Owner.Joystick;
+                    return;
+                }
             }
+
+            if (_cameraZone != null && _cameraZone.AddPointer(eventData))
+                _owners[eventData.pointerId] = Owner.Camera;
+        }
+
+        /// <summary>Bỏ drag threshold → OnDrag chạy ngay từ pixel đầu tiên (joystick không bị "kẹt" ~10px).</summary>
+        public void OnInitializePotentialDrag(PointerEventData eventData)
+        {
+            eventData.useDragThreshold = false;
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (!_joystickPointers.Contains(eventData.pointerId)) return;
-            if (_joystick == null) return;
+            if (!_owners.TryGetValue(eventData.pointerId, out var owner)) return;
 
-            // FIX v5: Gọi trực tiếp thay vì ExecuteEvents.Execute
-            // ProcessDragExternal dùng canvas local space → không bị layout delay
-            _joystick.ProcessDragExternal(eventData.position);
+            if (owner == Owner.Joystick)
+                _joystick?.ProcessDragExternal(eventData.position);
+            else
+                _cameraZone?.MovePointer(eventData.pointerId, eventData.position);
         }
 
         public void OnPointerUp(PointerEventData eventData)
         {
-            if (!_joystickPointers.Contains(eventData.pointerId)) return;
-            _joystickPointers.Remove(eventData.pointerId);
+            if (!_owners.TryGetValue(eventData.pointerId, out var owner)) return;
+            _owners.Remove(eventData.pointerId);
+            Release(eventData.pointerId, owner);
+        }
 
-            // EventSystem gửi OnPointerUp về receiver (không về joystick)
-            // → ForceRelease để joystick luôn reset đúng
-            _joystick?.ForceRelease(eventData.pointerId);
+        private void Release(int pointerId, Owner owner)
+        {
+            if (owner == Owner.Joystick) _joystick?.ForceRelease(pointerId);
+            else                         _cameraZone?.RemovePointer(pointerId);
         }
 
         // ══════════════════════════════════════════════════════════════════════
         //  PUBLIC
         // ══════════════════════════════════════════════════════════════════════
 
-        public void InjectJoystick(TISVirtualJoystick joystick)
-        {
-            _joystick = joystick;
-        }
+        public void InjectJoystick(TISVirtualJoystick joystick)   => _joystick   = joystick;
+        public void InjectCameraZone(TISTouchCameraZone zone)     => _cameraZone = zone;
     }
 }

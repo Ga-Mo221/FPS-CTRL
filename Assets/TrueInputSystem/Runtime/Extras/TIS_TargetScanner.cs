@@ -136,6 +136,8 @@ namespace GaMo.TrueInputSystem
         }
         
         // Thêm vào sau Update() hoặc LateUpdate()
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Chỉ có trong Editor / Development Build — OnGUI tồn tại là Unity gọi mỗi frame
         private void OnGUI()
         {
             if (!_showDebugOverlay) return;
@@ -148,6 +150,7 @@ namespace GaMo.TrueInputSystem
             if (!Application.isPlaying) return;
             DrawTextOverlay();
         }
+#endif
 
         private void DrawScanCircle()
         {

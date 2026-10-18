@@ -20,6 +20,7 @@ namespace GaMo.TrueInputSystem
     using UnityEngine;
     using UnityEngine.UI;
 
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISMobileSkillButton))]
     [InitializeOnLoad]
     public class TISMobileSkillButtonEditor : UnityEditor.Editor
@@ -245,7 +246,11 @@ namespace GaMo.TrueInputSystem
                 EditorGUILayout.LabelField("TIS Mobile Skill Button", EditorStyles.boldLabel,
                     GUILayout.ExpandWidth(true));
 
-                if (Application.isPlaying)
+                if (targets.Length > 1)
+                {
+                    DrawColorBadge(targets.Length + " OBJECTS", _accentColor * 0.7f);
+                }
+                else if (Application.isPlaying)
                 {
                     if (!btn.Interactable)
                         DrawColorBadge("DISABLED", _dangerColor);
@@ -306,6 +311,7 @@ namespace GaMo.TrueInputSystem
                     syncedIndex = 0; // fallback để dropdown không crash
                 }
 
+                EditorGUI.showMixedValue = _skillName.hasMultipleDifferentValues;
                 EditorGUI.BeginChangeCheck();
                 int newIndex = EditorGUILayout.Popup(
                     new GUIContent("Skill Name",
@@ -313,6 +319,7 @@ namespace GaMo.TrueInputSystem
                         "Phải khớp với bindingMobile hoặc actionName trong profile."),
                     Mathf.Max(syncedIndex, 0),
                     _actionNames);
+                EditorGUI.showMixedValue = false;
 
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -515,6 +522,13 @@ namespace GaMo.TrueInputSystem
             if (!Application.isPlaying)
             {
                 DrawHelpBox("Dữ liệu runtime chỉ hiển thị khi đang Play Mode.", MessageType.Info);
+                return;
+            }
+
+            // Multi-edit: dữ liệu runtime là của riêng từng object
+            if (targets.Length > 1)
+            {
+                DrawHelpBox("Đang chọn nhiều object: chọn 1 object để xem dữ liệu Runtime.", MessageType.Info);
                 return;
             }
 

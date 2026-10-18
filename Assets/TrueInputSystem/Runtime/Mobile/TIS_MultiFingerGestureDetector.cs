@@ -1,6 +1,14 @@
+// ============================================================
+//  TrueInputSystem — TIS_MultiFingerGestureDetector.cs
+//
+//  Nhận cử chỉ nhiều ngón (centroid, two-finger pan) từ CÁC NGÓN THUỘC
+//  TISTouchCameraZone (mỗi ngón một chủ — uGUI pointer ownership).
+//  Ngón của joystick / nút skill không bao giờ lọt vào đây nên không cần
+//  loại trừ theo ID hay theo vùng như bản dùng EnhancedTouch trước.
+//  _respectCameraZone / zone ratio giữ lại để tương thích + debug.
+// ============================================================
+
 using UnityEngine;
-using UnityEngine.InputSystem.EnhancedTouch;
-using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 namespace GaMo.TrueInputSystem
 {
@@ -123,13 +131,7 @@ namespace GaMo.TrueInputSystem
             _inputBridge?.RegisterGestureDetector(this);
         }
 
-        private void OnEnable()  => EnhancedTouchSupport.Enable();
-
-        private void OnDisable()
-        {
-            EnhancedTouchSupport.Disable();
-            ClearAllOutput();
-        }
+        private void OnDisable() => ClearAllOutput();
 
         private void Start()
         {
@@ -166,25 +168,18 @@ namespace GaMo.TrueInputSystem
         {
             _fingerCount = 0;
 
-            var touches    = Touch.activeTouches;
-            int joystickId = _joystick != null ? _joystick.ActiveTouchId : -1;
-
-            for (int i = 0; i < touches.Count && _fingerCount < MaxTrackedFingers; i++)
+            // Camera zone chạy trước (-90) → vị trí đã được đọc mới trong frame này
+            var zone = _cameraZone != null ? _cameraZone : TISTouchCameraZone.Current;
+            if (zone != null && zone.isActiveAndEnabled)
             {
-                var t = touches[i];
-
-                // Loại trừ ngón joystick
-                if (t.touchId == joystickId) continue;
-
-                // Loại trừ ngón đang giữ skill button
-                if (TISMobileButtonRegistry.IsEnhancedTouchConsumed(t.touchId)) continue;
-
-                // Loại trừ ngoài zone
-                if (_respectCameraZone && !InZone(t.screenPosition)) continue;
-
-                _fingerIds[_fingerCount]       = t.touchId;
-                _fingerPositions[_fingerCount] = t.screenPosition;
-                _fingerCount++;
+                int n = Mathf.Min(zone.PointerCount, MaxTrackedFingers);
+                for (int i = 0; i < n; i++)
+                {
+                    if (!zone.TryGetPointer(i, out int id, out Vector2 pos, out _)) continue;
+                    _fingerIds[_fingerCount]       = id;
+                    _fingerPositions[_fingerCount] = pos;
+                    _fingerCount++;
+                }
             }
 
             ActiveFingerCount = _fingerCount;
@@ -279,13 +274,6 @@ namespace GaMo.TrueInputSystem
         // ══════════════════════════════════════════════════════════════════
         //  HELPERS
         // ══════════════════════════════════════════════════════════════════
-
-        private bool InZone(Vector2 screenPos)
-        {
-            if (Screen.width <= 0) return false;
-            float normX = screenPos.x / Screen.width;
-            return normX >= _zoneStartRatio && normX <= _zoneEndRatio;
-        }
 
         private bool HasPrevId(int touchId)
         {
@@ -436,6 +424,7 @@ namespace GaMo.TrueInputSystem
             };
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         private void OnGUI()
         {
             if (!_debugDraw) return;
@@ -564,6 +553,7 @@ namespace GaMo.TrueInputSystem
                     valueColor: _colFinger);
             }
         }
+#endif
 
         // ── Helpers vẽ ───────────────────────────────────────────────────
 

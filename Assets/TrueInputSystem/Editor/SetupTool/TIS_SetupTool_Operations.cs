@@ -251,6 +251,7 @@ namespace GaMo.TrueInputSystem.Editor
             targetAsset.mobileSettings  = _workingProfile.mobileSettings;
             targetAsset.cameraSettings  = _workingProfile.cameraSettings;
             targetAsset.gamepadSettings = _workingProfile.gamepadSettings;
+            targetAsset.motionSettings  = _workingProfile.motionSettings;
             targetAsset.actionMaps      = _workingProfile.actionMaps.Select(m => m.Clone()).ToList();
 
             if (_sourceAsset != null)
@@ -356,6 +357,7 @@ namespace GaMo.TrueInputSystem.Editor
             target.mobileSettings  = _workingProfile.mobileSettings;
             target.cameraSettings  = _workingProfile.cameraSettings;
             target.gamepadSettings = _workingProfile.gamepadSettings;
+            target.motionSettings  = _workingProfile.motionSettings;
             target.actionMaps      = _workingProfile.actionMaps.Select(m => m.Clone()).ToList();
             EditorUtility.SetDirty(target);
             AssetDatabase.SaveAssets();

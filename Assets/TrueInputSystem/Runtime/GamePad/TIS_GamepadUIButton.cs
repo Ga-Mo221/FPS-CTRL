@@ -118,7 +118,9 @@ namespace GaMo.TrueInputSystem
         protected override void OnEnable()
         {
             base.OnEnable();
-            if (isFirstSelected && layer == NavigationLayer.Content)
+            // Selectable là [ExecuteAlways] → OnEnable cũng chạy ở Edit Mode (sau mỗi lần
+            // reload script). Lúc đó EventSystem không chạy → cảnh báo nhầm. Chỉ chọn khi Play.
+            if (Application.isPlaying && isFirstSelected && layer == NavigationLayer.Content)
                 StartCoroutine(SelectNextFrame());
         }
 
@@ -139,19 +141,24 @@ namespace GaMo.TrueInputSystem
                 context.UnregisterButton(this);
         }
 
+        // Số frame chờ EventSystem (vd. EventSystem nằm trong scene load additive sau)
+        private const int EventSystemWaitFrames = 10;
+
         private System.Collections.IEnumerator SelectNextFrame()
         {
-            yield return null;
-
-            if (EventSystem.current != null)
+            for (int i = 0; i < EventSystemWaitFrames; i++)
             {
+                yield return null;
+                if (EventSystem.current == null) continue;
+
                 EventSystem.current.SetSelectedGameObject(null);
                 EventSystem.current.SetSelectedGameObject(gameObject);
+                yield break;
             }
-            else
-            {
-                Debug.LogWarning("[GamepadUIButton] Không tìm thấy EventSystem trong Scene!");
-            }
+
+            Debug.LogWarning(
+                $"[GamepadUIButton] \"{name}\": không có EventSystem đang bật sau {EventSystemWaitFrames} frame " +
+                "→ không thể chọn sẵn button (Is First Selected).", this);
         }
 
         // ── Select / Deselect ─────────────────────────────────────────────────
@@ -186,7 +193,11 @@ namespace GaMo.TrueInputSystem
         {
             if (!isNavigationEnabled) return;
             if (ExternalSuppress > 0) return;                                  // overlay dang mo
-            var _brg = TISInputBridge.Instance; if (_brg != null && !_brg.IsGamepad) return;  // controller-first
+            // Controller-first [Aemy]: tay cầm điều hướng đầy đủ. Bàn phím / chuột: chỉ phím mũi tên
+            // điều hướng Content (không WASD — trùng phím di chuyển; không Q/E/Z/C — trùng phím game).
+            var _brg = TISInputBridge.Instance;
+            bool kbNav = _brg != null && _brg.IsKeyboardMouse;
+            if (_brg != null && !_brg.IsGamepad && !kbNav) return;
 
             bool isFocused = EventSystem.current != null
                              && EventSystem.current.currentSelectedGameObject == gameObject;
@@ -196,7 +207,7 @@ namespace GaMo.TrueInputSystem
                 // Button đang có real focus → đọc input, gửi lên Context xử lý
                 HandleContentInput();
             }
-            else if (alwaysActive)
+            else if (alwaysActive && !kbNav)
             {
                 // Tab/SubTab: chỉ button đang active trong layer mới đọc input
                 if (context != null
@@ -306,7 +317,10 @@ namespace GaMo.TrueInputSystem
                 if (inputSource == InputSource.Default)
                 {
                     Vector2 dpad  = gamepad.dpad.ReadValue();
-                    Vector2 stick = gamepad.leftStick.ReadValue();
+                    // Virtual cursor đang bật → left stick dành cho cursor, không điều hướng button
+                    Vector2 stick = TISGamepadVirtualCursor.IsCursorActive
+                        ? Vector2.zero
+                        : gamepad.leftStick.ReadValue();
                     inputDir = (dpad.sqrMagnitude > 0.1f) ? dpad : stick;
                 }
                 else if (inputSource == InputSource.LB_RB)
@@ -325,10 +339,11 @@ namespace GaMo.TrueInputSystem
             {
                 if (inputSource == InputSource.Default)
                 {
-                    if (Keyboard.current.leftArrowKey.isPressed  || Keyboard.current.aKey.isPressed) inputDir.x = -1;
-                    if (Keyboard.current.rightArrowKey.isPressed || Keyboard.current.dKey.isPressed) inputDir.x =  1;
-                    if (Keyboard.current.upArrowKey.isPressed    || Keyboard.current.wKey.isPressed) inputDir.y =  1;
-                    if (Keyboard.current.downArrowKey.isPressed  || Keyboard.current.sKey.isPressed) inputDir.y = -1;
+                    // Chỉ phím mũi tên — WASD là phím di chuyển, đọc ở đây sẽ làm UI nhảy khi đi bộ
+                    if (Keyboard.current.leftArrowKey.isPressed)  inputDir.x = -1;
+                    if (Keyboard.current.rightArrowKey.isPressed) inputDir.x =  1;
+                    if (Keyboard.current.upArrowKey.isPressed)    inputDir.y =  1;
+                    if (Keyboard.current.downArrowKey.isPressed)  inputDir.y = -1;
                 }
             }
 

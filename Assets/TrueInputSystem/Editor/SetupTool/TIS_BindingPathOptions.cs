@@ -216,6 +216,21 @@ namespace GaMo.TrueInputSystem.Editor
             yield return Header("System");
             yield return Item("Start",  "<Gamepad>/start");
             yield return Item("Select", "<Gamepad>/select");
+
+            // Gyro / touchpad tay cầm (DualShock 4, DualSense, Switch Pro...) — đọc qua SDL3,
+            // đưa vào Input System bằng thiết bị ảo <TISMotion>.
+            yield return Header("Gyro (TIS Motion)");
+            yield return Item("Gyro (Vector2)",           "<TISMotion>/gyro");
+            yield return Item("Gyro X  (quay ngang)",     "<TISMotion>/gyro/x");
+            yield return Item("Gyro Y  (nhìn lên/xuống)", "<TISMotion>/gyro/y");
+
+            yield return Header("Touchpad (TIS Motion)");
+            yield return Item("Touchpad Swipe (Vector2)", "<TISMotion>/touchpad");
+            yield return Item("Touchpad Swipe X",         "<TISMotion>/touchpad/x");
+            yield return Item("Touchpad Swipe Y",         "<TISMotion>/touchpad/y");
+            yield return Item("Touchpad Position",        "<TISMotion>/touchpadPosition");
+            yield return Item("Touchpad Touch",           "<TISMotion>/touchpadTouch");
+            yield return Item("Touchpad Click",           "<TISMotion>/touchpadPress");
         }
 
         // ══════════════════════════════════════════════════════
@@ -243,6 +258,18 @@ namespace GaMo.TrueInputSystem.Editor
         public static TISInputActionType InferType(string path)
         {
             if (string.IsNullOrEmpty(path)) return TISInputActionType.Button;
+
+            // Gyro / touchpad (TIS Motion): /x /y = Axis, touch / click = Button, còn lại Vector2
+            if (path.StartsWith("<TISMotion>", System.StringComparison.OrdinalIgnoreCase))
+            {
+                if (path.EndsWith("/x", System.StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith("/y", System.StringComparison.OrdinalIgnoreCase))
+                    return TISInputActionType.Axis;
+                if (path.EndsWith("/touchpadTouch", System.StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith("/touchpadPress", System.StringComparison.OrdinalIgnoreCase))
+                    return TISInputActionType.Button;
+                return TISInputActionType.Vector2;
+            }
 
             if (path.EndsWith("/leftStick",  System.StringComparison.OrdinalIgnoreCase) ||
                 path.EndsWith("/rightStick", System.StringComparison.OrdinalIgnoreCase) ||
