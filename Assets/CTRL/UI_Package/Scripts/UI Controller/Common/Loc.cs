@@ -114,6 +114,7 @@ namespace Game.UI
         private class Freeze
         {
             public bool hadCsf; public UnityEngine.UI.ContentSizeFitter.FitMode csfFit;
+            public UnityEngine.UI.ContentSizeFitter csf;   // CSF ngang da tat (co prefab gan 2 CSF tren 1 text)
             public HorizontalAlignmentOptions align;
             public UnityEngine.UI.LayoutElement addedLE;
             public bool wrap, autoSize; public float fontSize, min, max;
@@ -217,11 +218,12 @@ namespace Game.UI
                 align = t.horizontalAlignment, wrap = t.enableWordWrapping, autoSize = t.enableAutoSizing,
                 fontSize = t.fontSize, min = t.fontSizeMin, max = t.fontSizeMax, overflow = t.overflowMode
             };
-            var csf = t.GetComponent<UnityEngine.UI.ContentSizeFitter>();
-            if (csf != null && csf.horizontalFit != UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained)
+            foreach (var csf in t.GetComponents<UnityEngine.UI.ContentSizeFitter>())
             {
-                f.hadCsf = true; f.csfFit = csf.horizontalFit;
+                if (csf.horizontalFit == UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained) continue;
+                f.hadCsf = true; f.csfFit = csf.horizontalFit; f.csf = csf;
                 csf.horizontalFit = UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained; // rong giu nguyen = rong chu Viet
+                break;
             }
             var parent = rt.parent;
             var lg = parent != null ? parent.GetComponent<UnityEngine.UI.HorizontalOrVerticalLayoutGroup>() : null;
@@ -373,8 +375,7 @@ namespace Game.UI
             Freeze f;
             if (!_freeze.TryGetValue(t, out f)) return;
             _freeze.Remove(t);
-            var csf = t.GetComponent<UnityEngine.UI.ContentSizeFitter>();
-            if (f.hadCsf && csf != null) csf.horizontalFit = f.csfFit;
+            if (f.hadCsf && f.csf != null) f.csf.horizontalFit = f.csfFit;
             if (f.addedLE != null) Destroy(f.addedLE);
             t.horizontalAlignment = f.align;
             t.enableWordWrapping = f.wrap; t.overflowMode = f.overflow;

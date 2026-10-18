@@ -439,6 +439,7 @@ namespace Game.UI
             // [Aemy 2026-10-18] nut tim tran: dang tim -> bam de huy
             new KeyValuePair<Regex, string>(new Regex("^HỦY · (\\d+:\\d+)$", RegexOptions.Compiled), "CANCEL · $1"),
             new KeyValuePair<Regex, string>(new Regex("^MUA · (.+)$", RegexOptions.Compiled), "BUY · $1"),
+            new KeyValuePair<Regex, string>(new Regex("^TICK (\\d+) · PING TB (\\d+) ?ms$", RegexOptions.Compiled), "TICK $1 · AVG PING $2ms"),
             new KeyValuePair<Regex, string>(new Regex("^BỘ SƯU TẬP · (.+)$", RegexOptions.Compiled), "COLLECTION · $1"),
             new KeyValuePair<Regex, string>(new Regex("^LỖI: (.+)$", RegexOptions.Compiled), "ERROR: $1"),
             new KeyValuePair<Regex, string>(new Regex("^ĐỘI (\\S+) · (\\d+/\\d+)$", RegexOptions.Compiled), "TEAM $1 · $2"),
