@@ -114,6 +114,7 @@ public class NShootHandler : NetworkBehaviour
     private readonly LocalShot[] _hostShot = new LocalShot[8];
     private int _hostShotCount;
     private LocalShot _hostMeleeWallHit;
+    private readonly List<LagCompensatedHit> _meleeHits = new List<LagCompensatedHit>();
 
     /// <summary>Seed shotgun theo tick (tat dinh): host va client predict cung tick -> cung seed.</summary>
     private ushort ShotSeedFor(int tick)
@@ -695,7 +696,9 @@ public class NShootHandler : NetworkBehaviour
         }
 
         // ── Tầng 1: OverlapSphere fallback ────────────────────────────────
-        var hits  = new List<LagCompensatedHit>();
+        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) tai su dung list (truoc day new List moi tick trong window)
+        var hits  = _meleeHits;
+        hits.Clear();
         int count = Runner.LagCompensation.OverlapSphere(
             sphereCenter, radius,
             Object.InputAuthority,

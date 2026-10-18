@@ -10,10 +10,17 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public PlayerStateFlags StateFl {get; set;}
     private PlayerStateFlags _newState;
     [Networked] public int GrenadeID {get; private set;}
-    [Networked] public NetworkBool Grenade_Q { get; set; }
-    [Networked] public NetworkBool Grenade_E { get; set; }
-    public bool QKey = false;
-    public bool EKey = false;
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 5.2) QKey/EKey truoc la bien thuong nhung ghi trong FixedUpdateNetwork
+    // -> lech khi client resimulate. Nay gop ca 4 co (Grenade_Q/E da dung + dang giu Q/E) vao 1 byte networked:
+    // duoc rollback dung khi resimulate, va 2 NetworkBool (2 word) con 1 word.
+    [Networked] private byte _grenadeFlags { get; set; }
+    private const byte GF_USED_Q = 1, GF_USED_E = 2, GF_HOLD_Q = 4, GF_HOLD_E = 8;
+    private bool GetGF(byte f) { return (_grenadeFlags & f) != 0; }
+    private void SetGF(byte f, bool v) { _grenadeFlags = v ? (byte)(_grenadeFlags | f) : (byte)(_grenadeFlags & ~f); }
+    public bool Grenade_Q { get { return GetGF(GF_USED_Q); } set { SetGF(GF_USED_Q, value); } }
+    public bool Grenade_E { get { return GetGF(GF_USED_E); } set { SetGF(GF_USED_E, value); } }
+    public bool QKey      { get { return GetGF(GF_HOLD_Q); } set { SetGF(GF_HOLD_Q, value); } }
+    public bool EKey      { get { return GetGF(GF_HOLD_E); } set { SetGF(GF_HOLD_E, value); } }
     [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
     // [NET-OPT 2026-10-18 Aemy] (bao cao 3.4) IsJump -> JumpCount: truoc day Render() GHI IsJump=false vao bien networked
     // (khong hop le, client co the mat event nhay). Nay dung bo dem, Render so sanh voi gia tri local.

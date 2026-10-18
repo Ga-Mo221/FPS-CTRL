@@ -320,6 +320,27 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         }
     }
 
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) Cache chuoi ten / avatar: NetworkGameState goi moi 0.5s cho MOI player
+    // tren MOI may (truoc day ToString() cap phat chuoi moi lan, AvatarUrl toi 512 ky tu).
+    private NetworkString<_16> _nickKey; private string _nickText;
+    private NetworkString<_512> _avatarKey; private string _avatarText;
+    public string NicknameText
+    {
+        get
+        {
+            if (_nickText == null || !_nickKey.Equals(Nickname)) { _nickKey = Nickname; _nickText = Nickname.ToString(); }
+            return _nickText;
+        }
+    }
+    public string AvatarUrlText
+    {
+        get
+        {
+            if (_avatarText == null || !_avatarKey.Equals(AvatarUrl)) { _avatarKey = AvatarUrl; _avatarText = AvatarUrl.ToString(); }
+            return _avatarText;
+        }
+    }
+
     void OnNicknameChanged()
     {
         NInGameMessagesHandler.RememberName(Object.Id, Nickname.ToString());

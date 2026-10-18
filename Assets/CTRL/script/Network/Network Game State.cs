@@ -294,7 +294,7 @@ public class NetworkGameState : NetworkBehaviour
             int deathcount = player.GetDeathCount();
             int assist = player.Assist;
             int totalEXP = player.TotalExp;
-            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.Nickname.ToString(), team, player._kill, deathcount,  assist, totalEXP, player.nPlayer.AvatarUrl.ToString());
+            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.NicknameText, team, player._kill, deathcount,  assist, totalEXP, player.nPlayer.AvatarUrlText);
         }
 
         // ── Build leaderboard đã sort giảm dần theo kill ────────────────────────

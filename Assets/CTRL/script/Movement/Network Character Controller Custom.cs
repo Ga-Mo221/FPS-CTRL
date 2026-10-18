@@ -253,6 +253,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
                 return;
         }
 
+        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) goi moi tick qua CCSetHeight(): neu chieu cao/tam da dung
+        // thi bo qua (truoc day van tat/bat CharacterController 2 lan moi tick).
+        if (Mathf.Approximately(_controller.height, newHeight) && Mathf.Approximately(_controller.center.y, newCenterY))
+            return;
+
         // Vị trí đáy chân (world space) TRƯỚC khi thay đổi
         float oldBottomY = transform.position.y + _controller.center.y - (_controller.height * 0.5f);
 

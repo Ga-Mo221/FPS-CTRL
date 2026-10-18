@@ -213,6 +213,7 @@ public class NHPHandler : NetworkBehaviour
             // [NET-OPT 2026-10-18 Aemy] (bao cao 6.5) gui NetworkId + chi so vu khi thay vi 3 chuoi
             _inGameMessagesHandler.SendInGameRPCKill(id, damageCausedByPlayerNickName, weaponName);
             IsDead = true;
+            DeadCount++; // [NET-OPT 2026-10-18 Aemy] (bao cao 5.1) tang o simulation tren host, khong con o callback render
             StartServerRevive(GameManager.Instance.RespawnTime);
             if (Object.Id == id) return false;
             return true;
@@ -252,7 +253,8 @@ public class NHPHandler : NetworkBehaviour
             if (_nPlayer != null && _componentManager != null && !_nPlayer.IsLocalPlayer)
                 _componentManager.UIPlayerNickName.gameObject.SetActive(false);
 
-            DeadCount++;
+            // [NET-OPT 2026-10-18 Aemy] DeadCount++ da chuyen vao OnTakeDamage (host). Ghi bien networked
+            // trong OnChangedRender (chay o Render tren MOI may) la sai.
 
             // Thông báo cho các attacker biết target đã chết
             OnDied?.Invoke(_lastKillerId);
