@@ -572,7 +572,7 @@ public class NCharMovementHandler : NetworkBehaviour
     {
         if (state.IsThrow || state.IsSwitching) return;
 
-        if (input.ZoomDelta != 0 || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
+        if (input.Buttons.IsSet(InputButtons.ScrollSwitch) || input.Buttons.WasPressed(_previousButtons, InputButtons.Switch))
         {
             if (_weaponManager.SwitchWeaponActive(0))
             {

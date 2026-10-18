@@ -95,10 +95,10 @@ public class CharacterInputHandler : MonoBehaviour
         {
             nInputData.MoveDirection = _moveDirection;
             nInputData.LookDelta = _lookDelta;
-            nInputData.ZoomDelta = _zoomDelta;
             nInputData.AimForward = _aimForward;
 
             nInputData.Buttons = _buttons;
+            if (_zoomDelta != 0f) nInputData.Buttons.Set(InputButtons.ScrollSwitch, true); // [NET-OPT] thay ZoomDelta float
 
             nInputData.Buttons.Set(InputButtons.ADS,        _input.GetSkillAction(ADS,         TISButtonReadMode.Hold));
             if (NetworkGameState.Instance != null && NetworkGameState.Instance.GameStarted)
