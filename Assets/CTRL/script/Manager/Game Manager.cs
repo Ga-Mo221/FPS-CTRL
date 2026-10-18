@@ -424,6 +424,40 @@ public class GameManager : MonoBehaviour
         return -1;
     }
 
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2) DropItemWeapon sync byte chi so thay vi NetworkString ID.
+    public int GetWeaponIndexById(string id)
+    {
+        if (string.IsNullOrEmpty(id) || _weapon_Prefabs == null) return -1;
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+            if (string.Equals(_weapon_Prefabs[i].ID(), id, System.StringComparison.OrdinalIgnoreCase)) return i;
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+            if (_weapon_Prefabs[i].ID().Contains(id)) return i;
+        return -1;
+    }
+
+    public string GetWeaponIdByIndex(int index)
+    {
+        if (_weapon_Prefabs == null || index < 0 || index >= _weapon_Prefabs.Length) return null;
+        return _weapon_Prefabs[index].ID();
+    }
+
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2) NShootHandler sync byte chi so luu dan thay vi NetworkString.
+    public int GetGrenadeIndex(string id)
+    {
+        if (string.IsNullOrEmpty(id) || _grenade_Prefabs == null) return -1;
+        for (int i = 0; i < _grenade_Prefabs.Length; i++)
+            if (_grenade_Prefabs[i] != null && _grenade_Prefabs[i].ID == id) return i;
+        for (int i = 0; i < _grenade_Prefabs.Length; i++)
+            if (_grenade_Prefabs[i] != null && _grenade_Prefabs[i].ID.Contains(id)) return i;
+        return -1;
+    }
+
+    public string GetGrenadeIdByIndex(int index)
+    {
+        if (_grenade_Prefabs == null || index < 0 || index >= _grenade_Prefabs.Length || _grenade_Prefabs[index] == null) return null;
+        return _grenade_Prefabs[index].ID;
+    }
+
     public string GetWeaponNameByIndex(int index)
     {
         if (_weapon_Prefabs == null || index < 0 || index >= _weapon_Prefabs.Length) return null;

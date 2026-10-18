@@ -5,13 +5,37 @@ using UnityEngine;
 
 public class NHPHandler : NetworkBehaviour
 {
-    [Networked, OnChangedRender(nameof(OnHPChanged))]
-    public int HP { get; private set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.4) HP (ushort) + DeadCount (byte) + IsDead (byte) gop vao 1 word.
+    // 1 callback chung roi tach lai: HP doi -> OnHPChanged, IsDead doi -> OnStateChanged (hanh vi nhu cu).
+    [Networked, OnChangedRender(nameof(OnHPStateChanged))]
+    private uint _hpState { get; set; }
 
-    [Networked, OnChangedRender(nameof(OnStateChanged))]
-    public bool IsDead { get; private set; }
+    public int HP
+    {
+        get { return (int)(_hpState & 0xFFFF); }
+        private set { _hpState = (_hpState & 0xFFFF0000u) | (uint)Mathf.Clamp(value, 0, 65535); }
+    }
 
-    [Networked] public int DeadCount { get; private set; } = 0;
+    public int DeadCount
+    {
+        get { return (int)((_hpState >> 16) & 0xFF); }
+        private set { _hpState = (_hpState & 0xFF00FFFFu) | ((uint)Mathf.Clamp(value, 0, 255) << 16); }
+    }
+
+    public bool IsDead
+    {
+        get { return (_hpState >> 24) != 0; }
+        private set { _hpState = (_hpState & 0x00FFFFFFu) | (value ? 0x01000000u : 0u); }
+    }
+
+    private int _cbLastHP;
+    private bool _cbLastDead;
+    void OnHPStateChanged()
+    {
+        int hp = HP; bool dead = IsDead;
+        if (hp != _cbLastHP) { _cbLastHP = hp; OnHPChanged(); }
+        if (dead != _cbLastDead) { _cbLastDead = dead; OnStateChanged(); }
+    }
 
     // [NET-OPT 2026-10-18 Aemy] (bao cao 6.2b) Thay RPC_ApplyHitDamage (moi vien trung + 2 string):
     // nan nhan tu suy rung camera/am thanh tu chenh lech HP. Trauma luong tu hoa x100 vao 1 byte,
@@ -78,6 +102,8 @@ public class NHPHandler : NetworkBehaviour
         _dissolvingController  = _componentManager.DissolvingController;
         _weaponManager         = _componentManager.WeaponManager;
         _lastHP                = HP;
+        _cbLastHP              = HP;
+        _cbLastDead            = IsDead;
     }
 
     private void Start()

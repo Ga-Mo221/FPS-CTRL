@@ -11,7 +11,20 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     [Header("Setting")]
     [Networked] public PlayerTeam NetworkedTeam { get; set; } = PlayerTeam.Zero;
     
-    [Networked] public GamePlayMode GamePlayMode { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.3) GamePlayMode la hang so ca tran -> sync 1 lan o NetworkGameState.Mode
+    // thay vi lap lai trong state cua N player. Giu ten + setter de code cu (NSpawner) khong doi.
+    private GamePlayMode _localModeFallback;
+    public GamePlayMode GamePlayMode
+    {
+        get
+        {
+            var gs = NetworkGameState.Instance;
+            if (gs != null && gs.Object != null && gs.Object.IsValid) return gs.Mode;
+            var gm = GameManager.Instance;
+            return gm != null ? gm.GetGamePlayMode() : _localModeFallback;
+        }
+        set { _localModeFallback = value; }
+    }
     
     [Networked, OnChangedRender(nameof(OnNicknameChanged))]
     public NetworkString<_16> Nickname { get; private set; }

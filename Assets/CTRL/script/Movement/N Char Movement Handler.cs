@@ -17,17 +17,27 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
     // [NET-OPT 2026-10-18 Aemy] (bao cao 3.4) IsJump -> JumpCount: truoc day Render() GHI IsJump=false vao bien networked
     // (khong hop le, client co the mat event nhay). Nay dung bo dem, Render so sanh voi gia tri local.
-    [Networked] public int JumpCount { get; private set; }
+    // (JumpCount: xem _eventCounters)
     [Networked] public float NetworkedPitch { get; private set; }
     // ── Fire state — thay IsFiring(bool) bằng FireCount(int) để tiết kiệm băng thông
     // IsFiring chỉ cần 1 tick để NShootHandler đọc trong cùng FixedUpdateNetwork,
     // không cần sync ra ngoài. FireCount sync để remote clients spawn visual.
     // AimForward sync để Host/remote dùng cùng hướng bắn chính xác từ InputData.
-    [Networked] public int   FireCount   { get; private set; }  // tăng mỗi phát bắn
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.4) FireCount / SwitchCount / JumpCount gop thanh 3 byte trong 1 word.
+    // Gia tri 0..255 quay vong: noi doc chi so sanh != hoac lay delta (byte)(moi - cu).
+    [Networked] private uint _eventCounters { get; set; }
+    private int GetCounter(int shift) { return (int)((_eventCounters >> shift) & 0xFF); }
+    private void BumpCounter(int shift) { _eventCounters = (_eventCounters & ~(0xFFu << shift)) | ((uint)((GetCounter(shift) + 1) & 0xFF) << shift); }
+    public int FireCount   { get { return GetCounter(0); } }   // tăng mỗi phát bắn
+    public int SwitchCount { get { return GetCounter(8); } }
+    public int JumpCount   { get { return GetCounter(16); } }
     // [NET-OPT 2026-10-18 Aemy] (bao cao muc 1) Bo [Networked]: host va client predict deu gan lai tu GetInput moi tick,
     // proxy khong dung (proxy da co TargetYaw + NetworkedPitch). Tiet kiem 3 word dirty gan nhu moi tick.
     public Vector3 AimForward { get; private set; }  // hướng bắn từ NInputData
-    [Networked] public ShotInfo LastShotInfo { get; private set; } // kết quả raycast từ Host
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.1, huong A) Bo ShotInfo (~57 word) khoi state cua MOI player.
+    // Chi sync ShotSeed (ghi cung tick voi FireCount, chi shotgun) de host/client predict/proxy ra CUNG huong pellet;
+    // proxy tu raycast cuc bo de dung visual (damage van do host tinh bang LagCompensation).
+    [Networked] public ushort ShotSeed { get; private set; }
 
     // SHOOTING STATE
     // IsFiring chỉ dùng nội bộ trong frame FixedUpdateNetwork, không cần Networked
@@ -74,7 +84,7 @@ public class NCharMovementHandler : NetworkBehaviour
     
     [Networked] public NetworkBool CanTakeDamage { get; set; } = true;
     
-    [Networked] public int SwitchCount { get; private set; }
+    // (SwitchCount: xem _eventCounters)
     [Networked] private NetworkBool _newRound {get; set;} = false;
 
 
@@ -96,23 +106,24 @@ public class NCharMovementHandler : NetworkBehaviour
     // ── helpers cho NShootHandler ──────────────────────────────────────────
     public void IncrementFireCount()
     {
-        FireCount++;
+        BumpCounter(0);
     }
 
-    /// <summary>Rifle / Sniper: ghi 1 raycast vào slot 0, PelletCount = 0.</summary>
-    public void SetLastShotInfo(Vector3 pos, Vector3 normal, bool showEffect)
+    /// <summary>Host ghi seed shotgun cung tick voi IncrementFireCount().</summary>
+    public void SetShotSeed(ushort seed) { if (ShotSeed != seed) ShotSeed = seed; }
+
+    /// <summary>
+    /// Huong ngam suy tu TargetYaw + NetworkedPitch (proxy khong co AimForward). Lech nhe so voi camera that
+    /// (recoil/shake) nhung chi dung cho VISUAL dan tren may nguoi xem.
+    /// </summary>
+    public Vector3 DerivedAimForward
     {
-        LastShotInfo = new ShotInfo
+        get
         {
-            HitPosition  = pos,
-            HitNormal    = normal,
-            ShowEffect   = showEffect,
-            PelletCount  = 0   // 0 = không phải Shotgun
-        };
+            float yaw = _ncc != null ? _ncc.GetNetworkRotation().eulerAngles.y : transform.eulerAngles.y;
+            return Quaternion.Euler(NetworkedPitch, yaw, 0f) * Vector3.forward;
+        }
     }
-
-    /// <summary>Shotgun: ghi ShotInfo đã build đầy đủ pellets từ NShootHandler.</summary>
-    public void SetLastShotInfo(ShotInfo shotInfo) => LastShotInfo = shotInfo;
 
     public override void Spawned()
     {
@@ -327,7 +338,7 @@ public class NCharMovementHandler : NetworkBehaviour
             }
             
             _stateLogic.Jump(ref state);
-            JumpCount++;
+            BumpCounter(16);
             _ncc.Jump();
         }
     }
@@ -582,7 +593,7 @@ public class NCharMovementHandler : NetworkBehaviour
             if (_weaponManager.SwitchWeaponActive(0))
             {
                 _stateLogic.StartSwitch(ref state);
-                SwitchCount++;
+                BumpCounter(8);
             }
         }
 
@@ -591,7 +602,7 @@ public class NCharMovementHandler : NetworkBehaviour
             if (_weaponManager.SwitchWeaponActive(1))
             {
                 _stateLogic.StartSwitch(ref state);
-                SwitchCount++;
+                BumpCounter(8);
             }
         }
         
@@ -600,7 +611,7 @@ public class NCharMovementHandler : NetworkBehaviour
             if (_weaponManager.SwitchWeaponActive(2))
             {
                 _stateLogic.StartSwitch(ref state);
-                SwitchCount++;
+                BumpCounter(8);
             }
         }
     }

@@ -21,7 +21,9 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         _movementHandler = _componentManager.NCharMovementHandler;
         _playerMotionController = _componentManager.PlayerMotionController;
         _hpHandler = _componentManager.NHPHandler;
-        _lastJumpCount = _movementHandler.JumpCount; // nguoi vao sau khong phat lai cu nhay cu
+        _lastJumpCount   = _movementHandler.JumpCount; // nguoi vao sau khong phat lai cu nhay cu
+        _lastFireCount   = _movementHandler.FireCount;
+        _lastSwitchCount = _movementHandler.SwitchCount;
     }
 
     public override void Render()

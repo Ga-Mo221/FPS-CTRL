@@ -6,7 +6,9 @@ public class DropItemWeapon : NetworkBehaviour
 {
     [Networked] public int CurrentBullet { get; private set; }
     [Networked] public int MaxBullet { get; private set; }
-    [Networked] public NetworkString<_16> WeaponID { get; private set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2) NetworkString<_16> -> byte chi so trong GameManager._weapon_Prefabs.
+    [Networked] private byte _weaponIdx { get; set; } = 255;
+    public string WeaponID { get { var gm = GameManager.Instance; return gm != null ? (gm.GetWeaponIdByIndex(_weaponIdx) ?? "") : ""; } }
     // [NET-OPT 2026-10-18 Aemy] (bao cao 3.2) chi host dung; DropItemWeapon khong nam trong vong resume migration -> field thuong.
     private TickTimer DespawnTimer;
 
@@ -59,7 +61,10 @@ public class DropItemWeapon : NetworkBehaviour
     {
         CurrentBullet = current;
         MaxBullet = max;
-        WeaponID = weaponID;
+        var gm = GameManager.Instance;
+        int idx = gm != null ? gm.GetWeaponIndexById(weaponID) : -1;
+        if (idx < 0 || idx > 254) Debug.LogWarning("[DropItemWeapon] Khong tim thay vu khi '" + weaponID + "' trong GameManager -> khong nhat duoc.");
+        _weaponIdx = (byte)(idx >= 0 && idx <= 254 ? idx : 255);
         _gameHudController = hud; // Vẫn giữ để host set luôn
     }
 

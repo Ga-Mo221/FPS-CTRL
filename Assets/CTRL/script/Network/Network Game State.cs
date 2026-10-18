@@ -19,6 +19,9 @@ public class NetworkGameState : NetworkBehaviour
     // [NET-OPT 2026-10-18 Aemy] (bao cao muc 1) Truoc day RoundElapsed/TotalElapsed la [Networked] float
     // += DeltaTime MOI TICK -> 2 word dirty x moi client x moi tick. Nay chi sync 2 tick moc (doi 1-2 lan/tran),
     // moi may tu tinh tu Runner.Tick + _roundTimer (da networked).
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.3) che do choi cua ca tran, sync 1 lan (truoc day nam trong moi NPlayer).
+    [Networked] public GamePlayMode Mode { get; private set; }
+
     [Networked] public int StartTick { get; private set; } // tick bat dau tran (gan trong Spawned khi khong phai resume)
     [Networked] public int EndTick   { get; private set; } // tick khi IsMatchOver lan dau (0 = chua ket thuc)
 
@@ -114,6 +117,7 @@ public class NetworkGameState : NetworkBehaviour
         }
 
         CurrentRound         = 1;
+        if (GameManager.Instance != null) Mode = GameManager.Instance.GetGamePlayMode();
         StartTick            = Runner.Tick.Raw;
         EndTick              = 0;
         GameStarted          = false;
