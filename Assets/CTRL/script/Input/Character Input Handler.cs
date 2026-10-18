@@ -51,8 +51,12 @@ public class CharacterInputHandler : MonoBehaviour
         }
         else _moveDirection = Vector2.zero;
         
-        _lookDelta = _input.LookDelta;
-        _zoomDelta = _input.ZoomDelta;
+        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.7) Chuot/cam ung tra delta THEO FRAME -> cong don giua 2 tick
+        // (truoc day gan de: FPS cao mat delta, FPS thap dung lai 1 delta cho nhieu tick => do nhay phu thuoc FPS).
+        // Tay cam tra TOC DO (stick) -> giu gia tri moi nhat, khong cong don.
+        if (_input.IsGamepad) _lookDelta = _input.LookDelta;
+        else _lookDelta += _input.LookDelta;
+        _zoomDelta += _input.ZoomDelta;
         _aimForward = _componentManager.Camera.transform.forward;
         
         if (_input.GetSkillAction(RELOAD, TISButtonReadMode.PressDown))
@@ -111,5 +115,7 @@ public class CharacterInputHandler : MonoBehaviour
     public void ResetButton()
     {
         _buttons = default;
+        if (!_input.IsGamepad) _lookDelta = default; // tay cam: giu toc do stick cho tick sau (frame co the khong Update kip)
+        _zoomDelta = 0f;
     }
 }

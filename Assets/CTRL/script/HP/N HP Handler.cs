@@ -209,7 +209,7 @@ public class NHPHandler : NetworkBehaviour
         float trauma = _hitTraumaQ / 100f;
         if (trauma > 0f && _componentManager.CameraShake != null)
             _componentManager.CameraShake.AddTrauma(trauma);
-        if (_data != null && AudioManager.Instance != null)
+        if (_data != null && AudioManager.Instance != null && _data.HitDamageClips != null && _data.HitDamageClips.Length > 0)
             AudioManager.Instance.PlayClip(_componentManager.Audio_Body, _data.HitDamageClips, _data.Volume_HitDamage);
     }
 

@@ -78,6 +78,10 @@ public class NCharMovementHandler : NetworkBehaviour
 
     [Networked] public float CameraSpeed { get; private set; } = 1.0f;
     [Networked] public float ADSLookSpeedMultiplier { get; private set; } = 0.5f;
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.5) He so ADS la SETTING, gui 1 lan luc spawn / khi doi setting
+    // (Rpc_SetLookSettings). Host + may predict tu chon he so theo loai sung khi bam ADS -> het RPC lap khi resimulate.
+    private float _sniperAds = 0.5f;
+    private float _rifleAds  = 0.5f;
     
     private CharComponentManager _componentManager;
     private NetworkCharacterControllerCustom _ncc;
@@ -487,15 +491,13 @@ public class NCharMovementHandler : NetworkBehaviour
                 if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper )
                 {
                     // Sniper ADS → giảm tốc độ xoay camera
-                    if (Object.HasInputAuthority)
-                        RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.SniperADSSensitivity);
+                    ADSLookSpeedMultiplier = _sniperAds;
                 }
                 else if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle || 
                          _weaponManager.Weapon_Active().WeaponType == WeaponType.Shotgun)
                 {
                     // Rifle ADS → giảm tốc độ xoay camera
-                    if (Object.HasInputAuthority)
-                        RPC_SetAdsMultiplier(SettingManager.Instance.SettingData.RifleADSSensitivity);
+                    ADSLookSpeedMultiplier = _rifleAds;
                 }
             }
 
@@ -522,19 +524,33 @@ public class NCharMovementHandler : NetworkBehaviour
         //Debug.Log("ResetADS");
     }
 
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    public void RPC_SetAdsMultiplier(float value)
+    /// <summary>
+    /// [NET-OPT 2026-10-18 Aemy] Goi tu may local (InputAuthority) luc spawn / khi doi setting.
+    /// Luu ngay he so ADS local (de client predict dung) roi gui 1 RPC duy nhat len host.
+    /// </summary>
+    public void SendLookSettings(float camSpeed, float sniperAds, float rifleAds)
     {
-        // Chỉ chạy trên StateAuthority (Host)
-        ADSLookSpeedMultiplier = value; // [Networked] field
+        if (Object == null || !Object.IsValid || !Object.HasInputAuthority) return;
+        _sniperAds = sniperAds;
+        _rifleAds  = rifleAds;
+        Rpc_SetLookSettings(camSpeed, sniperAds, rifleAds);
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void Rpc_SetLookSettings(float camSpeed, float sniperAds, float rifleAds)
+    {
+        Debug.Log($"<color=green>[NCharMovementHandler]</color> Look settings: sens={camSpeed} sniperADS={sniperAds} rifleADS={rifleAds}");
+        // Chỉ chạy trên StateAuthority (Host)
+        CameraSpeed = camSpeed; // [Networked] field
+        _sniperAds  = sniperAds;
+        _rifleAds   = rifleAds;
+    }
+
+    /// <summary>Tuong thich code cu (SettingManager test button): chi doi do nhay, giu he so ADS hien tai.</summary>
     public void RPC_SetCameraSpeed(float value)
     {
-        Debug.Log($"<color=green>[NCharMovementHandler]</color> Update MouseSensitivity : {value}");
-        // Chỉ chạy trên StateAuthority (Host)
-        CameraSpeed = value; // [Networked] field
+        var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+        SendLookSettings(value, sd != null ? sd.SniperADSSensitivity : _sniperAds, sd != null ? sd.RifleADSSensitivity : _rifleAds);
     }
 
     private void ReloadHandler(NInputData input, ref PlayerStateFlags state)

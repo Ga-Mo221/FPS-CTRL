@@ -957,6 +957,10 @@ public class NShootHandler : NetworkBehaviour
             case 2: grenade = gm.GetGrenade(GrenadeE.ToString()); break;
         }
 
+        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) null-check TRUOC khi doc GrenadeType (truoc day NRE),
+        // va van reset _grende_ID de khong ket trang thai nem.
+        if (grenade == null) { _grende_ID = 0; return; }
+
         switch (grenade.GrenadeType)
         {
             case GrenadeType.Smoke:
@@ -967,15 +971,14 @@ public class NShootHandler : NetworkBehaviour
                 throwPoint = _throwPointLeft.position;
                 break;
         }
-            
-        if (grenade == null) return;
 
-        Runner.Spawn(grenade, throwPoint + _aimForward, Quaternion.LookRotation(_aimForward),
+        Vector3 dir = _aimForward.sqrMagnitude > 0.0001f ? _aimForward : transform.forward;
+        Runner.Spawn(grenade, throwPoint + dir, Quaternion.LookRotation(dir),
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
             {
                 spawnedGrenade.GetComponent<GrenadeHandler>().Throw(
-                    _aimForward * _fore,
+                    dir * _fore,
                     Object.InputAuthority,
                     nPlayer.Nickname.ToString(),
                     _hitMask,

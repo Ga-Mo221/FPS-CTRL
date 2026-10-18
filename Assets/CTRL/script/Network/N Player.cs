@@ -118,7 +118,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             var _av = Backend.Bootstrap.ProfileCache.Cached != null ? Backend.Bootstrap.ProfileCache.Cached.AvatarUrl : null; // [MVP-AVATAR]
             if (!string.IsNullOrEmpty(_av)) Rpc_SetAvatarUrl(_av);
             _lastSentSens = SettingManager.Instance.SettingData.MouseSensitivity;
-            _movementHandler.RPC_SetCameraSpeed(_lastSentSens);
+            SendLookSettings(); // [NET-OPT 2026-10-18 Aemy] 1 RPC gom do nhay + he so ADS
             HookSensitivity(); // [Aemy 2026-10-09]
 
             // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
@@ -321,9 +321,24 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     private void OnSensitivityChangedLive(float value)
     {
         if (this == null || Object == null || !Object.IsValid || !IsLocalPlayer || _movementHandler == null) return;
-        if (Mathf.Approximately(value, _lastSentSens)) return; // Apply() ban event moi lan doi setting -> bo qua neu khong doi
+        var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+        float sn = sd != null ? sd.SniperADSSensitivity : _lastSentSniper;
+        float rf = sd != null ? sd.RifleADSSensitivity : _lastSentRifle;
+        // Apply() ban event moi lan doi setting -> bo qua neu ca 3 gia tri khong doi
+        if (Mathf.Approximately(value, _lastSentSens) && Mathf.Approximately(sn, _lastSentSniper) && Mathf.Approximately(rf, _lastSentRifle)) return;
         _lastSentSens = value;
-        _movementHandler.RPC_SetCameraSpeed(value);
+        SendLookSettings();
+    }
+
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.5) Gui do nhay + he so ADS sniper/rifle trong 1 RPC.
+    private float _lastSentSniper = -1f, _lastSentRifle = -1f;
+    private void SendLookSettings()
+    {
+        var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+        if (sd == null || _movementHandler == null) return;
+        _lastSentSniper = sd.SniperADSSensitivity;
+        _lastSentRifle  = sd.RifleADSSensitivity;
+        _movementHandler.SendLookSettings(_lastSentSens, _lastSentSniper, _lastSentRifle);
     }
 
     void OnDestroy()
