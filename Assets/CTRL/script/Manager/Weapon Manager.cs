@@ -26,7 +26,9 @@ public class WeaponManager : NetworkBehaviour
     
     [TabGroup("Debug", "Debug")]
     [ReadOnly]
-    [Networked] public NetworkString<_16> _weaponOneID { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2 / 9.2.1) Bo sync _weaponOneID (NetworkString<_16> ~17 word):
+    // ID luon = Data.ID + "_W1" nen moi may tu tinh -> het coroutine WaitForIDThenAdd (polling + race).
+    public string _weaponOneID => _registeredIDOne ?? "";
     
     [TabGroup("Debug", "Debug")]
     [ReadOnly]
@@ -40,7 +42,7 @@ public class WeaponManager : NetworkBehaviour
     
     [TabGroup("Debug", "Debug")]
     [ReadOnly]
-    [Networked] public NetworkString<_16> _weaponTwoID { get; set; }
+    public string _weaponTwoID => _registeredIDTwo ?? ""; // [NET-OPT] xem _weaponOneID
     
     [TabGroup("Debug", "Debug")]
     [ReadOnly]
@@ -611,37 +613,16 @@ public class WeaponManager : NetworkBehaviour
     /// </summary>
     private bool ResolveWeaponControllers()
     {
-        bool hasPending = false;
-
+        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.2.4) Moi may dang ky NGAY (ID tu tinh), khong con nhanh cho ID sync.
+        // Giu kieu tra ve bool (luon false) de cac cho goi cu khong doi.
         if (_weaponOneRef != null && Weapon_One_CTRL == null)
         {
             Weapon_One_CTRL = _weaponOneRef.GetComponent<WeaponController>();
             if (Weapon_One_CTRL != null)
             {
                 _slotNetIdOne = _weaponOneRef.Id;
-
-                if (Object.HasStateAuthority)
-                {
-                    // Authority: set ID ngay, add đồng bộ luôn.
-                    Weapon_One_CTRL.Respawn();
-                    _weaponOneID = new NetworkString<_16>(Weapon_One_CTRL.Data.ID + "_W1");
-                    RegisterWeapon(1, Weapon_One_CTRL, _weaponOneID.ToString());
-                }
-                else
-                {
-                    // Non-authority: _weaponOneID chưa chắc đã sync về kịp.
-                    // Chờ đến khi ID khớp với weapon vừa resolve xong rồi mới AddNewWeapon.
-                    hasPending = true;
-                    var ctrl = Weapon_One_CTRL;
-                    StartCoroutine(WaitForIDThenAdd(
-                        1,
-                        ctrl,
-                        ctrl.Data.ID + "_W1",
-                        () => _weaponOneID.ToString(),
-                        () => Weapon_One_CTRL == ctrl,   // hủy nếu weapon đã bị thay
-                        isLast: true                      // coroutine này chịu trách nhiệm gọi SwitchWeapon
-                    ));
-                }
+                if (Object.HasStateAuthority) Weapon_One_CTRL.Respawn();
+                RegisterWeapon(1, Weapon_One_CTRL, Weapon_One_CTRL.Data.ID + "_W1");
             }
         }
 
@@ -651,72 +632,16 @@ public class WeaponManager : NetworkBehaviour
             if (Weapon_Two_CTRL != null)
             {
                 _slotNetIdTwo = _weaponTwoRef.Id;
-
-                if (Object.HasStateAuthority)
-                {
-                    Weapon_Two_CTRL.Respawn();
-                    _weaponTwoID = new NetworkString<_16>(Weapon_Two_CTRL.Data.ID + "_W2");
-                    RegisterWeapon(2, Weapon_Two_CTRL, _weaponTwoID.ToString());
-                }
-                else
-                {
-                    // Nếu weapon one cũng đang pending, weapon two KHÔNG được gọi SwitchWeapon
-                    // (weapon one sẽ lo). Nếu chỉ mình weapon two pending thì nó gọi.
-                    bool twoIsLast = !hasPending;
-                    hasPending = true;
-                    var ctrl = Weapon_Two_CTRL;
-                    StartCoroutine(WaitForIDThenAdd(
-                        2,
-                        ctrl,
-                        ctrl.Data.ID + "_W2",
-                        () => _weaponTwoID.ToString(),
-                        () => Weapon_Two_CTRL == ctrl,
-                        isLast: twoIsLast
-                    ));
-                }
+                if (Object.HasStateAuthority) Weapon_Two_CTRL.Respawn();
+                RegisterWeapon(2, Weapon_Two_CTRL, Weapon_Two_CTRL.Data.ID + "_W2");
             }
         }
 
-        return hasPending;
+        return false;
     }
 
-    /// <summary>
-    /// Coroutine dành cho non-authority client: poll đến khi NetworkString đã sync về
-    /// đúng ID của weapon vừa resolve, rồi mới gọi AddNewWeapon.
-    /// Nếu isLast == true, gọi SwitchWeapon sau khi add xong.
-    /// </summary>
-    private System.Collections.IEnumerator WaitForIDThenAdd(
-        int slot,
-        WeaponController ctrl,
-        string expectedID,
-        System.Func<string> getID,
-        System.Func<bool> isStillValid,
-        bool isLast)
-    {
-        // Chờ đến khi ID synced về chứa đúng Data.ID của weapon này
-        while (true)
-        {
-            if (!isStillValid()) yield break;   // weapon đã bị replace — hủy
+    // [NET-OPT 2026-10-18 Aemy] Da xoa coroutine WaitForIDThenAdd (ID vu khi gio tu tinh, khong cho sync).
 
-            var currentID = getID();
-            if (!currentID.IsNullOrEmpty() && currentID == expectedID)
-                break;
-
-            yield return null;
-        }
-
-        if (!isStillValid()) yield break;
-
-        var id = getID();
-        if (!id.IsNullOrEmpty())
-            RegisterWeapon(slot, ctrl, id);
-
-        // Chỉ coroutine "cuối cùng" mới gọi SwitchWeapon để tránh gọi nhiều lần
-        if (isLast)
-            SwitchWeapon();
-    }
-    
-    
 #if UNITY_EDITOR
     [Button]
     public void GetSetup()

@@ -16,13 +16,27 @@ public class WeaponController : NetworkBehaviour
     [TabGroup("Weapon Controller", "Runtime")]
     [Networked] public NetworkObject OwnerCharacter { get; set; }
     
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.2) Dan trong bang + dan du tru gop 1 word (2 x 16 bit), 1 callback
+    // thay vi 2 int + 2 OnChangedRender rieng (truoc day reload goi callback 2 lan).
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    [ReadOnly]
-    public int CurrentBulletvalue { get; private set; }
-    
-    [Networked, OnChangedRender(nameof(OnBulletCountChange))]
-    [ReadOnly]
-    public int CurrentMaxBullet { get; private set; }
+    private uint _ammo { get; set; }
+
+    public int CurrentBulletvalue
+    {
+        get { return (int)(_ammo & 0xFFFF); }
+        private set { _ammo = (_ammo & 0xFFFF0000u) | (uint)Mathf.Clamp(value, 0, 65535); }
+    }
+
+    public int CurrentMaxBullet
+    {
+        get { return (int)(_ammo >> 16); }
+        private set { _ammo = (_ammo & 0xFFFFu) | ((uint)Mathf.Clamp(value, 0, 65535) << 16); }
+    }
+
+    private void SetAmmo(int mag, int reserve)
+    {
+        _ammo = (uint)Mathf.Clamp(mag, 0, 65535) | ((uint)Mathf.Clamp(reserve, 0, 65535) << 16);
+    }
     
     // ============================ LOCAL FILED =====================================
     
@@ -168,7 +182,21 @@ public class WeaponController : NetworkBehaviour
     
     private List<GameObject> _poolBullet = new List<GameObject>();
 
-    [Networked] private bool _rightPuch {get; set;}
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.2.3) Bo [Networked] _rightPuch (trung NCharMovementHandler.RightPuch,
+    // con bi ghi o may khong co StateAuthority). May ban (host / client predict) dung gia tri local tu OnFire;
+    // proxy doc RightPuch da sync cua nhan vat so huu.
+    private bool _rightPuchLocal;
+    private bool _rightPuchLocalSet;
+    private bool _rightPuch
+    {
+        get
+        {
+            if (_rightPuchLocalSet) return _rightPuchLocal;
+            var owner = OwnerCharacter != null ? OwnerCharacter.GetComponent<NCharMovementHandler>() : null;
+            return owner != null && owner.RightPuch;
+        }
+        set { _rightPuchLocal = value; _rightPuchLocalSet = true; }
+    }
     
     // =============================== public Filed ============================================
     
@@ -261,8 +289,7 @@ public class WeaponController : NetworkBehaviour
         
         if (_type == WeaponType.Melee) return;
         
-        CurrentMaxBullet = _data.MaxBullet;
-        CurrentBulletvalue = _data.DefaultBullet;
+        SetAmmo(_data.DefaultBullet, _data.MaxBullet);
     }
     
     // ====================================== EVENT ONFIRE =========================
@@ -634,8 +661,7 @@ public class WeaponController : NetworkBehaviour
 
     public void SetBullet(int currentBullet, int maxBullet)
     {
-        CurrentBulletvalue = currentBullet;
-        CurrentMaxBullet = maxBullet;
+        SetAmmo(currentBullet, maxBullet);
     }
 
     /// <summary>
