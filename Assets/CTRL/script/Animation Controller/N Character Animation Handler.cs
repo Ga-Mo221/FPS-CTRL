@@ -13,6 +13,7 @@ public class NCharacterAnimationHandler : NetworkBehaviour
     private int _lastFireCount;
     private bool _localIsSwitching;
     private int _lastSwitchCount;
+    private int _lastJumpCount;
 
     public override void Spawned()
     {
@@ -20,6 +21,7 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         _movementHandler = _componentManager.NCharMovementHandler;
         _playerMotionController = _componentManager.PlayerMotionController;
         _hpHandler = _componentManager.NHPHandler;
+        _lastJumpCount = _movementHandler.JumpCount; // nguoi vao sau khong phat lai cu nhay cu
     }
 
     public override void Render()
@@ -62,10 +64,10 @@ public class NCharacterAnimationHandler : NetworkBehaviour
         
         _playerMotionController.IsSwitching(_localIsSwitching);
 
-        if (_movementHandler.IsJump)
+        if (_movementHandler.JumpCount != _lastJumpCount)
         {
+            _lastJumpCount = _movementHandler.JumpCount;
             _playerMotionController.IsJumping();
-            _movementHandler.IsJump = false;
         }
         else
         {

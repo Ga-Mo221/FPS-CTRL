@@ -16,8 +16,36 @@ public class NetworkGameState : NetworkBehaviour
     [Networked] private int _killTarget { get; set; } = 100;
     public int KillTarget => _killTarget;
 
-    [Networked] public float RoundElapsed { get; private set; } // giây còn lại trong hiệp (remaining)
-    [Networked] public float TotalElapsed { get; private set; } // tổng giây đã chơi cả trận
+    // [NET-OPT 2026-10-18 Aemy] (bao cao muc 1) Truoc day RoundElapsed/TotalElapsed la [Networked] float
+    // += DeltaTime MOI TICK -> 2 word dirty x moi client x moi tick. Nay chi sync 2 tick moc (doi 1-2 lan/tran),
+    // moi may tu tinh tu Runner.Tick + _roundTimer (da networked).
+    [Networked] public int StartTick { get; private set; } // tick bat dau tran (gan trong Spawned khi khong phai resume)
+    [Networked] public int EndTick   { get; private set; } // tick khi IsMatchOver lan dau (0 = chua ket thuc)
+
+    /// <summary>Giay CON LAI trong hiep (ten giu nguyen de khong vo UI cu). Dong bang khi tran ket thuc.</summary>
+    public float RoundElapsed
+    {
+        get
+        {
+            if (Runner == null || Object == null || !Object.IsValid) return 0f;
+            if (!GameStarted) return CurrentRound > 1 ? _roundDurationMinutes * 60f : 0f;
+            int? target = _roundTimer.TargetTick;
+            if (!target.HasValue) return 0f;
+            int now = EndTick > 0 ? EndTick : Runner.Tick.Raw;
+            return Mathf.Max(0f, (target.Value - now) * Runner.DeltaTime);
+        }
+    }
+
+    /// <summary>Tong giay da choi ca tran.</summary>
+    public float TotalElapsed
+    {
+        get
+        {
+            if (Runner == null || Object == null || !Object.IsValid || StartTick <= 0) return 0f;
+            int now = EndTick > 0 ? EndTick : Runner.Tick.Raw;
+            return Mathf.Max(0f, (now - StartTick) * Runner.DeltaTime);
+        }
+    }
 
     // ── Networked State ──────────────────────────────────────────────────────
     [Networked] private TickTimer _countdownTimer { get; set; }
@@ -77,14 +105,17 @@ public class NetworkGameState : NetworkBehaviour
 
         if (!HasStateAuthority) return;
 
-        // Nếu TotalElapsed > 0 nghĩa là resume từ snapshot → không reset
-        if (TotalElapsed > 0)
+        // Nếu CurrentRound > 0 nghĩa là resume từ snapshot → không reset
+        // [NET-OPT] doi tu "TotalElapsed > 0" vi TotalElapsed gio la thuoc tinh tinh tu tick.
+        if (CurrentRound > 0)
         {
             Debug.Log("<color=orange>[NetworkGameState]</color> Resumed from host migration");
             return;
         }
 
         CurrentRound         = 1;
+        StartTick            = Runner.Tick.Raw;
+        EndTick              = 0;
         GameStarted          = false;
         RoundEnded           = false;
         _redKillAccumulated  = 0;
@@ -101,8 +132,8 @@ public class NetworkGameState : NetworkBehaviour
     {
         if (!HasStateAuthority) return;
 
-        if (!IsMatchOver())
-            TotalElapsed += Runner.DeltaTime;
+        if (EndTick == 0 && IsMatchOver())
+            EndTick = Runner.Tick.Raw;
 
         // ── Cập nhật Kill stats (chỉ host, đồng bộ xuống mọi client) ───────────
         _killUpdateTimer += Runner.DeltaTime;
@@ -166,7 +197,6 @@ public class NetworkGameState : NetworkBehaviour
             {
                 GameStarted  = true;
                 RoundEnded   = false;
-                RoundElapsed = _roundDurationMinutes * 60;
                 _roundTimer  = TickTimer.CreateFromSeconds(Runner, _roundDurationMinutes * 60f);
             }
             return;
@@ -174,8 +204,6 @@ public class NetworkGameState : NetworkBehaviour
 
         if (!RoundEnded)
         {
-            RoundElapsed -= Runner.DeltaTime;
-
             if (_roundTimer.Expired(Runner))
             {
                 RoundEnded = true;
@@ -185,7 +213,6 @@ public class NetworkGameState : NetworkBehaviour
                     CurrentRound++;
                     GameStarted  = false;
                     RoundEnded   = false;
-                    RoundElapsed = _roundDurationMinutes * 60;
                     StartCountdown();
                     RespawnAllPlayers();
                 }

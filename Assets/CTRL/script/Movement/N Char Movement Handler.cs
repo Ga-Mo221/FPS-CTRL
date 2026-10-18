@@ -15,7 +15,9 @@ public class NCharMovementHandler : NetworkBehaviour
     public bool QKey = false;
     public bool EKey = false;
     [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
-    [Networked] public NetworkBool IsJump { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.4) IsJump -> JumpCount: truoc day Render() GHI IsJump=false vao bien networked
+    // (khong hop le, client co the mat event nhay). Nay dung bo dem, Render so sanh voi gia tri local.
+    [Networked] public int JumpCount { get; private set; }
     [Networked] public float NetworkedPitch { get; private set; }
     // ── Fire state — thay IsFiring(bool) bằng FireCount(int) để tiết kiệm băng thông
     // IsFiring chỉ cần 1 tick để NShootHandler đọc trong cùng FixedUpdateNetwork,
@@ -43,7 +45,8 @@ public class NCharMovementHandler : NetworkBehaviour
 
     // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
     // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
-    [Networked] private TickTimer _fireHoldTimer { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.2) buffer ~100ms chi host dung -> field thuong (mat khi migration khong sao)
+    private TickTimer _fireHoldTimer;
 
     // Số tick buffer — đủ để che lấp jitter 1-2 tick mà không delay cảm giác
     // Với tick rate 30: 3 tick = 100ms buffer.
@@ -61,8 +64,7 @@ public class NCharMovementHandler : NetworkBehaviour
 
     [Networked] private TickTimer _slideTimer { get; set; }
     [Networked] private TickTimer _respawnInvincibleTimer { get; set; }
-    [Networked] private float _currentSpeed { get; set; }
-    [Networked] private float _acceleration { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] _currentSpeed/_acceleration: tinh va dung ngay trong tick -> bien local (xem FixedUpdateNetwork)
     [Networked] private bool _isRespawnRequested { get; set; } = false;
     private CharacterState _stateLogic;
     [Networked] private NetworkButtons _previousButtons { get; set; }
@@ -215,8 +217,8 @@ public class NCharMovementHandler : NetworkBehaviour
             
             Vector3 moveDirection = transform.forward * inputdata.MoveDirection.y + transform.right * inputdata.MoveDirection.x;
             moveDirection.Normalize();
-            (_currentSpeed, _acceleration) = _data.MaxSpeed(_newState);
-            _ncc.Move(moveDirection, _currentSpeed, _acceleration);
+            var (currentSpeed, acceleration) = _data.MaxSpeed(_newState);
+            _ncc.Move(moveDirection, currentSpeed, acceleration);
             
             _previousButtons = inputdata.Buttons;
             StateFl = _newState;
@@ -310,8 +312,6 @@ public class NCharMovementHandler : NetworkBehaviour
 #region Jump
     private void JumpHandler(NInputData input, ref PlayerStateFlags state)
     {
-        if (IsJump) IsJump = false;
-        
         if (input.Buttons.WasPressed(_previousButtons, InputButtons.Jump))
         {
             if (_hpHandler.IsDead) return;
@@ -327,7 +327,7 @@ public class NCharMovementHandler : NetworkBehaviour
             }
             
             _stateLogic.Jump(ref state);
-            IsJump = true;
+            JumpCount++;
             _ncc.Jump();
         }
     }

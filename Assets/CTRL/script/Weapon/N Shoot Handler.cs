@@ -38,7 +38,7 @@ public class NShootHandler : NetworkBehaviour
     /// Timer delay từ lúc nhấn attack đến lúc hitbox check — đồng bộ với animation swing.
     /// Networked để Host quản lý timing chính xác theo tick.
     /// </summary>
-    [Networked] private TickTimer _meleeHitTimer { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.1) _meleeHitTimer khai bao nhung khong dung -> xoa.
 
     [Header("Melee Active Hit Window")]
     [Tooltip("Sau khi hết delay swing, hitbox check sẽ tiếp tục chạy MỖI TICK trong khoảng thời gian này (giây) thay vì chỉ 1 tick duy nhất — giúp dễ trúng đòn hơn với đối tượng đang di chuyển / độ trễ mạng.")]
@@ -48,7 +48,8 @@ public class NShootHandler : NetworkBehaviour
     /// Cửa sổ thời gian (nhiều tick) mà HandleMeleeHit() được phép chạy sau khi _meleeHitTimer hết hạn.
     /// Networked để mọi tick simulate/resimulate trên Host đều nhất quán.
     /// </summary>
-    [Networked] private TickTimer _meleeHitWindowEndTimer { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.2) cua so ~150ms chi host doc -> field thuong.
+    private TickTimer _meleeHitWindowEndTimer;
 
     /// <summary>
     /// Các target (theo NetworkId) đã bị đánh trúng trong pha vung vũ khí hiện tại.

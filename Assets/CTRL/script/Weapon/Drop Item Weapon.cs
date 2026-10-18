@@ -7,7 +7,8 @@ public class DropItemWeapon : NetworkBehaviour
     [Networked] public int CurrentBullet { get; private set; }
     [Networked] public int MaxBullet { get; private set; }
     [Networked] public NetworkString<_16> WeaponID { get; private set; }
-    [Networked] private TickTimer DespawnTimer { get; set; }
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.2) chi host dung; DropItemWeapon khong nam trong vong resume migration -> field thuong.
+    private TickTimer DespawnTimer;
 
     private GameHudControllerBase _gameHudController;
 
