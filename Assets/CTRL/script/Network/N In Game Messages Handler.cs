@@ -23,6 +23,11 @@ public class NInGameMessagesHandler : NetworkBehaviour
 
         if (_gameHudController != null)
             _gameHudController.AddKill(killer, weaponname, victim);
+
+        // [NET-OPT 2026-10-18 Aemy] Truoc day SetDeadStatus di kem RPC_ApplyHitDamage moi vien dan.
+        // RPC nay nam tren object cua NAN NHAN, nen may co InputAuthority = chinh nan nhan.
+        if (_gameHudController != null && Object.HasInputAuthority)
+            _gameHudController.SetDeadStatus(killer, weaponname);
     }
 
     public void SenManagerMessage(string message)

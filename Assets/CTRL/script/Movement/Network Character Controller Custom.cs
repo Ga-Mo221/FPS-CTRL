@@ -194,7 +194,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         Data.TRSPData.Position = transform.position;
         // Ghi rotation từ TargetYaw (không dùng transform.rotation) để NetworkTRSP.Render
         // và GetNetworkRotation() luôn có giá trị yaw đúng.
-        Data.TRSPData.Rotation = Quaternion.Euler(0f, Data.TargetYaw, 0f);
+        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.1) Rotation trung voi TargetYaw va bi Render() override,
+        // nen ghi hang identity de 4 word nay KHONG BAO GIO dirty. GetNetworkRotation()/CopyToEngine dung TargetYaw.
+        Data.TRSPData.Rotation = Quaternion.identity;
     }
 
     /// <summary>

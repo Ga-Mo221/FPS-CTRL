@@ -13,6 +13,12 @@ public class NHPHandler : NetworkBehaviour
 
     [Networked] public int DeadCount { get; private set; } = 0;
 
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.2b) Thay RPC_ApplyHitDamage (moi vien trung + 2 string):
+    // nan nhan tu suy rung camera/am thanh tu chenh lech HP. Trauma luong tu hoa x100 vao 1 byte,
+    // chi dirty khi muc trauma doi (dan thuong luon 0.2 -> gan nhu khong bao gio dirty).
+    [Networked] private byte _hitTraumaQ { get; set; }
+    private int _lastHP = int.MinValue;
+
     [Networked] private TickTimer _revivePhase1Timer { get; set; }
     [Networked] private TickTimer _revivePhase2Timer { get; set; }
 
@@ -71,6 +77,7 @@ public class NHPHandler : NetworkBehaviour
         _nPlayer               = _componentManager.NPlayer;
         _dissolvingController  = _componentManager.DissolvingController;
         _weaponManager         = _componentManager.WeaponManager;
+        _lastHP                = HP;
     }
 
     private void Start()
@@ -172,7 +179,7 @@ public class NHPHandler : NetworkBehaviour
         OnDamageDealt?.Invoke(id, actualDamage);
 
         if (Object.HasStateAuthority)
-            RPC_ApplyHitDamage(Trauma, damageCausedByPlayerNickName, weaponName);
+            _hitTraumaQ = (byte)Mathf.Clamp(Mathf.RoundToInt(Trauma * 100f), 0, 255);
 
         if (HP <= 0)
         {
@@ -188,23 +195,22 @@ public class NHPHandler : NetworkBehaviour
         return false;
     }
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
-    private void RPC_ApplyHitDamage(float trauma, string killer, string weaponName)
-    {
-        if (_componentManager != null)
-        {
-            _componentManager.CameraShake.AddTrauma(trauma);
-            _componentManager.GameHudController().SetDeadStatus(killer, weaponName);
-        }
-
-        if (_componentManager != null && _data != null)
-            AudioManager.Instance.PlayClip(_componentManager.Audio_Body, _data.HitDamageClips, _data.Volume_HitDamage);
-    }
-
     void OnHPChanged()
     {
+        int prev = _lastHP;
+        _lastHP = HP;
         if (!Object.HasInputAuthority) return;
         _gameHudController?.SetHP(HP);
+
+        // HP giam = vua trung don (regen/hoi sinh lam HP tang nen bi bo qua).
+        // Ten ke giet + vu khi cho man hinh chet: chuyen sang RPC_KillGame (NInGameMessagesHandler).
+        int dmg = prev == int.MinValue ? 0 : prev - HP;
+        if (dmg <= 0 || _componentManager == null) return;
+        float trauma = _hitTraumaQ / 100f;
+        if (trauma > 0f && _componentManager.CameraShake != null)
+            _componentManager.CameraShake.AddTrauma(trauma);
+        if (_data != null && AudioManager.Instance != null)
+            AudioManager.Instance.PlayClip(_componentManager.Audio_Body, _data.HitDamageClips, _data.Volume_HitDamage);
     }
 
     void OnStateChanged()
@@ -255,6 +261,7 @@ public class NHPHandler : NetworkBehaviour
     {
         if (Object.HasStateAuthority)
             NewState();
+        _lastHP = HP;
 
         if (_gameHudController != null)
         {

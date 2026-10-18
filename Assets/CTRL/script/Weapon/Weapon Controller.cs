@@ -595,9 +595,9 @@ public class WeaponController : NetworkBehaviour
                     // Máy đang predict chính là máy cần nghe âm thanh "hết đạn" nên phát trực tiếp cục
                     // bộ, không cần round-trip RPC tới chính mình. Chỉ khi chạy trên StateAuthority
                     // (Host, có thể điều khiển 1 máy khác) mới cần RPC để báo cho InputAuthority phát âm.
-                    if (Object.HasStateAuthority)
-                        RPC_ApplyAudio();
-                    else if (Object.HasInputAuthority)
+                    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.2a) Truoc day host gui RPC_ApplyAudio MOI TICK khi giu chuot
+                    // voi sung rong (30-60 RPC/s/nguoi). May cua nguoi ban da tu predict FireOnce() nen chi can phat local.
+                    if (Object.HasInputAuthority)
                         ApplyFireFailedAudio();
                     return false;
                 }
@@ -610,12 +610,6 @@ public class WeaponController : NetworkBehaviour
         }
     }
     
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
-    private void RPC_ApplyAudio()
-    {
-        ApplyFireFailedAudio();
-    }
-
     /// <summary>
     /// Phần logic audio/coroutine thuần cục bộ, không cần dữ liệu network — factor ra khỏi
     /// RPC_ApplyAudio() để nhánh client-prediction (không có quyền gửi RPC) gọi trực tiếp.

@@ -22,7 +22,9 @@ public class NCharMovementHandler : NetworkBehaviour
     // không cần sync ra ngoài. FireCount sync để remote clients spawn visual.
     // AimForward sync để Host/remote dùng cùng hướng bắn chính xác từ InputData.
     [Networked] public int   FireCount   { get; private set; }  // tăng mỗi phát bắn
-    [Networked] public Vector3 AimForward { get; private set; }  // hướng bắn từ NInputData
+    // [NET-OPT 2026-10-18 Aemy] (bao cao muc 1) Bo [Networked]: host va client predict deu gan lai tu GetInput moi tick,
+    // proxy khong dung (proxy da co TargetYaw + NetworkedPitch). Tiet kiem 3 word dirty gan nhu moi tick.
+    public Vector3 AimForward { get; private set; }  // hướng bắn từ NInputData
     [Networked] public ShotInfo LastShotInfo { get; private set; } // kết quả raycast từ Host
 
     // SHOOTING STATE
@@ -54,7 +56,7 @@ public class NCharMovementHandler : NetworkBehaviour
     /// Khi Host fire từ buffer timer (không có packet), dùng giá trị này thay vì
     /// AimForward hiện tại (có thể là packet cũ từ tick trước) để raycast đúng hướng.
     /// </summary>
-    [Networked] public Vector3 LastConfirmedAimForward { get; private set; }
+    public Vector3 LastConfirmedAimForward { get; private set; } // [NET-OPT] chi host dung -> field thuong
 
 
     [Networked] private TickTimer _slideTimer { get; set; }
