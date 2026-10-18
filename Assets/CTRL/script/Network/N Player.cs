@@ -114,25 +114,27 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
             _uiPlayerNickName.gameObject.SetActive(false);
             
-            Rpc_SetNickName(GameManager.Instance.GetPlayerNickName());
-            var _av = Backend.Bootstrap.ProfileCache.Cached != null ? Backend.Bootstrap.ProfileCache.Cached.AvatarUrl : null; // [MVP-AVATAR]
-            if (!string.IsNullOrEmpty(_av)) Rpc_SetAvatarUrl(_av);
-            _lastSentSens = SettingManager.Instance.SettingData.MouseSensitivity;
-            SendLookSettings(); // [NET-OPT 2026-10-18 Aemy] 1 RPC gom do nhay + he so ADS
-            HookSensitivity(); // [Aemy 2026-10-09]
-
-            // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
-            // ConnectionToken ở transport-level (không đáng tin cậy qua Photon Relay).
-            // Server sẽ dùng token này để nhận diện: player mới hay đang reconnect / resume sau host migration.
+            // [NET-OPT 2026-10-18 Aemy] (bao cao 6.3) Gop Rpc_SetNickName + Rpc_RegisterToken + RPC_SetCameraSpeed
+            // thanh 1 Rpc_InitPlayer luc spawn: bot header, het race giua cac RPC rieng le.
+            // ✅ Token gửi lên server ngay khi spawn, KHÔNG phụ thuộc vào ConnectionToken ở transport-level
+            // (không đáng tin cậy qua Photon Relay). Server dùng token để nhận diện player mới / reconnect / resume migration.
             byte[] myToken = GameManager.Instance.GetIdentityToken();
-            if (myToken != null && myToken.Length == 16)
-            {
-                Rpc_RegisterToken(myToken);
-            }
-            else
+            if (myToken == null || myToken.Length != 16)
             {
                 Debug.LogWarning("<color=green>[NPlayer]</color> Identity token invalid, cannot register.", this);
+                myToken = new byte[0];
             }
+            var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+            _lastSentSens   = sd != null ? sd.MouseSensitivity : 1f;
+            _lastSentSniper = sd != null ? sd.SniperADSSensitivity : 0.5f;
+            _lastSentRifle  = sd != null ? sd.RifleADSSensitivity : 0.5f;
+            _movementHandler.ApplyLookSettings(_lastSentSens, _lastSentSniper, _lastSentRifle); // he so ADS cho client predict
+            Rpc_InitPlayer(NInGameMessagesHandler.Truncate(GameManager.Instance.GetPlayerNickName(), 64), myToken,
+                           _lastSentSens, _lastSentSniper, _lastSentRifle);
+            // Avatar URL co the dai -> de RPC rieng (chi gui khi co) cho Rpc_InitPlayer khong bao gio vuot gioi han payload.
+            var _av = Backend.Bootstrap.ProfileCache.Cached != null ? Backend.Bootstrap.ProfileCache.Cached.AvatarUrl : null; // [MVP-AVATAR]
+            if (!string.IsNullOrEmpty(_av)) Rpc_SetAvatarUrl(_av);
+            HookSensitivity(); // [Aemy 2026-10-09]
             
             Debug.Log("<color=green>[NPlayer]</color> Spawned Local Player.", this);
         }
@@ -227,10 +229,19 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void Rpc_SetNickName(string nickName, RpcInfo info = default)
+    private void Rpc_InitPlayer(string nickName, byte[] rawToken, float camSpeed, float sniperAds, float rifleAds, RpcInfo info = default)
     {
-        Debug.Log($"<color=green>[NPlayer]</color> Rpc_SetNickName: {nickName}", this);
+        ApplyNickName(nickName);
+        if (_movementHandler == null) _movementHandler = GetComponent<NCharMovementHandler>();
+        if (_movementHandler != null) _movementHandler.ApplyLookSettings(camSpeed, sniperAds, rifleAds);
+        if (rawToken != null && rawToken.Length == 16) RegisterTokenOnHost(rawToken);
+    }
+
+    private void ApplyNickName(string nickName)
+    {
+        Debug.Log($"<color=green>[NPlayer]</color> InitPlayer nickname: {nickName}", this);
         Nickname = nickName;
+        NInGameMessagesHandler.RememberName(Object.Id, nickName);
 
         if (!_isPublicJoinMessageSent)
         {
@@ -246,8 +257,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void Rpc_SetAvatarUrl(string url, RpcInfo info = default) { AvatarUrl = url; } // [MVP-AVATAR 2026-10-01]
 
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void Rpc_RegisterToken(byte[] rawToken, RpcInfo info = default)
+    private void RegisterTokenOnHost(byte[] rawToken)
     {
         if (!Object.HasStateAuthority) return;
 
@@ -299,6 +309,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
     void OnNicknameChanged()
     {
+        NInGameMessagesHandler.RememberName(Object.Id, Nickname.ToString());
         Debug.Log($"<color=green>[NPlayer]</color> OnNicknameChanged to {Nickname.ToString()}", this);
         ComponentManager.UIPlayerNickName.SetNickName(Nickname.ToString());
     }

@@ -901,7 +901,8 @@ public class NShootHandler : NetworkBehaviour
     }
 
     // ── RPC ───────────────────────────────────────────────────────────────
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.3) hit marker tan suat cao, mat 1 cai khong sao -> Unreliable (khong gui lai).
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority, Channel = RpcChannel.Unreliable)]
     private void RPC_ApplyAudio()
     {
         AudioManager.Instance.PlayClip(_hitSound, _playerData.TakeDamageClips, _playerData.Volume_TakeDamage, true, 0.5f, 1f);

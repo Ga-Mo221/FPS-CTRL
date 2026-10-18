@@ -409,6 +409,28 @@ public class GameManager : MonoBehaviour
 
     public WeaponInfo[] GetWeaponDataList() => _weapon_Prefabs;
 
+    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.5) Kill feed gui chi so vu khi (byte) thay vi chuoi ten.
+    // Moi may dung cung GameManager prefab -> cung thu tu _weapon_Prefabs.
+    public int GetWeaponIndexByName(string weaponName)
+    {
+        if (string.IsNullOrEmpty(weaponName) || _weapon_Prefabs == null) return -1;
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+        {
+            var d = _weapon_Prefabs[i].Data();
+            if (d != null && d.WeaponName == weaponName) return i;
+        }
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+            if (string.Equals(_weapon_Prefabs[i].ID(), weaponName, System.StringComparison.OrdinalIgnoreCase)) return i;
+        return -1;
+    }
+
+    public string GetWeaponNameByIndex(int index)
+    {
+        if (_weapon_Prefabs == null || index < 0 || index >= _weapon_Prefabs.Length) return null;
+        var d = _weapon_Prefabs[index].Data();
+        return d != null ? d.WeaponName : _weapon_Prefabs[index].ID();
+    }
+
     // [Aemy 2026-10-11] Khop CHINH XAC ID (khong phan biet hoa thuong). Cac ham Get* van giu Contains lam du phong nhu cu.
     private bool TryFindExactWeapon(string ID, out WeaponInfo found)
     {

@@ -531,19 +531,24 @@ public class NCharMovementHandler : NetworkBehaviour
     public void SendLookSettings(float camSpeed, float sniperAds, float rifleAds)
     {
         if (Object == null || !Object.IsValid || !Object.HasInputAuthority) return;
+        ApplyLookSettings(camSpeed, sniperAds, rifleAds);
+        if (!Object.HasStateAuthority) Rpc_SetLookSettings(camSpeed, sniperAds, rifleAds);
+    }
+
+    /// <summary>Luu he so ADS (moi may) va CameraSpeed (chi host). Goi tu Rpc_SetLookSettings / NPlayer.Rpc_InitPlayer.</summary>
+    public void ApplyLookSettings(float camSpeed, float sniperAds, float rifleAds)
+    {
         _sniperAds = sniperAds;
         _rifleAds  = rifleAds;
-        Rpc_SetLookSettings(camSpeed, sniperAds, rifleAds);
+        if (Object != null && Object.IsValid && Object.HasStateAuthority)
+            CameraSpeed = camSpeed; // [Networked] field
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void Rpc_SetLookSettings(float camSpeed, float sniperAds, float rifleAds)
     {
         Debug.Log($"<color=green>[NCharMovementHandler]</color> Look settings: sens={camSpeed} sniperADS={sniperAds} rifleADS={rifleAds}");
-        // Chỉ chạy trên StateAuthority (Host)
-        CameraSpeed = camSpeed; // [Networked] field
-        _sniperAds  = sniperAds;
-        _rifleAds   = rifleAds;
+        ApplyLookSettings(camSpeed, sniperAds, rifleAds); // Chỉ chạy trên StateAuthority (Host)
     }
 
     /// <summary>Tuong thich code cu (SettingManager test button): chi doi do nhay, giu he so ADS hien tai.</summary>

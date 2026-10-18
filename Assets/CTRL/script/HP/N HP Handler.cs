@@ -184,9 +184,8 @@ public class NHPHandler : NetworkBehaviour
         if (HP <= 0)
         {
             _lastKillerId = id;
-            _inGameMessagesHandler.SendInGameRPCKill(
-                damageCausedByPlayerNickName, weaponName,
-                _nPlayer != null ? _nPlayer.Nickname.ToString() : "Player Test");
+            // [NET-OPT 2026-10-18 Aemy] (bao cao 6.5) gui NetworkId + chi so vu khi thay vi 3 chuoi
+            _inGameMessagesHandler.SendInGameRPCKill(id, damageCausedByPlayerNickName, weaponName);
             IsDead = true;
             StartServerRevive(GameManager.Instance.RespawnTime);
             if (Object.Id == id) return false;
