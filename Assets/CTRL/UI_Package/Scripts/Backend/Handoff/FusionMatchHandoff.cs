@@ -84,6 +84,28 @@ namespace Backend.Handoff
             if (Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeOut(go); else go();
         }
 
+        // [MM-BACKFILL 2026-10-18 Aemy] Vao THANG 1 phong dang dien ra (tim duoc qua lobby Fusion), GameMode.Client.
+        // onResult(false) -> phong vua day/dong: caller quay lai tim tran PlayFab.
+        public void HandOffJoinExisting(string sessionName, MatchMode modeIn, System.Action<bool, string> onResult)
+        {
+            GameManager gm = GameManager.Instance;
+            if (gm == null || gm.NetworkRunnerHandler == null) { if (onResult != null) onResult(false, "NoRunner"); return; }
+            NetworkRunnerHandler runner = gm.NetworkRunnerHandler;
+            GamePlayMode mode = MapMode(modeIn);
+            gm.SetGamePlayMode(mode);
+            EnsureNickname(gm);
+            gm.NewGame();
+            System.Action<bool, string> done = (ok, why) =>
+            {
+                if (!ok && Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeIn();
+                if (onResult != null) onResult(ok, why);
+            };
+            System.Action go = () => runner.JoinExistingSession(sessionName, LobbyName(mode), done);
+            if (Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeOut(go); else go();
+        }
+
+        public static string LobbyNameFor(MatchMode mode) { return LobbyName(MapMode(mode)); }
+
         // FFA -> Solo (không chia team) ; TDM -> Team.
         private static GamePlayMode MapMode(MatchMode mode)
         {

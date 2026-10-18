@@ -301,8 +301,12 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log($"<color=orange>[Spawner]</color> RecalculateTeamCounts: Blue={BlueCount}, Red={RedCount}");
     }
     
+    // [MM-BACKFILL 2026-10-18 Aemy] Phat danh sach phong cho QuickJoin (vao tran dang dien ra) o MenuShell.
+    public static event System.Action<List<SessionInfo>> SessionListUpdated;
+
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
     {
+        if (SessionListUpdated != null) SessionListUpdated(sessionList);
         if (_uiSessionListHandler == null) return;
 
         if (sessionList.Count == 0)

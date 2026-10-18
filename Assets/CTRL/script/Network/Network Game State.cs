@@ -22,6 +22,9 @@ public class NetworkGameState : NetworkBehaviour
     // [NET-OPT 2026-10-18 Aemy] (bao cao 9.3) che do choi cua ca tran, sync 1 lan (truoc day nam trong moi NPlayer).
     [Networked] public GamePlayMode Mode { get; private set; }
 
+    /// <summary>[MM-BACKFILL] Con it hon so giay nay trong hiep thi khong nhan nguoi vao giua tran nua.</summary>
+    public const float LATE_JOIN_MIN_SECONDS = 60f;
+
     [Networked] public int StartTick { get; private set; } // tick bat dau tran (gan trong Spawned khi khong phai resume)
     [Networked] public int EndTick   { get; private set; } // tick khi IsMatchOver lan dau (0 = chua ket thuc)
 
@@ -138,6 +141,14 @@ public class NetworkGameState : NetworkBehaviour
 
         if (EndTick == 0 && IsMatchOver())
             EndTick = Runner.Tick.Raw;
+
+        // [MM-BACKFILL 2026-10-18 Aemy] Cho nguoi moi vao tran dang dien ra (QuickJoin o MenuShell) khi con du thoi gian;
+        // dong phong khi tran da ket thuc hoac con < LATE_JOIN_MIN_SECONDS. Kiem tra ~2 lan/giay.
+        if (Runner.IsServer && Runner.Tick.Raw % 32 == 0 && Runner.SessionInfo != null && Runner.SessionInfo.IsValid)
+        {
+            bool joinable = !IsMatchOver() && (!GameStarted || RoundElapsed > LATE_JOIN_MIN_SECONDS);
+            if (Runner.SessionInfo.IsOpen != joinable) Runner.SessionInfo.IsOpen = joinable;
+        }
 
         // ── Cập nhật Kill stats (chỉ host, đồng bộ xuống mọi client) ───────────
         _killUpdateTimer += Runner.DeltaTime;

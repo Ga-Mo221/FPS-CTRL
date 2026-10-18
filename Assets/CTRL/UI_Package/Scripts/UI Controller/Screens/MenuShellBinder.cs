@@ -790,10 +790,29 @@ namespace Game.UI
             StartSearchTimer(); // [UI-INTEGRATION] nut Start bien thanh dong ho mm:ss
             if (_play != null) { _play.SetQueueStatus("Đang tìm trận..."); _play.SetStartInteractable(false); }
 
+            // [MM-BACKFILL 2026-10-18 Aemy] Uu tien VAO TRAN DANG DIEN RA con cho (lobby Fusion) truoc khi tao ve PlayFab.
+            bool anyMap = IsRandomMapSelected();
+            QueryJoinable(mode, anyMap, s =>
+            {
+                if (!_searching) return; // nguoi choi da huy trong luc hoi
+                if (s != null) { JoinExistingMatch(s, mode, anyMap); return; }
+                StartPlayFabSearch(mode, anyMap);
+            });
+        }
+
+        // [MM-BACKFILL 2026-10-18 Aemy] Tim tran PlayFab nhu cu, nhung trong luc cho van theo doi lobby Fusion:
+        // co phong cung che do vua mo (vd 2 nguoi vua duoc ghep o min=2) -> huy ve, vao thang phong do.
+        private void StartPlayFabSearch(MatchMode mode, bool anyMap)
+        {
+            var mm = BackendBootstrap.MatchmakingService;
+            if (mm == null) { _searching = false; StopSearchTimer(); if (_play != null) _play.SetStartInteractable(true); return; }
+            StartBackfillWatch(mode, anyMap);
             mm.StartMatchmaking(
                 new MatchmakingRequest { Mode = mode },
                 onMatchFound: m =>
                 {
+                    StopBackfillWatch();
+                    if (_joiningExisting) return; // da chon vao phong dang dien ra
                     _searching = false;
                     if (_play != null) _play.SetQueueStatus("Đã tìm thấy trận!");
                     StopSearchTimer();
@@ -802,12 +821,16 @@ namespace Game.UI
                 onProgress: _ => { if (_play != null) _play.SetQueueStatus("Đang tìm trận..."); },
                 onError: e =>
                 {
+                    StopBackfillWatch();
+                    if (_joiningExisting) return;
                     _searching = false;
                     StopSearchTimer();
                     if (_play != null) { _play.SetQueueStatus("Lỗi: " + e.ErrorCode); _play.SetStartInteractable(true); }
                 },
                 onTimedOut: () =>
                 {
+                    StopBackfillWatch();
+                    if (_joiningExisting) return;
                     _searching = false;
                     if (_play != null) _play.SetQueueStatus("Không tìm được trận (hết giờ). Thử lại?");
                     StopSearchTimer();
@@ -818,6 +841,7 @@ namespace Game.UI
                 },
                 onCancelled: () =>
                 {
+                    StopBackfillWatch();
                     _searching = false;
                     StopSearchTimer();
                     if (_play != null) { _play.SetQueueStatus("Đã hủy tìm trận."); _play.SetStartInteractable(true); }
@@ -847,6 +871,105 @@ namespace Game.UI
                 yield return new WaitForSeconds(1f);
             }
         }
+        // ===================== [MM-BACKFILL 2026-10-18 Aemy] VAO TRAN DANG DIEN RA =====================
+        private Coroutine _backfillWatchCo;
+        private bool _joiningExisting;
+        private const float BACKFILL_CHECK_SECONDS = 3f;
+
+        /// <summary>Hoi lobby Fusion (Solo/Team) roi tra ve phong vao duoc tot nhat (dong nguoi nhat) hoac null.</summary>
+        private void QueryJoinable(MatchMode mode, bool anyMap, Action<Fusion.SessionInfo> onDone)
+        {
+            var nrh = GameManager.Instance != null ? GameManager.Instance.NetworkRunnerHandler : null;
+            if (nrh == null) { onDone(null); return; }
+            nrh.QuerySessions(Backend.Handoff.FusionMatchHandoff.LobbyNameFor(mode), 3f, list => onDone(PickJoinable(list, mode, anyMap)));
+        }
+
+        private static Fusion.SessionInfo PickJoinable(List<Fusion.SessionInfo> list, MatchMode mode, bool anyMap)
+        {
+            if (list == null) return null;
+            int wantMode = (int)(mode == MatchMode.TDM ? GamePlayMode.Team : GamePlayMode.Solo);
+            int wantMap = -1;
+            if (!anyMap && GameManager.Instance != null)
+                wantMap = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(SceneName.GetPath(GameManager.Instance.GetSelectedMapScene()));
+            Fusion.SessionInfo best = null;
+            foreach (var s in list)
+            {
+                if (s == null || !s.IsValid || !s.IsOpen || !s.IsVisible) continue;
+                if (s.PlayerCount <= 0 || s.PlayerCount >= s.MaxPlayers) continue;
+                if (Game.UI.CustomRoomSession.IsCustomSession(s.Name)) continue; // phong rieng co ma
+                if (s.Properties == null) continue;
+                Fusion.SessionProperty p;
+                if (!s.Properties.TryGetValue(NetworkRunnerHandler.PROP_VER, out p) || !p.IsInt || (int)p != NetworkRunnerHandler.NET_PROTOCOL) continue;
+                if (!s.Properties.TryGetValue(NetworkRunnerHandler.PROP_MODE, out p) || !p.IsInt || (int)p != wantMode) continue;
+                if (wantMap >= 0 && (!s.Properties.TryGetValue(NetworkRunnerHandler.PROP_MAP, out p) || !p.IsInt || (int)p != wantMap)) continue;
+                if (best == null || s.PlayerCount > best.PlayerCount) best = s;
+            }
+            return best;
+        }
+
+        private void StartBackfillWatch(MatchMode mode, bool anyMap)
+        {
+            StopBackfillWatch();
+            _backfillWatchCo = StartCoroutine(BackfillWatchCo(mode, anyMap));
+        }
+
+        private void StopBackfillWatch()
+        {
+            if (_backfillWatchCo != null) { StopCoroutine(_backfillWatchCo); _backfillWatchCo = null; }
+        }
+
+        private IEnumerator BackfillWatchCo(MatchMode mode, bool anyMap)
+        {
+            while (_searching && !_joiningExisting)
+            {
+                yield return new WaitForSecondsRealtime(BACKFILL_CHECK_SECONDS);
+                if (!_searching || _joiningExisting) yield break;
+                var nrh = GameManager.Instance != null ? GameManager.Instance.NetworkRunnerHandler : null;
+                var s = nrh != null ? PickJoinable(nrh.LastSessionList, mode, anyMap) : null;
+                if (s != null)
+                {
+                    _backfillWatchCo = null;
+                    var mm = BackendBootstrap.MatchmakingService;
+                    if (mm != null && mm.IsSearching) mm.CancelMatchmaking(null);
+                    JoinExistingMatch(s, mode, anyMap);
+                    yield break;
+                }
+            }
+        }
+
+        private void JoinExistingMatch(Fusion.SessionInfo s, MatchMode mode, bool anyMap)
+        {
+            var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
+            if (ho == null) { StartPlayFabSearch(mode, anyMap); return; }
+            _joiningExisting = true;
+            StopBackfillWatch();
+            Debug.Log("[MenuShellBinder] Vao tran dang dien ra: " + s.Name + " (" + s.PlayerCount + "/" + s.MaxPlayers + ")");
+            if (_play != null) _play.SetQueueStatus("Đã tìm thấy trận đang diễn ra!");
+            StopSearchTimer();
+            if (_matchmakingScreen != null)
+            {
+                bool team = mode == MatchMode.TDM;
+                OpenLobbyScreen(team, "VÀO TRẬN ĐANG DIỄN RA");
+                var me = new LobbyMember { IsLocal = true, TeamId = "", Name = "Player", AvatarUrl = "" };
+                var prof = ProfileCache.Cached;
+                if (prof != null) { if (!string.IsNullOrEmpty(prof.DisplayName)) me.Name = prof.DisplayName; if (!string.IsNullOrEmpty(prof.AvatarUrl)) me.AvatarUrl = prof.AvatarUrl; }
+                FillLobbyRoster(new List<LobbyMember> { me }, team);
+                _matchmakingScreen.SetTimeText(s.PlayerCount + "/" + s.MaxPlayers);
+            }
+            ho.HandOffJoinExisting(s.Name, mode, (ok, why) =>
+            {
+                _joiningExisting = false;
+                if (ok) { _searching = false; return; }
+                // Phong vua day/dong -> quay lai tim tran binh thuong
+                Debug.LogWarning("[MenuShellBinder] Vao tran dang dien ra that bai (" + why + ") -> tim tran PlayFab.");
+                if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);
+                if (_play != null) _play.SetQueueStatus("Đang tìm trận...");
+                _searching = true;
+                StartSearchTimer();
+                StartPlayFabSearch(mode, anyMap);
+            });
+        }
+
         // [UI-INTEGRATION 2026-09-13] LOBBY: hien roster nguoi choi THAT (lay tu PlayFab GetMatch) roi moi vao tran.
         private void EnterLobby(MatchFoundResult match, MatchMode mode)
         {

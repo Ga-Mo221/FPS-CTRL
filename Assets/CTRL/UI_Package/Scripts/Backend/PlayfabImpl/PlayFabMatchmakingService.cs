@@ -63,6 +63,7 @@ namespace Backend.PlayfabImpl
             }
 
             _userCancelled = false;
+            _ticketId = null; // [MM-BACKFILL] khong de ma ve cu lot vao lan huy sau
             _queueName = _config.QueueFor(request.Mode);   // chọn queue theo mode (FFA/TDM)
             IsSearching = true;
 
@@ -99,6 +100,16 @@ namespace Backend.PlayfabImpl
                 createReq,
                 result =>
                 {
+                    // [MM-BACKFILL 2026-10-18 Aemy] Nguoi choi da huy (vd chuyen sang vao tran dang dien ra) TRUOC khi
+                    // ve tao xong -> huy luon ve nay, tranh ve "ma" bi ghep voi nguoi khac roi khong ai vao.
+                    if (!IsSearching)
+                    {
+                        PlayFabMultiplayerAPI.CancelMatchmakingTicket(
+                            new CancelMatchmakingTicketRequest { QueueName = _queueName, TicketId = result.TicketId },
+                            _ => Debug.Log("<color=#22d3ee>[Matchmaking]</color> Huy ve vua tao (nguoi choi da huy)."),
+                            e => Debug.LogWarning("<color=#22d3ee>[Matchmaking]</color> Huy ve vua tao loi: " + e.ErrorMessage));
+                        return;
+                    }
                     _ticketId = result.TicketId;               // ↓ nhận VỀ mã vé
                     _startTime = Time.realtimeSinceStartup;
                     Debug.Log($"<color=#22d3ee>[Matchmaking]</color> Ticket tạo xong: {_ticketId} (queue {_queueName})");

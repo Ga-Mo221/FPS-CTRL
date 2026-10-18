@@ -341,8 +341,114 @@ public class NetworkRunnerHandler : MonoBehaviour
             lobbyName,
             GameManager.Instance.BuildConnectionToken(),
             NetAddress.Any(),
-            sceneRef
+            sceneRef,
+            BuildSessionProps(buildIndex) // [MM-BACKFILL 2026-10-18 Aemy] de nguoi khac tim + vao tran dang dien ra
         );
+    }
+
+    // ===================== [MM-BACKFILL 2026-10-18 Aemy] VAO TRAN DANG DIEN RA =====================
+    // PlayFab Matchmaking chot tran ngay khi du MIN nguoi (vd 2) -> nguoi thu 3 tim sau bi dua sang tran khac
+    // du tran kia moi co 2 nguoi. Khac phuc o tang Fusion: moi phong cong khai (IsVisible) gan thuoc tinh
+    // che do/map/phien ban; nguoi bam "Bat dau" se xem danh sach phong trong lobby Fusion truoc, con cho
+    // + cung che do (+ cung map neu khong chon Ngau nhien) thi VAO THANG phong do; khong co moi tao ve PlayFab.
+    // Host tu dong DONG phong khi tran sap het / da ket thuc (NetworkGameState).
+
+    /// <summary>Doi so nay khi layout state mang thay doi -> ban build cu khong vao nham phong ban moi.</summary>
+    public const int NET_PROTOCOL = 20261018;
+    public const string PROP_MODE = "m", PROP_MAP = "map", PROP_VER = "v";
+
+    public static Dictionary<string, SessionProperty> BuildSessionProps(int mapBuildIndex)
+    {
+        var gm = GameManager.Instance;
+        return new Dictionary<string, SessionProperty>
+        {
+            { PROP_MODE, (int)(gm != null ? gm.GetGamePlayMode() : GamePlayMode.Solo) },
+            { PROP_MAP,  mapBuildIndex },
+            { PROP_VER,  NET_PROTOCOL },
+        };
+    }
+
+    /// <summary>
+    /// Vao lobby Fusion cua che do (Solo/Team) va tra ve danh sach phong dau tien nhan duoc (hoac rong khi het timeout).
+    /// Runner van o trong lobby sau do -> danh sach tiep tuc duoc day qua NSpawner.SessionListUpdated.
+    /// </summary>
+    public void QuerySessions(string lobbyName, float timeoutSeconds, Action<List<SessionInfo>> onList)
+    {
+        StartCoroutine(QuerySessionsCo(lobbyName, timeoutSeconds, onList));
+    }
+
+    // Danh sach phong moi nhat cua lobby dang o (Photon tu day cap nhat khi phong doi).
+    public List<SessionInfo> LastSessionList { get; private set; }
+    private string _lobbyJoined;
+    private bool _sessionHooked;
+
+    private void HookSessionList()
+    {
+        if (_sessionHooked) return;
+        NSpawner.SessionListUpdated += OnSessionList;
+        _sessionHooked = true;
+    }
+    private void OnSessionList(List<SessionInfo> l) { LastSessionList = l != null ? new List<SessionInfo>(l) : new List<SessionInfo>(); }
+    private void OnDestroy() { if (_sessionHooked) NSpawner.SessionListUpdated -= OnSessionList; }
+
+    private IEnumerator QuerySessionsCo(string lobbyName, float timeoutSeconds, Action<List<SessionInfo>> onList)
+    {
+        HookSessionList();
+        var runner = GetNetworkRunner();
+        bool inLobby = runner.LobbyInfo.IsValid && _lobbyJoined == lobbyName && LastSessionList != null;
+        if (inLobby) { if (onList != null) onList(new List<SessionInfo>(LastSessionList)); yield break; }
+        if (runner.IsRunning) { if (onList != null) onList(new List<SessionInfo>()); yield break; } // dang trong phong -> khong hoi
+        LastSessionList = null;
+        _lobbyJoined = lobbyName;
+        var join = runner.JoinSessionLobby(SessionLobby.Custom, lobbyName);
+        float t = 0f;
+        while (LastSessionList == null && t < timeoutSeconds)
+        {
+            if (join.IsCompleted && (join.IsFaulted || join.IsCanceled || !join.Result.Ok)) break;
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (onList != null) onList(LastSessionList != null ? new List<SessionInfo>(LastSessionList) : new List<SessionInfo>());
+    }
+
+    /// <summary>Vao phong co san bang GameMode.Client (KHONG tu tao phong moi neu phong vua dong).</summary>
+    public void JoinExistingSession(string sessionName, string lobbyName, Action<bool, string> onResult)
+    {
+        var task = JoinExistingSessionAsync(sessionName, lobbyName, onResult);
+    }
+
+    private async Task JoinExistingSessionAsync(string sessionName, string lobbyName, Action<bool, string> onResult)
+    {
+        var runner = GetNetworkRunner();
+        var sceneManager = GetSceneManager(runner);
+        runner.ProvideInput = true;
+        Debug.Log($"<color=orange>[NetworkRunnerHandler]</color> QuickJoin session {sessionName}");
+        StartGameResult res;
+        try
+        {
+            res = await runner.StartGame(new StartGameArgs
+            {
+                GameMode = GameMode.Client,
+                Address = NetAddress.Any(),
+                SessionName = sessionName,
+                CustomLobbyName = lobbyName,
+                SceneManager = sceneManager,
+                ConnectionToken = GameManager.Instance.BuildConnectionToken(),
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[NetworkRunnerHandler] QuickJoin loi: " + ex.Message);
+            SpawnNetworkRunner = null;
+            if (onResult != null) onResult(false, ex.Message);
+            return;
+        }
+        if (!res.Ok)
+        {
+            Debug.LogWarning($"[NetworkRunnerHandler] QuickJoin that bai: {res.ShutdownReason}");
+            SpawnNetworkRunner = null;
+        }
+        if (onResult != null) onResult(res.Ok, res.Ok ? null : res.ShutdownReason.ToString());
     }
 
     // [Aemy 2026-10-17] PHONG TUY CHINH (ma phong): chu phong = GameMode.Host, ban be = GameMode.Client.
