@@ -13,7 +13,7 @@ namespace Backend.Mock
     /// place — the UI doesn't change because it only depends on the interfaces.
     /// Callbacks fire synchronously (good enough for a mock).
     /// </summary>
-    public class MockAuthService : IAuthService, IExternalAuthService, IAccountRecoveryService, IUsernameAvailabilityService, IEmailVerificationStatusService
+    public class MockAuthService : IAuthService, IExternalAuthService, IAccountRecoveryService, IUsernameAvailabilityService, IEmailVerificationStatusService, IEmailVerificationResendService
     {
         public bool IsLoggedIn { get; private set; }
         public string CurrentUserId { get; private set; }
@@ -121,6 +121,13 @@ namespace Backend.Mock
             var status = _verifyPolls >= 3 ? EmailVerifyStatus.Confirmed : EmailVerifyStatus.Pending;
             Debug.Log($"[MockAuth] EmailVerificationStatus poll #{_verifyPolls} -> {status}");
             onResult?.Invoke(status);
+        }
+
+        // [Aemy 2026-10-19] Gia lap gui lai mail xac minh.
+        public void ResendVerificationEmail(Action<string> onSent, Action<AuthError> onFailure)
+        {
+            Debug.Log("[MockAuth] ResendVerificationEmail");
+            onSent?.Invoke("mock@example.com");
         }
 }
 }

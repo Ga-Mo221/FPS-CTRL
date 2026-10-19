@@ -19,7 +19,8 @@ namespace Backend.PlayfabImpl
     /// Implement nhiều interface nhỏ (ISP).
     /// </summary>
     public class PlayFabAuthService :
-        IAuthService, IExternalAuthService, IAccountRecoveryService, IEmailVerificationStatusService, IUsernameAvailabilityService
+        IAuthService, IExternalAuthService, IAccountRecoveryService, IEmailVerificationStatusService, IUsernameAvailabilityService,
+        IEmailVerificationResendService
     {
         public bool IsLoggedIn { get; private set; }
         public string CurrentUserId { get; private set; }
@@ -295,6 +296,34 @@ namespace Backend.PlayfabImpl
                     onResult?.Invoke(MapVerify(list[0].VerificationStatus));
                 },
                 error => onError?.Invoke(MapError(error)));
+        }
+
+        // [Aemy 2026-10-19] ↓ LẤY VỀ contact email hiện có → ↑ GỬI LÊN lại (AddOrUpdateContactEmail)
+        // → PlayFab bắn event player_updated_contact_email → Rule "Send Email" (template Email Verification) gửi mail.
+        public void ResendVerificationEmail(Action<string> onSent, Action<AuthError> onFailure)
+        {
+            if (!IsLoggedIn || string.IsNullOrEmpty(CurrentUserId))
+            {
+                onFailure?.Invoke(new AuthError { ErrorCode = "NotLoggedIn", ErrorMessage = "Chưa đăng nhập." });
+                return;
+            }
+            var req = new GetPlayerProfileRequest
+            {
+                PlayFabId = CurrentUserId,
+                ProfileConstraints = new PlayerProfileViewConstraints { ShowContactEmailAddresses = true }
+            };
+            PlayFabClientAPI.GetPlayerProfile(req, result =>
+            {
+                var list = result.PlayerProfile != null ? result.PlayerProfile.ContactEmailAddresses : null;
+                string email = list != null && list.Count > 0 ? list[0].EmailAddress : null;
+                if (string.IsNullOrEmpty(email))
+                {
+                    onFailure?.Invoke(new AuthError { ErrorCode = "NoContactEmail", ErrorMessage = "Tài khoản chưa có email liên hệ." });
+                    return;
+                }
+                SendEmailVerification(email, () => onSent?.Invoke(email), onFailure);
+            },
+            error => onFailure?.Invoke(MapError(error)));
         }
 
         // (local) map enum PlayFab -> enum trung lập của mình.

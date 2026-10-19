@@ -40,6 +40,8 @@ namespace Game.UI
             { "TÊN ĐÃ TỒN TẠI", "USERNAME TAKEN" },
             { "NHẬP TÊN/EMAIL VÀ MẬT KHẨU", "ENTER USERNAME/EMAIL AND PASSWORD" },
             { "ĐANG ĐĂNG NHẬP…", "SIGNING IN…" },
+            { "ĐANG KIỂM TRA EMAIL…", "CHECKING EMAIL…" }, // [Aemy 2026-10-19]
+            { "EMAIL CHƯA ĐƯỢC XÁC MINH\nMở link trong hộp thư (kiểm tra cả mục Spam) rồi đăng nhập lại.", "EMAIL NOT VERIFIED\nOpen the link in your inbox (check Spam too), then sign in again." },
             { "SAI TÀI KHOẢN HOẶC MẬT KHẨU", "WRONG USERNAME OR PASSWORD" },
             { "ĐANG MỞ GOOGLE…", "OPENING GOOGLE…" },
             { "ĐÃ HỦY ĐĂNG NHẬP GOOGLE", "GOOGLE SIGN-IN CANCELLED" },
@@ -438,6 +440,9 @@ namespace Game.UI
             new KeyValuePair<Regex, string>(new Regex("^PHÒNG TÙY CHỈNH · MÃ <b>(\\w+)</b>$", RegexOptions.Compiled), "CUSTOM ROOM · CODE <b>$1</b>"),
             new KeyValuePair<Regex, string>(new Regex("^Ngẫu nhiên · (.*)$", RegexOptions.Compiled), "Random · $1"),
             new KeyValuePair<Regex, string>(new Regex("^ĐĂNG KÝ THÀNH CÔNG!\\nĐã gửi email xác minh tới (.+)\\.\\nHãy đăng nhập để vào game\\.$", RegexOptions.Compiled), "SIGN-UP SUCCESSFUL!\nA verification email was sent to $1.\nPlease sign in to play."),
+            // [Aemy 2026-10-19] bat buoc xac minh email
+            new KeyValuePair<Regex, string>(new Regex("^ĐĂNG KÝ THÀNH CÔNG!\\nĐã gửi email xác minh tới (.+)\\.\\nMở link trong email rồi đăng nhập\\.$", RegexOptions.Compiled), "SIGN-UP SUCCESSFUL!\nA verification email was sent to $1.\nOpen the link in it, then sign in."),
+            new KeyValuePair<Regex, string>(new Regex("^EMAIL CHƯA ĐƯỢC XÁC MINH\\nĐã gửi link xác minh tới (.+)\\.\\nMở link \\(kiểm tra cả mục Spam\\) rồi đăng nhập lại\\.$", RegexOptions.Compiled), "EMAIL NOT VERIFIED\nA verification link was sent to $1.\nOpen it (check Spam too), then sign in again."),
             new KeyValuePair<Regex, string>(new Regex("^ĐANG CHỜ XÁC MINH EMAIL…\\nHãy mở link trong hộp thư: (.+)$", RegexOptions.Compiled), "WAITING FOR EMAIL VERIFICATION…\nOpen the link sent to: $1"),
             new KeyValuePair<Regex, string>(new Regex("^GOOGLE LỖI: (.+)$", RegexOptions.Compiled), "GOOGLE ERROR: $1"),
             new KeyValuePair<Regex, string>(new Regex("^Lỗi: (.+)$", RegexOptions.Compiled), "Error: $1"),

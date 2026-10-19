@@ -41,6 +41,11 @@ namespace Game.UI
         [SerializeField] private string _menuScene = "MenuShell";
         [Tooltip("Số giây tự tắt popup báo lỗi login.")]
         [SerializeField] private float _errorNoticeSeconds = 5f;
+        [Tooltip("[Aemy 2026-10-19] Tai khoan dang ky bang email phai bam link xac minh moi dang nhap duoc.\n" +
+                 "Can PlayFab: Add-ons > SMTP + Email Template (Email Verification) + Rule player_updated_contact_email.")]
+        [SerializeField] private bool _requireVerifiedEmail = true;
+        [Tooltip("Gui lai mail xac minh toi da 1 lan / bao nhieu giay cho moi tai khoan (chong spam).")]
+        [SerializeField] private float _resendCooldownSeconds = 120f;
         private bool _emailVerified;
 
         private void Awake()
@@ -103,9 +108,13 @@ namespace Game.UI
                 {
                     Debug.Log("[AuthFlowBinder] Đăng nhập OK: " + r.PlayerId);
                     RememberSave(remember, usernameOrEmail.Trim(), password); // [REMEMBER 2026-09-29 Aemy]
-                    SessionCache.ResetForNewSession(); // [Aemy 2026-10-17] khong lan du lieu tai khoan truoc
-                    if (_notice != null) _notice.Hide();
-                    SceneLoader.LoadWithLoading(_menuScene);
+                    // [Aemy 2026-10-19] Chua xac minh email -> khong cho vao game.
+                    RequireVerifiedEmail(r.PlayerId, () =>
+                    {
+                        SessionCache.ResetForNewSession(); // [Aemy 2026-10-17] khong lan du lieu tai khoan truoc
+                        if (_notice != null) _notice.Hide();
+                        SceneLoader.LoadWithLoading(_menuScene);
+                    });
                 },
                 e =>
                 {
@@ -150,6 +159,67 @@ namespace Game.UI
                 Debug.LogWarning("[AuthFlowBinder] Google login lỗi: " + ex.Message);
                 if (_notice != null) _notice.Show("GOOGLE LỖI", _errorNoticeSeconds);
             }
+        }
+
+        // [Aemy 2026-10-19] Cong xac minh email sau khi dang nhap bang ten/email + mat khau.
+        //  - Confirmed -> vao game.
+        //  - NoContactEmail (tai khoan cu / khong co email) -> cho vao (khong co gi de xac minh).
+        //  - Pending / Unverified -> gui lai mail (co cooldown), dang xuat, bao kiem tra hop thu.
+        //  - Khong doc duoc trang thai (Title chua bat "Contact email addresses" trong Client Profile Options, mat mang...)
+        //    -> cho vao + canh bao log, tranh khoa nham moi nguoi.
+        private void RequireVerifiedEmail(string playerId, System.Action proceed)
+        {
+            if (!_requireVerifiedEmail || _useMock || _verifyStatus == null) { proceed(); return; }
+            if (_notice != null) _notice.Show("ĐANG KIỂM TRA EMAIL…");
+            _verifyStatus.GetEmailVerificationStatus(
+                st =>
+                {
+                    if (st == EmailVerifyStatus.Confirmed || st == EmailVerifyStatus.NoContactEmail) { proceed(); return; }
+                    Debug.Log("[AuthFlowBinder] Email chưa xác minh (" + st + ") -> chặn đăng nhập.");
+                    BlockUnverified(playerId);
+                },
+                e =>
+                {
+                    Debug.LogWarning("[AuthFlowBinder] Không đọc được trạng thái email (" + e.ErrorMessage + ") -> cho vào game.");
+                    proceed();
+                });
+        }
+
+        private void BlockUnverified(string playerId)
+        {
+            var resend = _verifyStatus as IEmailVerificationResendService;
+            string key = "VerifyMailSentAt_" + playerId;
+            double last = 0; double.TryParse(PlayerPrefs.GetString(key, "0"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out last);
+            double now = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            bool canResend = resend != null && now - last >= _resendCooldownSeconds;
+
+            System.Action<string> done = email =>
+            {
+                try { _auth.Logout(); } catch (System.Exception ex) { Debug.LogWarning("[AuthFlowBinder] Logout lỗi: " + ex.Message); }
+                if (_notice == null) return;
+                if (!string.IsNullOrEmpty(email))
+                    _notice.Show("EMAIL CHƯA ĐƯỢC XÁC MINH\nĐã gửi link xác minh tới " + MaskEmail(email) + ".\nMở link (kiểm tra cả mục Spam) rồi đăng nhập lại.", 8f);
+                else
+                    _notice.Show("EMAIL CHƯA ĐƯỢC XÁC MINH\nMở link trong hộp thư (kiểm tra cả mục Spam) rồi đăng nhập lại.", 8f);
+            };
+
+            if (!canResend) { done(null); return; }
+            resend.ResendVerificationEmail(
+                email =>
+                {
+                    PlayerPrefs.SetString(key, now.ToString(System.Globalization.CultureInfo.InvariantCulture)); PlayerPrefs.Save();
+                    done(email);
+                },
+                e => { Debug.LogWarning("[AuthFlowBinder] Gửi lại mail xác minh lỗi: " + e.ErrorMessage); done(null); });
+        }
+
+        // "nyx.vank@gmail.com" -> "ny•••@gmail.com"
+        private static string MaskEmail(string email)
+        {
+            int at = email.IndexOf('@');
+            if (at <= 0) return email;
+            string head = email.Substring(0, Mathf.Min(2, at));
+            return head + "•••" + email.Substring(at);
         }
 
         // ---- Register ----
@@ -207,7 +277,7 @@ namespace Game.UI
             {
                 string msg = string.IsNullOrWhiteSpace(email)
                     ? "ĐĂNG KÝ THÀNH CÔNG!\nHãy đăng nhập để vào game."
-                    : "ĐĂNG KÝ THÀNH CÔNG!\nĐã gửi email xác minh tới " + email + ".\nHãy đăng nhập để vào game.";
+                    : "ĐĂNG KÝ THÀNH CÔNG!\nĐã gửi email xác minh tới " + email + ".\nMở link trong email rồi đăng nhập."; // [Aemy 2026-10-19] phai xac minh moi vao duoc
                 _notice.Show(msg, 6f);
             }
         }
