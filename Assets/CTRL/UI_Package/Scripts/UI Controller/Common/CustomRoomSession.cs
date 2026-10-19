@@ -44,13 +44,28 @@ namespace Game.UI
         public static bool IsCustomSession(string session) { return !string.IsNullOrEmpty(session) && session.StartsWith(SessionPrefix); }
         public static string CodeOfSession(string session) { return IsCustomSession(session) ? session.Substring(SessionPrefix.Length) : null; }
 
-        public static void Begin(string code, int killTarget, bool asHost)
+        public static void Begin(string code, int killTarget, bool asHost) { Begin(code, killTarget, 0, asHost); }
+
+        /// <summary>[Aemy 2026-10-19] + thoi gian tran (phut, 0 = mac dinh). Chi chu phong (host) dat vao GameManager.</summary>
+        public static void Begin(string code, int killTarget, int matchMinutes, bool asHost)
         {
             Code = code;
             var gm = GameManager.Instance;
             if (gm == null) return;
             if (_defaultKill < 0) _defaultKill = gm.KillTarget;
             if (asHost && killTarget > 0) gm.SetKillTarget(killTarget);
+            gm.SetRoundMinutes(asHost ? matchMinutes : 0);
+        }
+
+        /// <summary>Extra cua to doi: "custom:&lt;kill&gt;:&lt;phut&gt;" (ban cu chi co kill).</summary>
+        public static string MakePartyExtra(int killTarget, int matchMinutes) { return PartyExtra + ":" + killTarget + ":" + matchMinutes; }
+        public static void ParsePartyExtra(string extra, out int killTarget, out int matchMinutes)
+        {
+            killTarget = 0; matchMinutes = 0;
+            if (string.IsNullOrEmpty(extra)) return;
+            var parts = extra.Split(':');
+            if (parts.Length > 1) int.TryParse(parts[1], out killTarget);
+            if (parts.Length > 2) int.TryParse(parts[2], out matchMinutes);
         }
 
         /// <summary>Ve menu / vao tran thuong: xoa ma + tra moc ha guc mac dinh.</summary>
@@ -59,6 +74,7 @@ namespace Game.UI
             Code = null;
             var gm = GameManager.Instance;
             if (gm != null && _defaultKill >= 0) gm.SetKillTarget(_defaultKill);
+            if (gm != null) gm.SetRoundMinutes(0); // [Aemy 2026-10-19] tran thuong: thoi gian mac dinh
         }
 
         /// <summary>HUD trong tran: nhan nho "PHONG: T7KQ2D" goc tren trai (chi khi dang o phong tuy chinh).</summary>

@@ -69,6 +69,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
                     killTarget = GameManager.Instance.KillTarget;
                 
                 state.SetKillTarget(killTarget);
+                if (GameManager.Instance != null) state.SetRoundMinutes(GameManager.Instance.RoundMinutes); // [Aemy 2026-10-19] phong tuy chinh
             });
         }
         else if (_networkGameState == null && NetworkGameState.Instance != null)

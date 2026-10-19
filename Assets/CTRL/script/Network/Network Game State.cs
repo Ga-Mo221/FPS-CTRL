@@ -10,6 +10,10 @@ public class NetworkGameState : NetworkBehaviour
     [SerializeField] private int _totalRounds = 1;
     public int TotalRounds => _totalRounds;
     [SerializeField] private float _roundDurationMinutes = 10f;
+    // [Aemy 2026-10-19] Thoi gian tran chu phong chon (phong tuy chinh). Networked -> host moi (migration) van dung dung gia tri.
+    [Networked] private float _roundMinutesOverride { get; set; }
+    private float RoundMinutes => _roundMinutesOverride > 0f ? _roundMinutesOverride : _roundDurationMinutes;
+    public void SetRoundMinutes(float minutes) { if (minutes > 0f) _roundMinutesOverride = minutes; }
 
     [Header("Kill Target Settings")]
     [Tooltip("Solo: 1 player đạt đủ số kill này thì kết thúc trận. Team: Red hoặc Blue đạt đủ thì kết thúc.")]
@@ -34,7 +38,7 @@ public class NetworkGameState : NetworkBehaviour
         get
         {
             if (Runner == null || Object == null || !Object.IsValid) return 0f;
-            if (!GameStarted) return CurrentRound > 1 ? _roundDurationMinutes * 60f : 0f;
+            if (!GameStarted) return CurrentRound > 1 ? RoundMinutes * 60f : 0f;
             int? target = _roundTimer.TargetTick;
             if (!target.HasValue) return 0f;
             int now = EndTick > 0 ? EndTick : Runner.Tick.Raw;
@@ -212,7 +216,7 @@ public class NetworkGameState : NetworkBehaviour
             {
                 GameStarted  = true;
                 RoundEnded   = false;
-                _roundTimer  = TickTimer.CreateFromSeconds(Runner, _roundDurationMinutes * 60f);
+                _roundTimer  = TickTimer.CreateFromSeconds(Runner, RoundMinutes * 60f);
             }
             return;
         }

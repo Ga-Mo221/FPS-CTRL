@@ -470,7 +470,7 @@ namespace Game.UI
         private Backend.Models.PartySettings CurrentPartySettings()
         {
             var s = new Backend.Models.PartySettings { modeIndex = _selectedModeIndex, mapIndex = _selectedMapIndex };
-            if (_customRoom != null) { s.killTarget = _customRoom.KillTarget; s.customRule = _customRoom.Rule.ToString(); }
+            if (_customRoom != null) { s.killTarget = _customRoom.KillTarget; s.customRule = _customRoom.Rule.ToString(); s.matchMinutes = _customRoom.MatchMinutes; }
             return s;
         }
 
@@ -500,6 +500,7 @@ namespace Game.UI
             if (_customRoom != null)
             {
                 if (s.killTarget > 0) _customRoom.SetKillTarget(s.killTarget);
+                if (s.matchMinutes > 0) _customRoom.SetMatchMinutes(s.matchMinutes); // [Aemy 2026-10-19]
                 if (!string.IsNullOrEmpty(s.customRule)) _customRoom.SetRule(s.customRule == "TDM" ? MatchMode.TDM : MatchMode.FFA, false);
                 _customRoom.SetLocked(true);
             }
@@ -572,7 +573,7 @@ namespace Game.UI
             ResolveRandomMap();
             var rule = _customRoom.Rule;
             string code = Game.UI.CustomRoomSession.NewCode(rule);
-            Game.UI.CustomRoomSession.Begin(code, _customRoom.KillTarget, true);
+            Game.UI.CustomRoomSession.Begin(code, _customRoom.KillTarget, _customRoom.MatchMinutes, true);
             GUIUtility.systemCopyBuffer = code;
             _customRoom.SetStatus("Đang tạo phòng " + code + "… (mã đã sao chép)");
             if (_play != null) _play.SetStartInteractable(false);
@@ -730,13 +731,13 @@ namespace Game.UI
             if (Game.UI.CustomRoomSession.IsCustomSession(session) && extra != null && extra.StartsWith(Game.UI.CustomRoomSession.PartyExtra))
             {
                 string code = Game.UI.CustomRoomSession.CodeOfSession(session);
-                int kill = 0; int colon = extra.IndexOf(':'); if (colon >= 0) int.TryParse(extra.Substring(colon + 1), out kill);
+                int kill, minutes; Game.UI.CustomRoomSession.ParsePartyExtra(extra, out kill, out minutes); // [Aemy 2026-10-19] + thoi gian
                 StartLobbyHold(() =>
                 {
                     _partyLobbyPending = false;
                     var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
                     if (ho == null) return;
-                    Game.UI.CustomRoomSession.Begin(code, kill, isLeader);
+                    Game.UI.CustomRoomSession.Begin(code, kill, minutes, isLeader);
                     if (isLeader) ho.HandOffCustom(code, mode, true, (ok, why) => { if (!ok) Debug.LogWarning("[Party] Tao phong tuy chinh loi: " + why); });
                     else _partyHandoffCo = StartCoroutine(RetryJoinCustom(code, 6));
                 });
@@ -860,7 +861,7 @@ namespace Game.UI
                 {
                     // To doi + phong tuy chinh: truong nhom lam chu phong, thanh vien vao bang ma (qua MatchId party).
                     string code = Game.UI.CustomRoomSession.NewCode(_customRoom.Rule);
-                    _partyLobbyPending = _partyController.StartPartyMatch(mode, scene, Game.UI.CustomRoomSession.SessionOf(code), Game.UI.CustomRoomSession.PartyExtra + ":" + _customRoom.KillTarget);
+                    _partyLobbyPending = _partyController.StartPartyMatch(mode, scene, Game.UI.CustomRoomSession.SessionOf(code), Game.UI.CustomRoomSession.MakePartyExtra(_customRoom.KillTarget, _customRoom.MatchMinutes));
                 }
                 else _partyLobbyPending = _partyController.StartPartyMatch(mode, scene);
                 RefreshStartButton();

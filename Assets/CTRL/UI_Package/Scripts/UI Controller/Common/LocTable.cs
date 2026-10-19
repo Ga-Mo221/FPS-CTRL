@@ -405,6 +405,7 @@ namespace Game.UI
             { "ĐÃ HIỆU CHỈNH ✓", "CALIBRATED ✓" },
             { "CHƯA LẤY ĐƯỢC MẪU", "NO SAMPLES" },
             { "KHÔNG CÓ GYRO", "NO GYRO" },
+            { "THỜI GIAN (PHÚT)", "MATCH TIME (MIN)" }, // [Aemy 2026-10-19] phong tuy chinh
             // [Aemy 2026-10-19] Chat box menu
             { "TỔ ĐỘI", "PARTY" },
             { "GỬI", "SEND" },

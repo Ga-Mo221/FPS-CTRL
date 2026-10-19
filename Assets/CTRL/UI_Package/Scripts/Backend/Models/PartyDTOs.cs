@@ -34,9 +34,10 @@ namespace Backend.Models
         public int mapIndex;      // index o BAN DO
         public int killTarget;    // Custom: moc ha guc (0 = mac dinh)
         public string customRule; // Custom: "TDM" / "FFA"
+        public int matchMinutes;  // [Aemy 2026-10-19] Custom: thoi gian tran (phut, 0 = mac dinh)
         public bool SameAs(PartySettings o)
         {
-            return o != null && o.modeIndex == modeIndex && o.mapIndex == mapIndex && o.killTarget == killTarget && o.customRule == customRule;
+            return o != null && o.modeIndex == modeIndex && o.mapIndex == mapIndex && o.killTarget == killTarget && o.customRule == customRule && o.matchMinutes == matchMinutes;
         }
     }
 

@@ -169,6 +169,11 @@ public class GameManager : MonoBehaviour
     
     public int KillTarget => _killTarget;
     public void SetKillTarget(int killTarget) => _killTarget = killTarget;
+
+    // [Aemy 2026-10-19] Thoi gian tran (phut) chu phong dat cho phong tuy chinh. 0 = dung mac dinh cua NetworkGameState (10 phut).
+    private float _roundMinutes = 0f;
+    public float RoundMinutes => _roundMinutes;
+    public void SetRoundMinutes(float minutes) => _roundMinutes = Mathf.Max(0f, minutes);
     
     public int GetEXPperKill()  => _baseExpPerKill;
     
