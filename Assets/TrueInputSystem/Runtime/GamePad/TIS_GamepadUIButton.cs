@@ -178,7 +178,13 @@ namespace GaMo.TrueInputSystem
         {
             if (alwaysActive)
             {
-                DoStateTransition(SelectionState.Highlighted, false);
+                // [Aemy 2026-10-19] Truoc day KHONG goi base.OnDeselect -> Selectable giu hasSelection = true mai mai.
+                // Nut Tab/SubTab tung duoc focus that (vd D-pad di len thanh che do) ve sau chi can chuot re vao / ra
+                // la Unity danh gia lai trang thai = Selected -> hien sprite "Selected" va KHONG tat (hover ket).
+                // Goi base de xoa hasSelection, roi chi giu visual Highlighted neu nut dang active trong layer.
+                base.OnDeselect(eventData);
+                if (context == null || context.IsActiveInLayer(this))
+                    DoStateTransition(SelectionState.Highlighted, false);
                 onDeselect?.Invoke();
                 return;
             }
