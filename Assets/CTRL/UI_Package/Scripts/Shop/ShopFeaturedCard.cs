@@ -65,12 +65,12 @@ namespace Game.Shop
         public void SetInfo(ShopItemInfo info, Sprite art, bool owned)
         {
             _info = info; _hasInfo = true;
-            if (art != null && _art != null) _art.sprite = art;
+            if (art != null && _art != null) { _art.sprite = art; _art.preserveAspect = true; } // [Aemy 2026-10-19] giu ti le anh
             Refresh(owned);
         }
 
         /// <summary>Thay anh (goi khi tai dong xong). Null -> giu nguyen.</summary>
-        public void SetArt(Sprite s) { if (s != null && _art != null) _art.sprite = s; }
+        public void SetArt(Sprite s) { if (s != null && _art != null) { _art.sprite = s; _art.preserveAspect = true; } }
 
         public void Refresh(bool owned)
         {

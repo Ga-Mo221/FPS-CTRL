@@ -127,6 +127,7 @@ namespace Game.Shop
             if (s != null)
             {
                 _itemModel.sprite = s;
+                _itemModel.preserveAspect = true; // [Aemy 2026-10-19] giu ti le anh sung (truoc bi keo gian theo khung 557x152)
                 _itemModel.enabled = true;
                 _itemModel.gameObject.SetActive(true);
                 SetAlpha(_itemModel, 1f);
