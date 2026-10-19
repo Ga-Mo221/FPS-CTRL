@@ -33,6 +33,9 @@ namespace Game.UI
             Instance = this;
             if (_okButton != null) _okButton.onClick.AddListener(OnOk);
             if (_cancelButton != null) _cancelButton.onClick.AddListener(OnCancel);
+            // [Aemy 2026-10-19] Vien chon tay cam cho 2 nut (nut dong y mau teal -> vien TRANG cho noi).
+            EnsureFocusRing(_okButton);
+            EnsureFocusRing(_cancelButton);
             Hide();
         }
 
@@ -76,6 +79,14 @@ namespace Game.UI
             if (_cancelButton != null) _cancelButton.gameObject.SetActive(false);
             SetLabel(_okLabel, "OK");
             Show();
+        }
+
+        private static void EnsureFocusRing(Button b)
+        {
+            if (b == null) return;
+            var h = b.GetComponent<TISSelectHighlight>();
+            if (h == null) h = b.gameObject.AddComponent<TISSelectHighlight>();
+            h.Configure(Color.white, 3f, 5f);
         }
 
         private void SetMessage(string msg)

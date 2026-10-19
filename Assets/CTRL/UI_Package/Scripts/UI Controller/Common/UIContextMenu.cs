@@ -26,6 +26,7 @@ namespace Game.UI
         private static UIContextMenu s_open;
         private readonly List<Button> _buttons = new List<Button>();
         private readonly List<Image> _bgs = new List<Image>();
+        private readonly List<GameObject> _rings = new List<GameObject>(); // [Aemy 2026-10-19] vien chon tay cam
         private int _focus = -1;
         private bool _suppressing;
         private float _openedAt;
@@ -99,6 +100,7 @@ namespace Game.UI
                 enter.callback.AddListener(_ => menu.SetFocus(idx));
                 trig.triggers.Add(enter);
                 menu._buttons.Add(btn); menu._bgs.Add(img);
+                menu._rings.Add(TISSelectHighlight.CreateRing(row, new Color(0.31f, 0.86f, 0.80f, 1f), 2f, 0f));
             }
 
             // Dat tai con tro, kep trong man hinh.
@@ -115,12 +117,16 @@ namespace Game.UI
 
             menu._openedAt = Time.unscaledTime;
             GaMo.TrueInputSystem.TISGamepadUIButton.ExternalSuppress++; menu._suppressing = true; // chan dieu huong menu phia sau
+            // [Aemy 2026-10-19] Mo bang tay cam -> chon san dong dau (co vien) de biet dang o dau.
+            var br = GaMo.TrueInputSystem.TISInputBridge.Instance;
+            if (br != null && br.IsGamepad) menu.SetFocus(0);
         }
 
         private void SetFocus(int i)
         {
             _focus = i;
             for (int k = 0; k < _bgs.Count; k++) if (_bgs[k] != null) _bgs[k].color = k == i ? Hover : new Color(1, 1, 1, 0f);
+            for (int k = 0; k < _rings.Count; k++) if (_rings[k] != null) _rings[k].SetActive(k == i);
         }
 
         private void Update()
