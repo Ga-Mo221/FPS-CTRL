@@ -384,10 +384,17 @@ namespace Game.UI
         }
 
         // Khong dich chu nguoi choi go (o nhap ma phong, ten...).
+        // [Aemy 2026-10-19] + bo qua text nam duoi LocIgnore (tin chat, ten ban be...). Ket qua cache theo text.
+        private static readonly Dictionary<TMP_Text, bool> s_ignore = new Dictionary<TMP_Text, bool>();
         private static bool IsUserInput(TMP_Text t)
         {
+            bool skip;
+            if (s_ignore.TryGetValue(t, out skip)) return skip;
             var input = t.GetComponentInParent<TMP_InputField>(true);
-            return input != null && input.textComponent == t;
+            skip = (input != null && input.textComponent == t) || t.GetComponentInParent<LocIgnore>(true) != null;
+            if (s_ignore.Count > 4096) s_ignore.Clear();
+            s_ignore[t] = skip;
+            return skip;
         }
     }
 }

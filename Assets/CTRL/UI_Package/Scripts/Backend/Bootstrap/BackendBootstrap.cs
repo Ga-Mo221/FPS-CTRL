@@ -54,6 +54,7 @@ namespace Backend.Bootstrap
         public static IMenuDataService MenuDataService { get; private set; }
         public static IFriendsService FriendsService { get; private set; }
         public static IPartyService PartyService { get; private set; } // [Aemy 2026-09-21]
+        public static IChatService ChatService { get; private set; }   // [Aemy 2026-10-19] chat menu (to doi + ban be)
 
         private void Awake()
         {
@@ -97,6 +98,7 @@ namespace Backend.Bootstrap
             MenuDataService = playerData;
             FriendsService = playerData;
         PartyService = new PlayFabPartyService(); // [Aemy]
+            ChatService = new PlayFabChatService();   // [Aemy 2026-10-19]
 
             DontDestroyOnLoad(gameObject);
         }

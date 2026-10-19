@@ -383,6 +383,15 @@ namespace Game.UI
             { "VÀO TRẬN ĐANG DIỄN RA", "JOINING MATCH IN PROGRESS" },
             { "Đã tìm thấy trận đang diễn ra!", "Found a match in progress!" },
             { "KHÔNG TÌM ĐƯỢC TRẬN (HẾT GIỜ)", "NO MATCH FOUND (TIMED OUT)" },
+            // [Aemy 2026-10-19] Chat box menu
+            { "TỔ ĐỘI", "PARTY" },
+            { "GỬI", "SEND" },
+            { "Nhập tin nhắn…", "Type a message…" },
+            { "Mời bạn vào tổ đội để chat cùng nhau.", "Invite friends to your party to chat together." },
+            { "Chưa có tin nhắn nào. Chào mọi người đi!", "No messages yet. Say hi!" },
+            { "Chưa có bạn bè. Kết bạn ở mục BẠN BÈ phía trên nhé.", "No friends yet. Add some from FRIENDS at the top." },
+            { "Gửi chậm lại một chút nhé.", "Slow down a little." },
+            { "Chưa đăng nhập.", "Not signed in." },
             { "Lựu đạn", "Grenade" },
             { "Tên", "Name" },
         };
