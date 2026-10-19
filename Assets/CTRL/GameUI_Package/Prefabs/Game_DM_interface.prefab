@@ -5664,6 +5664,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3038064906015187524}
+  - component: {fileID: 2958051169399187462}
   m_Layer: 5
   m_Name: Basic
   m_TagString: Untagged
@@ -5695,6 +5696,35 @@ RectTransform:
   m_AnchoredPosition: {x: 0.000020980835, y: 0.000015258789}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2958051169399187462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3097039336560856588}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1530ae638a573f4484048365737f7ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.UI.CrosshairController
+  _center: {fileID: 4988459108989375552}
+  _up: {fileID: 5763513058343734484}
+  _down: {fileID: 6448422400803317012}
+  _left: {fileID: 891059768174149488}
+  _right: {fileID: 1267806481274055710}
+  _palette:
+  - {r: 0.30980393, g: 0.8392157, b: 0.7882353, a: 1}
+  - {r: 0.3019608, g: 1, b: 0.53333336, a: 1}
+  - {r: 1, g: 0.3019608, b: 0.3019608, a: 1}
+  - {r: 0.9490196, g: 0.75686276, b: 0.30588236, a: 1}
+  - {r: 1, g: 0.3019608, b: 1, a: 1}
+  - {r: 1, g: 1, b: 1, a: 1}
+  _thicknessScale: 2
+  _lengthScale: 3
+  _gapScale: 3
+  _outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  _outlineSize: 1.5
 --- !u!1 &3146522259223000705
 GameObject:
   m_ObjectHideFlags: 0
@@ -10583,6 +10613,7 @@ MonoBehaviour:
   defaultTab: {fileID: 0}
   defaultSubTab: {fileID: 0}
   defaultContent: {fileID: 629266068320527895}
+  debugLog: 1
 --- !u!114 &6812774066394859199
 MonoBehaviour:
   m_ObjectHideFlags: 0
