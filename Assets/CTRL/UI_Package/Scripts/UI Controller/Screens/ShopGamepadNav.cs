@@ -1,6 +1,8 @@
-// [Aemy 2026-10-12] FILE MOI. Tay cam o CUA HANG: noi hang tab <-> the noi bat <-> luoi vat pham.
+// [Aemy 2026-10-12] FILE MOI. Tay cam o CUA HANG: noi the noi bat <-> luoi vat pham.
+// [Aemy 2026-10-19] 3 tab (NOI BAT / VU KHI / NHAN VAT) la SubTab -> doi bang LB / RB (giong danh muc Cai dat).
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using GaMo.TrueInputSystem;
 using Game.Shop;
 
@@ -8,9 +10,10 @@ namespace Game.UI
 {
     /// <summary>
     /// Gan len ShopPanel. Chay SAU TISDynamicListNav (no noi luoi the 4 huong) va chi sua cac canh "mep":
-    ///   Tab (NOI BAT/SUNG/NHAN VAT) --xuong--> nut MUA cua the noi bat (tab Noi bat) / the dau luoi (tab khac)
     ///   the noi bat:  ‹  <->  MUA  <->  ›  --phai--> cot trai cua luoi
-    ///   luoi: hang tren --len--> tab dang mo ; cot trai --trai--> › (hoac MUA) khi co the noi bat
+    ///   luoi: cot trai --trai--> › (hoac MUA) khi co the noi bat
+    /// Tab la SubTab (LB/RB): Content khong nhay len tab nua. Doi tab -> focus vao MUA (Noi bat) hoac the dau luoi.
+    /// Mo Cua hang tu cho khac (vd Trang bi -> "Mua o cua hang" mo thang tab VU KHI) -> dong bo tab active cua TIS.
     /// Cap nhat moi frame vi luoi sinh lai khi doi tab / mua xong.
     /// </summary>
     [DefaultExecutionOrder(100)]
@@ -24,6 +27,9 @@ namespace Game.UI
 
         private TISGamepadUIButton _prev, _next;
         private readonly List<TISGamepadUIButton> _cards = new List<TISGamepadUIButton>();
+        private int _lastTab = -1;
+        private bool _focusPending;
+        private float _focusUntil;
 
         private void Awake()
         {
@@ -38,6 +44,8 @@ namespace Game.UI
             if (_grid == null) foreach (var t in GetComponentsInChildren<RectTransform>(true)) if (t.name == "ItemGrid") { _grid = t; break; }
         }
 
+        private void OnEnable() { _lastTab = -1; }
+
         private void LateUpdate()
         {
             if (_tabs == null || _tabs.Length == 0) return;
@@ -45,7 +53,8 @@ namespace Game.UI
             CollectCards();
 
             int cur = _shop != null ? Mathf.Clamp(_shop.CurrentTab, 0, _tabs.Length - 1) : 0;
-            var curTab = _tabs[cur];
+            SyncActiveSubTab(cur);
+
             bool featOn = Usable(_buy);
             bool prevOn = featOn && Usable(_prev), nextOn = featOn && Usable(_next);
 
@@ -57,19 +66,14 @@ namespace Game.UI
             }
             float minX = float.PositiveInfinity; foreach (var c in _cards) minX = Mathf.Min(minX, c.transform.position.x);
 
-            // hang tab
-            foreach (var t in _tabs) if (t != null) t.navDown = featOn ? _buy : topLeft;
-            if (_tabs[0] != null) _tabs[0].navLeft = null;
-            if (_tabs[_tabs.Length - 1] != null) _tabs[_tabs.Length - 1].navRight = null;
-
-            // the noi bat
+            // the noi bat (khong con len tab: tab = LB/RB)
             if (featOn)
             {
-                _buy.navUp = curTab; _buy.navDown = null;
+                _buy.navUp = null; _buy.navDown = null;
                 _buy.navLeft = prevOn ? _prev : null;
                 _buy.navRight = nextOn ? _next : topLeft;
-                if (prevOn) { _prev.navUp = curTab; _prev.navDown = null; _prev.navLeft = null; _prev.navRight = _buy; }
-                if (nextOn) { _next.navUp = curTab; _next.navDown = null; _next.navLeft = _buy; _next.navRight = topLeft; }
+                if (prevOn) { _prev.navUp = null; _prev.navDown = null; _prev.navLeft = null; _prev.navRight = _buy; }
+                if (nextOn) { _next.navUp = null; _next.navDown = null; _next.navLeft = _buy; _next.navRight = topLeft; }
             }
 
             // mep luoi
@@ -77,9 +81,51 @@ namespace Game.UI
             foreach (var c in _cards)
             {
                 var p = c.transform.position;
-                if (Mathf.Abs(p.y - topY) <= 1f) c.navUp = curTab;
+                if (Mathf.Abs(p.y - topY) <= 1f) c.navUp = null;
                 if (Mathf.Abs(p.x - minX) <= 1f) c.navLeft = leftOfGrid;
             }
+
+            // doi tab -> dua focus vao noi dung cua tab moi (luoi sinh lai sau vai frame -> cho toi 1s)
+            if (cur != _lastTab)
+            {
+                _focusPending = _lastTab >= 0; // lan dau mo panel: de TIS / firstContent tu lo
+                _focusUntil = Time.unscaledTime + 1f;
+                _lastTab = cur;
+            }
+            if (_focusPending)
+            {
+                var target = featOn ? _buy : topLeft;
+                if (target != null) { FocusIfGamepad(target); _focusPending = false; }
+                else if (Time.unscaledTime > _focusUntil)
+                {
+                    // Tab trong (vd NHAN VAT chua co mon nao) -> bo focus dang nam tren nut da an (MUA cua tab truoc).
+                    _focusPending = false;
+                    var es = EventSystem.current;
+                    if (es != null && es.currentSelectedGameObject != null && !es.currentSelectedGameObject.activeInHierarchy)
+                        es.SetSelectedGameObject(null);
+                }
+            }
+        }
+
+        // Tab dang mo cua ShopController khac tab active cua TIS (mo Shop thang vao tab VU KHI...) -> dong bo,
+        // de LB/RB tinh dung tu tab dang hien.
+        private void SyncActiveSubTab(int cur)
+        {
+            var tab = _tabs[cur];
+            if (tab == null || tab.context == null || !tab.isActiveAndEnabled) return;
+            var active = tab.context.GetActiveInLayer(TISGamepadUIButton.NavigationLayer.SubTab);
+            if (active == tab) return;
+            // Panel nay chi bat khi dang o CUA HANG -> SubTab active phai la tab cua Shop (ke ca khi dang la
+            // danh muc cua man khac do mo Shop bang chuot / tu man khac).
+            tab.context.SetActiveInLayer(tab); // onBecameActiveInLayer -> TISLayerActivateClick -> SelectTab(cur) (cung tab)
+        }
+
+        private static void FocusIfGamepad(TISGamepadUIButton target)
+        {
+            var br = TISInputBridge.Instance;
+            if (br != null && !br.IsGamepad) return;
+            var es = EventSystem.current;
+            if (es != null && target.isActiveAndEnabled) es.SetSelectedGameObject(target.gameObject);
         }
 
         private void FindArrows()
