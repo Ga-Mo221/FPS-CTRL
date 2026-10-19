@@ -1,4 +1,4 @@
-// [Aemy 2026-10-19] FILE MOI. Ap cai dat Gyro (tab CHUOT) xuong TrueInputSystem.
+
 using GaMo.TrueInputSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;

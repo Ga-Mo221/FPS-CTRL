@@ -1,4 +1,4 @@
-// [Aemy 2026-10-10] FILE MOI. Nut B (tay cam) = "quay lai" trong bang Pause.
+
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;

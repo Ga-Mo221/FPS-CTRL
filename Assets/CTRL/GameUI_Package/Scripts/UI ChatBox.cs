@@ -21,7 +21,7 @@ public class UIChatBox : MonoBehaviour
         
         _inputField.text = "";
         _messageText.text = "";
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 5.4a) gioi han o nhap de tin khong vuot payload RPC
+        //gioi han o nhap de tin khong vuot payload RPC
         _inputField.characterLimit = NInGameMessagesHandler.MAX_CHAT_CHARS;
     }
     

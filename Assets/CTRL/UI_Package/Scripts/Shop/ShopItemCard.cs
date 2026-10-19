@@ -127,7 +127,7 @@ namespace Game.Shop
             if (s != null)
             {
                 _itemModel.sprite = s;
-                _itemModel.preserveAspect = true; // [Aemy 2026-10-19] giu ti le anh sung (truoc bi keo gian theo khung 557x152)
+                _itemModel.preserveAspect = true; // giu ti le anh sung (truoc bi keo gian theo khung 557x152)
                 _itemModel.enabled = true;
                 _itemModel.gameObject.SetActive(true);
                 SetAlpha(_itemModel, 1f);
@@ -145,7 +145,7 @@ namespace Game.Shop
             var info = Info;
             TimeSpan rem;
             bool sale = info.IsOnSale(out rem);
-            // [Aemy 2026-10-11] Gia goc gach ngang ghep NGAY SAU gia giam trong cung 1 label (truoc la label rieng vi tri co dinh -> de chu len nhau "2,5003,500").
+            // Gia goc gach ngang ghep NGAY SAU gia giam trong cung 1 label (truoc la label rieng vi tri co dinh -> de chu len nhau "2,5003,500").
             if (_priceLabel != null)
             {
                 string txt = FormatPrice(info.DisplayPrice);

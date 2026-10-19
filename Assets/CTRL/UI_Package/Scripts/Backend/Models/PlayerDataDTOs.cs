@@ -30,13 +30,13 @@ namespace Backend.Models
         public int Deaths;
         public int HeadshotKills;
         public int Matches;
-        // [Aemy 2026-09-17] Assist (ban lead co dung) + Experience (tich luy de len Level).
+        // Assist + Experience (tich luy de len Level).
         public int Assist;
         public int Experience;
 
         public float KDA => Deaths <= 0 ? Kills : (float)Kills / Deaths;
         public int HeadshotPercent => Kills <= 0 ? 0 : (int)System.Math.Round(100.0 * HeadshotKills / Kills);
-        // [Aemy] Level suy ra tu tong Experience (nguon su that duy nhat cho Level).
+        //  Level suy ra tu tong Experience (nguon su that duy nhat cho Level).
         public int Level => LevelCurve.LevelForXp(Experience);
     }
 
@@ -65,7 +65,7 @@ namespace Backend.Models
     }
 
         /// <summary>Một người bạn trong danh sách bạn bè (PlayFab Friends).</summary>
-    /// <summary>[Aemy 2026-09-21] Trang thai hien dien.</summary>
+    /// <summary> Trang thai hien dien.</summary>
     public enum FriendPresence { Offline = 0, Away = 1, Online = 2 }
 
     [Serializable]
@@ -74,12 +74,12 @@ namespace Backend.Models
         public string PlayFabId;
         public string DisplayName;
         public string AvatarUrl;
-        public int Level;                 // [Aemy]
-        public long LastSeenMinutes;      // [Aemy] epoch phut lan cuoi online (0 = khong ro)
-        public FriendPresence Presence;   // [Aemy] suy tu LastSeen
+        public int Level;                 // 
+        public long LastSeenMinutes;      //  epoch phut lan cuoi online (0 = khong ro)
+        public FriendPresence Presence;   //  suy tu LastSeen
     }
 
-    /// <summary>[Aemy 2026-09-24] Mot loi moi ket ban DEN nguoi choi (tu CloudScript FriendRequests).</summary>
+    /// <summary> Mot loi moi ket ban DEN nguoi choi (tu CloudScript FriendRequests).</summary>
     [Serializable]
     public class FriendRequestInfo
     {
@@ -96,15 +96,15 @@ namespace Backend.Models
         public const string HeadshotKills = "HeadshotKills";
         public const string Matches       = "Matches";
         public const string Level         = "Level";
-        public const string Assist        = "Assist";        // [Aemy] tro lai theo ban lead
-        public const string Experience    = "Experience";    // [Aemy] tong XP tich luy
-        public const string LastSeen      = "LastSeen";      // [Aemy] epoch phut - presence ban be
+        public const string Assist        = "Assist";        // tro lai theo ban lead
+        public const string Experience    = "Experience";    // tong XP tich luy
+        public const string LastSeen      = "LastSeen";      // epoch phut - presence ban be
         // Dẫn xuất cho leaderboard (int):
         public const string KDAx100       = "KDAx100";      // KDA * 100
         public const string HeadshotPct   = "HeadshotPct";  // 0..100
     }
 
-    /// <summary>[Aemy 2026-09-17] Quy doi EXP <-> Level. Level L->L+1 can 1000xL XP.</summary>
+    /// <summary> Quy doi EXP <-> Level. Level L->L+1 can 1000xL XP.</summary>
     public static class LevelCurve
     {
         public static int XpForLevelUp(int level) { return 1000 * System.Math.Max(1, level); }

@@ -10,7 +10,7 @@ namespace Backend.Interfaces
         void GetMyStats(Action<CombatStats> onResult, Action<AuthError> onFailure);
 
         // Cộng dồn kết quả 1 trận vào thống kê tích luỵ + cập nhật stat dẫn xuất (KDA, headshot%).
-        // [Aemy 2026-09-17] Them assists + expGained; tra ve CombatStats sau cong don (de UI hien Level/EXP moi).
+        //  Them assists + expGained; tra ve CombatStats sau cong don (de UI hien Level/EXP moi).
         void ReportMatchResult(int kills, int deaths, int headshotKills, int assists, int expGained,
             Action<CombatStats> onSuccess, Action<AuthError> onFailure);
 

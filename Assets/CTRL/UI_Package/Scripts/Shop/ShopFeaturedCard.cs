@@ -65,7 +65,7 @@ namespace Game.Shop
         public void SetInfo(ShopItemInfo info, Sprite art, bool owned)
         {
             _info = info; _hasInfo = true;
-            if (art != null && _art != null) { _art.sprite = art; _art.preserveAspect = true; } // [Aemy 2026-10-19] giu ti le anh
+            if (art != null && _art != null) { _art.sprite = art; _art.preserveAspect = true; } // giu ti le anh
             Refresh(owned);
         }
 

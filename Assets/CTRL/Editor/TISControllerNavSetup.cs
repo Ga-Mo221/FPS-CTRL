@@ -8,7 +8,7 @@ using GaMo.TrueInputSystem;
 namespace GaMo.TrueInputSystem.EditorTools
 {
     /// <summary>
-    /// [Aemy 2026-10-01] Tien ich setup dieu huong tay cam cho 1 panel UI:
+    /// Tien ich setup dieu huong tay cam cho 1 panel UI:
     /// - Doi Button thuong -> TISGamepadUIButton (giu nguyen onClick/mau/targetGraphic).
     /// - Gan TISUINavigationContext len panel.
     /// - Tu noi navUp/Down/Left/Right theo VI TRI man hinh.
@@ -84,7 +84,7 @@ namespace GaMo.TrueInputSystem.EditorTools
                 var pe = so.FindProperty("isNavigationEnabled"); if (pe != null) pe.boolValue = true;
                 var pf = so.FindProperty("isFirstSelected"); if (pf != null) pf.boolValue = false;
                 so.ApplyModifiedProperties();
-                // [Aemy 2026-10-04] highlight khi duoc chon (controller di toi -> nut sang)
+                // highlight khi duoc chon (controller di toi -> nut sang)
                 if (t.GetComponent(typeof(Game.UI.TISSelectHighlight)) == null)
                     t.gameObject.AddComponent(typeof(Game.UI.TISSelectHighlight));
             }

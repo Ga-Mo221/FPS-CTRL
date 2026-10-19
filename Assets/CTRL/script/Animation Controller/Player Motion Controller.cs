@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PlayerMotionController : MonoBehaviour
 {
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) Weapon_Active() bi goi ~10 lan/frame cho MOI player (ca proxy)
+    // Weapon_Active() bi goi ~10 lan/frame cho MOI player (ca proxy)
     // -> cache theo frame (tu het han moi frame nen doi sung van dung ngay frame sau).
     private WeaponController _activeCache;
     private int _activeCacheFrame = -1;

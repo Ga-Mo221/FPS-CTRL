@@ -16,7 +16,7 @@ public class WeaponController : NetworkBehaviour
     [TabGroup("Weapon Controller", "Runtime")]
     [Networked] public NetworkObject OwnerCharacter { get; set; }
     
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.2) Dan trong bang + dan du tru gop 1 word (2 x 16 bit), 1 callback
+    // Dan trong bang + dan du tru gop 1 word (2 x 16 bit), 1 callback
     // thay vi 2 int + 2 OnChangedRender rieng (truoc day reload goi callback 2 lan).
     [Networked, OnChangedRender(nameof(OnBulletCountChange))]
     private uint _ammo { get; set; }
@@ -182,7 +182,7 @@ public class WeaponController : NetworkBehaviour
     
     private List<GameObject> _poolBullet = new List<GameObject>();
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.2.3) Bo [Networked] _rightPuch (trung NCharMovementHandler.RightPuch,
+    // Bo [Networked] _rightPuch (trung NCharMovementHandler.RightPuch,
     // con bi ghi o may khong co StateAuthority). May ban (host / client predict) dung gia tri local tu OnFire;
     // proxy doc RightPuch da sync cua nhan vat so huu.
     private bool _rightPuchLocal;
@@ -460,7 +460,7 @@ public class WeaponController : NetworkBehaviour
             StopCoroutine(_blendRoutine);
 
         float target = ads ? 1f : 0f;
-        float zoom = GameFov.ForWeapon(_camera_Zoom, _data.Stand_Zoom, _data.ADS_Zoom, ads); // [Aemy 2026-10-19] FOV theo Cai dat, ngam giu ti le zoom cua sung
+        float zoom = GameFov.ForWeapon(_camera_Zoom, _data.Stand_Zoom, _data.ADS_Zoom, ads); // FOV theo Cai dat, ngam giu ti le zoom cua sung
         float zoom_z = ads ? _data.ADS_Zoom_Z : _data.Stamd_Zoom_Z;
         Vector3 Pivot_Offset = PivotOffset;
         _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Offset, _data.ADS_duration));
@@ -622,7 +622,7 @@ public class WeaponController : NetworkBehaviour
                     // Máy đang predict chính là máy cần nghe âm thanh "hết đạn" nên phát trực tiếp cục
                     // bộ, không cần round-trip RPC tới chính mình. Chỉ khi chạy trên StateAuthority
                     // (Host, có thể điều khiển 1 máy khác) mới cần RPC để báo cho InputAuthority phát âm.
-                    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.2a) Truoc day host gui RPC_ApplyAudio MOI TICK khi giu chuot
+                    // Truoc day host gui RPC_ApplyAudio MOI TICK khi giu chuot
                     // voi sung rong (30-60 RPC/s/nguoi). May cua nguoi ban da tu predict FireOnce() nen chi can phat local.
                     if (Object.HasInputAuthority)
                         ApplyFireFailedAudio();

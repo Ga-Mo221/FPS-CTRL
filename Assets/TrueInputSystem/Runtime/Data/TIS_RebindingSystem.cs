@@ -245,7 +245,7 @@ namespace GaMo.TrueInputSystem
 
             inputAction.Disable();
 
-            // [Aemy 2026-10-11] FIX tay cam: ban cu goi WithControlsHavingToMatchPath("") cho Gamepad
+            // FIX tay cam: ban cu goi WithControlsHavingToMatchPath("") cho Gamepad
             // -> Input System nem ArgumentNullException -> rebind tay cam KHONG BAO GIO chay, action bi Disable mai,
             // state ket o Listening. Gio: chi them path hop le + boc try/catch de luon khoi phuc action.
             try
@@ -270,7 +270,7 @@ namespace GaMo.TrueInputSystem
 
                 _rebindOp
                     .OnMatchWaitForAnother(0.1f)
-                    .OnGeneratePath(GeneralizePath)   // [Aemy] luu "<Gamepad>/buttonSouth" thay vi "/XInputControllerWindows/buttonSouth"
+                    .OnGeneratePath(GeneralizePath)   // luu "<Gamepad>/buttonSouth" thay vi "/XInputControllerWindows/buttonSouth"
                     .OnComplete(op => HandleRebindComplete(op, bridge, actionName, target, oldPath, onComplete))
                     .OnCancel(op   => HandleRebindCancel(op,  bridge, actionName, target, oldPath, onComplete));
 
@@ -538,7 +538,7 @@ namespace GaMo.TrueInputSystem
                 if (string.IsNullOrEmpty(entry.actionName) || string.IsNullOrEmpty(entry.path)) continue;
                 if (!Enum.TryParse<RebindTarget>(entry.target, out var tgt)) continue;
 
-                _overrides[MakeKey(profileName, entry.actionName, tgt)] = GeneralizeStoredPath(entry.path); // [Aemy 2026-10-11]
+                _overrides[MakeKey(profileName, entry.actionName, tgt)] = GeneralizeStoredPath(entry.path);
                 anyLoaded = true;
                 Debug.Log($"[TISRebinding] ↑ Load: \"{entry.actionName}\" [{tgt}] = {GetDisplayName(entry.path)}");
             }
@@ -690,7 +690,7 @@ namespace GaMo.TrueInputSystem
             string actionName, RebindTarget target,
             string oldPath, Action<RebindResult> onComplete)
         {
-            // [Aemy 2026-10-11] Path tong quat ("<Gamepad>/buttonSouth") -> chay voi MOI tay cam + FindConflict so khop dung.
+            // Path tong quat ("<Gamepad>/buttonSouth") -> chay voi MOI tay cam + FindConflict so khop dung.
             string newPath = GeneralizePath(op.selectedControl);
 
             if (_pathBlacklist.Contains(newPath))
@@ -876,7 +876,7 @@ namespace GaMo.TrueInputSystem
         }
 
         /// <summary>
-        /// [Aemy 2026-10-11] Doi control cu the -> path tong quat theo loai thiet bi:
+        /// Doi control cu the -> path tong quat theo loai thiet bi:
         /// "/XInputControllerWindows/buttonSouth" -> "&lt;Gamepad&gt;/buttonSouth", "/Keyboard/g" -> "&lt;Keyboard&gt;/g".
         /// </summary>
         public static string GeneralizePath(InputControl control)
@@ -891,7 +891,7 @@ namespace GaMo.TrueInputSystem
             return control.path;
         }
 
-        /// <summary>[Aemy 2026-10-11] Path cu luu dang "/Keyboard/g" (truoc khi co GeneralizePath) -> tong quat hoa khi load.</summary>
+        /// <summary> Path cu luu dang "/Keyboard/g" (truoc khi co GeneralizePath) -> tong quat hoa khi load.</summary>
         private static string GeneralizeStoredPath(string path)
         {
             if (string.IsNullOrEmpty(path) || path.StartsWith("<")) return path;

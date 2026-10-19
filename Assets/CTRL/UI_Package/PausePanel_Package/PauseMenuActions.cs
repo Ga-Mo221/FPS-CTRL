@@ -1,4 +1,4 @@
-// [UI-INTEGRATION 2026-09-13 - Aemy] FILE MỚI. Hành động 3 nút của Pause menu (Resume/Settings/Leave).
+
 using UnityEngine;
 
 namespace Game.UI
@@ -28,7 +28,7 @@ namespace Game.UI
             gameObject.SetActive(false); // ẩn Pause_ panel
         }
 
-        private bool _leaving; // [Aemy 2026-10-09] chan goi 2 lan (Submit tay cam + click)
+        private bool _leaving; // chan goi 2 lan (Submit tay cam + click)
 
         private void OnEnable() { _leaving = false; }
 
@@ -40,7 +40,7 @@ namespace Game.UI
             var gm = GameManager.Instance;
             if (gm != null)
             {
-                // [Aemy 2026-10-09] giong nut roi tran o man ket qua: reset state tran (OnUI flags, PlayerList,
+                // giong nut roi tran o man ket qua: reset state tran (OnUI flags, PlayerList,
                 // dan, hien chuot) truoc khi shutdown runner -> ve MenuShell khong bi ket chuot/co UI cu.
                 gm.NewGame();
                 if (gm.NetworkRunnerHandler != null)

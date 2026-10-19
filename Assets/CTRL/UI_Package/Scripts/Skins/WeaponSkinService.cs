@@ -1,4 +1,4 @@
-// [Aemy 2026-10-10] FILE MOI. Skin dang trang bi cho tung sung + doi ID sung goc -> ID skin khi vao tran.
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,7 +18,7 @@ namespace Game.Skins
     public static class WeaponSkinService
     {
         private const string Key = "EquippedSkins";                         // key PlayFab User Data
-        private static string PrefKey { get { return Game.UI.SessionCache.UserKey(Key); } } // [Aemy 2026-10-17] cache may theo tai khoan
+        private static string PrefKey { get { return Game.UI.SessionCache.UserKey(Key); } } // cache may theo tai khoan
         private static Dictionary<string, string> _equipped;
         public static event Action Changed;
 
@@ -81,7 +81,7 @@ namespace Game.Skins
             }, e => { Debug.LogWarning("[WeaponSkinService] Tai skin loi: " + e.ErrorMessage); if (onDone != null) onDone(); });
         }
 
-        /// <summary>[Aemy 2026-10-17] Doi tai khoan: bo skin dang nho trong bo nho (doc lai theo tai khoan moi).</summary>
+        /// <summary> Doi tai khoan: bo skin dang nho trong bo nho (doc lai theo tai khoan moi).</summary>
         public static void ResetCache()
         {
             _equipped = null;

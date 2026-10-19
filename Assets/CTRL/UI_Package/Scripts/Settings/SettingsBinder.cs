@@ -34,7 +34,7 @@ public class SettingsBinder : MonoBehaviour
 
     private void OnEnable()
     {
-        // [Aemy 2026-10-09] doi thiet bi khi panel dang mo -> slider do nhay hien dung slot PC/tay cam
+        // doi thiet bi khi panel dang mo -> slider do nhay hien dung slot PC/tay cam
         if (SettingManager.Instance != null) SettingManager.Instance.OnPlatformChanged += OnPlatformChangedRefresh;
         if (!_built) return;
         RefreshAll();
@@ -94,7 +94,7 @@ public class SettingsBinder : MonoBehaviour
         BindSlider("Chuot/DO NHAY/Nhay khi ngam sniper",  () => Data.SniperADSSensitivity, v => Data.SniperADSSensitivity = v);
         BindSwitch("Chuot/TUY CHON/Dao nguoc truc Y",     () => Data.InvertY,    v => Data.InvertY = v);
         BindSwitch("Chuot/TUY CHON/Gia toc chuot (Accel)",() => Data.MouseAccel, v => Data.MouseAccel = v);
-        // [Aemy 2026-10-19] Gyro tay cam (MotionSettingsApplier ap xuong TIS). Nut "Hieu chinh" tu xu ly (GyroCalibrateButton).
+        //  Gyro tay cam (MotionSettingsApplier ap xuong TIS). Nut "Hieu chinh" tu xu ly (GyroCalibrateButton).
         BindCycler("Chuot/GYRO/Che do gyro", MotionSettingsApplier.ModeOptions, () => Data.GyroMode, v => Data.GyroMode = v);
         BindSlider("Chuot/GYRO/Nhay gyro ngang", () => Data.GyroSensX, v => Data.GyroSensX = v);
         BindSlider("Chuot/GYRO/Nhay gyro doc",   () => Data.GyroSensY, v => Data.GyroSensY = v);
@@ -102,7 +102,7 @@ public class SettingsBinder : MonoBehaviour
         BindSwitch("Chuot/TUY CHON GYRO/Dao truc doc",   () => Data.GyroInvertY, v => Data.GyroInvertY = v);
 
         // ---- Do hoa (trong ScrollRect) ----
-        BindCycler("Do hoa Scroll/Content/HIEN THI/Ngon ngu", Game.UI.Loc.LanguageNames, () => Data.Language, v => Data.Language = v); // [Aemy 2026-10-17]
+        BindCycler("Do hoa Scroll/Content/HIEN THI/Ngon ngu", Game.UI.Loc.LanguageNames, () => Data.Language, v => Data.Language = v); 
         BindSlider("Do hoa Scroll/Content/HIEN THI/Truong nhin (FOV)", () => Data.Fov, v => Data.Fov = v);
         BindSwitch("Do hoa Scroll/Content/CHAT LUONG/V-Sync", () => Data.VSync, v => Data.VSync = v);
         BindSlider("Do hoa Scroll/Content/HINH ANH/Do sang",     () => Data.Brightness, v => Data.Brightness = v);
@@ -113,10 +113,10 @@ public class SettingsBinder : MonoBehaviour
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Vignette",    () => Data.VignetteOn, v => Data.VignetteOn = v);
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Motion Blur", () => Data.MotionBlurOn, v => Data.MotionBlurOn = v);
         BindQuality("Do hoa Scroll/Content/CHAT LUONG/Chat luong tong the", () => Data.QualityLevel, v => Data.QualityLevel = v);
-        // [Aemy 2026-10-17] Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
+        // Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
         BindCycler("Do hoa Scroll/Content/CHAT LUONG/Ket cau (Texture)", GraphicsQualityApplier.TextureOptions, () => Data.TextureQuality, v => Data.TextureQuality = v);
         BindCycler("Do hoa Scroll/Content/CHAT LUONG/Khu rang cua (AA)", GraphicsQualityApplier.AAOptions, () => Data.AntiAliasing, v => Data.AntiAliasing = v);
-        // [Aemy 2026-10-19] Hien thi: truoc chi la chu tinh -> nay la o chon ◄ ► (DisplaySettingsApplier ap xuong engine).
+        // Hien thi: truoc chi la chu tinh -> nay la o chon ◄ ► (DisplaySettingsApplier ap xuong engine).
         BindCycler("Do hoa Scroll/Content/HIEN THI/Che do man hinh", DisplaySettingsApplier.ModeOptions, () => Data.DisplayMode, v => Data.DisplayMode = v);
         BindCycler("Do hoa Scroll/Content/HIEN THI/Do phan giai", DisplaySettingsApplier.ResolutionOptions(), () => DisplaySettingsApplier.ResolutionIndex(Data), v => DisplaySettingsApplier.SetResolutionIndex(Data, v));
         BindCycler("Do hoa Scroll/Content/HIEN THI/Tan so quet", DisplaySettingsApplier.RefreshOptions(), () => DisplaySettingsApplier.RefreshIndex(Data), v => DisplaySettingsApplier.SetRefreshIndex(Data, v));

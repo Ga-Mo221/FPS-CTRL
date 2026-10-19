@@ -1,4 +1,4 @@
-// [Aemy 2026-10-05] Danh muc nhan vat cho man CHON NHAN VAT (LMHT style).
+// Danh muc nhan vat cho man CHON NHAN VAT 
 // Nguon: PlayFab Title Data key "Characters" (JSON { "characters":[ {id,name,desc,previewUrl} ] }) - chinh qua Google Sheet nhu Avatars.
 // Title Data trong/loi -> dung danh sach mac dinh built-in (Ghost/Olivia) de man chon luon chay.
 // LUU Y: id phai KHOP voi NPlayer.Name cua prefab nhan vat (GameManager._character_Prefabs) de spawn dung.
@@ -73,7 +73,7 @@ namespace Backend.PlayfabImpl
             foreach (var c in Loaded)
                 if (c != null && !string.IsNullOrEmpty(c.id) && string.Equals(c.id, id, StringComparison.OrdinalIgnoreCase))
                     return c;
-            // [Aemy 2026-10-11] Du phong: bo khoang trang / gach (sheet ghi "AnhTeo", prefab ten "Anh Teo").
+            // Du phong: bo khoang trang / gach (sheet ghi "AnhTeo", prefab ten "Anh Teo").
             string key = Normalize(id);
             foreach (var c in Loaded)
                 if (c != null && !string.IsNullOrEmpty(c.id) && Normalize(c.id) == key)

@@ -3,7 +3,7 @@ using Backend.Models;
 
 namespace Backend.Interfaces
 {
-    // [Aemy 2026-09-21] Party + moi ban (SharedGroupData + CloudScript invite).
+    //  Party + moi ban (SharedGroupData + CloudScript invite).
     public interface IPartyService
     {
         void CreateParty(Action<string> onCode, Action<AuthError> onError);       // tao party -> tra code
@@ -17,7 +17,7 @@ namespace Backend.Interfaces
         void ClearInvite(Action onOk, Action<AuthError> onError);
         void Touch(string code, bool ready, Action onOk, Action<AuthError> onError); // [PARTY-HB] heartbeat
         void KickMember(string code, string playFabId, Action onOk, Action<AuthError> onError); // [PARTY-HB] da member mat ket noi
-        void SetLeader(string code, string playFabId, Action onOk, Action<AuthError> onError);   // [Aemy 2026-10-17] chuyen truong nhom
-        void SetSettings(string code, string settingsJson, Action onOk, Action<AuthError> onError); // [Aemy 2026-10-17] che do/map cua truong nhom
+        void SetLeader(string code, string playFabId, Action onOk, Action<AuthError> onError);   //  chuyen truong nhom
+        void SetSettings(string code, string settingsJson, Action onOk, Action<AuthError> onError); //  che do/map cua truong nhom
     }
 }

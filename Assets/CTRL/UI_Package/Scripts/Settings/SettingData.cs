@@ -45,10 +45,10 @@ public class SettingData : ScriptableObject
     [SerializeField] private bool _vSync = false;
     [SerializeField] private int _qualityLevel = 2;   // index QualitySettings (0=Thap..3=Toi da)
     [SerializeField, Range(60f,120f)] private float _fov = 90f;
-    [SerializeField] private int _textureQuality = 2;  // [Aemy 2026-10-17] 0 Thap / 1 Vua / 2 Cao (globalTextureMipmapLimit)
-    [SerializeField] private int _antiAliasing = 2;    // [Aemy 2026-10-17] 0 Tat / 1 FXAA / 2 SMAA / 3 MSAA 4x / 4 TAA
+    [SerializeField] private int _textureQuality = 2;  //  0 Thap / 1 Vua / 2 Cao (globalTextureMipmapLimit)
+    [SerializeField] private int _antiAliasing = 2;    // 0 Tat / 1 FXAA / 2 SMAA / 3 MSAA 4x / 4 TAA
 
-    [Header("Display")] // [Aemy 2026-10-19] DisplaySettingsApplier
+    [Header("Display")] //  DisplaySettingsApplier
     [SerializeField] private int _displayMode = 1;      // 0 Toan man hinh (Exclusive) / 1 Khong vien / 2 Cua so
     [SerializeField] private int _resolutionWidth = 0;  // 0 = do phan giai goc man hinh
     [SerializeField] private int _resolutionHeight = 0;
@@ -56,7 +56,7 @@ public class SettingData : ScriptableObject
     [SerializeField] private int _fpsLimit = 0;         // 0 = khong gioi han (chi tac dung khi V-Sync tat)
 
     [Header("Ngon ngu")]
-    [SerializeField] private int _language = 0;        // [Aemy 2026-10-17] 0 Tieng Viet / 1 English
+    [SerializeField] private int _language = 0;        //  0 Tieng Viet / 1 English
 
     // ================= CHUOT (them) =================
     [Header("Mouse options")]
@@ -65,7 +65,7 @@ public class SettingData : ScriptableObject
 
     // ================= GYRO (tay cam co cam bien: DualShock 4 / DualSense / Switch Pro) =================
     [Header("Gyro")]
-    [SerializeField] private int _gyroMode = 0;            // [Aemy 2026-10-19] 0 Tat / 1 Khi ngam (giu ADS) / 2 Luon bat
+    [SerializeField] private int _gyroMode = 0;            //  0 Tat / 1 Khi ngam (giu ADS) / 2 Luon bat
     [SerializeField] private float _gyroSensX = 1.5f;      // he so "the gioi thuc": 1 = xoay tay cam 10 do -> camera 10 do (o do nhay tay cam 1.0)
     [SerializeField] private float _gyroSensY = 1.5f;
     [SerializeField] private bool _gyroInvertX = false;
@@ -155,7 +155,7 @@ public class SettingData : ScriptableObject
     public bool ShowOnlineStatus   { get { return _showOnlineStatus; }   set { _showOnlineStatus = value; } }
 
 
-    // [Aemy 2026-10-17] Constructor rong: dam bao gia tri mac dinh (khoi tao truong) duoc dung khi Unity tao asset/
+    //  Constructor rong: dam bao gia tri mac dinh (khoi tao truong) duoc dung khi Unity tao asset/
     // CreateInstance (truoc day chi co constructor co tham so -> truong moi them vao bi 0: Texture "Thap", AA "Tat").
     public SettingData() { }
 

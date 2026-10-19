@@ -1,4 +1,4 @@
-// [Aemy 2026-09-24] Load chi so sung tu PlayFab Title Data ('WeaponSpecs') va overlay len WeaponData luc runtime.
+// Load chi so sung tu PlayFab Title Data ('WeaponSpecs') va overlay len WeaponData luc runtime.
 // - KHONG can build lai: sua sheet -> Apps Script day len Title Data -> tran sau tu dong ap.
 // - Host-authoritative: damage duoc host doc thang tu WeaponData khi tinh hit, nen overlay o host = so co hieu luc.
 //   Client cung overlay (tu Title Data) de feel dung (fireDelay/recoil/ADS) + hien UI. Damage van do host quyet.
@@ -18,12 +18,12 @@ namespace Backend.PlayfabImpl
         // Bang chi so da load gan nhat (cache). UI co the doc iconUrl/imageUrl tu day.
         public static WeaponSpecTable Loaded { get; private set; }
 
-        // [MERGE 2026-09-30 Aemy] Sheet dung CODENAME -> map ve _iD that cua WeaponData (lead khop bang _iD.Contains).
+        // Sheet dung CODENAME -> map ve _iD that cua WeaponData (lead khop bang _iD.Contains).
         // Khong co trong map thi tra nguyen (nen ID that van chay). Nyx doi codename chi can sua o day + o sheet.
         private static readonly System.Collections.Generic.Dictionary<string,string> CodenameToId =
             new System.Collections.Generic.Dictionary<string,string>(System.StringComparer.OrdinalIgnoreCase)
         {
-            { "Dao",    "Knife"     },   // [Aemy 2026-10-11] ten cu; o Trang bi nay ghi "Knife" (= ID)
+            { "Dao",    "Knife"     },   // ten cu; o Trang bi nay ghi "Knife" (= ID)
             { "Vesper", "9mm-Demon" },
             { "Umbra",  "M4"        },
             { "Corona", "M24"       },

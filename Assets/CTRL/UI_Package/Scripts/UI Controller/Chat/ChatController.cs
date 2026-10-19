@@ -9,7 +9,7 @@ using Backend.Models;
 namespace Game.UI
 {
     /// <summary>
-    /// [Aemy 2026-10-19] Logic chat ngoai menu (khong ve UI - ChatBoxView lo phan hien thi).
+    /// Logic chat ngoai menu (khong ve UI - ChatBoxView lo phan hien thi).
     ///  - Kenh "party": tin cua to doi hien tai (chi bat khi to doi co tu 2 nguoi).
     ///  - Kenh "dm:&lt;PlayFabId&gt;": nhan rieng voi tung ban be.
     /// Polling PlayFab (IChatService): to doi moi ~2.5s; cuoc tro chuyen dang mo moi ~3s;

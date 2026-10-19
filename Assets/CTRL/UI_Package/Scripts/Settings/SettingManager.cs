@@ -90,7 +90,7 @@ public class SettingManager : MonoBehaviour
     private void Update()
     {
         if (_settingData == null) return;
-        // [Aemy 2026-10-17] Camera nguoi choi sinh sau khi vao tran -> ap khu rang cua cho camera moi.
+        // Camera nguoi choi sinh sau khi vao tran -> ap khu rang cua cho camera moi.
         if (Time.unscaledTime >= _aaCheckAt)
         {
             _aaCheckAt = Time.unscaledTime + 0.5f;
@@ -100,7 +100,7 @@ public class SettingManager : MonoBehaviour
         var bridge = TISInputBridge.Instance;
         if (bridge == null) return;
         if (bridge != _keybindsLoadedFor) ApplyKeybinds();   // bridge sinh sau SettingManager -> van nap phim da luu
-        MotionSettingsApplier.Tick(_settingData);            // [Aemy 2026-10-19] gyro: ap lai khi bridge / profile duoc dung lai (rebind, swap)
+        MotionSettingsApplier.Tick(_settingData);            //gyro: ap lai khi bridge / profile duoc dung lai (rebind, swap)
         AimAssistPlatform p;
         switch (bridge.ActiveDevice)
         {
@@ -145,7 +145,7 @@ public class SettingManager : MonoBehaviour
     {
         var svc = BackendBootstrap.SettingsService;
         if (svc == null) return; // chua login / backend chua san -> chi luu local
-        // [Aemy] Boc try/catch: PlayFab nem exception DONG BO khi chua dang nhap -> nuot loi, chi luu local (tranh chet Awake).
+        // Boc try/catch: PlayFab nem exception DONG BO khi chua dang nhap -> nuot loi, chi luu local (tranh chet Awake).
         try { svc.SaveSettings(json, null, err => Debug.LogWarning("[SettingManager] PlayFab save loi: " + (err != null ? err.ErrorMessage : "?"))); }
         catch (Exception e) { Debug.LogWarning("[SettingManager] Chua the sync PlayFab (save): " + e.Message); }
     }
@@ -159,7 +159,7 @@ public class SettingManager : MonoBehaviour
         {
             try { JsonUtility.FromJsonOverwrite(File.ReadAllText(FilePath), _settingData); } catch (Exception e) { Debug.LogWarning("[SettingManager] Doc local loi: " + e.Message); }
         }
-        if (_settingData.Platform == AimAssistPlatform.None) _settingData.Platform = AimAssistPlatform.PC;   // [Aemy] tranh Platform None lay nham slot sens
+        if (_settingData.Platform == AimAssistPlatform.None) _settingData.Platform = AimAssistPlatform.PC;   //  tranh Platform None lay nham slot sens
         Apply();
         if (_syncPlayFab) PullFromPlayFab();
     }
@@ -173,7 +173,7 @@ public class SettingManager : MonoBehaviour
         {
             if (string.IsNullOrEmpty(json) || _settingData == null) return;
             try { JsonUtility.FromJsonOverwrite(json, _settingData); } catch { return; }
-            if (_settingData.Platform == AimAssistPlatform.None) _settingData.Platform = AimAssistPlatform.PC;   // [Aemy]
+            if (_settingData.Platform == AimAssistPlatform.None) _settingData.Platform = AimAssistPlatform.PC; 
             Apply();
             try { File.WriteAllText(FilePath, json); } catch { }
         }, err => { /* offline -> giu ban local */ }); }
@@ -185,11 +185,11 @@ public class SettingManager : MonoBehaviour
     public void Apply()
     {
         if (_settingData == null) return;
-        Game.UI.Loc.SetLanguage(_settingData.Language); // [Aemy 2026-10-17] ngon ngu giao dien
+        Game.UI.Loc.SetLanguage(_settingData.Language); // ngon ngu giao dien
         ApplyAudio();
         ApplyGraphics();
         ApplyKeybinds();
-        MotionSettingsApplier.Apply(_settingData); // [Aemy 2026-10-19] gyro tay cam
+        MotionSettingsApplier.Apply(_settingData); //  gyro tay cam
         if (OnSensitivityChanged != null) OnSensitivityChanged(_settingData.MouseSensitivity);
         if (OnSettingsApplied != null) OnSettingsApplied(_settingData);
     }
@@ -214,9 +214,9 @@ public class SettingManager : MonoBehaviour
     {
         if (_settingData == null) return; //  guard tranh NRE khi chua gan SettingData
         QualitySettings.vSyncCount = _settingData.VSync ? 1 : 0;
-        // [Aemy 2026-10-17] Project chi co 2 muc QualitySettings (Mobile/PC) -> tu ap bac THAP..TOI DA + texture + AA.
+        // Project chi co 2 muc QualitySettings (Mobile/PC) -> tu ap bac THAP..TOI DA + texture + AA.
         GraphicsQualityApplier.Apply(_settingData);
-        DisplaySettingsApplier.Apply(_settingData); // [Aemy 2026-10-19] che do man hinh / do phan giai / Hz / gioi han FPS
+        DisplaySettingsApplier.Apply(_settingData); // che do man hinh / do phan giai / Hz / gioi han FPS
         if (_postVolume != null && _postVolume.profile != null) GraphicsQualityApplier.ApplyVolumeTier(_postVolume.profile, _volumeDefaults);
         if (_color != null)
         {

@@ -38,7 +38,7 @@ namespace Backend.Models
         public string ErrorMessage;
     }
 
-    // [FIX BUG-ACCOUNT 2026-09-14 - Aemy] email + trang thai link Google de hien o tab Tai khoan.
+    //  email + trang thai link Google de hien o tab Tai khoan.
     public class LinkedAccountInfo
     {
         public string Email;

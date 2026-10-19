@@ -10,19 +10,19 @@ namespace Backend.Interfaces
         // ↓ LẤY VỀ: danh sách bạn bè (kèm tên hiển thị + avatar url).
         void GetFriends(Action<List<FriendInfo>> onResult, Action<AuthError> onError);
 
-        // [Aemy 2026-09-21] Danh sach ban + presence (online/away/offline) suy tu LastSeen.
+        //  Danh sach ban + presence (online/away/offline) suy tu LastSeen.
         void GetFriendsWithPresence(Action<List<FriendInfo>> onResult, Action<AuthError> onError);
 
-        // [Aemy] Them ban theo Ten hien thi HOAC PlayFabId.
+        //Them ban theo Ten hien thi HOAC PlayFabId.
         void AddFriend(string displayNameOrId, Action onSuccess, Action<AuthError> onError);
 
-        // [Aemy] Xoa ban theo PlayFabId.
+        // Xoa ban theo PlayFabId.
         void RemoveFriend(string playFabId, Action onSuccess, Action<AuthError> onError);
 
-        // [Aemy] Heartbeat: ghi LastSeen (epoch phut) de ban be thay minh online.
+        // Heartbeat: ghi LastSeen (epoch phut) de ban be thay minh online.
         void Heartbeat(Action onSuccess = null, Action<AuthError> onError = null);
 
-        // ===== KET BAN 2 CHIEU (request -> accept) qua CloudScript [Aemy 2026-09-24] =====
+        // ===== KET BAN 2 CHIEU (request -> accept) qua CloudScript =====
         // Dang ky ten minh vao chi muc de nguoi khac tim duoc (goi sau login / doi ten).
         void IndexMyName(Action onDone = null, Action<AuthError> onError = null);
 

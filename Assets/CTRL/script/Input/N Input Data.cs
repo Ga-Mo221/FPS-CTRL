@@ -2,7 +2,7 @@ using Fusion;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-// [NET-OPT 2026-10-18 Aemy] (bao cao 9.6) Nen input 36B -> 16B moi tick (gui lien tuc tu moi client).
+// Nen input 36B -> 16B moi tick (gui lien tuc tu moi client).
 // Fusion weaver cap phat MOI FIELD 1 word (4 byte) nen phai GOP 2 gia tri 16-bit vao 1 field 32-bit.
 // Chi FIELD duoc serialize; code cu van dung .MoveDirection / .LookDelta / .AimForward (nay la property) nen khong doi.
 // Client predict doc lai dung gia tri DA luong tu hoa -> khong lech voi host.
@@ -77,10 +77,10 @@ public static class InputButtons
     public const int Mode    = 9;
     public const int Weapon1 = 10;
     public const int Weapon2  = 11;
-    public const int ScrollSwitch = 12; // [NET-OPT 2026-10-18 Aemy] thay ZoomDelta (float) — chi dung "!= 0" de doi sung
+    public const int ScrollSwitch = 12; // thay ZoomDelta (float) — chi dung "!= 0" de doi sung
 }
 
-// [NET-OPT 2026-10-18 Aemy] (bao cao 2.3) 8 NetworkBool (8 word) -> 1 byte bitmask. Code cu "s.IsRun = true" van chay
+// 8 NetworkBool (8 word) -> 1 byte bitmask. Code cu "s.IsRun = true" van chay
 // vi cac co gio la property; chi field Bits duoc serialize.
 [System.Serializable]
 public struct PlayerStateFlags : INetworkStruct
@@ -127,5 +127,3 @@ public struct PlayerStateFlags : INetworkStruct
     }
 }
 
-// [NET-OPT 2026-10-18 Aemy] (bao cao 2.1) Da xoa struct ShotInfo (~228B trong state moi player).
-// Proxy tu raycast visual; shotgun dung NCharMovementHandler.ShotSeed de pellet trung huong.

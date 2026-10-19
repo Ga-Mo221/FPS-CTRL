@@ -10,7 +10,7 @@ public class NetworkGameState : NetworkBehaviour
     [SerializeField] private int _totalRounds = 1;
     public int TotalRounds => _totalRounds;
     [SerializeField] private float _roundDurationMinutes = 10f;
-    // [Aemy 2026-10-19] Thoi gian tran chu phong chon (phong tuy chinh). Networked -> host moi (migration) van dung dung gia tri.
+    // Thoi gian tran chu phong chon (phong tuy chinh). Networked -> host moi (migration) van dung dung gia tri.
     [Networked] private float _roundMinutesOverride { get; set; }
     private float RoundMinutes => _roundMinutesOverride > 0f ? _roundMinutesOverride : _roundDurationMinutes;
     public void SetRoundMinutes(float minutes) { if (minutes > 0f) _roundMinutesOverride = minutes; }
@@ -20,10 +20,10 @@ public class NetworkGameState : NetworkBehaviour
     [Networked] private int _killTarget { get; set; } = 100;
     public int KillTarget => _killTarget;
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao muc 1) Truoc day RoundElapsed/TotalElapsed la [Networked] float
+    // Truoc day RoundElapsed/TotalElapsed la [Networked] float
     // += DeltaTime MOI TICK -> 2 word dirty x moi client x moi tick. Nay chi sync 2 tick moc (doi 1-2 lan/tran),
     // moi may tu tinh tu Runner.Tick + _roundTimer (da networked).
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.3) che do choi cua ca tran, sync 1 lan (truoc day nam trong moi NPlayer).
+    // che do choi cua ca tran, sync 1 lan (truoc day nam trong moi NPlayer).
     [Networked] public GamePlayMode Mode { get; private set; }
 
     /// <summary>[MM-BACKFILL] Con it hon so giay nay trong hiep thi khong nhan nguoi vao giua tran nua.</summary>
@@ -70,12 +70,12 @@ public class NetworkGameState : NetworkBehaviour
     // ── Kill Stats (networked) ────────────────────────────────────────────────
     [Networked] public int RedKill  { get; private set; }
     [Networked] public int BlueKill { get; private set; }
-    // [LAST-MAN 2026-10-01 Aemy] Con <=1 nguoi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
+    // Con <=1 nguoi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
     [Networked] public NetworkBool EndedByForfeit { get; private set; }
     [Networked] public int ForfeitWinnerTeam { get; private set; }
     [Networked] public NetworkId ForfeitWinnerId { get; private set; }
     private bool _hadTwoPlayers;
-    private bool _hadBothTeams; // [Aemy 2026-10-11] che do Team: tung co ca 2 doi
+    private bool _hadBothTeams; // che do Team: tung co ca 2 doi
     //[Networked] public int AllKill  { get; private set; }
 
     [Header("Kill Stats Settings")]
@@ -146,7 +146,7 @@ public class NetworkGameState : NetworkBehaviour
         if (EndTick == 0 && IsMatchOver())
             EndTick = Runner.Tick.Raw;
 
-        // [MM-BACKFILL 2026-10-18 Aemy] Cho nguoi moi vao tran dang dien ra (QuickJoin o MenuShell) khi con du thoi gian;
+        // Cho nguoi moi vao tran dang dien ra (QuickJoin o MenuShell) khi con du thoi gian;
         // dong phong khi tran da ket thuc hoac con < LATE_JOIN_MIN_SECONDS. Kiem tra ~2 lan/giay.
         if (Runner.IsServer && Runner.Tick.Raw % 32 == 0 && Runner.SessionInfo != null && Runner.SessionInfo.IsValid)
         {
@@ -169,7 +169,7 @@ public class NetworkGameState : NetworkBehaviour
             }
         }
 
-        // [LAST-MAN 2026-10-01 Aemy] Con <=1 nguoi choi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
+        // Con <=1 nguoi choi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
         if (GameStarted && !MatchEndedByKillTarget)
         {
             int active = 0; PlayerRef lastRef = default;
@@ -186,7 +186,7 @@ public class NetworkGameState : NetworkBehaviour
             if (active >= 2) _hadTwoPlayers = true;
             if (blue > 0 && red > 0) _hadBothTeams = true;
 
-            // [Aemy 2026-10-11] Team: 1 doi khong con ai (doi kia van con nguoi) -> doi con lai thang.
+            // Team: 1 doi khong con ai (doi kia van con nguoi) -> doi con lai thang.
             bool isTeam = GameManager.Instance != null && GameManager.Instance.GetGamePlayMode() == GamePlayMode.Team;
             if (isTeam && _hadBothTeams && active >= 1 && (blue == 0 || red == 0))
             {

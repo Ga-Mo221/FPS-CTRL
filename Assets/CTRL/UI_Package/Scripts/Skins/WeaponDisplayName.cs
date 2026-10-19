@@ -1,4 +1,4 @@
-// [Aemy 2026-10-11] FILE MOI. Ten hien thi vu khi thong nhat cho HUD trong tran (menu doi Balo, o sung dang cam).
+
 using TMPro;
 using UnityEngine;
 

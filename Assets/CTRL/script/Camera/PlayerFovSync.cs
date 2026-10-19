@@ -1,4 +1,4 @@
-// [Aemy 2026-10-19] FILE MOI. Gan len Main Camera cua prefab nhan vat.
+
 using UnityEngine;
 
 /// <summary>

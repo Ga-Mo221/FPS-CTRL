@@ -5,7 +5,7 @@ using Backend.Models;
 namespace Backend.Interfaces
 {
     /// <summary>
-    /// [Aemy 2026-10-19] Chat ngoai menu (to doi + nhan rieng ban be).
+    /// Chat ngoai menu (to doi + nhan rieng ban be).
     /// Mo hinh "hop thu di": moi nguoi chi ghi hop thu CUA MINH, nguoi nhan doc (polling) hop thu cua ben kia.
     ///  - To doi: moi thanh vien 1 key trong SharedGroup cua party.
     ///  - Nhan rieng: 1 key Public trong UserData cua nguoi gui (ban be doc duoc).

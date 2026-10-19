@@ -107,7 +107,7 @@ namespace Game.Shop
 
         private void OnEnable()
         {
-            // [Aemy 2026-10-19] moi lan vao tab CUA HANG -> mac dinh muc NOI BAT (dung lai ngay bang catalog da nap, khong cho tai lai)
+            // moi lan vao tab CUA HANG -> mac dinh muc NOI BAT (dung lai ngay bang catalog da nap, khong cho tai lai)
             if (Application.isPlaying && _currentTab != 0) { _currentTab = 0; if (_loaded) Rebuild(); }
             ApplyTabVisual();
             if (Application.isPlaying) { LoadCatalog(); return; }
@@ -370,7 +370,7 @@ namespace Game.Shop
             }
         }
 
-        /// <summary>[Aemy 2026-10-12] Tab dang mo (0 Noi bat, 1 Sung, 2 Nhan vat) - cho ShopGamepadNav.</summary>
+        /// <summary> Tab dang mo (0 Noi bat, 1 Sung, 2 Nhan vat) - cho ShopGamepadNav.</summary>
         public int CurrentTab { get { return _currentTab; } }
 
         public void SelectTab(int index)

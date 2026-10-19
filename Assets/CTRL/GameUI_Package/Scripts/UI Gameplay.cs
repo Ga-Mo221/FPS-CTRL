@@ -8,13 +8,13 @@ public class UIGameplay : MonoBehaviour
     private Coroutine _endGame;
 
     private bool OnLoad = false;
-    private bool _reported = false;   // [Aemy 2026-10-01] guard bao cao 1 lan
+    private bool _reported = false;   // guard bao cao 1 lan
 
     private void Awake()
     {
-        // [Aemy 2026-10-01] reset so lieu dau tran (hygiene cho pipeline stats).
+        // reset so lieu dau tran (hygiene cho pipeline stats).
         Game.Match.MatchStatsReporter.Instance.ResetMatch();
-        Game.UI.CustomRoomSession.AttachHudLabel(transform); // [Aemy 2026-10-17] hien ma phong tuy chinh tren HUD
+        Game.UI.CustomRoomSession.AttachHudLabel(transform); // hien ma phong tuy chinh tren HUD
     }
 
     private void Update()
@@ -51,7 +51,7 @@ public class UIGameplay : MonoBehaviour
             else
                 won = Solo(gs);
 
-            // [Aemy 2026-10-01] Day stats + EXP len PlayFab, roi hien phan thuong (EXP/Level).
+            //  Day stats + EXP len PlayFab, roi hien phan thuong (EXP/Level).
             ReportAndShowRewards(killInfo, won);
 
             if (_endGame == null && gameObject.activeInHierarchy)
@@ -63,25 +63,25 @@ public class UIGameplay : MonoBehaviour
 
     private bool Team(NetworkGameState gs)
     {
-        // [LAST-MAN 2026-10-01] Forfeit -> doi con lai thang; nguoc lai theo ti so kill.
+        // Forfeit -> doi con lai thang; nguoc lai theo ti so kill.
         bool blueWon;
         bool draw = false;
         if (gs.EndedByForfeit && gs.ForfeitWinnerTeam >= 0)
             blueWon = (gs.ForfeitWinnerTeam == (int)PlayerTeam.Blue);
         else
         {
-            draw = gs.BlueKill == gs.RedKill; // [Aemy 2026-10-11] hoa -> khong ai thang (truoc day doi Do tu "thang")
+            draw = gs.BlueKill == gs.RedKill; // hoa -> khong ai thang (truoc day doi Do tu "thang")
             blueWon = gs.BlueKill > gs.RedKill;
         }
 
         var local = NPlayer.Local;
         bool localPlayerWon = !draw && local != null && local.NetworkedTeam == (blueWon ? PlayerTeam.Blue : PlayerTeam.Red);
-        // [Aemy 2026-10-11] Ten = DOI THANG (Alpha = Blue, Beta = Red - khop HUD), khong phai doi cua minh.
+        // Ten = DOI THANG (Alpha = Blue, Beta = Red - khop HUD), khong phai doi cua minh.
         string name = draw ? "Alpha · Beta" : (blueWon ? "Alpha" : "Beta");
         string winScore = (blueWon ? gs.BlueKill : gs.RedKill).ToString();
         int loseScore = blueWon ? gs.RedKill : gs.BlueKill;
         _winlose?.SetResult(new MatchResult(name, winScore, loseScore, draw ? 2 : (localPlayerWon ? 1 : 0)));
-        // [Aemy 2026-10-12] Ti so theo goc nhin nguoi choi: TRAI = doi minh, PHAI = doi dich, to mau theo doi (Xanh/Do).
+        // Ti so theo goc nhin nguoi choi: TRAI = doi minh, PHAI = doi dich, to mau theo doi (Xanh/Do).
         // Thang 10-2 (minh Xanh) -> "10 - 2"; ben Do thua thay "2 - 10".
         bool myBlue = local == null || local.NetworkedTeam == PlayerTeam.Blue;
         int myScore = myBlue ? gs.BlueKill : gs.RedKill;
@@ -104,7 +104,7 @@ public class UIGameplay : MonoBehaviour
         return localPlayerWon;
     }
 
-    // [Aemy 2026-10-01] EXP tran = TotalExp + 100 (hoan thanh) + 200 (neu thang).
+    // EXP tran = TotalExp + 100 (hoan thanh) + 200 (neu thang).
     // Day len PlayFab qua MatchStatsReporter; dung Experience that tra ve de tinh Level + phan thuong.
     private void ReportAndShowRewards(KillInfo killInfo, bool won)
     {

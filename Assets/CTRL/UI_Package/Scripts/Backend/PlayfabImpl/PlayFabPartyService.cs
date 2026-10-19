@@ -9,20 +9,20 @@ using Backend.Models;
 
 namespace Backend.PlayfabImpl
 {
-    // [Aemy 2026-09-21] Party dua tren PlayFab SharedGroupData + CloudScript invite.
+    // Party dua tren PlayFab SharedGroupData + CloudScript invite.
     public class PlayFabPartyService : IPartyService
     {
         private const string InviteKey = "PartyInvite";
         private const string LeaderKey = "leader";
         private const string MatchKey  = "match";
-        private const string SettingsKey = "cfg"; // [Aemy 2026-10-17]
+        private const string SettingsKey = "cfg"; 
 
         private static string SelfId() { return BackendBootstrap.AuthService != null ? BackendBootstrap.AuthService.CurrentUserId : null; }
         private static string SelfName() { var p = ProfileCache.Cached; return (p != null && !string.IsNullOrEmpty(p.DisplayName)) ? p.DisplayName : "PLAYER"; }
         private static string SelfAvatar() { var p = ProfileCache.Cached; return (p != null && p.AvatarUrl != null) ? p.AvatarUrl : ""; }
         private static long Now() { return System.DateTimeOffset.UtcNow.ToUnixTimeSeconds(); }
 
-        // [PARTY-HB 2026-09-29] Heartbeat: ghi lai blob voi seen moi (giu ready hien tai).
+        // Heartbeat: ghi lai blob voi seen moi (giu ready hien tai).
         public void Touch(string code, bool ready, Action onOk, Action<AuthError> onError)
         {
             string self = SelfId();
@@ -33,7 +33,7 @@ namespace Backend.PlayfabImpl
             _ => { if (onOk != null) onOk(); }, e => { if (onError != null) onError(Map(e)); });
         }
 
-        // [PARTY-HB] Leader da mot thanh vien mat ket noi ra khoi nhom.
+        // Leader da mot thanh vien mat ket noi ra khoi nhom.
         public void KickMember(string code, string playFabId, Action onOk, Action<AuthError> onError)
         {
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(playFabId)) { if (onOk != null) onOk(); return; }
@@ -67,7 +67,7 @@ namespace Backend.PlayfabImpl
         {
             string self = SelfId();
             if (string.IsNullOrEmpty(self) || string.IsNullOrEmpty(code)) { if (onError != null) onError(Err("Thieu code / chua dang nhap.")); return; }
-            // [PARTY-FIX 2026-09-29] Client KHONG the tu them minh vao shared group (AddSharedGroupMembers chi cho
+            // Client KHONG the tu them minh vao shared group (AddSharedGroupMembers chi cho
             // thanh vien hien tai goi). Nho CloudScript (server) them ho roi ghi blob.
             var blob = JsonUtility.ToJson(new PartyMemberBlob { name = SelfName(), ready = false, avatar = SelfAvatar(), seen = Now() });
             PlayFabClientAPI.ExecuteCloudScript(new ExecuteCloudScriptRequest
@@ -113,7 +113,7 @@ namespace Backend.PlayfabImpl
             e => { if (onError != null) onError(Map(e)); });
         }
 
-        // [Aemy 2026-10-17] Chuyen truong nhom (hoac thanh vien dau tien nhan lai khi truong nhom cu da roi).
+        // Chuyen truong nhom (hoac thanh vien dau tien nhan lai khi truong nhom cu da roi).
         public void SetLeader(string code, string playFabId, Action onOk, Action<AuthError> onError)
         {
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(playFabId)) { if (onError != null) onError(Err("Thieu code / id.")); return; }
@@ -123,7 +123,7 @@ namespace Backend.PlayfabImpl
             e => { if (onError != null) onError(Map(e)); });
         }
 
-        // [Aemy 2026-10-17] Truong nhom ghi che do / map / moc ha guc -> thanh vien doc qua GetParty.
+        // Truong nhom ghi che do / map / moc ha guc -> thanh vien doc qua GetParty.
         public void SetSettings(string code, string settingsJson, Action onOk, Action<AuthError> onError)
         {
             if (string.IsNullOrEmpty(code)) { if (onError != null) onError(Err("Thieu code.")); return; }
@@ -196,7 +196,7 @@ namespace Backend.PlayfabImpl
                 e => { if (onError != null) onError(Map(e)); });
         }
 
-        // [INVITE-FIX 2026-09-29 Aemy] Parse invite khoan dung ca 2 kieu ten field (Code/code) tu CloudScript.
+        // Parse invite khoan dung ca 2 kieu ten field (Code/code) tu CloudScript.
         private static PartyInvite ParseInvite(string json)
         {
             if (string.IsNullOrEmpty(json)) return null;

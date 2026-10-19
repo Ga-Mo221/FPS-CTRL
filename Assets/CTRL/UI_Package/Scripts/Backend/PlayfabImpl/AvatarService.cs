@@ -1,4 +1,4 @@
-// [Aemy 2026-09-27] Danh sach avatar preset cho nguoi choi chon.
+//Danh sach avatar preset cho nguoi choi chon.
 // Nguon: PlayFab Title Data key "Avatars" (JSON { "avatars":[ {id,name,url} ] }) - chinh qua Google Sheet nhu Weapons/Shop.
 // Neu Title Data trong/loi -> dung danh sach mac dinh built-in (robohash) de picker luon co avatar de chon.
 using System;

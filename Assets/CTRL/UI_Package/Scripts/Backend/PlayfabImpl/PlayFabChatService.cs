@@ -9,7 +9,7 @@ using Backend.Models;
 namespace Backend.PlayfabImpl
 {
     /// <summary>
-    /// [Aemy 2026-10-19] IChatService tren PlayFab, KHONG can CloudScript:
+    /// IChatService tren PlayFab, KHONG can CloudScript:
     ///  - To doi: SharedGroupData cua party, key "chat_&lt;PlayFabId&gt;" (moi thanh vien ghi key cua minh).
     ///  - Nhan rieng: UserData key "chat_dm" (Permission Public) cua nguoi gui; nguoi nhan GetUserData(PlayFabId).
     /// Luu y: du lieu Public -> ai biet PlayFabId cung doc duoc (phu hop chat ban be trong game, khong dung cho tin mat).

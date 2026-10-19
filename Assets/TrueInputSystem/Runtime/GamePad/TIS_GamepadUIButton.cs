@@ -12,7 +12,7 @@ namespace GaMo.TrueInputSystem
     {
         // ── Enums ─────────────────────────────────────────────────────────────
 
-        // [Aemy 2026-10-05] >0 = dang co overlay (chon nhan vat/avatar) -> chan input menu phia sau.
+        //  >0 = dang co overlay (chon nhan vat/avatar) -> chan input menu phia sau.
         public static int ExternalSuppress = 0;
 
         public enum NavMode     { FourDirectional, Horizontal, Vertical }
@@ -178,7 +178,7 @@ namespace GaMo.TrueInputSystem
         {
             if (alwaysActive)
             {
-                // [Aemy 2026-10-19] Truoc day KHONG goi base.OnDeselect -> Selectable giu hasSelection = true mai mai.
+                // Truoc day KHONG goi base.OnDeselect -> Selectable giu hasSelection = true mai mai.
                 // Nut Tab/SubTab tung duoc focus that (vd D-pad di len thanh che do) ve sau chi can chuot re vao / ra
                 // la Unity danh gia lai trang thai = Selected -> hien sprite "Selected" va KHONG tat (hover ket).
                 // Goi base de xoa hasSelection, roi chi giu visual Highlighted neu nut dang active trong layer.
@@ -199,7 +199,7 @@ namespace GaMo.TrueInputSystem
         {
             if (!isNavigationEnabled) return;
             if (ExternalSuppress > 0) return;                                  // overlay dang mo
-            // Controller-first [Aemy]: tay cầm điều hướng đầy đủ. Bàn phím / chuột: chỉ phím mũi tên
+            // Controller-first : tay cầm điều hướng đầy đủ. Bàn phím / chuột: chỉ phím mũi tên
             // điều hướng Content (không WASD — trùng phím di chuyển; không Q/E/Z/C — trùng phím game).
             var _brg = TISInputBridge.Instance;
             bool kbNav = _brg != null && _brg.IsKeyboardMouse;

@@ -1,4 +1,4 @@
-// [Aemy 2026-10-11] FILE MOI. Phat am UI + nhac nen menu cho TOAN game (tu khoi tao, song qua cac scene).
+
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;

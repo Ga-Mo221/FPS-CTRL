@@ -7,7 +7,7 @@ using GaMo.TrueInputSystem;
 namespace Game.UI
 {
     /// <summary>
-    /// [Aemy 2026-10-04] Bao dam LUON co 1 TISGamepadUIButton duoc focus khi nguoi choi dung tay cam/arrow.
+    /// Bao dam LUON co 1 TISGamepadUIButton duoc focus khi nguoi choi dung tay cam/arrow.
     /// Khac phuc goc: chuoi focus cua TIS mong manh (chuot xoa selection, selection tro vao button panel da an,
     /// EventSystem chua san luc set) -> khong button nao duoc chon -> bam tay cam vo tac dung.
     /// Dat len GOC cua menu (MenuShell). Chi set focus khi KHONG co button hop le dang chon -> khong dung voi TIS.
@@ -28,7 +28,7 @@ namespace Game.UI
 
 private void Update()
         {
-            // [Aemy 2026-10-05] overlay dang mo -> khong gianh focus; controller-first -> chi khi dang dung tay cam.
+            // overlay dang mo -> khong gianh focus; controller-first -> chi khi dang dung tay cam.
             if (TISGamepadUIButton.ExternalSuppress > 0) return;
             var _br = TISInputBridge.Instance; if (_br != null && !_br.IsGamepad) return;
 
@@ -55,7 +55,7 @@ private void Update()
         {
             if (go == null || !go.activeInHierarchy) return false;
             var b = go.GetComponent<TISGamepadUIButton>();
-            // [Aemy 2026-10-12] Bo dieu kien interactable: o "khoa"/"da so huu" (interactable=false) van la cho dung hop le
+            // Bo dieu kien interactable: o "khoa"/"da so huu" (interactable=false) van la cho dung hop le
             // cho tay cam (di qua duoc). Truoc day guard keo focus di moi lan bam D-pad -> ket.
             return b != null && b.enabled;
         }

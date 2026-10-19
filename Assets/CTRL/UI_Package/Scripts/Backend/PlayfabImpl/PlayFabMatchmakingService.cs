@@ -100,7 +100,7 @@ namespace Backend.PlayfabImpl
                 createReq,
                 result =>
                 {
-                    // [MM-BACKFILL 2026-10-18 Aemy] Nguoi choi da huy (vd chuyen sang vao tran dang dien ra) TRUOC khi
+                    // Nguoi choi da huy (vd chuyen sang vao tran dang dien ra) TRUOC khi
                     // ve tao xong -> huy luon ve nay, tranh ve "ma" bi ghep voi nguoi khac roi khong ai vao.
                     if (!IsSearching)
                     {

@@ -5,7 +5,7 @@ using UnityEngine;
 [DefaultExecutionOrder(25)] // sau NCharMovementHandler (20)
 public class NShootHandler : NetworkBehaviour
 {
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2) 2 NetworkString<_16> (~34 word, UTF-32) -> 1 ushort:
+    // 2 NetworkString<_16> (~34 word, UTF-32) -> 1 ushort:
     // byte thap = chi so luu dan Q, byte cao = E trong GameManager.GetGrenadeList(); 255 = mac dinh (Frag/Flash).
     // GrenadeQ/GrenadeE giu nguyen ten + kieu tra ve chuoi nen code cu (.ToString()) khong doi.
     [Networked] private ushort _grenadeSlots { get; set; } = 0xFFFF;
@@ -43,7 +43,7 @@ public class NShootHandler : NetworkBehaviour
     [SerializeField] private LayerMask _hitMask;
 
     // ── Networked stats ────────────────────────────────────────────────────
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.4) _kill + Assist gop 2 ushort trong 1 word, 1 callback chung.
+    // _kill + Assist gop 2 ushort trong 1 word, 1 callback chung.
     [Networked, OnChangedRender(nameof(OnScoreChanged))]
     private uint _score { get; set; }
     public int _kill
@@ -72,7 +72,7 @@ public class NShootHandler : NetworkBehaviour
     /// Timer delay từ lúc nhấn attack đến lúc hitbox check — đồng bộ với animation swing.
     /// Networked để Host quản lý timing chính xác theo tick.
     /// </summary>
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.1) _meleeHitTimer khai bao nhung khong dung -> xoa.
+    // _meleeHitTimer khai bao nhung khong dung -> xoa.
 
     [Header("Melee Active Hit Window")]
     [Tooltip("Sau khi hết delay swing, hitbox check sẽ tiếp tục chạy MỖI TICK trong khoảng thời gian này (giây) thay vì chỉ 1 tick duy nhất — giúp dễ trúng đòn hơn với đối tượng đang di chuyển / độ trễ mạng.")]
@@ -82,7 +82,7 @@ public class NShootHandler : NetworkBehaviour
     /// Cửa sổ thời gian (nhiều tick) mà HandleMeleeHit() được phép chạy sau khi _meleeHitTimer hết hạn.
     /// Networked để mọi tick simulate/resimulate trên Host đều nhất quán.
     /// </summary>
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.2) cua so ~150ms chi host doc -> field thuong.
+    // cua so ~150ms chi host doc -> field thuong.
     private TickTimer _meleeHitWindowEndTimer;
 
     /// <summary>
@@ -109,7 +109,7 @@ public class NShootHandler : NetworkBehaviour
     /// </summary>
     private const float MeleeDotThreshold = 0.64f;
 
-    // ── [NET-OPT 2026-10-18 Aemy] Ket qua raycast cua host (local, khong sync) ──
+    // Ket qua raycast cua host (local, khong sync) ──
     private struct LocalShot { public Vector3 Pos; public Vector3 Normal; public bool Effect; }
     private readonly LocalShot[] _hostShot = new LocalShot[8];
     private int _hostShotCount;
@@ -185,7 +185,7 @@ public class NShootHandler : NetworkBehaviour
         _hitSound               = _componentManager.Audio_HitSound;
         _playerData             = _movementHandler.Data;
         _nHPHandler             = _componentManager.NHPHandler;
-        // [NET-OPT 2026-10-18 Aemy] nguoi vao sau / sau migration: khong phat lai su kien cu
+        // nguoi vao sau / sau migration: khong phat lai su kien cu
         _lastFireCount          = _movementHandler.FireCount;
         _lastMeleeHitCount      = _meleeHitCount;
         _lastRenderedKill       = _kill;
@@ -227,7 +227,7 @@ public class NShootHandler : NetworkBehaviour
                         ? _movementHandler.LastConfirmedAimForward
                         : _aimForward;
 
-                    // [NET-OPT 2026-10-18 Aemy] Ket qua raycast KHONG ghi vao state nua; host giu cache local
+                    // Ket qua raycast KHONG ghi vao state nua; host giu cache local
                     // de tu dung visual cho chinh minh trong Render (proxy tu raycast, xem OnFireDetected).
                     if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle ||
                         _weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
@@ -324,7 +324,7 @@ public class NShootHandler : NetworkBehaviour
         // FIX Bug #4: ping cao / snapshot thưa có thể khiến FireCount nhảy nhiều đơn vị
         // giữa 2 lần Render() liên tiếp. Trước đây chỉ so sánh != nên chỉ chạy OnFireDetected()
         // một lần dù FireCount tăng 3-4 → mất visual những phát ở giữa.
-        // [NET-OPT 2026-10-18 Aemy] FireCount la byte quay vong -> delta theo modulo 256, chan spam visual toi da 4.
+        // FireCount la byte quay vong -> delta theo modulo 256, chan spam visual toi da 4.
         int fireDelta = (byte)(_movementHandler.FireCount - _lastFireCount);
         if (fireDelta > 4) fireDelta = 4;
         if (fireDelta > 0)
@@ -385,7 +385,7 @@ public class NShootHandler : NetworkBehaviour
 
         // SpawnProjectileVisual (điểm/effect trúng đạn):
         //  - Host: dung cache ket qua raycast that (LagCompensation) cua tick ban.
-        //  - Proxy: [NET-OPT 2026-10-18 Aemy] tu raycast cuc bo theo huong suy tu TargetYaw + NetworkedPitch
+        //  - Proxy: tu raycast cuc bo theo huong suy tu TargetYaw + NetworkedPitch
         //    (truoc day doc LastShotInfo ~228B/nguoi trong state). Sai lech chi o visual, damage do host tinh.
         var activeType = _weaponManager.Weapon_Active()?.WeaponType;
         if (activeType == WeaponType.Rifle || activeType == WeaponType.Sniper || activeType == WeaponType.Shotgun)
@@ -429,7 +429,7 @@ public class NShootHandler : NetworkBehaviour
             weaponCtrl?.SpawnProjectileVisual(_hostMeleeWallHit.Pos, _hostMeleeWallHit.Normal, true);
             return;
         }
-        // [NET-OPT 2026-10-18 Aemy] May khac tu raycast tu camera theo huong ngam, tam Range + MeleeRadius.
+        // May khac tu raycast tu camera theo huong ngam, tam Range + MeleeRadius.
         Vector3 aim = Object.HasInputAuthority && _aimForward.sqrMagnitude > 0.0001f ? _aimForward : _movementHandler.DerivedAimForward;
         float range  = weaponCtrl != null ? weaponCtrl.Data.Range : 1.5f;
         float radius = weaponCtrl != null ? weaponCtrl.Data.MeleeRadius : 0.6f;
@@ -596,7 +596,7 @@ public class NShootHandler : NetworkBehaviour
     /// </summary>
     private static Vector3 GetSpreadDirection(Vector3 forward, float spreadAngle, ushort seed, int pelletIndex)
     {
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 2.1) Truoc day UnityEngine.Random -> moi may 1 huong pellet khac nhau.
+        // Truoc day UnityEngine.Random -> moi may 1 huong pellet khac nhau.
         // Nay dung hash tat dinh tu (seed, pellet) -> host, client predict va proxy cung ra 1 huong.
         float angle  = Hash01(seed, pelletIndex * 2)     * 360f * Mathf.Deg2Rad;
         float radius = Hash01(seed, pelletIndex * 2 + 1);   // sqrt để uniform trên đĩa
@@ -696,7 +696,7 @@ public class NShootHandler : NetworkBehaviour
         }
 
         // ── Tầng 1: OverlapSphere fallback ────────────────────────────────
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) tai su dung list (truoc day new List moi tick trong window)
+        // tai su dung list (truoc day new List moi tick trong window)
         var hits  = _meleeHits;
         hits.Clear();
         int count = Runner.LagCompensation.OverlapSphere(
@@ -979,7 +979,7 @@ public class NShootHandler : NetworkBehaviour
     }
 
     // ── RPC ───────────────────────────────────────────────────────────────
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.3) hit marker tan suat cao, mat 1 cai khong sao -> Unreliable (khong gui lai).
+    // hit marker tan suat cao, mat 1 cai khong sao -> Unreliable (khong gui lai).
     [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority, Channel = RpcChannel.Unreliable)]
     private void RPC_ApplyAudio()
     {
@@ -1037,7 +1037,7 @@ public class NShootHandler : NetworkBehaviour
             case 2: grenade = gm.GetGrenade(GrenadeE.ToString()); break;
         }
 
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) null-check TRUOC khi doc GrenadeType (truoc day NRE),
+        // null-check TRUOC khi doc GrenadeType (truoc day NRE),
         // va van reset _grende_ID de khong ket trang thai nem.
         if (grenade == null) { _grende_ID = 0; return; }
 

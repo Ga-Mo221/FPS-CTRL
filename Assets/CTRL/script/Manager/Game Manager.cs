@@ -170,7 +170,7 @@ public class GameManager : MonoBehaviour
     public int KillTarget => _killTarget;
     public void SetKillTarget(int killTarget) => _killTarget = killTarget;
 
-    // [Aemy 2026-10-19] Thoi gian tran (phut) chu phong dat cho phong tuy chinh. 0 = dung mac dinh cua NetworkGameState (10 phut).
+    // Thoi gian tran (phut) chu phong dat cho phong tuy chinh. 0 = dung mac dinh cua NetworkGameState (10 phut).
     private float _roundMinutes = 0f;
     public float RoundMinutes => _roundMinutes;
     public void SetRoundMinutes(float minutes) => _roundMinutes = Mathf.Max(0f, minutes);
@@ -283,7 +283,7 @@ public class GameManager : MonoBehaviour
     
     public GamePlaySetupData GetSetupData() => _setupData;
     public void SetSetupData(GamePlaySetupData setupData) => _setupData = setupData;
-    // [Aemy 2026-10-05] Set nhan vat dang chon (-> _setupData -> token -> NSpawner spawn dung prefab).
+    // Set nhan vat dang chon (-> _setupData -> token -> NSpawner spawn dung prefab).
     public void SetCharacter(string name) { if (!string.IsNullOrEmpty(name)) _setupData.CharacterName = name; }
     
     public void setCurrentBalo(BaloData data)
@@ -366,7 +366,7 @@ public class GameManager : MonoBehaviour
         if (ID.IsNullOrEmpty()) return null;
         
         if (_weapon_Prefabs == null || _weapon_Prefabs.Length == 0) return null;
-        WeaponInfo exact; // [Aemy 2026-10-11] uu tien khop dung ID (skin "Vesper_DR" chua chuoi "Vesper")
+        WeaponInfo exact; // uu tien khop dung ID (skin "Vesper_DR" chua chuoi "Vesper")
         if (TryFindExactWeapon(ID, out exact)) return exact.Weapon;
         foreach (var weapon in _weapon_Prefabs)
             if (weapon.ID().Contains(ID))
@@ -379,7 +379,7 @@ public class GameManager : MonoBehaviour
         if (ID == "Frag")
             return _fragSprite;
         
-        WeaponInfo exact; // [Aemy 2026-10-11]
+        WeaponInfo exact;
         if (TryFindExactWeapon(ID, out exact)) return exact.Icon();
         foreach (var weapon in _weapon_Prefabs)
         {
@@ -387,7 +387,7 @@ public class GameManager : MonoBehaviour
                 return weapon.Icon();
         }
         
-        // [Aemy 2026-10-11] Kill feed truyen WeaponName (vd "Vesper Dark Red") chu khong phai ID -> khop them theo ten.
+        // Kill feed truyen WeaponName (vd "Vesper Dark Red") chu khong phai ID -> khop them theo ten.
         if (!string.IsNullOrEmpty(ID))
             foreach (var weapon in _weapon_Prefabs)
             {
@@ -401,7 +401,7 @@ public class GameManager : MonoBehaviour
 
     public WeaponData GetWeaponData(string ID)
     {
-        WeaponInfo exact; // [Aemy 2026-10-11]
+        WeaponInfo exact;
         if (TryFindExactWeapon(ID, out exact)) return exact.Data();
         foreach (var weapon in _weapon_Prefabs)
         {
@@ -414,7 +414,7 @@ public class GameManager : MonoBehaviour
 
     public WeaponInfo[] GetWeaponDataList() => _weapon_Prefabs;
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.5) Kill feed gui chi so vu khi (byte) thay vi chuoi ten.
+    // Kill feed gui chi so vu khi (byte) thay vi chuoi ten.
     // Moi may dung cung GameManager prefab -> cung thu tu _weapon_Prefabs.
     public int GetWeaponIndexByName(string weaponName)
     {
@@ -429,7 +429,7 @@ public class GameManager : MonoBehaviour
         return -1;
     }
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2) DropItemWeapon sync byte chi so thay vi NetworkString ID.
+    // DropItemWeapon sync byte chi so thay vi NetworkString ID.
     public int GetWeaponIndexById(string id)
     {
         if (string.IsNullOrEmpty(id) || _weapon_Prefabs == null) return -1;
@@ -446,7 +446,7 @@ public class GameManager : MonoBehaviour
         return _weapon_Prefabs[index].ID();
     }
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2) NShootHandler sync byte chi so luu dan thay vi NetworkString.
+    // NShootHandler sync byte chi so luu dan thay vi NetworkString.
     public int GetGrenadeIndex(string id)
     {
         if (string.IsNullOrEmpty(id) || _grenade_Prefabs == null) return -1;
@@ -470,7 +470,7 @@ public class GameManager : MonoBehaviour
         return d != null ? d.WeaponName : _weapon_Prefabs[index].ID();
     }
 
-    // [Aemy 2026-10-11] Khop CHINH XAC ID (khong phan biet hoa thuong). Cac ham Get* van giu Contains lam du phong nhu cu.
+    // Khop CHINH XAC ID (khong phan biet hoa thuong). Cac ham Get* van giu Contains lam du phong nhu cu.
     private bool TryFindExactWeapon(string ID, out WeaponInfo found)
     {
         found = default(WeaponInfo);
@@ -504,7 +504,7 @@ public class GameManager : MonoBehaviour
     }
     
     public NPlayer[] GetCharacterList() => _character_Prefabs;
-    // [MERGE 2026-09-30 Aemy] Port tu EclipseStrike: map scene + loadout cache (client-side) cho UI_Package.
+    // Port tu EclipseStrike: map scene + loadout cache (client-side) cho UI_Package.
     private string _selectedMapScene = "ShortMap1";
     public void SetSelectedMapScene(string sceneName) { if (!string.IsNullOrEmpty(sceneName)) _selectedMapScene = sceneName; }
     public string GetSelectedMapScene() => string.IsNullOrEmpty(_selectedMapScene) ? "ShortMap1" : _selectedMapScene;
@@ -548,7 +548,7 @@ public struct KillInfo
     
     public int Deaths { get; private set; }
 
-    public string AvatarUrl { get; private set; } // [MVP-AVATAR 2026-10-01 Aemy]
+    public string AvatarUrl { get; private set; } 
 
     public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths, int assist, int totalExp, string avatarUrl = "")
     {

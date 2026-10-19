@@ -10,7 +10,7 @@ public class NCharMovementHandler : NetworkBehaviour
     [Networked] public PlayerStateFlags StateFl {get; set;}
     private PlayerStateFlags _newState;
     [Networked] public int GrenadeID {get; private set;}
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 5.2) QKey/EKey truoc la bien thuong nhung ghi trong FixedUpdateNetwork
+    // QKey/EKey truoc la bien thuong nhung ghi trong FixedUpdateNetwork
     // -> lech khi client resimulate. Nay gop ca 4 co (Grenade_Q/E da dung + dang giu Q/E) vao 1 byte networked:
     // duoc rollback dung khi resimulate, va 2 NetworkBool (2 word) con 1 word.
     [Networked] private byte _grenadeFlags { get; set; }
@@ -22,7 +22,7 @@ public class NCharMovementHandler : NetworkBehaviour
     public bool QKey      { get { return GetGF(GF_HOLD_Q); } set { SetGF(GF_HOLD_Q, value); } }
     public bool EKey      { get { return GetGF(GF_HOLD_E); } set { SetGF(GF_HOLD_E, value); } }
     [Networked] public NetworkBool IsTurnInPlaceActive { get; private set; }
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.4) IsJump -> JumpCount: truoc day Render() GHI IsJump=false vao bien networked
+    // IsJump -> JumpCount: truoc day Render() GHI IsJump=false vao bien networked
     // (khong hop le, client co the mat event nhay). Nay dung bo dem, Render so sanh voi gia tri local.
     // (JumpCount: xem _eventCounters)
     [Networked] public float NetworkedPitch { get; private set; }
@@ -30,7 +30,7 @@ public class NCharMovementHandler : NetworkBehaviour
     // IsFiring chỉ cần 1 tick để NShootHandler đọc trong cùng FixedUpdateNetwork,
     // không cần sync ra ngoài. FireCount sync để remote clients spawn visual.
     // AimForward sync để Host/remote dùng cùng hướng bắn chính xác từ InputData.
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.4) FireCount / SwitchCount / JumpCount gop thanh 3 byte trong 1 word.
+    // FireCount / SwitchCount / JumpCount gop thanh 3 byte trong 1 word.
     // Gia tri 0..255 quay vong: noi doc chi so sanh != hoac lay delta (byte)(moi - cu).
     [Networked] private uint _eventCounters { get; set; }
     private int GetCounter(int shift) { return (int)((_eventCounters >> shift) & 0xFF); }
@@ -38,10 +38,10 @@ public class NCharMovementHandler : NetworkBehaviour
     public int FireCount   { get { return GetCounter(0); } }   // tăng mỗi phát bắn
     public int SwitchCount { get { return GetCounter(8); } }
     public int JumpCount   { get { return GetCounter(16); } }
-    // [NET-OPT 2026-10-18 Aemy] (bao cao muc 1) Bo [Networked]: host va client predict deu gan lai tu GetInput moi tick,
+    // Bo [Networked]: host va client predict deu gan lai tu GetInput moi tick,
     // proxy khong dung (proxy da co TargetYaw + NetworkedPitch). Tiet kiem 3 word dirty gan nhu moi tick.
     public Vector3 AimForward { get; private set; }  // hướng bắn từ NInputData
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.1, huong A) Bo ShotInfo (~57 word) khoi state cua MOI player.
+    // Bo ShotInfo (~57 word) khoi state cua MOI player.
     // Chi sync ShotSeed (ghi cung tick voi FireCount, chi shotgun) de host/client predict/proxy ra CUNG huong pellet;
     // proxy tu raycast cuc bo de dung visual (damage van do host tinh bang LagCompensation).
     [Networked] public ushort ShotSeed { get; private set; }
@@ -62,7 +62,7 @@ public class NCharMovementHandler : NetworkBehaviour
 
     // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
     // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 3.2) buffer ~100ms chi host dung -> field thuong (mat khi migration khong sao)
+    // buffer ~100ms chi host dung -> field thuong (mat khi migration khong sao)
     private TickTimer _fireHoldTimer;
 
     // Số tick buffer — đủ để che lấp jitter 1-2 tick mà không delay cảm giác
@@ -81,7 +81,7 @@ public class NCharMovementHandler : NetworkBehaviour
 
     [Networked] private TickTimer _slideTimer { get; set; }
     [Networked] private TickTimer _respawnInvincibleTimer { get; set; }
-    // [NET-OPT 2026-10-18 Aemy] _currentSpeed/_acceleration: tinh va dung ngay trong tick -> bien local (xem FixedUpdateNetwork)
+    // _currentSpeed/_acceleration: tinh va dung ngay trong tick -> bien local (xem FixedUpdateNetwork)
     [Networked] private bool _isRespawnRequested { get; set; } = false;
     private CharacterState _stateLogic;
     [Networked] private NetworkButtons _previousButtons { get; set; }
@@ -97,7 +97,7 @@ public class NCharMovementHandler : NetworkBehaviour
 
     [Networked] public float CameraSpeed { get; private set; } = 1.0f;
     [Networked] public float ADSLookSpeedMultiplier { get; private set; } = 0.5f;
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.5) He so ADS la SETTING, gui 1 lan luc spawn / khi doi setting
+    // He so ADS la SETTING, gui 1 lan luc spawn / khi doi setting
     // (Rpc_SetLookSettings). Host + may predict tu chon he so theo loai sung khi bam ADS -> het RPC lap khi resimulate.
     private float _sniperAds = 0.5f;
     private float _rifleAds  = 0.5f;
@@ -543,7 +543,7 @@ public class NCharMovementHandler : NetworkBehaviour
     }
 
     /// <summary>
-    /// [NET-OPT 2026-10-18 Aemy] Goi tu may local (InputAuthority) luc spawn / khi doi setting.
+    /// Goi tu may local (InputAuthority) luc spawn / khi doi setting.
     /// Luu ngay he so ADS local (de client predict dung) roi gui 1 RPC duy nhat len host.
     /// </summary>
     public void SendLookSettings(float camSpeed, float sniperAds, float rifleAds)

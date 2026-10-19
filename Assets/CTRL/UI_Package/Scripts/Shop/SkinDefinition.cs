@@ -1,4 +1,4 @@
-// [UI-INTEGRATION 2026-09-12 - Aemy] FILE MỚI (thêm cho việc ghép UI / hệ skin).
+
 using System.Collections.Generic;
 using UnityEngine;
 

@@ -16,7 +16,7 @@ namespace Backend.Interfaces
         // Xoá vĩnh viễn tài khoản người chơi hiện tại (gọi CloudScript 'DeleteMyAccount' -> server.DeletePlayer).
         void DeleteMyAccount(Action onSuccess, Action<AuthError> onFailure);
 
-        // [NEWPLAYER 2026-09-14 - Aemy] set mac dinh khi tao player moi.
+        // set mac dinh khi tao player moi.
         void InitializeNewPlayer(Action onSuccess, Action<AuthError> onFailure);
     }
 }

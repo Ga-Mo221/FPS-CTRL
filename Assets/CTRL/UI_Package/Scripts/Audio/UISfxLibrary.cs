@@ -1,4 +1,4 @@
-// [Aemy 2026-10-11] FILE MOI. Bang am thanh UI + nhac nen menu (1 asset trong Resources, chinh trong Inspector, khong sua code).
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;

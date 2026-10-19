@@ -1,4 +1,4 @@
-// [Aemy 2026-10-19] FILE MOI. Gui lai mail xac minh cho tai khoan dang dang nhap (ISP: tach khoi IEmailVerificationStatusService).
+
 using System;
 using Backend.Models;
 

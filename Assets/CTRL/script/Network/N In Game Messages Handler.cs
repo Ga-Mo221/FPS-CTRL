@@ -4,7 +4,6 @@ using Game.UI;
 using UnityEngine;
 using WebSocketSharp;
 
-// [NET-OPT 2026-10-18 Aemy] (bao cao 5.4, 6.3, 6.4, 6.5)
 // - Kill feed: RPC chi gui NetworkId nguoi giet + byte chi so vu khi (~5B thay vi 3 string ~50B); moi may tu tra ten.
 // - Chat: gui LEN HOST (RPC_SendChat); host lay ten that tu NPlayer (khong tin ten client tu dien),
 //   chi chuyen tin doi cho dung dong doi (RPC_ShowChat co [RpcTarget]) -> khong lo chat doi dich, khong gui thua.
@@ -78,7 +77,7 @@ public class NInGameMessagesHandler : NetworkBehaviour
         if (!EnsureHud()) return;
         _gameHudController.AddKill(killer, weaponname, victim);
 
-        // [NET-OPT 2026-10-18 Aemy] Truoc day SetDeadStatus di kem RPC_ApplyHitDamage moi vien dan.
+        // Truoc day SetDeadStatus di kem RPC_ApplyHitDamage moi vien dan.
         // RPC nay nam tren object cua NAN NHAN, nen may co InputAuthority = chinh nan nhan.
         if (Object.HasInputAuthority)
             _gameHudController.SetDeadStatus(killer, weaponname);

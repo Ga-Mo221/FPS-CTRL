@@ -52,7 +52,7 @@ public class UISelectedWeaponButton : MonoBehaviour
         // Đảm bảo không bao giờ null, dùng string.Empty thay thế
         string weapon1ID = _weaponDataOne?.ID ?? string.Empty;
         string weapon2ID = _weaponDataTwo?.ID ?? string.Empty;
-        // [Aemy 2026-10-01] null-guard grenade (balo co the thieu utility) -> tranh NRE.
+        // null-guard grenade (balo co the thieu utility) -> tranh NRE.
         string gQ = _grenade_Q != null ? _grenade_Q.ID : string.Empty;
         string gE = _grenade_E != null ? _grenade_E.ID : string.Empty;
         
@@ -76,13 +76,13 @@ public class UISelectedWeaponButton : MonoBehaviour
             nshootHandler.RPC_SetGrenadeOnUI(gQ, gE);
     }
 
-    /// <summary>[Aemy 2026-10-11] Ten balo (vd "BALO 1 · ALPHA").</summary>
+    /// <summary> Ten balo (vd "BALO 1 · ALPHA").</summary>
     public void SetTitle(string title)
     {
         if (_balo_name_text != null && !string.IsNullOrEmpty(title)) _balo_name_text.text = title;
     }
 
-    // [Aemy 2026-10-11] Loai sung nam o WeaponController tren prefab (WeaponData khong co) -> tra qua GameManager.
+    // Loai sung nam o WeaponController tren prefab (WeaponData khong co) -> tra qua GameManager.
     private static bool IsMelee(WeaponData d)
     {
         if (d == null || GameManager.Instance == null) return false;
@@ -101,13 +101,13 @@ public class UISelectedWeaponButton : MonoBehaviour
         if (weaponOneData != null)
         {
             _weapon_one_icon_image.sprite = weaponOneData.Icon;
-            Game.Skins.WeaponDisplayName.Apply(_weapon_one_name_text, weaponOneData); // [Aemy 2026-10-11] skin: ten goc + ten skin, 1 dong
+            Game.Skins.WeaponDisplayName.Apply(_weapon_one_name_text, weaponOneData); //  skin: ten goc + ten skin, 1 dong
             _Weapon_one_default_mg_text.text = weaponOneData.DefaultBullet.ToString();
             _Weapon_one_default_max_mg_text.text = $"/{weaponOneData.MaxBullet}";
             
             _weapon_one_icon_image.gameObject.SetActive(true);
             _weapon_one_name_text.gameObject.SetActive(true);
-            bool ammo1 = !IsMelee(weaponOneData);   // [Aemy 2026-10-11] dao (Melee) khong dung dan -> an so dan
+            bool ammo1 = !IsMelee(weaponOneData);   // dao (Melee) khong dung dan -> an so dan
             _Weapon_one_default_mg_text.gameObject.SetActive(ammo1);
             _Weapon_one_default_max_mg_text.gameObject.SetActive(ammo1);
         }
@@ -122,7 +122,7 @@ public class UISelectedWeaponButton : MonoBehaviour
         if (weaponTwoData != null)
         {
             _weapon_two_icon_image.sprite = weaponTwoData.Icon;
-            Game.Skins.WeaponDisplayName.Apply(_weapon_two_name_text, weaponTwoData); // [Aemy 2026-10-11]
+            Game.Skins.WeaponDisplayName.Apply(_weapon_two_name_text, weaponTwoData); 
             _Weapon_two_default_mg_text.text = weaponTwoData.DefaultBullet.ToString();
             _Weapon_two_default_max_mg_text.text = $"/{weaponTwoData.MaxBullet}";
             

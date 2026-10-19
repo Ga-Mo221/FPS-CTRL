@@ -53,8 +53,8 @@ namespace Backend.Bootstrap
         // ---- Menu Data (coins + online) ----
         public static IMenuDataService MenuDataService { get; private set; }
         public static IFriendsService FriendsService { get; private set; }
-        public static IPartyService PartyService { get; private set; } // [Aemy 2026-09-21]
-        public static IChatService ChatService { get; private set; }   // [Aemy 2026-10-19] chat menu (to doi + ban be)
+        public static IPartyService PartyService { get; private set; } 
+        public static IChatService ChatService { get; private set; }   // chat menu (to doi + ban be)
 
         private void Awake()
         {
@@ -84,7 +84,7 @@ namespace Backend.Bootstrap
                 PollIntervalSeconds = _pollIntervalSeconds
             };
             MatchmakingService = new PlayFabMatchmakingService(this, config);
-            // [UI-INTEGRATION 2026-09-12 - Aemy] đổi từ LoggingMatchHandoff (chỉ log) sang cầu Fusion thật.
+            // đổi từ LoggingMatchHandoff (chỉ log) sang cầu Fusion thật.
             MatchHandoff = new FusionMatchHandoff();  // vào phòng Fusion: SessionName = match.MatchId
 
             // Player Data
@@ -97,8 +97,8 @@ namespace Backend.Bootstrap
 
             MenuDataService = playerData;
             FriendsService = playerData;
-        PartyService = new PlayFabPartyService(); // [Aemy]
-            ChatService = new PlayFabChatService();   // [Aemy 2026-10-19]
+            PartyService = new PlayFabPartyService();
+            ChatService = new PlayFabChatService();
 
             DontDestroyOnLoad(gameObject);
         }

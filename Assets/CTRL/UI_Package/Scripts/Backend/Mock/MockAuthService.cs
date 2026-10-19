@@ -69,7 +69,7 @@ namespace Backend.Mock
         public void LinkGoogleAccount(string serverAuthCode, Action onSuccess, Action<AuthError> onFailure)
         {
             Debug.Log("[MockAuth] Link Google OK");
-            _mockGoogleLinked = true;   // [FIX BUG-ACCOUNT 2026-09-14 - Aemy]
+            _mockGoogleLinked = true; 
             onSuccess?.Invoke();
         }
 
@@ -86,8 +86,7 @@ namespace Backend.Mock
             Debug.Log($"[MockAuth] Verification email sent -> {email}");
             onSuccess?.Invoke();
         }
-
-        // [FIX BUG-ACCOUNT 2026-09-14 - Aemy]
+        
         private bool _mockGoogleLinked;
         public void GetLinkedAccountInfo(Action<LinkedAccountInfo> onResult, Action<AuthError> onFailure)
         {
@@ -123,7 +122,7 @@ namespace Backend.Mock
             onResult?.Invoke(status);
         }
 
-        // [Aemy 2026-10-19] Gia lap gui lai mail xac minh.
+        // Gia lap gui lai mail xac minh.
         public void ResendVerificationEmail(Action<string> onSent, Action<AuthError> onFailure)
         {
             Debug.Log("[MockAuth] ResendVerificationEmail");

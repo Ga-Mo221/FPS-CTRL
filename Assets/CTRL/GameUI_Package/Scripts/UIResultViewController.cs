@@ -26,10 +26,10 @@ namespace Game.UI
         [FoldoutGroup("Result")]
         [SerializeField] private string _defeatText = "THẤT BẠI";
         [FoldoutGroup("Result")]
-        [SerializeField] private UnityEngine.UI.Image _overlay; // [OVERLAY 2026-10-01 Aemy] nen mau thang/thua
+        [SerializeField] private UnityEngine.UI.Image _overlay; // nen mau thang/thua
         [FoldoutGroup("Result")]
         [Tooltip("UIGradient cua 'Color Overlay' (trong -> tu tim con ten 'Color Overlay'). Doi mau theo thang/thua giong ban thiet ke Win/Lose.")]
-        [SerializeField] private UIGradient _colorOverlay; // [Aemy 2026-10-11]
+        [SerializeField] private UIGradient _colorOverlay;
         [FoldoutGroup("Result")]
         [SerializeField] private string _drawText = "HÒA";
         [FoldoutGroup("Result")]
@@ -38,7 +38,7 @@ namespace Game.UI
         [SerializeField] private Color _loseAccent = new Color(0.860f, 0.300f, 0.270f, 1f);  // do (ban Lose.prefab)
         [FoldoutGroup("Result")]
         [SerializeField] private Color _drawAccent = new Color(0.800f, 0.820f, 0.850f, 1f);
-        // [Aemy 2026-10-11] Color Overlay = mau Image x UIGradient. Thang: GIONG HET PlayPanel (Image teal + gradient top/bottom);
+        // Color Overlay = mau Image x UIGradient. Thang: GIONG HET PlayPanel (Image teal + gradient top/bottom);
         // thua: cung chi so, dao kenh mau sang do; hoa: xam cung do sang.
         [FoldoutGroup("Result")]
         [SerializeField] private Color _winOverlayColor = new Color(0.120f, 0.592f, 0.528f, 1f);   // = PlayPanel/Color Overlay (Image)
@@ -56,7 +56,7 @@ namespace Game.UI
         [SerializeField] private Color _gradientBottom = new Color(0f, 0f, 0f, 0f);                 // = PlayPanel (UIGradient bottom)
         [FoldoutGroup("Result")]
         [Tooltip("Bat = doi ca mau Image cua lop overlay. Tat = giu mau Image (vd BG den), chi doi mau gradient - dung khi BG lam overlay.")]
-        [SerializeField] private bool _tintOverlayGraphic = true; // [Aemy 2026-10-12]
+        [SerializeField] private bool _tintOverlayGraphic = true;
         [FoldoutGroup("Result")]
         [Tooltip("Mau doi XANH (Blue/Alpha) cho ti so.")]
         [SerializeField] private Color _blueTeamColor = new Color(0.310f, 0.839f, 0.788f, 1f);
@@ -67,7 +67,7 @@ namespace Game.UI
         [FoldoutGroup("MVP")]
         [SerializeField] private TMP_Text _mvpNameLabel;
         [FoldoutGroup("MVP")]
-        [SerializeField] private UnityEngine.UI.Image _mvpAvatar; // [MVP-AVATAR 2026-10-01 Aemy]
+        [SerializeField] private UnityEngine.UI.Image _mvpAvatar;
 
         [FoldoutGroup("Rewards")]
         [SerializeField] private TMP_Text _expLabel;
@@ -173,7 +173,7 @@ namespace Game.UI
 
         public void SetResult(MatchResult result)
         {
-            // [Aemy 2026-10-11] 1 = thang, 0 = thua, 2 = hoa.
+            // 1 = thang, 0 = thua, 2 = hoa.
             Color accent = result.LocalPlayerWon == 1 ? _winAccent : result.LocalPlayerWon == 0 ? _loseAccent : _drawAccent;
             if (_resultTitleLabel != null)
             {
@@ -182,7 +182,7 @@ namespace Game.UI
                 else _resultTitleLabel.text = _drawText;
                 _resultTitleLabel.color = accent;
             }
-            if (_colorOverlay == null) { var t = transform.Find("Color Overlay"); if (t == null) t = transform.Find("BG"); if (t != null) _colorOverlay = t.GetComponent<UIGradient>(); } // [Aemy 2026-10-12] Nyx dung BG lam overlay
+            if (_colorOverlay == null) { var t = transform.Find("Color Overlay"); if (t == null) t = transform.Find("BG"); if (t != null) _colorOverlay = t.GetComponent<UIGradient>(); } 
             if (_colorOverlay != null)
             {
                 Color top = result.LocalPlayerWon == 1 ? _winGradientTop : result.LocalPlayerWon == 0 ? _loseGradientTop : _drawGradientTop;
@@ -197,7 +197,7 @@ namespace Game.UI
 
             if (_overlay != null)
             {
-                // [Aemy 2026-10-11] Tat lop phu phang - chi dung Color Overlay theo chi so PlayPanel (Nyx yeu cau).
+                // Tat lop phu phang - chi dung Color Overlay theo chi so PlayPanel (Nyx yeu cau).
                 _overlay.enabled = false;
             }
         }
@@ -207,7 +207,7 @@ namespace Game.UI
         [FoldoutGroup("Result")]
         [SerializeField] private Color _enemyScoreColor = new Color(1.000f, 0.416f, 0.239f, 1f); // cam (ban Win/Lose.prefab)
 
-        /// <summary>[Aemy 2026-10-12] Che do Team: TRAI = diem doi MINH, PHAI = diem doi dich; moi so to theo MAU DOI (Xanh/Do).
+        /// <summary> Che do Team: TRAI = diem doi MINH, PHAI = diem doi dich; moi so to theo MAU DOI (Xanh/Do).
         /// Vd minh doi Xanh thang 10-2 -> "10" xanh - "2" do; ben thua (doi Do) thay "2" do - "10" xanh.</summary>
         public void SetTeamScores(int myScore, bool myTeamIsBlue, int enemyScore)
         {
@@ -215,7 +215,7 @@ namespace Game.UI
             if (_loseScoreLabel != null) { _loseScoreLabel.text = enemyScore.ToString(); _loseScoreLabel.color = myTeamIsBlue ? _redTeamColor : _blueTeamColor; }
         }
 
-        /// <summary>[Aemy 2026-10-11] (cu) o ti so ben trai = doi thang. winnerIsLocal -> trai teal/phai cam, nguoc lai.</summary>
+        /// <summary> o ti so ben trai = doi thang. winnerIsLocal -> trai teal/phai cam, nguoc lai.</summary>
         public void SetTeamScoreColors(bool winnerIsLocal)
         {
             if (_winScoreLabel != null) _winScoreLabel.color = winnerIsLocal ? _myScoreColor : _enemyScoreColor;

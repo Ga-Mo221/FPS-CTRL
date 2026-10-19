@@ -46,7 +46,7 @@ public class LocalInputController : MonoBehaviour
             var gm = GameManager.Instance;
             if (gm != null)
             {
-                // [Aemy 2026-10-10] Vao tran bang chon Balo tu mo -> SetOnUIOptions(true) bi tu choi khi loadout dang mo
+                // Vao tran bang chon Balo tu mo -> SetOnUIOptions(true) bi tu choi khi loadout dang mo
                 // => ESC/Start khong mo duoc Pause. Dang mo bang Balo thi dong no (giu balo dang chon) roi mo Pause.
                 if (gm.OnUILoadout() && !gm.OnUIOption())
                 {
@@ -54,7 +54,7 @@ public class LocalInputController : MonoBehaviour
                     gm.SetOnuiLoadout(false);
                 }
                 gm.SetOnUIOptions(!gm.OnUIOption());
-                // [Aemy 2026-10-01, khoi phuc 2026-10-10 — bi mat khi gop code] hien/an panel Pause theo co
+                // hien/an panel Pause theo co
                 if (_gameHudController != null) _gameHudController.SetPauseVisible(gm.OnUIOption());
             }
             //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");

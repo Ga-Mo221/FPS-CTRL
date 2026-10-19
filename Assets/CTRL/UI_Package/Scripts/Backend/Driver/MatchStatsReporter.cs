@@ -12,7 +12,7 @@ namespace Game.Match
     /// Thu thap so lieu NGUOI CHOI CUC BO trong 1 tran roi gui len PlayFab khi tran ket thuc:
     /// gop thong ke (K/D/Assist/HS/Matches/EXP/Level) + kill-theo-sung + thuong GC (CloudScript).
     ///
-    /// [Aemy 2026-09-17] Mo rong tu ban lead: Assist, EXP (cong don -> tu len Level qua LevelCurve), thuong GC.
+    ///  Mo rong: Assist, EXP (cong don -> tu len Level qua LevelCurve), thuong GC.
     ///
     /// Cach dung tu gameplay:
     ///   - Dau tran:  MatchStatsReporter.Instance.ResetMatch();
@@ -67,17 +67,17 @@ namespace Game.Match
         }
 
         public void RegisterDeath()  { _deaths++; }
-        public void RegisterAssist() { _assists++; }                      // [Aemy]
-        public void RegisterExp(int amount) { if (amount > 0) _exp += amount; } // [Aemy]
+        public void RegisterAssist() { _assists++; }                    
+        public void RegisterExp(int amount) { if (amount > 0) _exp += amount; } 
 
-        /// <summary>[Aemy] Ket thuc tran - dung so lieu da Register* (kem _exp da cong don).</summary>
+        /// <summary>Ket thuc tran - dung so lieu da Register* (kem _exp da cong don).</summary>
         public void ReportMatchEnd(bool won,
             Action<CombatStats> onDone = null, Action<string> onError = null)
         {
             ReportMatchEnd(_kills, _deaths, _assists, _headshots, _exp, won, onDone, onError);
         }
 
-        /// <summary>[Aemy] Ket thuc tran - truyen thang so lieu (uu tien, lay tu NetworkGameState).</summary>
+        /// <summary> Ket thuc tran - truyen thang so lieu (uu tien, lay tu NetworkGameState).</summary>
         public void ReportMatchEnd(int kills, int deaths, int assists, int headshots, int expGained, bool won,
             Action<CombatStats> onDone = null, Action<string> onError = null)
         {
@@ -106,7 +106,7 @@ namespace Game.Match
         }
 
         /// <summary>
-        /// [Aemy] Goi CloudScript "AwardMatchGC" de SERVER cong GC (thang/thua).
+        /// Goi CloudScript "AwardMatchGC" de SERVER cong GC (thang/thua).
         /// Handler duoc tao ben PlayFab dashboard (Automation/CloudScript). Client chi kich hoat.
         /// </summary>
         private void AwardMatchGC(bool won)

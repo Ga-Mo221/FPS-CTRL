@@ -18,7 +18,7 @@ namespace Game.UI
             SetBaloOne(gm.GetSetupData().Balo_One);
             SetBaloTwo(gm.GetSetupData().Balo_Two);
             SetBaloThree(gm.GetSetupData().Balo_Three);
-            // [Aemy 2026-10-11] Balo 1/2/3 = ALPHA/BRAVO/CHARLIE o menu Trang bi -> ghi ro ten de khoi nham.
+            // Balo 1/2/3 = ALPHA/BRAVO/CHARLIE o menu Trang bi -> ghi ro ten de khoi nham.
             if (_balo1 != null) _balo1.SetTitle("BALO 1 · ALPHA");
             if (_balo2 != null) _balo2.SetTitle("BALO 2 · BRAVO");
             if (_balo3 != null) _balo3.SetTitle("BALO 3 · CHARLIE");

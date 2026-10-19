@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class NHPHandler : NetworkBehaviour
 {
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.4) HP (ushort) + DeadCount (byte) + IsDead (byte) gop vao 1 word.
+    //HP (ushort) + DeadCount (byte) + IsDead (byte) gop vao 1 word.
     // 1 callback chung roi tach lai: HP doi -> OnHPChanged, IsDead doi -> OnStateChanged (hanh vi nhu cu).
     [Networked, OnChangedRender(nameof(OnHPStateChanged))]
     private uint _hpState { get; set; }
@@ -37,7 +37,7 @@ public class NHPHandler : NetworkBehaviour
         if (dead != _cbLastDead) { _cbLastDead = dead; OnStateChanged(); }
     }
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 6.2b) Thay RPC_ApplyHitDamage (moi vien trung + 2 string):
+    // Thay RPC_ApplyHitDamage (moi vien trung + 2 string):
     // nan nhan tu suy rung camera/am thanh tu chenh lech HP. Trauma luong tu hoa x100 vao 1 byte,
     // chi dirty khi muc trauma doi (dan thuong luon 0.2 -> gan nhu khong bao gio dirty).
     [Networked] private byte _hitTraumaQ { get; set; }
@@ -210,10 +210,10 @@ public class NHPHandler : NetworkBehaviour
         if (HP <= 0)
         {
             _lastKillerId = id;
-            // [NET-OPT 2026-10-18 Aemy] (bao cao 6.5) gui NetworkId + chi so vu khi thay vi 3 chuoi
+            // gui NetworkId + chi so vu khi thay vi 3 chuoi
             _inGameMessagesHandler.SendInGameRPCKill(id, damageCausedByPlayerNickName, weaponName);
             IsDead = true;
-            DeadCount++; // [NET-OPT 2026-10-18 Aemy] (bao cao 5.1) tang o simulation tren host, khong con o callback render
+            DeadCount++; // tang o simulation tren host, khong con o callback render
             StartServerRevive(GameManager.Instance.RespawnTime);
             if (Object.Id == id) return false;
             return true;
@@ -253,7 +253,7 @@ public class NHPHandler : NetworkBehaviour
             if (_nPlayer != null && _componentManager != null && !_nPlayer.IsLocalPlayer)
                 _componentManager.UIPlayerNickName.gameObject.SetActive(false);
 
-            // [NET-OPT 2026-10-18 Aemy] DeadCount++ da chuyen vao OnTakeDamage (host). Ghi bien networked
+            // DeadCount++ da chuyen vao OnTakeDamage (host). Ghi bien networked
             // trong OnChangedRender (chay o Render tren MOI may) la sai.
 
             // Thông báo cho các attacker biết target đã chết

@@ -1,4 +1,4 @@
-// [UI-INTEGRATION 2026-09-12 - Aemy] FILE MỚI (thêm cho việc ghép UI / hệ skin).
+
 using Backend.Interfaces;
 using Backend.Models;
 using UnityEngine;
@@ -19,7 +19,7 @@ namespace Backend.Handoff
     /// </summary>
     public class FusionMatchHandoff : IMatchHandoff
     {
-        private const string GameplaySceneName = "ShortMap1"; // [MAP 2026-09-28 Aemy] fallback mac dinh (map thuc lay tu GameManager.GetSelectedMapScene)
+        private const string GameplaySceneName = "ShortMap1"; // fallback mac dinh (map thuc lay tu GameManager.GetSelectedMapScene)
 
         public void HandOff(MatchFoundResult match)
         {
@@ -64,7 +64,7 @@ namespace Backend.Handoff
                 runner.CreateGame(sessionName, lobby, gm.GetSelectedMapScene());
         }
 
-        // [Aemy 2026-10-17] Phong tuy chinh: chu phong tao (Host), ban be vao bang ma (Client). onResult(ok, lyDo).
+        // Phong tuy chinh: chu phong tao (Host), ban be vao bang ma (Client). onResult(ok, lyDo).
         public void HandOffCustom(string code, MatchMode rule, bool asHost, System.Action<bool, string> onResult)
         {
             GameManager gm = GameManager.Instance;
@@ -84,7 +84,7 @@ namespace Backend.Handoff
             if (Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeOut(go); else go();
         }
 
-        // [MM-BACKFILL 2026-10-18 Aemy] Vao THANG 1 phong dang dien ra (tim duoc qua lobby Fusion), GameMode.Client.
+        // Vao THANG 1 phong dang dien ra (tim duoc qua lobby Fusion), GameMode.Client.
         // onResult(false) -> phong vua day/dong: caller quay lai tim tran PlayFab.
         public void HandOffJoinExisting(string sessionName, MatchMode modeIn, System.Action<bool, string> onResult)
         {
@@ -118,7 +118,7 @@ namespace Backend.Handoff
         }
 
         // An toàn: nếu GameManager chưa có nickname (menu chưa set) thì lấy từ PlayerPrefs như UIMainMenuHandler.
-        // [Aemy 2026-09-17] Dam bao LUON co ten: PlayFab display name -> PlayerPrefs -> "PLAYER".
+        // Dam bao LUON co ten: PlayFab display name -> PlayerPrefs -> "PLAYER".
         private static void EnsureNickname(GameManager gm)
         {
             if (!string.IsNullOrEmpty(gm.GetPlayerNickName())) return;

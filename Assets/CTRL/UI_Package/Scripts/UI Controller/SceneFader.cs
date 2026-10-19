@@ -1,4 +1,4 @@
-// [UI-INTEGRATION 2026-09-13 - Aemy] FILE MỚI. Fade chuyển scene cho mượt (MenuShell -> SampleScene).
+
 using System;
 using System.Collections;
 using UnityEngine;

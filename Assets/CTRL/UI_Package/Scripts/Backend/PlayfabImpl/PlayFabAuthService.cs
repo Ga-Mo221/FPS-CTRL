@@ -177,7 +177,7 @@ namespace Backend.PlayfabImpl
                 error => onError?.Invoke(MapError(error)));
         }
 
-        // [FIX BUG-ACCOUNT 2026-09-14 - Aemy] Lay contact email + trang thai link Google qua GetPlayerProfile.
+        // Lay contact email + trang thai link Google qua GetPlayerProfile.
         // Client GetAccountInfo thuong khong tra PrivateInfo.Email (bi gate) -> dung GetPlayerProfile.
         public void GetLinkedAccountInfo(System.Action<Backend.Models.LinkedAccountInfo> onResult, System.Action<AuthError> onError)
         {
@@ -298,7 +298,7 @@ namespace Backend.PlayfabImpl
                 error => onError?.Invoke(MapError(error)));
         }
 
-        // [Aemy 2026-10-19] ↓ LẤY VỀ contact email hiện có → ↑ GỬI LÊN lại (AddOrUpdateContactEmail)
+        // ↓ LẤY VỀ contact email hiện có → ↑ GỬI LÊN lại (AddOrUpdateContactEmail)
         // → PlayFab bắn event player_updated_contact_email → Rule "Send Email" (template Email Verification) gửi mail.
         public void ResendVerificationEmail(Action<string> onSent, Action<AuthError> onFailure)
         {

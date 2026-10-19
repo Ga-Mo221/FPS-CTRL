@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// [MERGE 2026-10-01 Aemy] Khoi phuc class bi lo vo hieu hoa khi don Settings trung.
+// Khoi phuc class bi lo vo hieu hoa khi don Settings trung.
 // Slider HUD chinh do nhay chuot (test UI). Noi lai voi SettingManager da merge
 // (ban cu cua lead dung Setting rieng cua lead - da thay bang UI_Package SettingManager).
 public class TestUIMouseSensitivity : MonoBehaviour

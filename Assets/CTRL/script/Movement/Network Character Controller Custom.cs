@@ -194,7 +194,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         Data.TRSPData.Position = transform.position;
         // Ghi rotation từ TargetYaw (không dùng transform.rotation) để NetworkTRSP.Render
         // và GetNetworkRotation() luôn có giá trị yaw đúng.
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.1) Rotation trung voi TargetYaw va bi Render() override,
+        // Rotation trung voi TargetYaw va bi Render() override,
         // nen ghi hang identity de 4 word nay KHONG BAO GIO dirty. GetNetworkRotation()/CopyToEngine dung TargetYaw.
         Data.TRSPData.Rotation = Quaternion.identity;
     }
@@ -253,7 +253,7 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
                 return;
         }
 
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) goi moi tick qua CCSetHeight(): neu chieu cao/tam da dung
+        // goi moi tick qua CCSetHeight(): neu chieu cao/tam da dung
         // thi bo qua (truoc day van tat/bat CharacterController 2 lan moi tick).
         if (Mathf.Approximately(_controller.height, newHeight) && Mathf.Approximately(_controller.center.y, newCenterY))
             return;

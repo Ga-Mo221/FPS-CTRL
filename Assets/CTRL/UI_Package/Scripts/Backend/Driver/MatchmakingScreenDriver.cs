@@ -113,7 +113,7 @@ namespace Game.UI
                 {
                     _searching = false;
                     if (_view != null) { _view.StopTimer(); _view.SetTitle("KHÔNG TÌM ĐƯỢC TRẬN (HẾT GIỜ)"); }
-                    // [FIX BUG-MATCHMAKING 2026-09-14 - Aemy] tat solo-fallback khi test. Bat lai: bo comment dong duoi.
+                    //  tat solo-fallback khi test. Bat lai: bo comment dong duoi.
                     // BackendBootstrap.MatchHandoff.HandOffSolo(mode);
                 },
                 onCancelled: () =>

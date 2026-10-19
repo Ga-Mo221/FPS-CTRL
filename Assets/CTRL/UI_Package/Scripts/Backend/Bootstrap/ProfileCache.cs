@@ -16,7 +16,7 @@ namespace Backend.Bootstrap
     {
         private static PlayerProfileInfo _cached;
         private static bool _fetching;
-        /// <summary>[Aemy 2026-09-28] Ban tin khi ho so bi doi thu cong (Set/Invalidate) -> UI (top bar) tu refresh.</summary>
+        /// <summary> Ban tin khi ho so bi doi thu cong (Set/Invalidate) -> UI (top bar) tu refresh.</summary>
         public static event System.Action Changed;
         private static readonly List<Action<PlayerProfileInfo>> _okWaiters = new List<Action<PlayerProfileInfo>>();
         private static readonly List<Action<AuthError>> _failWaiters = new List<Action<AuthError>>();

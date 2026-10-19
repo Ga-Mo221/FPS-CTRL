@@ -1,4 +1,4 @@
-// [Aemy 2026-10-10] FILE MOI. Danh sach skin sung (them skin moi = them 1 dong trong asset, khong sua code).
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -19,7 +19,7 @@ namespace Game.Skins
             public string displayName;
             [Tooltip("Mau chu ten skin (Trang bi + HUD trong tran).")]
             public Color tagColor = new Color(0.91f, 0.71f, 0.29f, 1f);
-            // [Aemy 2026-10-11] Bo fallbackPrice: gia/mua skin chi nam o CUA HANG (ShopCatalog).
+            // Bo fallbackPrice: gia/mua skin chi nam o CUA HANG (ShopCatalog).
             /// <summary>itemId trong ShopCatalog / OwnedShopItems = skinWeaponId viet thuong.</summary>
             public string ItemId { get { return string.IsNullOrEmpty(skinWeaponId) ? "" : skinWeaponId.Trim().ToLowerInvariant(); } }
         }

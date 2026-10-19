@@ -5,9 +5,9 @@ using UnityEngine.EventSystems;
 namespace Game.UI
 {
     /// <summary>
-    /// [Aemy 2026-10-04] Vien teal (focus ring) quanh nut DANG DUOC CHON (controller/arrow di toi).
+    /// Vien teal (focus ring) quanh nut DANG DUOC CHON (controller/arrow di toi).
     /// Gon, ro, khong che noi dung, khong doi mau 'active' san co. Hop moi loai nut.
-    /// [Aemy 2026-10-19] - Nut nho (dau "+", chu 1 dong) -> vien toi thieu _minSize de nhin thay ro.
+    /// - Nut nho (dau "+", chu 1 dong) -> vien toi thieu _minSize de nhin thay ro.
     ///                   - Configure(...) cho nut tao luc chay (popup), CreateRing(...) dung chung cho menu tu ve.
     /// </summary>
     [DisallowMultipleComponent]

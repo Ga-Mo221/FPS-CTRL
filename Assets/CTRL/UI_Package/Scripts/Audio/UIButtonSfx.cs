@@ -1,4 +1,4 @@
-// [Aemy 2026-10-11] FILE MOI. Am thanh cho 1 nut (UISfxManager tu gan; gan tay de doi loai am cho nut dac biet).
+
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;

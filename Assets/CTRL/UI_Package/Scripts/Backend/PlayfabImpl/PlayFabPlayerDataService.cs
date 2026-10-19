@@ -86,7 +86,7 @@ namespace Backend.PlayfabImpl
                     onResult?.Invoke(new PlayerProfileInfo
                     {
                         PlayFabId = playFabId,
-                        DisplayName = (p != null && !string.IsNullOrEmpty(p.DisplayName)) ? p.DisplayName : "PLAYER",   // [NEWPLAYER 2026-09-14 - Aemy] fallback PLAYER
+                        DisplayName = (p != null && !string.IsNullOrEmpty(p.DisplayName)) ? p.DisplayName : "PLAYER",
                         AvatarUrl = p != null ? p.AvatarUrl : null,
                         Level = 0                    // Level lấy riêng ở GetMyProfile
                     });
@@ -145,12 +145,12 @@ namespace Backend.PlayfabImpl
         }
 
 
-        // [NEWPLAYER 2026-09-14 - Aemy] Set mac dinh player moi: loadout 3 slot (Dao+Vesper, GE+Flash) + Level 1 + stats 0.
+        // Set mac dinh player moi: loadout 3 slot (Dao+Vesper, GE+Flash) + Level 1 + stats 0.
         public void InitializeNewPlayer(Action onSuccess, Action<AuthError> onError)
         {
             var def = new LoadoutConfig
             {
-                Weapons = new string[] { "Knife", "Vesper" },   // [Aemy 2026-10-11] thong nhat ID
+                Weapons = new string[] { "Knife", "Vesper" },
                 WeaponTypes = new string[] { "", "Pistol" },
                 Utilities = new string[] { "Lựu đạn", "Lựu đạn choáng" }
             };
@@ -175,8 +175,8 @@ namespace Backend.PlayfabImpl
                                 new StatisticUpdate { StatisticName = StatKeys.Deaths, Value = 0 },
                                 new StatisticUpdate { StatisticName = StatKeys.HeadshotKills, Value = 0 },
                                 new StatisticUpdate { StatisticName = StatKeys.Matches, Value = 0 },
-                                new StatisticUpdate { StatisticName = StatKeys.Assist, Value = 0 },        // [Aemy]
-                                new StatisticUpdate { StatisticName = StatKeys.Experience, Value = 0 },    // [Aemy]
+                                new StatisticUpdate { StatisticName = StatKeys.Assist, Value = 0 },        
+                                new StatisticUpdate { StatisticName = StatKeys.Experience, Value = 0 },    
                                 new StatisticUpdate { StatisticName = StatKeys.KDAx100, Value = 0 },
                                 new StatisticUpdate { StatisticName = StatKeys.HeadshotPct, Value = 0 }
                             }
@@ -301,7 +301,7 @@ namespace Backend.PlayfabImpl
         }
 
         // Kết hợp ↓ LẤY VỀ rồi ↑ GỬI LÊN: cộng dồn kết quả 1 trận vào tổng tích luỹ.
-        // [Aemy 2026-09-17] Them assists + expGained; Level suy tu Experience; tra CombatStats moi.
+        // Them assists + expGained; Level suy tu Experience; tra CombatStats moi.
         public void ReportMatchResult(int kills, int deaths, int headshotKills, int assists, int expGained,
             Action<CombatStats> onSuccess, Action<AuthError> onError)
         {
@@ -312,8 +312,8 @@ namespace Backend.PlayfabImpl
                     Kills = cur.Kills + kills,
                     Deaths = cur.Deaths + deaths,
                     HeadshotKills = cur.HeadshotKills + headshotKills,
-                    Assist = cur.Assist + assists,                                   // [Aemy]
-                    Experience = cur.Experience + (expGained > 0 ? expGained : 0),   // [Aemy]
+                    Assist = cur.Assist + assists,                                   
+                    Experience = cur.Experience + (expGained > 0 ? expGained : 0),   
                     Matches = cur.Matches + 1
                 };
                 int kdax100 = (int)System.Math.Round(total.KDA * 100.0);
@@ -329,9 +329,9 @@ namespace Backend.PlayfabImpl
                             new StatisticUpdate { StatisticName = StatKeys.Matches,       Value = total.Matches },
                             new StatisticUpdate { StatisticName = StatKeys.KDAx100,       Value = kdax100 },
                             new StatisticUpdate { StatisticName = StatKeys.HeadshotPct,   Value = total.HeadshotPercent },
-                            new StatisticUpdate { StatisticName = StatKeys.Assist,        Value = total.Assist },       // [Aemy]
-                            new StatisticUpdate { StatisticName = StatKeys.Experience,    Value = total.Experience },   // [Aemy]
-                            new StatisticUpdate { StatisticName = StatKeys.Level,         Value = total.Level },        // [Aemy] suy tu Experience
+                            new StatisticUpdate { StatisticName = StatKeys.Assist,        Value = total.Assist },       
+                            new StatisticUpdate { StatisticName = StatKeys.Experience,    Value = total.Experience },   
+                            new StatisticUpdate { StatisticName = StatKeys.Level,         Value = total.Level },        
                         }
                     },
                     _ => { if (onSuccess != null) onSuccess(total); },
@@ -352,8 +352,8 @@ namespace Backend.PlayfabImpl
                     case StatKeys.Deaths:        s.Deaths = v.Value; break;
                     case StatKeys.HeadshotKills: s.HeadshotKills = v.Value; break;
                     case StatKeys.Matches:       s.Matches = v.Value; break;
-                    case StatKeys.Assist:        s.Assist = v.Value; break;         // [Aemy]
-                    case StatKeys.Experience:    s.Experience = v.Value; break;     // [Aemy]
+                    case StatKeys.Assist:        s.Assist = v.Value; break;         
+                    case StatKeys.Experience:    s.Experience = v.Value; break;     
                 }
             }
             return s;
@@ -567,7 +567,7 @@ namespace Backend.PlayfabImpl
                 e => { if (onError != null) onError(MapError(e)); });
         }
 
-        // [Aemy 2026-09-21] Them ban theo Ten hien thi HOAC PlayFabId.
+        // Them ban theo Ten hien thi HOAC PlayFabId.
         public void AddFriend(string displayNameOrId, Action onSuccess, Action<AuthError> onError)
         {
             if (string.IsNullOrEmpty(displayNameOrId)) return;
@@ -580,7 +580,7 @@ namespace Backend.PlayfabImpl
                 e => { if (onError != null) onError(MapError(e)); });
         }
 
-        // [Aemy] Xoa ban theo PlayFabId.
+        // Xoa ban theo PlayFabId.
         public void RemoveFriend(string playFabId, Action onSuccess, Action<AuthError> onError)
         {
             if (string.IsNullOrEmpty(playFabId)) return;
@@ -589,7 +589,7 @@ namespace Backend.PlayfabImpl
                 e => { if (onError != null) onError(MapError(e)); });
         }
 
-        // [Aemy] Heartbeat: ghi LastSeen = epoch phut hien tai.
+        // Heartbeat: ghi LastSeen = epoch phut hien tai.
         public void Heartbeat(Action onSuccess = null, Action<AuthError> onError = null)
         {
             int nowMin = (int)(System.DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 60);
@@ -602,7 +602,7 @@ namespace Backend.PlayfabImpl
                 e => { if (onError != null) onError(MapError(e)); });
         }
 
-        // [Aemy] Danh sach ban + presence: GetFriends roi phu LastSeen tu GetFriendLeaderboard.
+        // Danh sach ban + presence: GetFriends roi phu LastSeen tu GetFriendLeaderboard.
         public void GetFriendsWithPresence(Action<List<Backend.Models.FriendInfo>> onResult, Action<AuthError> onError)
         {
             GetFriends(list =>
@@ -639,7 +639,7 @@ namespace Backend.PlayfabImpl
             }, onError);
         }
 
-        // ============ KET BAN 2 CHIEU qua CloudScript (request -> accept) [Aemy 2026-09-24] ============
+        // ============ KET BAN 2 CHIEU qua CloudScript (request -> accept) ============
         // Helper: goi 1 handler CloudScript tra { ok, message } (giong PurchaseItem).
         private void CallFriendCloud(string fn, object param, Action<string> onDone, Action<AuthError> onError)
         {

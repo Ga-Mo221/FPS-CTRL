@@ -178,13 +178,13 @@ namespace GaMo.TrueInputSystem
             InitialiseWithProfile(_profile);
             InitialiseObjectTracker();
 
-            // [Aemy 2026-10-10] Mo game khi dang cam tay cam -> bat dau o che do tay cam
+            //  Mo game khi dang cam tay cam -> bat dau o che do tay cam
             // (menu/TopBar tu chon san, khong mat lan bam dau de "danh thuc" tay cam).
             if (!_isMobileMode && Gamepad.current != null) _activeDevice = TISActiveDevice.Gamepad;
             InputSystem.onDeviceChange += OnDeviceChangeAemy;
         }
 
-        // [Aemy 2026-10-10] Cam tay cam vao luc dang chay -> chuyen sang che do tay cam ngay.
+        // Cam tay cam vao luc dang chay -> chuyen sang che do tay cam ngay.
         private void OnDeviceChangeAemy(InputDevice device, InputDeviceChange change)
         {
             if (_isMobileMode) return;
@@ -211,7 +211,7 @@ namespace GaMo.TrueInputSystem
                 _asset = null;
             }
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
-            InputSystem.onDeviceChange -= OnDeviceChangeAemy; // [Aemy 2026-10-10]
+            InputSystem.onDeviceChange -= OnDeviceChangeAemy;
             if (_activeProfile != null) Destroy(_activeProfile);   // runtime copy do bridge tạo
             if (Instance == this) Instance = null;
         }
@@ -749,7 +749,7 @@ private void UpdateActiveDevice()
                 return;
             }
 
-            // [Aemy 2026-10-05] FIX: goi IsActuated() tren CA device khong dang tin
+            // FIX: goi IsActuated() tren CA device khong dang tin
             // (magnitude cap-device co the tra -1 => luon false), khien menu khong bao gio
             // nhan ra tay cam => chan sach di chuyen (dpad/L1R1/L2R2) nhung nut A van chay.
             // => Poll tung control cu the voi nguong (bo stick drift).
@@ -806,7 +806,7 @@ private void UpdateActiveDevice()
         private bool GamepadHasInputCached(Gamepad gp)
             => NeedsPoll(ref _gamepadPoll, gp) ? StorePoll(ref _gamepadPoll, gp, GamepadHasInput(gp)) : false;
 
-        // [Aemy 2026-10-05] Poll input tay cam theo tung control (dang tin hon IsActuated cap-device).
+        // Poll input tay cam theo tung control (dang tin hon IsActuated cap-device).
         private static bool GamepadHasInput(Gamepad gp)
         {
             if (gp.dpad.ReadValue().sqrMagnitude > 0.1f) return true;

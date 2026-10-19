@@ -1,4 +1,4 @@
-// [Aemy 2026-10-19] FILE MOI. Truong nhin (FOV) trong Cai dat ap len camera nguoi choi.
+
 using UnityEngine;
 
 /// <summary>

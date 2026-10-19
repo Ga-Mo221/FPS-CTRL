@@ -26,7 +26,7 @@ public class WeaponManager : NetworkBehaviour
     
     [TabGroup("Debug", "Debug")]
     [ReadOnly]
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 2.2 / 9.2.1) Bo sync _weaponOneID (NetworkString<_16> ~17 word):
+    // Bo sync _weaponOneID (NetworkString<_16> ~17 word):
     // ID luon = Data.ID + "_W1" nen moi may tu tinh -> het coroutine WaitForIDThenAdd (polling + race).
     public string _weaponOneID => _registeredIDOne ?? "";
     
@@ -613,7 +613,7 @@ public class WeaponManager : NetworkBehaviour
     /// </summary>
     private bool ResolveWeaponControllers()
     {
-        // [NET-OPT 2026-10-18 Aemy] (bao cao 9.2.4) Moi may dang ky NGAY (ID tu tinh), khong con nhanh cho ID sync.
+        // (bao cao 9.2.4) Moi may dang ky NGAY (ID tu tinh), khong con nhanh cho ID sync.
         // Giu kieu tra ve bool (luon false) de cac cho goi cu khong doi.
         if (_weaponOneRef != null && Weapon_One_CTRL == null)
         {
@@ -640,7 +640,7 @@ public class WeaponManager : NetworkBehaviour
         return false;
     }
 
-    // [NET-OPT 2026-10-18 Aemy] Da xoa coroutine WaitForIDThenAdd (ID vu khi gio tu tinh, khong cho sync).
+    // Da xoa coroutine WaitForIDThenAdd (ID vu khi gio tu tinh, khong cho sync).
 
 #if UNITY_EDITOR
     [Button]

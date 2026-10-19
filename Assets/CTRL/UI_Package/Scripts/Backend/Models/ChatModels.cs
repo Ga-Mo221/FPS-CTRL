@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Backend.Models
 {
     /// <summary>
-    /// [Aemy 2026-10-19] Mot tin nhan chat ngoai menu (to doi hoac nhan rieng ban be).
+    ///  Mot tin nhan chat ngoai menu (to doi hoac nhan rieng ban be).
     /// Ten field ngan de blob JSON tren PlayFab gon (gioi han kich thuoc moi key).
     /// </summary>
     [Serializable]

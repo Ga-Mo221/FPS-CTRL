@@ -1,4 +1,4 @@
-// [Aemy 2026-10-19] FILE MOI. Lam cho "Che do man hinh", "Do phan giai", "Tan so quet", "Gioi han FPS" hoat dong that.
+
 using System.Collections.Generic;
 using UnityEngine;
 

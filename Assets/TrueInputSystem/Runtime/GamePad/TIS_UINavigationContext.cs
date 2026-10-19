@@ -236,7 +236,7 @@ namespace GaMo.TrueInputSystem
         public void RequestContentMove(TISGamepadUIButton from, TISGamepadUIButton target)
         {
             if (target == null || !target.gameObject.activeInHierarchy) return;
-            // [Aemy 2026-10-19] Content KHONG duoc nhay len nut Tab / SubTab bang D-pad / stick
+            // Content KHONG duoc nhay len nut Tab / SubTab bang D-pad / stick
             // (vd hang map bam len -> thanh che do). Tab = LT/RT, SubTab = LB/RB. Nut layer nhan focus that
             // se doc truc ngang theo vong Tab/SubTab va giu trang thai Selected -> loan focus.
             if (from != null && from.layer == TISGamepadUIButton.NavigationLayer.Content

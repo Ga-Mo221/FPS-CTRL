@@ -11,7 +11,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     [Header("Setting")]
     [Networked] public PlayerTeam NetworkedTeam { get; set; } = PlayerTeam.Zero;
     
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.3) GamePlayMode la hang so ca tran -> sync 1 lan o NetworkGameState.Mode
+    // GamePlayMode la hang so ca tran -> sync 1 lan o NetworkGameState.Mode
     // thay vi lap lai trong state cua N player. Giu ten + setter de code cu (NSpawner) khong doi.
     private GamePlayMode _localModeFallback;
     public GamePlayMode GamePlayMode
@@ -30,7 +30,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     public NetworkString<_16> Nickname { get; private set; }
     
     [Networked] public int Token { get; set; }
-    [Networked] public NetworkString<_512> AvatarUrl { get; set; } // [MVP-AVATAR 2026-10-01 Aemy]
+    [Networked] public NetworkString<_512> AvatarUrl { get; set; } 
 
     // Lưu raw 16 bytes của Guid token để có thể restore sau host migration
     [Networked, Capacity(16)] public NetworkArray<byte> RawToken => default;
@@ -59,7 +59,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     
     public bool IsLocalPlayer {get; private set;}
 
-    // [Aemy 2026-10-09] Hook do nhay live: doi thiet bi (PC <-> tay cam) hoac keo slider -> gui lai CameraSpeed.
+    // Hook do nhay live: doi thiet bi (PC <-> tay cam) hoac keo slider -> gui lai CameraSpeed.
     private bool _sensHooked;
     private float _lastSentSens = -1f;
     
@@ -127,9 +127,9 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
             _uiPlayerNickName.gameObject.SetActive(false);
             
-            // [NET-OPT 2026-10-18 Aemy] (bao cao 6.3) Gop Rpc_SetNickName + Rpc_RegisterToken + RPC_SetCameraSpeed
+            //(bao cao 6.3) Gop Rpc_SetNickName + Rpc_RegisterToken + RPC_SetCameraSpeed
             // thanh 1 Rpc_InitPlayer luc spawn: bot header, het race giua cac RPC rieng le.
-            // ✅ Token gửi lên server ngay khi spawn, KHÔNG phụ thuộc vào ConnectionToken ở transport-level
+            // Token gửi lên server ngay khi spawn, KHÔNG phụ thuộc vào ConnectionToken ở transport-level
             // (không đáng tin cậy qua Photon Relay). Server dùng token để nhận diện player mới / reconnect / resume migration.
             byte[] myToken = GameManager.Instance.GetIdentityToken();
             if (myToken == null || myToken.Length != 16)
@@ -147,7 +147,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
             // Avatar URL co the dai -> de RPC rieng (chi gui khi co) cho Rpc_InitPlayer khong bao gio vuot gioi han payload.
             var _av = Backend.Bootstrap.ProfileCache.Cached != null ? Backend.Bootstrap.ProfileCache.Cached.AvatarUrl : null; // [MVP-AVATAR]
             if (!string.IsNullOrEmpty(_av)) Rpc_SetAvatarUrl(_av);
-            HookSensitivity(); // [Aemy 2026-10-09]
+            HookSensitivity(); 
             
             Debug.Log("<color=green>[NPlayer]</color> Spawned Local Player.", this);
         }
@@ -320,7 +320,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         }
     }
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.8) Cache chuoi ten / avatar: NetworkGameState goi moi 0.5s cho MOI player
+    // Cache chuoi ten / avatar: NetworkGameState goi moi 0.5s cho MOI player
     // tren MOI may (truoc day ToString() cap phat chuoi moi lan, AvatarUrl toi 512 ky tu).
     private NetworkString<_16> _nickKey; private string _nickText;
     private NetworkString<_512> _avatarKey; private string _avatarText;
@@ -348,7 +348,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         ComponentManager.UIPlayerNickName.SetNickName(Nickname.ToString());
     }
 
-    // [Aemy 2026-10-09] Dang ky 1 lan (InitPlayer co the chay 2 lan do host migration).
+    // Dang ky 1 lan (InitPlayer co the chay 2 lan do host migration).
     private void HookSensitivity()
     {
         if (_sensHooked || SettingManager.Instance == null) return;
@@ -375,7 +375,7 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         SendLookSettings();
     }
 
-    // [NET-OPT 2026-10-18 Aemy] (bao cao 9.5) Gui do nhay + he so ADS sniper/rifle trong 1 RPC.
+    // Gui do nhay + he so ADS sniper/rifle trong 1 RPC.
     private float _lastSentSniper = -1f, _lastSentRifle = -1f;
     private void SendLookSettings()
     {
@@ -388,9 +388,9 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
     void OnDestroy()
     {
-        UnhookSensitivity(); // [Aemy 2026-10-09]
+        UnhookSensitivity();
 
-        // ✅ Chỉ local player mới có camera bị reparent ra ngoài (mồ côi, không tự despawn theo).
+        // Chỉ local player mới có camera bị reparent ra ngoài (mồ côi, không tự despawn theo).
         // Remote player: camera vẫn là con của NetworkObject này -> Fusion/Unity tự destroy theo,
         // không cần xử lý thủ công.
         if (_detachedCameraRoot != null)

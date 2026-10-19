@@ -1,5 +1,4 @@
-// [Aemy 2026-10-17] FILE MOI. Lam cho "Chat luong tong the", "Ket cau (Texture)", "Khu rang cua (AA)" CO HIEU LUC THAT.
-// Truoc day SetQualityLevel(0..3) trong khi project chi co 2 muc (Mobile, PC) -> chon THAP/TB/CAO/TOI DA gan nhu khong doi gi.
+
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;

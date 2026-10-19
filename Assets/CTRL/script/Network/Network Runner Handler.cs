@@ -31,7 +31,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // [MERGE 2026-10-01 Aemy] Scene menu: KHONG auto-start NetworkRunner (vao tran qua FusionMatchHandoff.CreateGame).
+    // Scene menu: KHONG auto-start NetworkRunner (vao tran qua FusionMatchHandoff.CreateGame).
     private static bool IsMenuScene(string n)
     {
         return n == "MainMenu_Test" || n == "Login_Register" || n == "Loading" || n == "MenuShell";
@@ -44,7 +44,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             SpawnNetworkRunner = Instantiate(_networkRunner_Prefab);
             SpawnNetworkRunner.name = "Network Runner";
 
-            if (!IsMenuScene(SceneManager.GetActiveScene().name)) // [MERGE 2026-10-01 Aemy] khong auto-start tran trong scene menu (Login_Register/Loading/MenuShell)
+            if (!IsMenuScene(SceneManager.GetActiveScene().name)) // khong auto-start tran trong scene menu (Login_Register/Loading/MenuShell)
             // lấy scene hiện tại rồi chuyển sang sceneref bằng convert của fusion.
             {
                 Scene UnityScene = SceneManager.GetActiveScene();
@@ -342,11 +342,11 @@ public class NetworkRunnerHandler : MonoBehaviour
             GameManager.Instance.BuildConnectionToken(),
             NetAddress.Any(),
             sceneRef,
-            BuildSessionProps(buildIndex) // [MM-BACKFILL 2026-10-18 Aemy] de nguoi khac tim + vao tran dang dien ra
+            BuildSessionProps(buildIndex) // de nguoi khac tim + vao tran dang dien ra
         );
     }
 
-    // ===================== [MM-BACKFILL 2026-10-18 Aemy] VAO TRAN DANG DIEN RA =====================
+    // ===================== VAO TRAN DANG DIEN RA =====================
     // PlayFab Matchmaking chot tran ngay khi du MIN nguoi (vd 2) -> nguoi thu 3 tim sau bi dua sang tran khac
     // du tran kia moi co 2 nguoi. Khac phuc o tang Fusion: moi phong cong khai (IsVisible) gan thuoc tinh
     // che do/map/phien ban; nguoi bam "Bat dau" se xem danh sach phong trong lobby Fusion truoc, con cho
@@ -451,7 +451,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         if (onResult != null) onResult(res.Ok, res.Ok ? null : res.ShutdownReason.ToString());
     }
 
-    // [Aemy 2026-10-17] PHONG TUY CHINH (ma phong): chu phong = GameMode.Host, ban be = GameMode.Client.
+    // PHONG TUY CHINH (ma phong): chu phong = GameMode.Host, ban be = GameMode.Client.
     // Session an khoi danh sach phong (IsVisible=false) -> chi ai co ma moi vao duoc, khong ghep nguoi la.
     // Client vao ma khong ton tai -> StartGame tra loi (khong tu tao phong moi nhu AutoHostOrClient).
     public void StartCustomGame(string sessionName, string lobbyName, string sceneName, bool asHost, Action<bool, string> onResult)
@@ -550,7 +550,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         SpawnNetworkRunner = null;
 
         // Chờ scene load xong hoàn toàn
-        var asyncLoad = SceneManager.LoadSceneAsync("MenuShell") /* [MERGE 2026-10-01 Aemy] ve MenuShell thay vi MainMenu_Test */;
+        var asyncLoad = SceneManager.LoadSceneAsync("MenuShell") /* ve MenuShell thay vi MainMenu_Test */;
         while (!asyncLoad.isDone)
             await Task.Yield();
 
@@ -598,7 +598,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         await SpawnNetworkRunner.Shutdown();
         SpawnNetworkRunner = null;
         
-        var asyncLoad = SceneManager.LoadSceneAsync("MenuShell") /* [MERGE 2026-10-01 Aemy] ve MenuShell thay vi MainMenu_Test */;
+        var asyncLoad = SceneManager.LoadSceneAsync("MenuShell") /* ve MenuShell thay vi MainMenu_Test */;
         while (!asyncLoad.isDone)
             await Task.Yield();
         
@@ -614,7 +614,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         if (SpawnNetworkRunner == null)
         {
             var oldRunner = FindAnyObjectByType<NetworkRunner>(FindObjectsInactive.Include);
-            if (oldRunner != null) Destroy(oldRunner.gameObject); // [MERGE 2026-10-01 Aemy] null-check tranh NRE
+            if (oldRunner != null) Destroy(oldRunner.gameObject); // null-check tranh NRE
             SpawnNetworkRunner = Instantiate(_networkRunner_Prefab);
             SpawnNetworkRunner.name = "Network Runner";
             Debug.Log("<color=orange>[NetworkRunnerHandler]</color> Create New Network Runner");

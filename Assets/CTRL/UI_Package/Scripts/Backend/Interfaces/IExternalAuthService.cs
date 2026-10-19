@@ -15,7 +15,6 @@ namespace Backend.Interfaces
             Action<AuthError> onFailure);
 
         /// <summary>Lien ket tai khoan Google vao tai khoan HIEN TAI (dang dang nhap).</summary>
-        // [FIX BUG-ACCOUNT 2026-09-14 - Aemy]
         void GetLinkedAccountInfo(Action<LinkedAccountInfo> onResult, Action<AuthError> onFailure);
 
         void LinkGoogleAccount(string serverAuthCode,

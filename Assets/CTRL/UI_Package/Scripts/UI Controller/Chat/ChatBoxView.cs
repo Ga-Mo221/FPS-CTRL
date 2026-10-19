@@ -8,7 +8,7 @@ using Backend.Models;
 namespace Game.UI
 {
     /// <summary>
-    /// [Aemy 2026-10-19] Chat box nho o goc duoi phai tab CHOI (duoi muc SUNG CHU LUC), thu gon duoc.
+    /// Chat box nho o goc duoi phai tab CHOI (duoi muc SUNG CHU LUC), thu gon duoc.
     /// Chi lo hien thi + nhap lieu; logic/poll nam o ChatController (SRP).
     ///  - Tab TO DOI: kenh chung cua to doi.
     ///  - Tab BAN BE: danh sach ban (cham online + so tin chua doc) -> bam 1 ban de nhan rieng, ◄ de quay lai.
