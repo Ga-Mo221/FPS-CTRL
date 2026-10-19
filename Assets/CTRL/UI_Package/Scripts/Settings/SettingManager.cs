@@ -100,6 +100,7 @@ public class SettingManager : MonoBehaviour
         var bridge = TISInputBridge.Instance;
         if (bridge == null) return;
         if (bridge != _keybindsLoadedFor) ApplyKeybinds();   // bridge sinh sau SettingManager -> van nap phim da luu
+        MotionSettingsApplier.Tick(_settingData);            // [Aemy 2026-10-19] gyro: ap lai khi bridge / profile duoc dung lai (rebind, swap)
         AimAssistPlatform p;
         switch (bridge.ActiveDevice)
         {
@@ -188,6 +189,7 @@ public class SettingManager : MonoBehaviour
         ApplyAudio();
         ApplyGraphics();
         ApplyKeybinds();
+        MotionSettingsApplier.Apply(_settingData); // [Aemy 2026-10-19] gyro tay cam
         if (OnSensitivityChanged != null) OnSensitivityChanged(_settingData.MouseSensitivity);
         if (OnSettingsApplied != null) OnSettingsApplied(_settingData);
     }
@@ -265,7 +267,8 @@ public class SettingManager : MonoBehaviour
             case "audio":
                 _settingData.MasterVolume = d.MasterVolume; _settingData.SfxVolume = d.SfxVolume; _settingData.MusicVolume = d.MusicVolume; _settingData.Surround3D = d.Surround3D; break;
             case "mouse":
-                _settingData.MouseSensitivity = d.MouseSensitivity; _settingData.RifleADSSensitivity = d.RifleADSSensitivity; _settingData.SniperADSSensitivity = d.SniperADSSensitivity; _settingData.InvertY = d.InvertY; _settingData.MouseAccel = d.MouseAccel; break;
+                _settingData.MouseSensitivity = d.MouseSensitivity; _settingData.RifleADSSensitivity = d.RifleADSSensitivity; _settingData.SniperADSSensitivity = d.SniperADSSensitivity; _settingData.InvertY = d.InvertY; _settingData.MouseAccel = d.MouseAccel;
+                _settingData.GyroMode = d.GyroMode; _settingData.GyroSensX = d.GyroSensX; _settingData.GyroSensY = d.GyroSensY; _settingData.GyroInvertX = d.GyroInvertX; _settingData.GyroInvertY = d.GyroInvertY; break;
             case "graphics":
                 _settingData.Fov = d.Fov; _settingData.VSync = d.VSync; _settingData.Brightness = d.Brightness; _settingData.Contrast = d.Contrast; _settingData.Saturation = d.Saturation; _settingData.BloomOn = d.BloomOn; _settingData.BloomIntensity = d.BloomIntensity; _settingData.VignetteOn = d.VignetteOn; _settingData.MotionBlurOn = d.MotionBlurOn; _settingData.QualityLevel = d.QualityLevel; _settingData.TextureQuality = d.TextureQuality; _settingData.AntiAliasing = d.AntiAliasing; _settingData.DisplayMode = d.DisplayMode; _settingData.ResolutionWidth = d.ResolutionWidth; _settingData.ResolutionHeight = d.ResolutionHeight; _settingData.RefreshRate = d.RefreshRate; _settingData.FpsLimit = d.FpsLimit; break;
             case "crosshair":

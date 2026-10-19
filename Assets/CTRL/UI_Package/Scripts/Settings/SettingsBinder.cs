@@ -94,6 +94,12 @@ public class SettingsBinder : MonoBehaviour
         BindSlider("Chuot/DO NHAY/Nhay khi ngam sniper",  () => Data.SniperADSSensitivity, v => Data.SniperADSSensitivity = v);
         BindSwitch("Chuot/TUY CHON/Dao nguoc truc Y",     () => Data.InvertY,    v => Data.InvertY = v);
         BindSwitch("Chuot/TUY CHON/Gia toc chuot (Accel)",() => Data.MouseAccel, v => Data.MouseAccel = v);
+        // [Aemy 2026-10-19] Gyro tay cam (MotionSettingsApplier ap xuong TIS). Nut "Hieu chinh" tu xu ly (GyroCalibrateButton).
+        BindCycler("Chuot/GYRO/Che do gyro", MotionSettingsApplier.ModeOptions, () => Data.GyroMode, v => Data.GyroMode = v);
+        BindSlider("Chuot/GYRO/Nhay gyro ngang", () => Data.GyroSensX, v => Data.GyroSensX = v);
+        BindSlider("Chuot/GYRO/Nhay gyro doc",   () => Data.GyroSensY, v => Data.GyroSensY = v);
+        BindSwitch("Chuot/TUY CHON GYRO/Dao truc ngang", () => Data.GyroInvertX, v => Data.GyroInvertX = v);
+        BindSwitch("Chuot/TUY CHON GYRO/Dao truc doc",   () => Data.GyroInvertY, v => Data.GyroInvertY = v);
 
         // ---- Do hoa (trong ScrollRect) ----
         BindCycler("Do hoa Scroll/Content/HIEN THI/Ngon ngu", Game.UI.Loc.LanguageNames, () => Data.Language, v => Data.Language = v); // [Aemy 2026-10-17]

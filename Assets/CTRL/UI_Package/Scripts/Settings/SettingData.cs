@@ -63,6 +63,14 @@ public class SettingData : ScriptableObject
     [SerializeField] private bool _invertY = false;
     [SerializeField] private bool _mouseAccel = false;
 
+    // ================= GYRO (tay cam co cam bien: DualShock 4 / DualSense / Switch Pro) =================
+    [Header("Gyro")]
+    [SerializeField] private int _gyroMode = 0;            // [Aemy 2026-10-19] 0 Tat / 1 Khi ngam (giu ADS) / 2 Luon bat
+    [SerializeField] private float _gyroSensX = 1.5f;      // he so "the gioi thuc": 1 = xoay tay cam 10 do -> camera 10 do (o do nhay tay cam 1.0)
+    [SerializeField] private float _gyroSensY = 1.5f;
+    [SerializeField] private bool _gyroInvertX = false;
+    [SerializeField] private bool _gyroInvertY = false;
+
     // ================= TAM NGAM =================
     [Header("Crosshair")]
     [SerializeField] private int _crosshairColorIndex = 0;      // index bang mau (6 o)
@@ -125,6 +133,13 @@ public class SettingData : ScriptableObject
     // -- Mouse --
     public bool InvertY    { get { return _invertY; }    set { _invertY = value; } }
     public bool MouseAccel { get { return _mouseAccel; } set { _mouseAccel = value; } }
+
+    // -- Gyro --
+    public int   GyroMode    { get { return _gyroMode; }    set { _gyroMode = Mathf.Clamp(value, 0, 2); } }
+    public float GyroSensX   { get { return _gyroSensX; }   set { _gyroSensX = Mathf.Clamp(value, 0.1f, 5f); } }
+    public float GyroSensY   { get { return _gyroSensY; }   set { _gyroSensY = Mathf.Clamp(value, 0.1f, 5f); } }
+    public bool  GyroInvertX { get { return _gyroInvertX; } set { _gyroInvertX = value; } }
+    public bool  GyroInvertY { get { return _gyroInvertY; } set { _gyroInvertY = value; } }
 
     // -- Crosshair --
     public int   CrosshairColorIndex { get { return _crosshairColorIndex; } set { _crosshairColorIndex = value; } }

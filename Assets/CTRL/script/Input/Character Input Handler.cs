@@ -24,6 +24,10 @@ public class CharacterInputHandler : MonoBehaviour
     
     Vector2 _moveDirection;
     private Vector2 _lookDelta;
+    // [Aemy 2026-10-19] Tay cam: lay TRUNG BINH toc do cac frame giua 2 tick (truoc day chi lay frame cuoi).
+    // Stick gan nhu khong doi; gyro (toc do goc thay doi lien tuc) thi khong bi mat chuyen dong giua cac frame.
+    private Vector2 _padLookSum;
+    private int _padLookFrames;
     private float _zoomDelta;
     private Vector3 _aimForward;
     
@@ -54,7 +58,12 @@ public class CharacterInputHandler : MonoBehaviour
         // [NET-OPT 2026-10-18 Aemy] (bao cao 9.7) Chuot/cam ung tra delta THEO FRAME -> cong don giua 2 tick
         // (truoc day gan de: FPS cao mat delta, FPS thap dung lai 1 delta cho nhieu tick => do nhay phu thuoc FPS).
         // Tay cam tra TOC DO (stick) -> giu gia tri moi nhat, khong cong don.
-        if (_input.IsGamepad) _lookDelta = _input.LookDelta;
+        if (_input.IsGamepad)
+        {
+            _padLookSum += _input.LookDelta;
+            _padLookFrames++;
+            _lookDelta = _padLookSum / _padLookFrames;
+        }
         else _lookDelta += _input.LookDelta;
         _zoomDelta += _input.ZoomDelta;
         _aimForward = _componentManager.Camera.transform.forward;
@@ -116,6 +125,7 @@ public class CharacterInputHandler : MonoBehaviour
     {
         _buttons = default;
         if (!_input.IsGamepad) _lookDelta = default; // tay cam: giu toc do stick cho tick sau (frame co the khong Update kip)
+        _padLookSum = default; _padLookFrames = 0;   // [Aemy 2026-10-19] tick moi -> trung binh lai tu dau
         _zoomDelta = 0f;
     }
 }
