@@ -107,6 +107,8 @@ namespace Game.Shop
 
         private void OnEnable()
         {
+            // [Aemy 2026-10-19] moi lan vao tab CUA HANG -> mac dinh muc NOI BAT (dung lai ngay bang catalog da nap, khong cho tai lai)
+            if (Application.isPlaying && _currentTab != 0) { _currentTab = 0; if (_loaded) Rebuild(); }
             ApplyTabVisual();
             if (Application.isPlaying) { LoadCatalog(); return; }
 #if UNITY_EDITOR
