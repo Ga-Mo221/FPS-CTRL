@@ -100,7 +100,10 @@ namespace Game.UI
         }
 
         /// <summary>Hien model tu nguon. Tra false neu nguon rong / khong co hinh.</summary>
-        public bool Show(GameObject source, bool bakeStatic)
+        public bool Show(GameObject source, bool bakeStatic) { return Show(source, bakeStatic, Vector3.zero); }
+
+        /// <summary>[Aemy 2026-10-19] Nhu tren + xoay them rieng cho model nay (truc local cua model, sau _baseEuler).</summary>
+        public bool Show(GameObject source, bool bakeStatic, Vector3 extraEuler)
         {
             EnsureStage();
             Clear();
@@ -110,7 +113,7 @@ namespace Game.UI
             _model.name = "Model";
             _model.transform.SetParent(_pivot, false);
             _model.transform.localPosition = Vector3.zero;
-            _model.transform.localRotation = Quaternion.Euler(_baseEuler);
+            _model.transform.localRotation = Quaternion.Euler(_baseEuler) * Quaternion.Euler(extraEuler);
             SetLayerRecursive(_model, 0);
             _yaw = 0f; _zoom = 1f; _pivot.localRotation = Quaternion.identity;
             Frame();

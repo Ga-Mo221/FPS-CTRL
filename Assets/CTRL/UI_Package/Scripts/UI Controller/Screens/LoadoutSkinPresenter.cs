@@ -212,7 +212,7 @@ namespace Game.UI
             GameObject src = null;
             var data = !string.IsNullOrEmpty(id) ? WeaponLookup.Resolve(id) : null; // [Aemy 2026-10-11] "Dao" -> Knife
             src = ModelSourceOf(data);
-            bool shown = _preview != null && _preview.Show(src, true);
+            bool shown = _preview != null && _preview.Show(src, true, data != null ? data.PreviewEuler : Vector3.zero); // [Aemy 2026-10-19] goc rieng tung sung (Dusk)
             if (_emptyLabel) _emptyLabel.gameObject.SetActive(!shown);
         }
 

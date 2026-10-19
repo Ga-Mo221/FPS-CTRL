@@ -29,6 +29,9 @@ public class WeaponData : ScriptableObject
 
     [TabGroup("Weapon Data", "Info")] 
     [SerializeField] private GameObject _dropItemPrefab;
+    [Tooltip("[Aemy 2026-10-19] Xoay them cho model xem truoc o Trang bi (truc cua model rieng tung sung khac nhau).\n" +
+             "Vd M24 (Dusk): 0,0,-90 de ong ngam nam tren.")]
+    [SerializeField] private Vector3 _previewEuler = Vector3.zero;
     
     //========================== ATTACK/ALL ====================================
     
@@ -177,6 +180,7 @@ public class WeaponData : ScriptableObject
     public bool HasRecoilData => _recoilData != null;
     
     public GameObject DropItemPrefab => _dropItemPrefab;
+    public Vector3 PreviewEuler => _previewEuler;
     
     public Sprite Icon => (_runtimeIcon != null ? _runtimeIcon : _icon);
     public string ID => _iD;
