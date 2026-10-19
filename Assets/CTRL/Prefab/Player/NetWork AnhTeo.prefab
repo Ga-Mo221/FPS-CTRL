@@ -388,6 +388,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -1772,6 +1773,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -3142,77 +3144,17 @@ MonoBehaviour:
   _data: {fileID: 11400000, guid: bc37ffe50bf880d4e8b5feccfa06359b, type: 2}
   _MoveDirection: {x: 0, y: 0}
   _StateFl:
-    IsADS:
-      _value: 0
-    IsRun:
-      _value: 0
-    IsSprint:
-      _value: 0
-    IsCrouch:
-      _value: 0
-    IsSlide:
-      _value: 0
-    IsReloading:
-      _value: 0
-    IsSwitching:
-      _value: 0
-    IsThrow:
-      _value: 0
+    Bits: 0
   _GrenadeID: 0
-  _Grenade_Q:
-    _value: 0
-  _Grenade_E:
-    _value: 0
-  QKey: 0
-  EKey: 0
   _IsTurnInPlaceActive:
     _value: 0
-  _IsJump:
-    _value: 0
   _NetworkedPitch: 0
-  _FireCount: 0
-  _AimForward: {x: 0, y: 0, z: 0}
-  _LastShotInfo:
-    HitPosition: {x: 0, y: 0, z: 0}
-    HitNormal: {x: 0, y: 0, z: 0}
-    ShowEffect:
-      _value: 0
-    PelletCount: 0
-    HitPosition1: {x: 0, y: 0, z: 0}
-    HitNormal1: {x: 0, y: 0, z: 0}
-    ShowEffect1:
-      _value: 0
-    HitPosition2: {x: 0, y: 0, z: 0}
-    HitNormal2: {x: 0, y: 0, z: 0}
-    ShowEffect2:
-      _value: 0
-    HitPosition3: {x: 0, y: 0, z: 0}
-    HitNormal3: {x: 0, y: 0, z: 0}
-    ShowEffect3:
-      _value: 0
-    HitPosition4: {x: 0, y: 0, z: 0}
-    HitNormal4: {x: 0, y: 0, z: 0}
-    ShowEffect4:
-      _value: 0
-    HitPosition5: {x: 0, y: 0, z: 0}
-    HitNormal5: {x: 0, y: 0, z: 0}
-    ShowEffect5:
-      _value: 0
-    HitPosition6: {x: 0, y: 0, z: 0}
-    HitNormal6: {x: 0, y: 0, z: 0}
-    ShowEffect6:
-      _value: 0
-    HitPosition7: {x: 0, y: 0, z: 0}
-    HitNormal7: {x: 0, y: 0, z: 0}
-    ShowEffect7:
-      _value: 0
+  _ShotSeed: 0
   _RightPuch: 0
   _ShootIndex: 0
   _canNextAttackCombo: 1
-  _LastConfirmedAimForward: {x: 0, y: 0, z: 0}
   _CanTakeDamage:
     _value: 1
-  _SwitchCount: 0
   _CameraSpeed: 1
   _ADSLookSpeedMultiplier: 0.5
 --- !u!114 &7154161077378459247
@@ -3229,7 +3171,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NPlayer
   Name: Anh Teo
   _NetworkedTeam: 0
-  _GamePlayMode: 0
   _Nickname:
     _length: 0
     _data:
@@ -3336,16 +3277,8 @@ MonoBehaviour:
     m_Bits: 8
   _weapon_Parrent: {fileID: 5398304258409137546}
   __weaponOneRef: {fileID: 0}
-  __weaponOneID:
-    _length: 0
-    _data:
-      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   Weapon_One_CTRL: {fileID: 0}
   __weaponTwoRef: {fileID: 0}
-  __weaponTwoID:
-    _length: 0
-    _data:
-      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   Weapon_Two_CTRL: {fileID: 0}
   __weapon_Active: 0
   _debug: 1
@@ -3439,14 +3372,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c685340383c11a4c9097785b33b1217, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NShootHandler
-  _GrenadeQ:
-    _length: 8
-    _data:
-      Data: 460000007200000061000000670000002d0000004d00000036000000370000000000000000000000000000000000000000000000000000000000000000000000
-  _GrenadeE:
-    _length: 9
-    _data:
-      Data: 460000006c0000006100000073000000680000002d0000004d000000380000003400000000000000000000000000000000000000000000000000000000000000
   _throwPointRight: {fileID: 8812056211215345882}
   _throwPointLeft: {fileID: 2499487651626842687}
   __grende_ID: 0
@@ -3454,8 +3379,6 @@ MonoBehaviour:
   _hitMask:
     serializedVersion: 2
     m_Bits: 136
-  __kill: 0
-  _Assist: 0
   _TotalExp: 0
   _meleeHitWindowDuration: 0.15
   _aimForward: {x: 0, y: 0, z: 0}
@@ -3472,9 +3395,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de1cd88088df52d448268df432191d39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NHPHandler
-  _HP: 0
-  _IsDead: 0
-  _DeadCount: 0
   SkipSettingStartValues: 0
   _regenDelay: 6
   _regenInterval: 1
@@ -4538,6 +4458,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -5469,6 +5390,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -6255,6 +6177,7 @@ GameObject:
   - component: {fileID: 1704556372531723004}
   - component: {fileID: 6691223628621461027}
   - component: {fileID: 7009672427896617825}
+  - component: {fileID: 723394399836529817}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: Untagged
@@ -6451,6 +6374,18 @@ MonoBehaviour:
   detectedLineColor: {r: 0, g: 1, b: 1, a: 1}
   blockedLineColor: {r: 1, g: 0, b: 0, a: 1}
   detectedObjects: []
+--- !u!114 &723394399836529817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6180163430641446219}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d0a347dcece79748a6c628d0c8cd020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFovSync
 --- !u!1 &6260264674629146389
 GameObject:
   m_ObjectHideFlags: 0
@@ -6508,6 +6443,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -7695,6 +7631,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0

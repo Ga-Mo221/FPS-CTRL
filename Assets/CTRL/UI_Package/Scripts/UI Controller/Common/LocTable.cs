@@ -383,6 +383,10 @@ namespace Game.UI
             { "VÀO TRẬN ĐANG DIỄN RA", "JOINING MATCH IN PROGRESS" },
             { "Đã tìm thấy trận đang diễn ra!", "Found a match in progress!" },
             { "KHÔNG TÌM ĐƯỢC TRẬN (HẾT GIỜ)", "NO MATCH FOUND (TIMED OUT)" },
+            // [Aemy 2026-10-19] Cai dat hien thi
+            { "Không viền", "Borderless" },
+            { "Cửa sổ", "Windowed" },
+            { "Không giới hạn", "Unlimited" },
             // [Aemy 2026-10-19] Chat box menu
             { "TỔ ĐỘI", "PARTY" },
             { "GỬI", "SEND" },

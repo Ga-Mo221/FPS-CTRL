@@ -110,6 +110,11 @@ public class SettingsBinder : MonoBehaviour
         // [Aemy 2026-10-17] Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
         BindCycler("Do hoa Scroll/Content/CHAT LUONG/Ket cau (Texture)", GraphicsQualityApplier.TextureOptions, () => Data.TextureQuality, v => Data.TextureQuality = v);
         BindCycler("Do hoa Scroll/Content/CHAT LUONG/Khu rang cua (AA)", GraphicsQualityApplier.AAOptions, () => Data.AntiAliasing, v => Data.AntiAliasing = v);
+        // [Aemy 2026-10-19] Hien thi: truoc chi la chu tinh -> nay la o chon ◄ ► (DisplaySettingsApplier ap xuong engine).
+        BindCycler("Do hoa Scroll/Content/HIEN THI/Che do man hinh", DisplaySettingsApplier.ModeOptions, () => Data.DisplayMode, v => Data.DisplayMode = v);
+        BindCycler("Do hoa Scroll/Content/HIEN THI/Do phan giai", DisplaySettingsApplier.ResolutionOptions(), () => DisplaySettingsApplier.ResolutionIndex(Data), v => DisplaySettingsApplier.SetResolutionIndex(Data, v));
+        BindCycler("Do hoa Scroll/Content/HIEN THI/Tan so quet", DisplaySettingsApplier.RefreshOptions(), () => DisplaySettingsApplier.RefreshIndex(Data), v => DisplaySettingsApplier.SetRefreshIndex(Data, v));
+        BindCycler("Do hoa Scroll/Content/HIEN THI/Gioi han FPS", DisplaySettingsApplier.FpsOptions(), () => DisplaySettingsApplier.FpsIndex(Data), v => DisplaySettingsApplier.SetFpsIndex(Data, v));
 
         // ---- Tam ngam ----
         BindColor("Tam Ngam/HINH DANG/Mau sac", () => Data.CrosshairColorIndex, v => Data.CrosshairColorIndex = v);

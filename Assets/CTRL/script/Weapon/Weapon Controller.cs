@@ -460,7 +460,7 @@ public class WeaponController : NetworkBehaviour
             StopCoroutine(_blendRoutine);
 
         float target = ads ? 1f : 0f;
-        float zoom = ads ? _data.ADS_Zoom : _data.Stand_Zoom;
+        float zoom = GameFov.ForWeapon(_camera_Zoom, _data.Stand_Zoom, _data.ADS_Zoom, ads); // [Aemy 2026-10-19] FOV theo Cai dat, ngam giu ti le zoom cua sung
         float zoom_z = ads ? _data.ADS_Zoom_Z : _data.Stamd_Zoom_Z;
         Vector3 Pivot_Offset = PivotOffset;
         _blendRoutine = StartCoroutine(ADSBlend(target, zoom, zoom_z, Pivot_Offset, _data.ADS_duration));

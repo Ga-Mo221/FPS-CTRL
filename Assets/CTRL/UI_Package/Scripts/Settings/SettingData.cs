@@ -48,6 +48,13 @@ public class SettingData : ScriptableObject
     [SerializeField] private int _textureQuality = 2;  // [Aemy 2026-10-17] 0 Thap / 1 Vua / 2 Cao (globalTextureMipmapLimit)
     [SerializeField] private int _antiAliasing = 2;    // [Aemy 2026-10-17] 0 Tat / 1 FXAA / 2 SMAA / 3 MSAA 4x / 4 TAA
 
+    [Header("Display")] // [Aemy 2026-10-19] DisplaySettingsApplier
+    [SerializeField] private int _displayMode = 1;      // 0 Toan man hinh (Exclusive) / 1 Khong vien / 2 Cua so
+    [SerializeField] private int _resolutionWidth = 0;  // 0 = do phan giai goc man hinh
+    [SerializeField] private int _resolutionHeight = 0;
+    [SerializeField] private int _refreshRate = 0;      // Hz, 0 = cao nhat
+    [SerializeField] private int _fpsLimit = 0;         // 0 = khong gioi han (chi tac dung khi V-Sync tat)
+
     [Header("Ngon ngu")]
     [SerializeField] private int _language = 0;        // [Aemy 2026-10-17] 0 Tieng Viet / 1 English
 
@@ -108,6 +115,11 @@ public class SettingData : ScriptableObject
     public float Fov          { get { return _fov; }          set { _fov = value; } }
     public int   TextureQuality { get { return _textureQuality; } set { _textureQuality = Mathf.Clamp(value, 0, 2); } }
     public int   AntiAliasing   { get { return _antiAliasing; }   set { _antiAliasing = Mathf.Clamp(value, 0, 4); } }
+    public int   DisplayMode    { get { return _displayMode; }    set { _displayMode = Mathf.Clamp(value, 0, 2); } }
+    public int   ResolutionWidth  { get { return _resolutionWidth; }  set { _resolutionWidth = Mathf.Max(0, value); } }
+    public int   ResolutionHeight { get { return _resolutionHeight; } set { _resolutionHeight = Mathf.Max(0, value); } }
+    public int   RefreshRate    { get { return _refreshRate; }    set { _refreshRate = Mathf.Max(0, value); } }
+    public int   FpsLimit       { get { return _fpsLimit; }       set { _fpsLimit = Mathf.Max(0, value); } }
     public int   Language       { get { return _language; }       set { _language = Mathf.Clamp(value, 0, 1); } }
 
     // -- Mouse --
