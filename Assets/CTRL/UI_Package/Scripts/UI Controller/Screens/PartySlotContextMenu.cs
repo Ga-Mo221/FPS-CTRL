@@ -12,6 +12,9 @@ namespace Game.UI
     ///  - Nguoi khac: KET BAN (neu chua la ban), [truong nhom] CHUYEN TRUONG NHOM, DA KHOI DOI.
     ///  - Chinh minh (dang trong doi): ROI DOI.
     /// Logic party nam o PartyController; o day chi dung menu + xac nhan (SRP).
+    /// [Aemy 2026-10-19] Tay cam: moi o la 1 nut TIS (vien chon). A tren o CO NGUOI = mo menu nay (ket ban / chuyen truong
+    /// nhom / da khoi doi / roi doi); A tren o TRONG = nut "+ MOI". Chuot trai van nhu cu (chi chuot phai mo menu).
+    /// Dieu huong trai / phai trong hang: PartyRowGamepadNav.
     /// </summary>
     public class PartySlotContextMenu : MonoBehaviour
     {
@@ -41,8 +44,46 @@ namespace Game.UI
                 // O can Graphic nhan raycast (o co Image) -> relay nhan duoc chuot phai.
                 int idx = i;
                 RightClickRelay.On(root).RightClicked += pos => Open(idx, pos);
+                MakeGamepadFocusable(root, idx);
             }
+            if (_panel.GetComponent<PartyRowGamepadNav>() == null) _panel.gameObject.AddComponent<PartyRowGamepadNav>();
             _hooked = true;
+        }
+
+        // O party -> nut TIS (chi nhan focus tay cam + Submit; onClick rong nen chuot trai khong doi hanh vi).
+        private void MakeGamepadFocusable(GameObject root, int idx)
+        {
+            var btn = root.GetComponent<GaMo.TrueInputSystem.TISGamepadUIButton>();
+            if (btn == null) btn = root.AddComponent<GaMo.TrueInputSystem.TISGamepadUIButton>();
+            btn.transition = UnityEngine.UI.Selectable.Transition.None;
+            if (btn.context == null)
+            {
+                var near = _panel.GetComponentInChildren<GaMo.TrueInputSystem.TISGamepadUIButton>(true);
+                foreach (var b in _panel.GetComponentsInChildren<GaMo.TrueInputSystem.TISGamepadUIButton>(true))
+                    if (b != btn && b.context != null) { near = b; break; }
+                if (near != null && near.context != null) btn.SetContext(near.context);
+            }
+            if (root.GetComponent<TISSelectHighlight>() == null) root.AddComponent<TISSelectHighlight>();
+            var relay = root.GetComponent<SubmitRelay>();
+            if (relay == null) relay = root.AddComponent<SubmitRelay>();
+            relay.Submitted = () => OnSlotSubmit(idx, root);
+        }
+
+        private void OnSlotSubmit(int slot, GameObject root)
+        {
+            // Menu / hop thoai dang mo (hoac vua dong trong frame nay): nut A thuoc ve no, khong mo lai menu.
+            if (GaMo.TrueInputSystem.TISGamepadUIButton.ExternalSuppress > 0 || UIContextMenu.IsOpen) return;
+            if (_panel.IsSlotFilled(slot))
+            {
+                var rt = root.transform as RectTransform;
+                var canvas = root.GetComponentInParent<Canvas>();
+                Camera cam = canvas != null && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.rootCanvas.worldCamera : null;
+                Vector2 pos = rt != null ? RectTransformUtility.WorldToScreenPoint(cam, rt.position) : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+                Open(slot, pos);
+                return;
+            }
+            var invite = _panel.GetSlotInviteButton(slot);
+            if (invite != null && invite.interactable) invite.onClick.Invoke();
         }
 
         private void Open(int slot, Vector2 screenPos)

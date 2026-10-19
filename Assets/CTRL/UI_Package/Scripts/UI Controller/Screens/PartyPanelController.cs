@@ -67,6 +67,14 @@ namespace Game.UI
             var g = _members[index].filledGroup; return g != null && g.activeSelf;
         }
 
+        /// <summary>[Aemy 2026-10-19] Nut "+ MOI" cua o trong (de tay cam bam A tren o trong = moi ban).</summary>
+        public Button GetSlotInviteButton(int index)
+        {
+            if (_members == null || index < 0 || index >= _members.Length || _members[index] == null) return null;
+            var g = _members[index].emptyGroup;
+            return g != null ? g.GetComponentInChildren<Button>(true) : null;
+        }
+
         /// <summary>So o avatar ban be co the trinh bay.</summary>
         public int FriendAvatarCount => _friendAvatars != null ? _friendAvatars.Length : 0;
 
