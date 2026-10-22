@@ -82,15 +82,25 @@ public class NInGameMessagesHandler : NetworkBehaviour
         ShowKill(killer, weapon);
 
         // Headshot (am thanh + UI): chi may cua nguoi giet (local player), bo qua tu sat.
-        if (headshot && killerId != Object.Id && NPlayer.Local != null && NPlayer.Local.Object != null
-            && NPlayer.Local.Object.Id == killerId)
+        bool localKiller = killerId != Object.Id && NPlayer.Local != null && NPlayer.Local.Object != null
+            && NPlayer.Local.Object.Id == killerId;
+        if (headshot && localKiller)
             LocalKillEvents.RaiseHeadshot();
+
+        // [Aemy 2026-10-22] Kill-theo-sung cho panel "SUNG CHU LUC". Truoc day RegisterKill khong duoc goi o dau ca
+        // -> bang kill-theo-sung tren PlayFab dung yen (1 sung, 2 kill tu luc test cu).
+        if (localKiller && weaponIdx != WEAPON_ZONE)
+            Game.Match.MatchStatsReporter.Instance.RegisterKill(weapon, headshot);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     private void RPC_KillGameStr(string killer, string weaponname, RpcInfo info = default)
     {
         ShowKill(killer, weaponname);
+        // [Aemy 2026-10-22] Duong du phong (chi co ten nguoi giet): khop ten local player, bo tu sat.
+        if (NPlayer.Local != null && NPlayer.Local.Object != Object
+            && !string.IsNullOrEmpty(killer) && killer == NPlayer.Local.Nickname.ToString() && weaponname != "Zone")
+            Game.Match.MatchStatsReporter.Instance.RegisterKill(weaponname);
     }
 
     private void ShowKill(string killer, string weaponname)

@@ -237,13 +237,15 @@ namespace Game.UI
             err => Debug.LogWarning("[MenuShellBinder] Coins lỗi: " + err.ErrorMessage));
         }
 
+        private const int TopWeaponsShown = 3;
+
         // ↓ Lấy top súng nhiều kill nhất từ PlayFab đổ vào panel "SÚNG CHỦ LỰC".
         public void RefreshWeapons()
         {
             if (_weaponStats == null) return;
             var svc = BackendBootstrap.PlayerStatsService;
             if (svc == null) return;
-            int n = _weaponStats.SlotCount;
+            int n = Mathf.Min(_weaponStats.SlotCount, TopWeaponsShown); // [Aemy 2026-10-22] toi da 3 sung
             svc.GetTopWeapons(n, list =>
             {
                 int count = list != null ? list.Count : 0;

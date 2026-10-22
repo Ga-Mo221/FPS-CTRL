@@ -59,11 +59,37 @@ namespace Game.Match
         {
             _kills++;
             if (headshot) _headshots++;
-            if (!string.IsNullOrEmpty(weaponName))
+            // [Aemy 2026-10-22] Gop skin ve sung goc (Umbra Dark Red -> Umbra); bo qua thu khong phai vu khi (luu dan, vung...).
+            string key = BaseWeaponName(weaponName);
+            if (!string.IsNullOrEmpty(key))
             {
-                int cur; _weaponKills.TryGetValue(weaponName, out cur);
-                _weaponKills[weaponName] = cur + 1;
+                int cur; _weaponKills.TryGetValue(key, out cur);
+                _weaponKills[key] = cur + 1;
             }
+        }
+
+        /// <summary>Ten hien thi cua sung GOC (skin "&lt;ID&gt;_xx" -> sung "&lt;ID&gt;"). null neu khong phai WeaponData.</summary>
+        public static string BaseWeaponName(string weaponName)
+        {
+            var gm = GameManager.Instance;
+            if (string.IsNullOrEmpty(weaponName) || gm == null) return null;
+            var list = gm.GetWeaponDataList();
+            if (list == null) return null;
+            foreach (var w in list)
+            {
+                var d = w.Data();
+                string id = w.ID();
+                if (d == null || string.IsNullOrEmpty(id)) continue;
+                if (d.WeaponName != weaponName && !string.Equals(id, weaponName, StringComparison.OrdinalIgnoreCase)) continue;
+                int us = id.IndexOf('_');
+                if (us > 0)
+                {
+                    var baseData = gm.GetWeaponData(id.Substring(0, us));
+                    if (baseData != null && !string.IsNullOrEmpty(baseData.WeaponName)) return baseData.WeaponName;
+                }
+                return string.IsNullOrEmpty(d.WeaponName) ? id : d.WeaponName;
+            }
+            return null;
         }
 
         public void RegisterDeath()  { _deaths++; }
