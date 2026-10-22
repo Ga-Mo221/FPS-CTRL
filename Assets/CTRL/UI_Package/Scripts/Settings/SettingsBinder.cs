@@ -333,6 +333,23 @@ public class SettingsBinder : MonoBehaviour
         row.anchoredPosition += new Vector2(dx, 0f);
         foreach (Transform c in row) if (c is RectTransform crt) crt.anchoredPosition -= new Vector2(dx, 0f);
 
+        // [Aemy 2026-10-22] Vung cuon phai chua HET dong moi: dong slider co thanh truot + vach ke nam DUOI chu,
+        // ma buoc dong lay theo dong switch -> o Pause (Content sat day) thanh truot bi mask cat mat.
+        if (content != null)
+        {
+            var corners = new Vector3[4];
+            float lowest = float.MaxValue;
+            foreach (var r in row.GetComponentsInChildren<RectTransform>(true))
+            {
+                r.GetWorldCorners(corners);
+                float y = content.InverseTransformPoint(corners[0]).y;
+                if (y < lowest) lowest = y;
+            }
+            float need = content.rect.yMax - lowest + 24f; // chua toi diem thap nhat + le duoi
+            if (lowest < float.MaxValue && need > content.rect.height)
+                content.sizeDelta += new Vector2(0f, need - content.rect.height);
+        }
+
         // Tay cam: dang ky nut moi voi khung dieu huong TIS
         var ctx = row.GetComponentInParent<GaMo.TrueInputSystem.TISUINavigationContext>(true);
         if (ctx != null) ctx.ScanChildButtons();
