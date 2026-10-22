@@ -36,15 +36,39 @@ public class LocalInputController : MonoBehaviour
 
         OnDragItem();
 
+        OnDropWeapon();
+
         OpenLoadOut();
+    }
+
+    // Vứt súng đang cầm (G / D-pad phải). Host tự kiểm tra luật (không vứt dao, không vứt món cuối...).
+    private void OnDropWeapon()
+    {
+        if (!_input.GetSkillAction("Drop", TISButtonReadMode.PressDown)) return;
+        var gm = GameManager.Instance;
+        if (gm != null && (gm.OnUIChatBox() || gm.OnUIOption())) return; // đang gõ chat / mở menu
+        if (_weaponManager != null)
+            _weaponManager.Rpc_RequestDrop();
     }
     
     private void OnUI()
     {
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.SetOnUIOptions(!GameManager.Instance.OnUIOption());
+            var gm = GameManager.Instance;
+            if (gm != null)
+            {
+                // Vao tran bang chon Balo tu mo -> SetOnUIOptions(true) bi tu choi khi loadout dang mo
+                // => ESC/Start khong mo duoc Pause. Dang mo bang Balo thi dong no (giu balo dang chon) roi mo Pause.
+                if (gm.OnUILoadout() && !gm.OnUIOption())
+                {
+                    if (_gameHudController != null) _gameHudController.SetLoadoutVisible(false);
+                    gm.SetOnuiLoadout(false);
+                }
+                gm.SetOnUIOptions(!gm.OnUIOption());
+                // hien/an panel Pause theo co
+                if (_gameHudController != null) _gameHudController.SetPauseVisible(gm.OnUIOption());
+            }
             //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
         }
     }
@@ -81,10 +105,10 @@ public class LocalInputController : MonoBehaviour
             if (gm != null && gm.GetCanDragItem())
             {
                 var item = gm.GetDropItemWeapon;
-                if (item != null)
+                if (item != null && item.Object != null && item.Object.IsValid)
                 {
-                    _weaponManager.Rpc_RequestChangeWeapon(item.WeaponName.ToString(), item.CurrentBullet, item.MaxBullet);
-                    item.Despawn();
+                    // Chi gui id item; host tu kiem tra + lay loai sung / so dan tu item.
+                    _weaponManager.Rpc_RequestPickup(item.Object.Id);
                 }
             }
         }

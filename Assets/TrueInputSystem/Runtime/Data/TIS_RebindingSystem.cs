@@ -245,23 +245,53 @@ namespace GaMo.TrueInputSystem
 
             inputAction.Disable();
 
-            int bindingIdx = FindFirstBindingIndex(inputAction, target);
-            _rebindOp = bindingIdx >= 0
-                ? inputAction.PerformInteractiveRebinding(bindingIdx)
-                : inputAction.PerformInteractiveRebinding();
+            // FIX tay cam: ban cu goi WithControlsHavingToMatchPath("") cho Gamepad
+            // -> Input System nem ArgumentNullException -> rebind tay cam KHONG BAO GIO chay, action bi Disable mai,
+            // state ket o Listening. Gio: chi them path hop le + boc try/catch de luon khoi phuc action.
+            try
+            {
+                int bindingIdx = FindFirstBindingIndex(inputAction, target);
+                _rebindOp = bindingIdx >= 0
+                    ? inputAction.PerformInteractiveRebinding(bindingIdx)
+                    : inputAction.PerformInteractiveRebinding();
 
-            _rebindOp
-                .WithControlsHavingToMatchPath(target == RebindTarget.PC ? "<Keyboard>" : "<Gamepad>")
-                .WithControlsHavingToMatchPath(target == RebindTarget.PC ? "<Mouse>"    : "")
-                .OnMatchWaitForAnother(0.1f)
-                .OnComplete(op => HandleRebindComplete(op, bridge, actionName, target, oldPath, onComplete))
-                .OnCancel(op   => HandleRebindCancel(op,  bridge, actionName, target, oldPath, onComplete));
+                if (target == RebindTarget.PC)
+                {
+                    _rebindOp.WithControlsHavingToMatchPath("<Keyboard>")
+                             .WithControlsHavingToMatchPath("<Mouse>");
+                }
+                else
+                {
+                    // Can analog (Move/Look) khong rebind qua day -> loai tru de lo cham stick khong bi gan nham.
+                    _rebindOp.WithControlsHavingToMatchPath("<Gamepad>")
+                             .WithControlsExcluding("<Gamepad>/leftStick")
+                             .WithControlsExcluding("<Gamepad>/rightStick");
+                }
 
-            if (!string.IsNullOrEmpty(cancelPath))
-                _rebindOp.WithCancelingThrough(cancelPath);
+                _rebindOp
+                    .OnMatchWaitForAnother(0.1f)
+                    .OnGeneratePath(GeneralizePath)   // luu "<Gamepad>/buttonSouth" thay vi "/XInputControllerWindows/buttonSouth"
+                    .OnComplete(op => HandleRebindComplete(op, bridge, actionName, target, oldPath, onComplete))
+                    .OnCancel(op   => HandleRebindCancel(op,  bridge, actionName, target, oldPath, onComplete));
 
-            OnRebindStarted?.Invoke(actionName, target);
-            _rebindOp.Start();
+                if (!string.IsNullOrEmpty(cancelPath))
+                    _rebindOp.WithCancelingThrough(cancelPath);
+
+                OnRebindStarted?.Invoke(actionName, target);
+                _rebindOp.Start();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[TISRebinding] Khong the bat dau rebind \"{actionName}\" [{target}]: {e.Message}");
+                try { _rebindOp?.Dispose(); } catch { }
+                ReEnableAction(bridge, actionName);
+                _state = RebindState.Failed;
+                ResetSession();
+                var fail = Fail(actionName, target, oldPath, "start error: " + e.Message);
+                onComplete?.Invoke(fail);
+                OnRebindCompleted?.Invoke(fail);
+                return;
+            }
             Debug.Log($"[TISRebinding] ▶ Đang lắng nghe phím mới cho \"{actionName}\" [{target}]...");
         }
 
@@ -508,7 +538,7 @@ namespace GaMo.TrueInputSystem
                 if (string.IsNullOrEmpty(entry.actionName) || string.IsNullOrEmpty(entry.path)) continue;
                 if (!Enum.TryParse<RebindTarget>(entry.target, out var tgt)) continue;
 
-                _overrides[MakeKey(profileName, entry.actionName, tgt)] = entry.path;
+                _overrides[MakeKey(profileName, entry.actionName, tgt)] = GeneralizeStoredPath(entry.path);
                 anyLoaded = true;
                 Debug.Log($"[TISRebinding] ↑ Load: \"{entry.actionName}\" [{tgt}] = {GetDisplayName(entry.path)}");
             }
@@ -660,7 +690,8 @@ namespace GaMo.TrueInputSystem
             string actionName, RebindTarget target,
             string oldPath, Action<RebindResult> onComplete)
         {
-            string newPath = op.selectedControl?.path ?? "";
+            // Path tong quat ("<Gamepad>/buttonSouth") -> chay voi MOI tay cam + FindConflict so khop dung.
+            string newPath = GeneralizePath(op.selectedControl);
 
             if (_pathBlacklist.Contains(newPath))
             {
@@ -734,6 +765,8 @@ namespace GaMo.TrueInputSystem
 
             ApplyOverridesToProfile(copy);
             bridge.SwapProfile(copy);
+            // SwapProfile tự tạo runtime copy riêng → bản tạm này không còn ai dùng
+            UnityEngine.Object.Destroy(copy);
         }
 
         // ══════════════════════════════════════════════════════
@@ -840,6 +873,37 @@ namespace GaMo.TrueInputSystem
                 if (target == RebindTarget.Gamepad && isGamepad)  return i;
             }
             return -1;
+        }
+
+        /// <summary>
+        /// Doi control cu the -> path tong quat theo loai thiet bi:
+        /// "/XInputControllerWindows/buttonSouth" -> "&lt;Gamepad&gt;/buttonSouth", "/Keyboard/g" -> "&lt;Keyboard&gt;/g".
+        /// </summary>
+        public static string GeneralizePath(InputControl control)
+        {
+            if (control == null) return "";
+            var device = control.device;
+            if (device == null || control == device) return control.path ?? "";
+            string rel = control.path.Substring(device.path.Length);   // "/buttonSouth", "/dpad/up"
+            if (device is Gamepad)  return "<Gamepad>"  + rel;
+            if (device is Keyboard) return "<Keyboard>" + rel;
+            if (device is Mouse)    return "<Mouse>"    + rel;
+            return control.path;
+        }
+
+        /// <summary> Path cu luu dang "/Keyboard/g" (truoc khi co GeneralizePath) -> tong quat hoa khi load.</summary>
+        private static string GeneralizeStoredPath(string path)
+        {
+            if (string.IsNullOrEmpty(path) || path.StartsWith("<")) return path;
+            try
+            {
+                var c = InputSystem.FindControl(path);
+                if (c != null) return GeneralizePath(c);
+            }
+            catch { }
+            if (path.StartsWith("/Keyboard/", StringComparison.OrdinalIgnoreCase)) return "<Keyboard>" + path.Substring(9);
+            if (path.StartsWith("/Mouse/",    StringComparison.OrdinalIgnoreCase)) return "<Mouse>"    + path.Substring(6);
+            return path;
         }
 
         private static void ReEnableAction(TISInputBridge bridge, string actionName)

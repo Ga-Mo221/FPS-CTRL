@@ -60,6 +60,28 @@ namespace GaMo.TrueInputSystem
 
         private static readonly HashSet<int> _consumedEnhancedTouchIds = new HashSet<int>();
 
+        // ── Edge latch (PressDown / PressUp) ─────────────────────
+        // Lần nhấn / nhả được CHỐT ngay lúc xảy ra (OnPointerDown/Up trong EventSystem.Update)
+        // rồi giao cho lần đọc đầu tiên, giữ nguyên kết quả cho mọi lần đọc khác trong CÙNG frame đó.
+        //  · Không phụ thuộc thứ tự Update giữa script game và EventSystem
+        //    (trước đây: game đọc trước EventSystem → FlushFrame cuối frame nuốt mất lần nhấn).
+        //  · Tap nhanh nhấn + nhả trong cùng 1 frame vẫn tính là 1 lần nhấn.
+        //  · Không ai đọc trong frame xảy ra lẫn frame kế tiếp → hết hạn (không bắn trễ về sau).
+        private sealed class EdgeState
+        {
+            public bool pressPending;
+            public int  pressFrame;
+            public int  pressObservedFrame   = -1;
+            public bool releasePending;
+            public int  releaseFrame;
+            public int  releaseObservedFrame = -1;
+        }
+
+        private static readonly Dictionary<string, EdgeState> _edges =
+            new Dictionary<string, EdgeState>(StringComparer.OrdinalIgnoreCase);
+
+        private const int EdgeLifetimeFrames = 1; // giao trong frame xảy ra hoặc frame kế tiếp
+
         // ── Write (từ TISMobileSkillButton) ─────────────────────
 
         /// <summary>
@@ -81,6 +103,21 @@ namespace GaMo.TrueInputSystem
                 _registeredKeys.Add(skillName);
                 _states[skillName]     = false; // sẽ bị ghi đè dòng dưới
                 _prevStates[skillName] = false; // đảm bảo keyset đồng bộ sau swap
+                _edges[skillName]      = new EdgeState();
+            }
+
+            bool was = _states[skillName];
+            if (pressed && !was)
+            {
+                var e = _edges[skillName];
+                e.pressPending = true;
+                e.pressFrame   = Time.frameCount;
+            }
+            else if (!pressed && was)
+            {
+                var e = _edges[skillName];
+                e.releasePending = true;
+                e.releaseFrame   = Time.frameCount;
             }
 
             _states[skillName] = pressed;
@@ -125,10 +162,16 @@ namespace GaMo.TrueInputSystem
         /// </summary>
         public static bool WasPressedThisFrame(string skillName)
         {
-            if (string.IsNullOrEmpty(skillName)) return false;
-            bool wasHeld = _prevStates.TryGetValue(skillName, out bool p) && p;
-            bool isHeld  = GetState(skillName);
-            return !wasHeld && isHeld;
+            if (string.IsNullOrEmpty(skillName) || !_edges.TryGetValue(skillName, out var e)) return false;
+
+            int frame = Time.frameCount;
+            if (e.pressObservedFrame == frame) return true;          // đọc lại trong cùng frame → nhất quán
+            if (!e.pressPending) return false;
+
+            e.pressPending = false;
+            if (frame - e.pressFrame > EdgeLifetimeFrames) return false; // quá hạn → bỏ
+            e.pressObservedFrame = frame;
+            return true;
         }
 
         // ── Read (từ TISInputBridge) ─────────────────────────────
@@ -151,6 +194,7 @@ namespace GaMo.TrueInputSystem
         {
             if (!GetState(skillName)) return false;
             _states[skillName] = false; // consume
+            if (_edges.TryGetValue(skillName, out var e)) e.pressPending = false;
             return true;
         }
 
@@ -161,10 +205,16 @@ namespace GaMo.TrueInputSystem
         /// </summary>
         public static bool WasReleasedThisFrame(string skillName)
         {
-            if (string.IsNullOrEmpty(skillName)) return false;
-            bool wasHeld = _prevStates.TryGetValue(skillName, out bool p) && p;
-            bool isHeld  = GetState(skillName);
-            return wasHeld && !isHeld;
+            if (string.IsNullOrEmpty(skillName) || !_edges.TryGetValue(skillName, out var e)) return false;
+
+            int frame = Time.frameCount;
+            if (e.releaseObservedFrame == frame) return true;
+            if (!e.releasePending) return false;
+
+            e.releasePending = false;
+            if (frame - e.releaseFrame > EdgeLifetimeFrames) return false;
+            e.releaseObservedFrame = frame;
+            return true;
         }
 
         // ── Pointer → EnhancedTouch mapping ─────────────────────────────────
@@ -364,6 +414,7 @@ namespace GaMo.TrueInputSystem
         {
             _states.Clear();
             _prevStates.Clear();
+            _edges.Clear();
             _registeredKeys.Clear();
             _pointerToEnhancedId.Clear();
             ClearAllPointers();

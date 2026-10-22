@@ -122,7 +122,7 @@ namespace MagicaCloth2
             int hash = 0;
             hash += (int)clothType;
             foreach (var ren in sourceRenderers)
-                hash += ren != null ? ren.GetInstanceID() : NullHash;
+                hash += ren != null ? ren.GetMagicaId().GetHashCode() : NullHash;
             foreach (var t in rootBones)
             {
                 var stack = new Stack<Transform>(30);
@@ -135,7 +135,7 @@ namespace MagicaCloth2
                         hash += NullHash;
                         continue;
                     }
-                    hash += t2.GetInstanceID();
+                    hash += t2.GetMagicaId().GetHashCode();
                     hash += t2.localPosition.GetHashCode();
                     hash += t2.localRotation.GetHashCode();
                     int cnt = t2.childCount;
@@ -153,7 +153,7 @@ namespace MagicaCloth2
             {
                 if (map)
                 {
-                    hash += map.GetInstanceID();
+                    hash += map.GetMagicaId().GetHashCode();
                     hash += map.isReadable ? 1 : 0;
                 }
             }
@@ -213,6 +213,7 @@ namespace MagicaCloth2
             float rotationalInterpolation;
             float rootRotation;
             ClothUpdateMode updateMode;
+            ClothDisableMode disableMode;
             float animationPoseRatio;
             ReductionSettings reductionSetting;
             CustomSkinningSettings customSkinningSetting;
@@ -245,6 +246,7 @@ namespace MagicaCloth2
                 rotationalInterpolation = sdata.rotationalInterpolation;
                 rootRotation = sdata.rootRotation;
                 updateMode = sdata.updateMode;
+                disableMode = sdata.disableMode;
                 animationPoseRatio = sdata.animationPoseRatio;
                 reductionSetting = sdata.reductionSetting.Clone();
                 customSkinningSetting = sdata.customSkinningSetting.Clone();
@@ -273,6 +275,7 @@ namespace MagicaCloth2
                 sdata.rotationalInterpolation = rotationalInterpolation;
                 sdata.rootRotation = rootRotation;
                 sdata.updateMode = updateMode;
+                sdata.disableMode = disableMode;
                 sdata.animationPoseRatio = animationPoseRatio;
                 sdata.reductionSetting = reductionSetting;
                 sdata.customSkinningSetting = customSkinningSetting;
@@ -354,6 +357,7 @@ namespace MagicaCloth2
                 rotationalInterpolation = sdata.rotationalInterpolation;
                 rootRotation = sdata.rootRotation;
                 updateMode = sdata.updateMode;
+                disableMode = sdata.disableMode;
                 animationPoseRatio = sdata.animationPoseRatio;
                 reductionSetting = sdata.reductionSetting.Clone();
                 customSkinningSetting = sdata.customSkinningSetting.Clone();
@@ -408,14 +412,14 @@ namespace MagicaCloth2
             colliderCollisionConstraint.GetUsedTransform(transformSet);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             for (int i = 0; i < rootBones.Count; i++)
             {
                 var t = rootBones[i];
-                if (t && replaceDict.ContainsKey(t.GetInstanceID()))
+                if (t && replaceDict.ContainsKey(t.GetMagicaId()))
                 {
-                    rootBones[i] = replaceDict[t.GetInstanceID()];
+                    rootBones[i] = replaceDict[t.GetMagicaId()];
                 }
             }
             customSkinningSetting.ReplaceTransform(replaceDict);

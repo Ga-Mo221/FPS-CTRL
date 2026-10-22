@@ -25,7 +25,8 @@ namespace GaMo.TrueInputSystem
     [AddComponentMenu("TIS/Demo/TIS Mobile Button")]
     [RequireComponent(typeof(Image))]
     public class TISMobileSkillButton : MonoBehaviour,
-        IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+        IPointerDownHandler, IPointerUpHandler, IPointerExitHandler,
+        IInitializePotentialDragHandler, IDragHandler
     {
         // ══════════════════════════════════════════════════════
         //  ENUM
@@ -229,11 +230,27 @@ namespace GaMo.TrueInputSystem
         {
             if (!_interactable || IsDisabled) return;
 
-            if (!_OnTouchCamera)
-                TISMobileButtonRegistry.ConsumePointerByPositionMapped(eventData.pointerId, eventData.position);
+            // Mỗi ngón một chủ: EventSystem đã giao ngón này cho nút → camera không bao giờ
+            // tự giành được nó. On Touch Camera = ON: nút CHIA ngón cho camera zone để
+            // vừa giữ nút (bắn) vừa kéo ngón xoay camera (ngắm) — kiểu CODM / PUBG.
+            if (_OnTouchCamera)
+                TISTouchCameraZone.Current?.AddPointer(eventData);
 
             _activePointerId = eventData.pointerId;
             PressButton();
+        }
+
+        /// <summary>Bỏ drag threshold để camera nhận chuyển động ngay (On Touch Camera).</summary>
+        public void OnInitializePotentialDrag(PointerEventData eventData)
+        {
+            if (_OnTouchCamera) eventData.useDragThreshold = false;
+        }
+
+        /// <summary>Chỉ cần cho EventSystem legacy — camera đọc vị trí trực tiếp với Input System UI module.</summary>
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (_OnTouchCamera && eventData.pointerId == _activePointerId)
+                TISTouchCameraZone.Current?.MovePointer(eventData.pointerId, eventData.position);
         }
 
         /// <summary>
@@ -243,8 +260,8 @@ namespace GaMo.TrueInputSystem
         public void OnPointerUp(PointerEventData eventData)
         {
             if (!_isPressed) return;
-            if (!_OnTouchCamera)
-                TISMobileButtonRegistry.ReleasePointerMapped(_activePointerId);
+            if (_OnTouchCamera)
+                TISTouchCameraZone.Current?.RemovePointer(_activePointerId);
             _activePointerId = -1;
             ReleaseButton();
         }
@@ -255,10 +272,9 @@ namespace GaMo.TrueInputSystem
         /// </summary>
         public void OnPointerExit(PointerEventData eventData)
         {
-            if (_isPressed)
+            // On Touch Camera: kéo ngón ra khỏi nút để ngắm là bình thường → giữ nút tới khi nhấc tay
+            if (_isPressed && !_OnTouchCamera)
             {
-                if (!_OnTouchCamera)
-                    TISMobileButtonRegistry.ReleasePointerMapped(_activePointerId);
                 _activePointerId = -1;
                 ReleaseButton();
             }

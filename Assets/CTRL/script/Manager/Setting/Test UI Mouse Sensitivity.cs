@@ -1,28 +1,33 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Khoi phuc class bi lo vo hieu hoa khi don Settings trung.
+// Slider HUD chinh do nhay chuot (test UI). Noi lai voi SettingManager da merge
+// (ban cu cua lead dung Setting rieng cua lead - da thay bang UI_Package SettingManager).
 public class TestUIMouseSensitivity : MonoBehaviour
 {
     [SerializeField] private Slider _slider;
 
-    private SettingManager _setting;
-
-    private void Awake()
+    private void OnEnable()
     {
-        _setting = SettingManager.Instance;
+        if (_slider == null) return;
+        var mgr = SettingManager.Instance;
+        if (mgr != null && mgr.SettingData != null)
+            _slider.SetValueWithoutNotify(mgr.SettingData.MouseSensitivity);
+        _slider.onValueChanged.AddListener(OnSliderChanged);
     }
 
-    private void Start()
+    private void OnDisable()
     {
-        if (_setting == null)
-            _setting = SettingManager.Instance;
-        _slider.value = _setting.SettingData.MouseSensitivity;
+        if (_slider != null) _slider.onValueChanged.RemoveListener(OnSliderChanged);
     }
 
-    public void UpdateMouseSensitivity(float sensitivity)
+    private void OnSliderChanged(float v)
     {
-        _setting.SetMouseSensitivity(sensitivity);
-        _setting.UpdateMouseSensitivity();
+        var mgr = SettingManager.Instance;
+        if (mgr == null || mgr.SettingData == null) return;
+        mgr.SettingData.MouseSensitivity = v;
+        mgr.Apply();
+        mgr.Save();
     }
 }

@@ -169,6 +169,11 @@ public class GameManager : MonoBehaviour
     
     public int KillTarget => _killTarget;
     public void SetKillTarget(int killTarget) => _killTarget = killTarget;
+
+    // Thoi gian tran (phut) chu phong dat cho phong tuy chinh. 0 = dung mac dinh cua NetworkGameState (10 phut).
+    private float _roundMinutes = 0f;
+    public float RoundMinutes => _roundMinutes;
+    public void SetRoundMinutes(float minutes) => _roundMinutes = Mathf.Max(0f, minutes);
     
     public int GetEXPperKill()  => _baseExpPerKill;
     
@@ -182,6 +187,9 @@ public class GameManager : MonoBehaviour
     }
     
     public int GetBestStreak() => _bestStreak;
+
+    /// <summary>Chuoi kill hien tai cua local player (reset khi chet) - dung cho am thanh dominating/rampage.</summary>
+    public int GetCurrentStreak() => _lastBestStreak;
     
     public bool SetOnUIOptions(bool status)
     {
@@ -278,6 +286,8 @@ public class GameManager : MonoBehaviour
     
     public GamePlaySetupData GetSetupData() => _setupData;
     public void SetSetupData(GamePlaySetupData setupData) => _setupData = setupData;
+    // Set nhan vat dang chon (-> _setupData -> token -> NSpawner spawn dung prefab).
+    public void SetCharacter(string name) { if (!string.IsNullOrEmpty(name)) _setupData.CharacterName = name; }
     
     public void setCurrentBalo(BaloData data)
     {
@@ -359,6 +369,8 @@ public class GameManager : MonoBehaviour
         if (ID.IsNullOrEmpty()) return null;
         
         if (_weapon_Prefabs == null || _weapon_Prefabs.Length == 0) return null;
+        WeaponInfo exact; // uu tien khop dung ID (skin "Vesper_DR" chua chuoi "Vesper")
+        if (TryFindExactWeapon(ID, out exact)) return exact.Weapon;
         foreach (var weapon in _weapon_Prefabs)
             if (weapon.ID().Contains(ID))
                 return weapon.Weapon;
@@ -370,17 +382,30 @@ public class GameManager : MonoBehaviour
         if (ID == "Frag")
             return _fragSprite;
         
+        WeaponInfo exact;
+        if (TryFindExactWeapon(ID, out exact)) return exact.Icon();
         foreach (var weapon in _weapon_Prefabs)
         {
             if (weapon.ID().Contains(ID))
                 return weapon.Icon();
         }
         
+        // Kill feed truyen WeaponName (vd "Vesper Dark Red") chu khong phai ID -> khop them theo ten.
+        if (!string.IsNullOrEmpty(ID))
+            foreach (var weapon in _weapon_Prefabs)
+            {
+                var d = weapon.Data();
+                if (d != null && string.Equals(d.WeaponName, ID, System.StringComparison.OrdinalIgnoreCase))
+                    return weapon.Icon();
+            }
+        
         return null;
     }
 
     public WeaponData GetWeaponData(string ID)
     {
+        WeaponInfo exact;
+        if (TryFindExactWeapon(ID, out exact)) return exact.Data();
         foreach (var weapon in _weapon_Prefabs)
         {
             if (weapon.ID().Contains(ID))
@@ -391,6 +416,73 @@ public class GameManager : MonoBehaviour
     }
 
     public WeaponInfo[] GetWeaponDataList() => _weapon_Prefabs;
+
+    // Kill feed gui chi so vu khi (byte) thay vi chuoi ten.
+    // Moi may dung cung GameManager prefab -> cung thu tu _weapon_Prefabs.
+    public int GetWeaponIndexByName(string weaponName)
+    {
+        if (string.IsNullOrEmpty(weaponName) || _weapon_Prefabs == null) return -1;
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+        {
+            var d = _weapon_Prefabs[i].Data();
+            if (d != null && d.WeaponName == weaponName) return i;
+        }
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+            if (string.Equals(_weapon_Prefabs[i].ID(), weaponName, System.StringComparison.OrdinalIgnoreCase)) return i;
+        return -1;
+    }
+
+    // DropItemWeapon sync byte chi so thay vi NetworkString ID.
+    public int GetWeaponIndexById(string id)
+    {
+        if (string.IsNullOrEmpty(id) || _weapon_Prefabs == null) return -1;
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+            if (string.Equals(_weapon_Prefabs[i].ID(), id, System.StringComparison.OrdinalIgnoreCase)) return i;
+        for (int i = 0; i < _weapon_Prefabs.Length; i++)
+            if (_weapon_Prefabs[i].ID().Contains(id)) return i;
+        return -1;
+    }
+
+    public string GetWeaponIdByIndex(int index)
+    {
+        if (_weapon_Prefabs == null || index < 0 || index >= _weapon_Prefabs.Length) return null;
+        return _weapon_Prefabs[index].ID();
+    }
+
+    // NShootHandler sync byte chi so luu dan thay vi NetworkString.
+    public int GetGrenadeIndex(string id)
+    {
+        if (string.IsNullOrEmpty(id) || _grenade_Prefabs == null) return -1;
+        for (int i = 0; i < _grenade_Prefabs.Length; i++)
+            if (_grenade_Prefabs[i] != null && _grenade_Prefabs[i].ID == id) return i;
+        for (int i = 0; i < _grenade_Prefabs.Length; i++)
+            if (_grenade_Prefabs[i] != null && _grenade_Prefabs[i].ID.Contains(id)) return i;
+        return -1;
+    }
+
+    public string GetGrenadeIdByIndex(int index)
+    {
+        if (_grenade_Prefabs == null || index < 0 || index >= _grenade_Prefabs.Length || _grenade_Prefabs[index] == null) return null;
+        return _grenade_Prefabs[index].ID;
+    }
+
+    public string GetWeaponNameByIndex(int index)
+    {
+        if (_weapon_Prefabs == null || index < 0 || index >= _weapon_Prefabs.Length) return null;
+        var d = _weapon_Prefabs[index].Data();
+        return d != null ? d.WeaponName : _weapon_Prefabs[index].ID();
+    }
+
+    // Khop CHINH XAC ID (khong phan biet hoa thuong). Cac ham Get* van giu Contains lam du phong nhu cu.
+    private bool TryFindExactWeapon(string ID, out WeaponInfo found)
+    {
+        found = default(WeaponInfo);
+        if (string.IsNullOrEmpty(ID) || _weapon_Prefabs == null) return false;
+        foreach (var weapon in _weapon_Prefabs)
+            if (string.Equals(weapon.ID(), ID, System.StringComparison.OrdinalIgnoreCase))
+            { found = weapon; return true; }
+        return false;
+    }
 
     public GrenadeHandler GetGrenade(string name)
     {
@@ -415,6 +507,32 @@ public class GameManager : MonoBehaviour
     }
     
     public NPlayer[] GetCharacterList() => _character_Prefabs;
+    // Port tu EclipseStrike: map scene + loadout cache (client-side) cho UI_Package.
+    private string _selectedMapScene = "ShortMap1";
+    public void SetSelectedMapScene(string sceneName) { if (!string.IsNullOrEmpty(sceneName)) _selectedMapScene = sceneName; }
+    public string GetSelectedMapScene() => string.IsNullOrEmpty(_selectedMapScene) ? "ShortMap1" : _selectedMapScene;
+
+    private string[] _loadoutWeapons = new string[2];
+    private string[] _loadoutUtilities = new string[2];
+    public void SetLoadout(string w0, string w1, string u0, string u1)
+    {
+        _loadoutWeapons[0] = w0; _loadoutWeapons[1] = w1;
+        _loadoutUtilities[0] = u0; _loadoutUtilities[1] = u1;
+    }
+    public string GetLoadoutWeapon(int i)
+    {
+        if (i < 0 || i >= 2) return null;
+        if (!string.IsNullOrEmpty(_loadoutWeapons[i])) return _loadoutWeapons[i];
+        var pp = UnityEngine.PlayerPrefs.GetString("LoadoutActiveW" + i, "");
+        return string.IsNullOrEmpty(pp) ? null : pp;
+    }
+    public string GetLoadoutUtility(int i)
+    {
+        if (i < 0 || i >= 2) return null;
+        if (!string.IsNullOrEmpty(_loadoutUtilities[i])) return _loadoutUtilities[i];
+        var pp = UnityEngine.PlayerPrefs.GetString("LoadoutActiveU" + i, "");
+        return string.IsNullOrEmpty(pp) ? null : pp;
+    }
 }
 
 public struct KillInfo
@@ -433,7 +551,9 @@ public struct KillInfo
     
     public int Deaths { get; private set; }
 
-    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths, int assist, int totalExp)
+    public string AvatarUrl { get; private set; } 
+
+    public KillInfo(NetworkId playerId, string name, PlayerTeam team, int kills, int deaths, int assist, int totalExp, string avatarUrl = "")
     {
         PlayerId = playerId;
         PlayerName = name;
@@ -442,6 +562,7 @@ public struct KillInfo
         Deaths = deaths;
         Assist = assist;
         TotalExp = totalExp;
+        AvatarUrl = avatarUrl;
     }
 }
 

@@ -18,7 +18,7 @@ namespace MagicaCloth2
         /// <summary>
         /// 描画データをint型ハンドルで管理する
         /// </summary>
-        Dictionary<int, RenderData> renderDataDict = new Dictionary<int, RenderData>();
+        Dictionary<MagicaObjectId, RenderData> renderDataDict = new Dictionary<MagicaObjectId, RenderData>();
 
         //=========================================================================================
         // ■RenderData
@@ -159,7 +159,7 @@ namespace MagicaCloth2
         /// </summary>
         /// <param name="ren"></param>
         /// <returns></returns>
-        public int AddRenderer(
+        public MagicaObjectId AddRenderer(
             Renderer ren,
             RenderSetupData referenceSetupData,
             RenderSetupData.UniqueSerializationData referenceUniqueSetupData,
@@ -167,11 +167,11 @@ namespace MagicaCloth2
             )
         {
             if (isValid == false)
-                return 0;
+                return MagicaObjectId.Invalid;
             Debug.Assert(ren);
 
             // 制御ハンドル
-            int handle = ren.GetInstanceID();
+            MagicaObjectId handle = ren.GetMagicaId();
 
             lock (renderDataDict)
             {
@@ -190,7 +190,7 @@ namespace MagicaCloth2
             return handle;
         }
 
-        public bool RemoveRenderer(int handle)
+        public bool RemoveRenderer(MagicaObjectId handle)
         {
             if (isValid == false)
                 return false;
@@ -221,7 +221,7 @@ namespace MagicaCloth2
             return delete;
         }
 
-        public RenderData GetRendererData(int handle)
+        public RenderData GetRendererData(MagicaObjectId handle)
         {
             if (isValid == false)
                 return null;
@@ -327,7 +327,7 @@ namespace MagicaCloth2
         /// 有効化
         /// </summary>
         /// <param name="handle"></param>
-        public void StartUse(ClothProcess cprocess, int handle)
+        public void StartUse(ClothProcess cprocess, MagicaObjectId handle)
         {
             GetRendererData(handle)?.StartUse(cprocess);
         }
@@ -336,7 +336,7 @@ namespace MagicaCloth2
         /// 無効化
         /// </summary>
         /// <param name="handle"></param>
-        public void EndUse(ClothProcess cprocess, int handle)
+        public void EndUse(ClothProcess cprocess, MagicaObjectId handle)
         {
             GetRendererData(handle)?.EndUse(cprocess);
         }

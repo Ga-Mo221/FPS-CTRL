@@ -11,12 +11,26 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     [Header("Setting")]
     [Networked] public PlayerTeam NetworkedTeam { get; set; } = PlayerTeam.Zero;
     
-    [Networked] public GamePlayMode GamePlayMode { get; set; }
+    // GamePlayMode la hang so ca tran -> sync 1 lan o NetworkGameState.Mode
+    // thay vi lap lai trong state cua N player. Giu ten + setter de code cu (NSpawner) khong doi.
+    private GamePlayMode _localModeFallback;
+    public GamePlayMode GamePlayMode
+    {
+        get
+        {
+            var gs = NetworkGameState.Instance;
+            if (gs != null && gs.Object != null && gs.Object.IsValid) return gs.Mode;
+            var gm = GameManager.Instance;
+            return gm != null ? gm.GetGamePlayMode() : _localModeFallback;
+        }
+        set { _localModeFallback = value; }
+    }
     
     [Networked, OnChangedRender(nameof(OnNicknameChanged))]
     public NetworkString<_16> Nickname { get; private set; }
     
     [Networked] public int Token { get; set; }
+    [Networked] public NetworkString<_512> AvatarUrl { get; set; } 
 
     // Lưu raw 16 bytes của Guid token để có thể restore sau host migration
     [Networked, Capacity(16)] public NetworkArray<byte> RawToken => default;
@@ -44,6 +58,10 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     private GameObject _detachedCameraRoot;
     
     public bool IsLocalPlayer {get; private set;}
+
+    // Hook do nhay live: doi thiet bi (PC <-> tay cam) hoac keo slider -> gui lai CameraSpeed.
+    private bool _sensHooked;
+    private float _lastSentSens = -1f;
     
     // ============================== Public Field =====================================
     
@@ -109,21 +127,27 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
 
             _uiPlayerNickName.gameObject.SetActive(false);
             
-            Rpc_SetNickName(GameManager.Instance.GetPlayerNickName());
-            _movementHandler.RPC_SetCameraSpeed(SettingManager.Instance.SettingData.MouseSensitivity);
-
-            // ✅ Gửi token của mình lên server ngay khi spawn, KHÔNG phụ thuộc vào
-            // ConnectionToken ở transport-level (không đáng tin cậy qua Photon Relay).
-            // Server sẽ dùng token này để nhận diện: player mới hay đang reconnect / resume sau host migration.
+            //(bao cao 6.3) Gop Rpc_SetNickName + Rpc_RegisterToken + RPC_SetCameraSpeed
+            // thanh 1 Rpc_InitPlayer luc spawn: bot header, het race giua cac RPC rieng le.
+            // Token gửi lên server ngay khi spawn, KHÔNG phụ thuộc vào ConnectionToken ở transport-level
+            // (không đáng tin cậy qua Photon Relay). Server dùng token để nhận diện player mới / reconnect / resume migration.
             byte[] myToken = GameManager.Instance.GetIdentityToken();
-            if (myToken != null && myToken.Length == 16)
-            {
-                Rpc_RegisterToken(myToken);
-            }
-            else
+            if (myToken == null || myToken.Length != 16)
             {
                 Debug.LogWarning("<color=green>[NPlayer]</color> Identity token invalid, cannot register.", this);
+                myToken = new byte[0];
             }
+            var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+            _lastSentSens   = sd != null ? sd.MouseSensitivity : 1f;
+            _lastSentSniper = sd != null ? sd.SniperADSSensitivity : 0.5f;
+            _lastSentRifle  = sd != null ? sd.RifleADSSensitivity : 0.5f;
+            _movementHandler.ApplyLookSettings(_lastSentSens, _lastSentSniper, _lastSentRifle); // he so ADS cho client predict
+            Rpc_InitPlayer(NInGameMessagesHandler.Truncate(GameManager.Instance.GetPlayerNickName(), 64), myToken,
+                           _lastSentSens, _lastSentSniper, _lastSentRifle);
+            // Avatar URL co the dai -> de RPC rieng (chi gui khi co) cho Rpc_InitPlayer khong bao gio vuot gioi han payload.
+            var _av = Backend.Bootstrap.ProfileCache.Cached != null ? Backend.Bootstrap.ProfileCache.Cached.AvatarUrl : null; // [MVP-AVATAR]
+            if (!string.IsNullOrEmpty(_av)) Rpc_SetAvatarUrl(_av);
+            HookSensitivity(); 
             
             Debug.Log("<color=green>[NPlayer]</color> Spawned Local Player.", this);
         }
@@ -218,10 +242,19 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void Rpc_SetNickName(string nickName, RpcInfo info = default)
+    private void Rpc_InitPlayer(string nickName, byte[] rawToken, float camSpeed, float sniperAds, float rifleAds, RpcInfo info = default)
     {
-        Debug.Log($"<color=green>[NPlayer]</color> Rpc_SetNickName: {nickName}", this);
+        ApplyNickName(nickName);
+        if (_movementHandler == null) _movementHandler = GetComponent<NCharMovementHandler>();
+        if (_movementHandler != null) _movementHandler.ApplyLookSettings(camSpeed, sniperAds, rifleAds);
+        if (rawToken != null && rawToken.Length == 16) RegisterTokenOnHost(rawToken);
+    }
+
+    private void ApplyNickName(string nickName)
+    {
+        Debug.Log($"<color=green>[NPlayer]</color> InitPlayer nickname: {nickName}", this);
         Nickname = nickName;
+        NInGameMessagesHandler.RememberName(Object.Id, nickName);
 
         if (!_isPublicJoinMessageSent)
         {
@@ -235,7 +268,9 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
     // Đây là nguồn "sự thật" duy nhất cho danh tính player, thay cho ConnectionToken
     // ở transport-level (không hoạt động qua Photon Relay).
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void Rpc_RegisterToken(byte[] rawToken, RpcInfo info = default)
+    private void Rpc_SetAvatarUrl(string url, RpcInfo info = default) { AvatarUrl = url; } // [MVP-AVATAR 2026-10-01]
+
+    private void RegisterTokenOnHost(byte[] rawToken)
     {
         if (!Object.HasStateAuthority) return;
 
@@ -285,15 +320,77 @@ public class NPlayer : NetworkBehaviour, IPlayerLeft
         }
     }
 
+    // Cache chuoi ten / avatar: NetworkGameState goi moi 0.5s cho MOI player
+    // tren MOI may (truoc day ToString() cap phat chuoi moi lan, AvatarUrl toi 512 ky tu).
+    private NetworkString<_16> _nickKey; private string _nickText;
+    private NetworkString<_512> _avatarKey; private string _avatarText;
+    public string NicknameText
+    {
+        get
+        {
+            if (_nickText == null || !_nickKey.Equals(Nickname)) { _nickKey = Nickname; _nickText = Nickname.ToString(); }
+            return _nickText;
+        }
+    }
+    public string AvatarUrlText
+    {
+        get
+        {
+            if (_avatarText == null || !_avatarKey.Equals(AvatarUrl)) { _avatarKey = AvatarUrl; _avatarText = AvatarUrl.ToString(); }
+            return _avatarText;
+        }
+    }
+
     void OnNicknameChanged()
     {
+        NInGameMessagesHandler.RememberName(Object.Id, Nickname.ToString());
         Debug.Log($"<color=green>[NPlayer]</color> OnNicknameChanged to {Nickname.ToString()}", this);
         ComponentManager.UIPlayerNickName.SetNickName(Nickname.ToString());
     }
 
+    // Dang ky 1 lan (InitPlayer co the chay 2 lan do host migration).
+    private void HookSensitivity()
+    {
+        if (_sensHooked || SettingManager.Instance == null) return;
+        SettingManager.Instance.OnSensitivityChanged += OnSensitivityChangedLive;
+        _sensHooked = true;
+    }
+
+    private void UnhookSensitivity()
+    {
+        if (!_sensHooked) return;
+        if (SettingManager.Instance != null) SettingManager.Instance.OnSensitivityChanged -= OnSensitivityChangedLive;
+        _sensHooked = false;
+    }
+
+    private void OnSensitivityChangedLive(float value)
+    {
+        if (this == null || Object == null || !Object.IsValid || !IsLocalPlayer || _movementHandler == null) return;
+        var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+        float sn = sd != null ? sd.SniperADSSensitivity : _lastSentSniper;
+        float rf = sd != null ? sd.RifleADSSensitivity : _lastSentRifle;
+        // Apply() ban event moi lan doi setting -> bo qua neu ca 3 gia tri khong doi
+        if (Mathf.Approximately(value, _lastSentSens) && Mathf.Approximately(sn, _lastSentSniper) && Mathf.Approximately(rf, _lastSentRifle)) return;
+        _lastSentSens = value;
+        SendLookSettings();
+    }
+
+    // Gui do nhay + he so ADS sniper/rifle trong 1 RPC.
+    private float _lastSentSniper = -1f, _lastSentRifle = -1f;
+    private void SendLookSettings()
+    {
+        var sd = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+        if (sd == null || _movementHandler == null) return;
+        _lastSentSniper = sd.SniperADSSensitivity;
+        _lastSentRifle  = sd.RifleADSSensitivity;
+        _movementHandler.SendLookSettings(_lastSentSens, _lastSentSniper, _lastSentRifle);
+    }
+
     void OnDestroy()
     {
-        // ✅ Chỉ local player mới có camera bị reparent ra ngoài (mồ côi, không tự despawn theo).
+        UnhookSensitivity();
+
+        // Chỉ local player mới có camera bị reparent ra ngoài (mồ côi, không tự despawn theo).
         // Remote player: camera vẫn là con của NetworkObject này -> Fusion/Unity tự destroy theo,
         // không cần xử lý thủ công.
         if (_detachedCameraRoot != null)

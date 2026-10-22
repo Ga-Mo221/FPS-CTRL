@@ -52,6 +52,8 @@ using System;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace GaMo.TrueInputSystem
@@ -59,7 +61,8 @@ namespace GaMo.TrueInputSystem
     [AddComponentMenu("TIS/Demo/TIS Mobile Button Direction")]
     [RequireComponent(typeof(Image))]
     public class TISDirectionalSkillButton : MonoBehaviour,
-        IPointerDownHandler, IDragHandler, IPointerUpHandler, IPointerExitHandler
+        IPointerDownHandler, IDragHandler, IPointerUpHandler, IPointerExitHandler,
+        IInitializePotentialDragHandler
     {
         // ══════════════════════════════════════════════════════
         //  ENUMS
@@ -320,6 +323,8 @@ namespace GaMo.TrueInputSystem
         // Touch tracking
         private bool    _isPointerDown;
         private int     _activePointerId = -1;
+        private int         _activeTouchId;     // touchId của ngón đang giữ (0 = chuột / bút)
+        private InputDevice _activeDevice;      // thiết bị gửi pointer (Touchscreen / Mouse / Pen)
         private float   _pointerDownTime;
         private Vector2 _pointerDownScreenPos;
         private Vector2 _currentScreenPos;
@@ -386,6 +391,11 @@ namespace GaMo.TrueInputSystem
             WasCastThisFrame = false;
             CastDirection    = Vector2.zero;
 
+            // Đang giữ: cập nhật hướng theo vị trí ngón mỗi frame (không chờ OnDrag)
+            if (_isPointerDown && TryGetLivePointerPosition(out var livePos)
+                && (livePos - _currentScreenPos).sqrMagnitude > 0.01f)
+                ProcessDrag(livePos);
+
             // Flash countdown
             if (_flashTimer > 0f)
             {
@@ -438,6 +448,9 @@ namespace GaMo.TrueInputSystem
 
             _isPointerDown        = true;
             _activePointerId      = eventData.pointerId;
+            var ext = eventData as ExtendedPointerEventData;
+            _activeTouchId        = ext != null ? ext.touchId : 0;
+            _activeDevice         = ext != null ? ext.device : null;
             _pointerDownTime      = Time.unscaledTime;
             _pointerDownScreenPos = eventData.position;
             _currentScreenPos     = eventData.position;
@@ -445,9 +458,10 @@ namespace GaMo.TrueInputSystem
             IsDragging            = false;
             Direction             = Vector2.zero;
 
-            if (!_OnTouchCamera)
-                TISMobileButtonRegistry.ConsumePointerByPositionMapped(
-                    eventData.pointerId, eventData.position);
+            // Mỗi ngón một chủ: EventSystem đã giao ngón cho nút. On Touch Camera = ON →
+            // chia ngón cho camera zone (kéo hướng skill đồng thời xoay camera).
+            if (_OnTouchCamera)
+                TISTouchCameraZone.Current?.AddPointer(eventData);
 
             if (_rangeCircleImage != null)
                 _rangeCircleImage.gameObject.SetActive(true);
@@ -464,12 +478,51 @@ namespace GaMo.TrueInputSystem
             ApplyButtonColor(false);
         }
 
+        /// <summary>
+        /// Tắt ngưỡng kéo của EventSystem: hướng phải đổi ngay từ những milimet đầu tiên
+        /// (giống TISVirtualJoystick). Ngưỡng tap / kéo của chính nút vẫn là _dragThresholdPx.
+        /// </summary>
+        public void OnInitializePotentialDrag(PointerEventData eventData) => eventData.useDragThreshold = false;
+
         public void OnDrag(PointerEventData eventData)
         {
             if (!_isPointerDown || eventData.pointerId != _activePointerId) return;
+            ProcessDrag(eventData.position);
+        }
 
-            _currentScreenPos = eventData.position;
-            Vector2 delta     = eventData.position - _pointerDownScreenPos;
+        /// <summary>
+        /// Đọc vị trí hiện tại của ngón / chuột đang giữ trực tiếp từ Input System.
+        /// Khi ngón trượt rất chậm, sự kiện OnDrag có thể đến thưa → hướng nhảy từng nấc;
+        /// đọc mỗi frame giúp hướng bám theo ngón liên tục.
+        /// </summary>
+        private bool TryGetLivePointerPosition(out Vector2 position)
+        {
+            position = default;
+            if (_activeDevice is Touchscreen ts)
+            {
+                var touches = ts.touches;
+                for (int i = 0; i < touches.Count; i++)
+                {
+                    var t = touches[i];
+                    if (t.touchId.ReadValue() != _activeTouchId) continue;
+                    if (!t.isInProgress) return false;
+                    position = t.position.ReadValue();
+                    return true;
+                }
+                return false;
+            }
+            if (_activeDevice is Pointer p && p.added)
+            {
+                position = p.position.ReadValue();
+                return true;
+            }
+            return false;
+        }
+
+        private void ProcessDrag(Vector2 screenPos)
+        {
+            _currentScreenPos = screenPos;
+            Vector2 delta     = screenPos - _pointerDownScreenPos;
             float   dist      = delta.magnitude;
 
             // Kích hoạt drag khi vượt threshold
@@ -508,7 +561,7 @@ namespace GaMo.TrueInputSystem
             {
                 bool wasInCancel = _isInCancelZone;
                 _isInCancelZone  = RectTransformUtility.RectangleContainsScreenPoint(
-                    _cancelZone, eventData.position, _uiCamera);
+                    _cancelZone, screenPos, _uiCamera);
 
                 if (_isInCancelZone != wasInCancel)
                 {
@@ -565,8 +618,8 @@ namespace GaMo.TrueInputSystem
 
         private void HandleRelease()
         {
-            if (!_OnTouchCamera)
-                TISMobileButtonRegistry.ReleasePointerMapped(_activePointerId);
+            if (_OnTouchCamera)
+                TISTouchCameraZone.Current?.RemovePointer(_activePointerId);
 
             // ── Hủy kỹ năng nếu nhả trong Cancel Zone ─────────
             if (_isInCancelZone && _cancelZone != null)
@@ -693,7 +746,7 @@ namespace GaMo.TrueInputSystem
         {
             if (_isPointerDown)
             {
-                TISMobileButtonRegistry.ReleasePointerMapped(_activePointerId);
+                if (_OnTouchCamera) TISTouchCameraZone.Current?.RemovePointer(_activePointerId);
                 TISMobileButtonRegistry.SetState(_skillName, false);
                 TISDirectionalRegistry.SetDirection(DirKey, Vector2.zero);
                 if (!string.IsNullOrEmpty(_directionActionName))
@@ -920,7 +973,7 @@ namespace GaMo.TrueInputSystem
             _disabledByExternal = disabled;
             if (disabled && _isPointerDown)
             {
-                TISMobileButtonRegistry.ReleasePointerMapped(_activePointerId);
+                if (_OnTouchCamera) TISTouchCameraZone.Current?.RemovePointer(_activePointerId);
                 CleanupAfterRelease();
             }
             ApplyButtonColor(IsDragging);
@@ -940,7 +993,7 @@ namespace GaMo.TrueInputSystem
 
             if (!wasCooling && _disabledByCooldown && _isPointerDown)
             {
-                TISMobileButtonRegistry.ReleasePointerMapped(_activePointerId);
+                if (_OnTouchCamera) TISTouchCameraZone.Current?.RemovePointer(_activePointerId);
                 CleanupAfterRelease();
             }
             ApplyButtonColor(IsDragging);

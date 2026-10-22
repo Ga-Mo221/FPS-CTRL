@@ -459,7 +459,12 @@ namespace MagicaCloth2
                         ref frictionArray,
                         // buffer
                         ref stepBasicPositionBuffer,
-                        ref stepBasicRotationBuffer
+                        ref stepBasicRotationBuffer,
+                        // temp
+                        ref tempVectorBufferA,
+                        ref tempVectorBufferB,
+                        ref tempCountBuffer,
+                        ref tempFloatBufferA
                         );
 
                     // 制約解決のためのステップごとの基準姿勢を計算
@@ -753,8 +758,10 @@ namespace MagicaCloth2
                     ref attributes,
                     ref positions,
                     ref rotations,
-                    ref vertexRootIndices
-
+                    ref vertexRootIndices,
+                    // temp
+                    ref tempVectorBufferA,
+                    ref tempRotationBufferA
                 );
 
                 // ■クロスシミュレーション後の頂点姿勢計算
@@ -777,7 +784,10 @@ namespace MagicaCloth2
                     ref baseLineFlags,
                     ref baseLineStartDataIndices,
                     ref baseLineDataCounts,
-                    ref baseLineData
+                    ref baseLineData,
+                    // temp
+                    ref tempVectorBufferA,
+                    ref tempRotationBufferA
                     );
                 VirtualMeshManager.SimulationPostProxyMeshUpdateTriangle(
                     new DataChunk(0, tdata.proxyTriangleChunk.dataLength),
@@ -1065,7 +1075,12 @@ namespace MagicaCloth2
             ref NativeArray<float> frictionArray,
             // buffer
             ref NativeArray<float3> stepBasicPositionBuffer,
-            ref NativeArray<quaternion> stepBasicRotationBuffer
+            ref NativeArray<quaternion> stepBasicRotationBuffer,
+            // temp buffer
+            ref NativeArray<float3> tempVectorBufferA,
+            ref NativeArray<float3> tempVectorBufferB,
+            ref NativeArray<int> tempCountBuffer,
+            ref NativeArray<float> tempFloatBufferA
             )
         {
             // 速度更新、外力の影響、慣性シフト
@@ -1220,6 +1235,12 @@ namespace MagicaCloth2
 
                 // 予測位置格納
                 nextPosArray[pindex] = nextPos;
+
+                // 作業バッファクリア
+                tempVectorBufferA[pindex] = 0;
+                tempVectorBufferB[pindex] = 0;
+                tempCountBuffer[pindex] = 0;
+                tempFloatBufferA[pindex] = 0;
             }
         }
 
@@ -1659,7 +1680,10 @@ namespace MagicaCloth2
             ref NativeArray<VertexAttribute> attributes,
             ref NativeArray<float3> positions,
             ref NativeArray<quaternion> rotations,
-            ref NativeArray<int> vertexRootIndices
+            ref NativeArray<int> vertexRootIndices,
+            // temp
+            ref NativeArray<float3> tempVectorBufferA,
+            ref NativeArray<quaternion> tempRotationBufferA
         )
         {
             //int pindex = tdata.particleChunk.startIndex;
@@ -1739,6 +1763,10 @@ namespace MagicaCloth2
                     rot = MathUtility.ToRotation(lw.c1.xyz, lw.c2.xyz);
                     rotations[vindex] = rot;
                 }
+
+                // BoneClothのベースライン姿勢制御のために基本姿勢をtempに保存
+                tempVectorBufferA[pindex] = pos;
+                tempRotationBufferA[pindex] = rot;
             }
         }
 

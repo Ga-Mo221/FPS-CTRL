@@ -1,0 +1,180 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c9baaa990132464c9f1066f1283ddfd, type: 3}
+  m_Name: TIS_Tut_KeyboardMouse_Car
+  m_EditorClassIdentifier: TrueInputSystem.Runtime::GaMo.TrueInputSystem.TISInputProfileConfig
+  profileName: "TIS Tut \xB7 L\xE1i xe"
+  description: "Profile l\xE1i xe \u2014 b\xE0i h\u01B0\u1EDBng d\u1EABn SwapProfile
+    (Chu\u1ED9t + B\xE0n ph\xEDm)."
+  enablePC: 1
+  enableGamepad: 1
+  enableMobile: 0
+  actionMaps:
+  - mapName: Driving
+    enabledByDefault: 1
+    actions:
+    - actionName: Move
+      actionType: 1
+      bindingPC: <Keyboard>/wasd
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/leftStick
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Boost
+      actionType: 0
+      bindingPC: <Keyboard>/leftShift
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/rightTrigger
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 1
+      isSinglePress: 0
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: Horn
+      actionType: 0
+      bindingPC: <Keyboard>/h
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/buttonNorth
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+    - actionName: ExitCar
+      actionType: 0
+      bindingPC: <Keyboard>/f
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/buttonWest
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  - mapName: Camera
+    enabledByDefault: 1
+    actions:
+    - actionName: Look
+      actionType: 1
+      bindingPC: <Mouse>/delta
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/rightStick
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  - mapName: UI
+    enabledByDefault: 1
+    actions:
+    - actionName: Pause
+      actionType: 0
+      bindingPC: <Keyboard>/escape
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/start
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  mobileSettings:
+    joystickRadius: 100
+    joystickDeadzone: 0.08
+    dynamicJoystick: 1
+    idleOpacity: 0.4
+    showSkillButtons: 1
+    skillButtonSize: 100
+    cameraZoneWidthRatio: 0.4
+    cameraZoneDebugOpacity: 0
+  cameraSettings:
+    mouseSensitivity: {x: 1.2, y: 1.2}
+    gamepadSensitivity: {x: 0.25, y: 0.25}
+    mobileSensitivity: {x: 0.12, y: 0.12}
+    invertY: 0
+    smoothing: 12
+    pitchMin: -40
+    pitchMax: 20
+  gamepadSettings:
+    leftStickDeadzone: 0.12
+    rightStickDeadzone: 0.1
+    stickCurve: 1.5
+    enableRumble: 1
+  motionSettings:
+    onlyWhenGamepadActive: 1
+    enableGyro: 0
+    gyroActivation: 0
+    gyroActivationAction: Aim
+    gyroSpace: 1
+    gyroSensitivity: {x: 0.02, y: 0.02}
+    invertGyroX: 0
+    invertGyroY: 0
+    gyroDeadzone: 0.5
+    tighteningThreshold: 3
+    smoothingThreshold: 6
+    smoothingTime: 0.08
+    autoCalibrate: 1
+    stillnessTime: 1.5
+    stillnessGyroThreshold: 2
+    stillnessAccelThreshold: 0.03
+    touchpadMovesCursor: 1
+    touchpadCursorSensitivity: 1.2
+    touchpadClickIsLeftClick: 1
+    gyroMovesCursor: 0
+    gyroCursorPixelsPerDegree: 20
+    enableTouchpad: 0
+    touchpadLookSensitivity: {x: 0.1, y: 0.1}
+    useSdl3OnPC: 1
+    sdl3:
+      rescanInterval: 1
+      enhancedReports: auto
+      disablePlayerLed: 1
+      verboseLog: 1
+    simulateInEditor: 0
+    simulated:
+      simulateGyro: 1
+      simulateTouchpad: 1
+      pitchUpKey: 23
+      pitchDownKey: 25
+      yawLeftKey: 24
+      yawRightKey: 26
+      rollLeftKey: 35
+      rollRightKey: 29
+      fastKey: 52
+      turnRate: 60
+      fastMultiplier: 4
+      rampTime: 0.08
+      drift: {x: 0.6, y: -0.4, z: 0.2}
+      noise: 0.3
+      restingAccel: {x: 0, y: 1, z: 0}
+      touchKey: 34
+      clickKey: 21
+    showDebugGUI: 0

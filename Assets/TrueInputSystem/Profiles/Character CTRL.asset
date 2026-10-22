@@ -27,6 +27,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/leftStick
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: TISVirtualJoystick
       readMode: 1
       isSinglePress: 0
@@ -38,6 +40,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/buttonSouth
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_1
       readMode: 0
       isSinglePress: 1
@@ -49,6 +53,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/leftStickPress
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_0
       readMode: 0
       isSinglePress: 1
@@ -60,6 +66,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/buttonEast
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_11
       readMode: 0
       isSinglePress: 1
@@ -74,6 +82,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/rightStick
       bindingGamepadModifier: 
+      gamepadMixGyro: 1
+      gamepadMixTouchpad: 0
       bindingMobile: CameraZone
       readMode: 1
       isSinglePress: 0
@@ -85,6 +95,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/start
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_10
       readMode: 0
       isSinglePress: 1
@@ -99,6 +111,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/rightTrigger
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_2
       readMode: 0
       isSinglePress: 1
@@ -110,6 +124,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/leftTrigger
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_3
       readMode: 1
       isSinglePress: 0
@@ -121,6 +137,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/dpad/down
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: 
       readMode: 0
       isSinglePress: 1
@@ -132,6 +150,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/buttonNorth
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_4
       readMode: 0
       isSinglePress: 1
@@ -143,6 +163,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/leftShoulder
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_5
       readMode: 0
       isSinglePress: 1
@@ -154,6 +176,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/rightShoulder
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_6
       readMode: 0
       isSinglePress: 1
@@ -165,6 +189,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/buttonWest
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_7
       readMode: 0
       isSinglePress: 1
@@ -176,6 +202,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: 
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_8
       readMode: 0
       isSinglePress: 1
@@ -187,6 +215,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: 
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_9
       readMode: 0
       isSinglePress: 1
@@ -198,6 +228,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/select
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: 
       readMode: 1
       isSinglePress: 0
@@ -209,6 +241,8 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: 
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: 
       readMode: 0
       isSinglePress: 1
@@ -220,20 +254,37 @@ MonoBehaviour:
       bindingPCModifier: 
       bindingGamepad: <Gamepad>/dpad/up
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: 
       readMode: 0
       isSinglePress: 1
       _readModeMigrated: 1
       overrideDeadzone: 0
-  - mapName: Test
+    - actionName: Drop
+      actionType: 0
+      bindingPC: <Keyboard>/g
+      bindingPCModifier: 
+      bindingGamepad: <Gamepad>/dpad/right
+      bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
+      bindingMobile: 
+      readMode: 0
+      isSinglePress: 1
+      _readModeMigrated: 1
+      overrideDeadzone: 0
+  - mapName: Loadout
     enabledByDefault: 1
     actions:
     - actionName: B
       actionType: 0
       bindingPC: <Keyboard>/b
       bindingPCModifier: 
-      bindingGamepad: 
+      bindingGamepad: <Gamepad>/dpad/up
       bindingGamepadModifier: 
+      gamepadMixGyro: 0
+      gamepadMixTouchpad: 0
       bindingMobile: Button_10
       readMode: 2
       isSinglePress: 0
@@ -261,3 +312,53 @@ MonoBehaviour:
     rightStickDeadzone: 0.1
     stickCurve: 1.5
     enableRumble: 1
+  motionSettings:
+    onlyWhenGamepadActive: 1
+    enableGyro: 1
+    gyroActivation: 0
+    gyroActivationAction: Aim
+    gyroSpace: 1
+    gyroSensitivity: {x: 0.01, y: 0.01}
+    invertGyroX: 0
+    invertGyroY: 0
+    gyroDeadzone: 0.5
+    tighteningThreshold: 3
+    smoothingThreshold: 6
+    smoothingTime: 0.08
+    autoCalibrate: 1
+    stillnessTime: 1.5
+    stillnessGyroThreshold: 2
+    stillnessAccelThreshold: 0.03
+    touchpadMovesCursor: 0
+    touchpadCursorSensitivity: 1.2
+    touchpadClickIsLeftClick: 0
+    gyroMovesCursor: 0
+    gyroCursorPixelsPerDegree: 20
+    enableTouchpad: 0
+    touchpadLookSensitivity: {x: 0.1, y: 0.1}
+    useSdl3OnPC: 1
+    sdl3:
+      rescanInterval: 1
+      enhancedReports: auto
+      disablePlayerLed: 1
+      verboseLog: 1
+    simulateInEditor: 0
+    simulated:
+      simulateGyro: 1
+      simulateTouchpad: 1
+      pitchUpKey: 23
+      pitchDownKey: 25
+      yawLeftKey: 24
+      yawRightKey: 26
+      rollLeftKey: 35
+      rollRightKey: 29
+      fastKey: 52
+      turnRate: 60
+      fastMultiplier: 4
+      rampTime: 0.08
+      drift: {x: 0.6, y: -0.4, z: 0.2}
+      noise: 0.3
+      restingAccel: {x: 0, y: 1, z: 0}
+      touchKey: 34
+      clickKey: 21
+    showDebugGUI: 0

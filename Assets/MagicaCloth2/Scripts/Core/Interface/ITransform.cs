@@ -20,6 +20,6 @@ namespace MagicaCloth2
         /// value:入れ替えるトランスフォーム
         /// </summary>
         /// <param name="replaceDict"></param>
-        void ReplaceTransform(Dictionary<int, Transform> replaceDict);
+        void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict);
     }
 }

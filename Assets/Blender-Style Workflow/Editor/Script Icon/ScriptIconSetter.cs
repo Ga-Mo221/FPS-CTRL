@@ -16,13 +16,16 @@ namespace GaMo.BlenderEditorTools
         private static void ApplyAllIfNeeded()
         {
             bool anyChanged = false;
-            anyChanged |= SetIconIfNeeded<DynamicBone>("spring");
             anyChanged |= SetIconIfNeeded<TransformConstraint>("CopyTransform");
             anyChanged |= SetIconIfNeeded<IKConstraint>("IKConstraint");
             anyChanged |= SetIconIfNeeded<SimpleBoneRenderer>("BoneRenderer");
             anyChanged |= SetIconIfNeeded<MotionTimeEventBehaviour>("Event");
+            anyChanged |= SetIconIfNeeded<DynamicBone>("spring");
             anyChanged |= SetIconIfNeeded<DynamicBoneCollider>("DynamicBoneCollider");
-
+            anyChanged |= SetIconIfNeeded<DynamicBoneManager>("dynamicmanager");
+            anyChanged |= SetIconIfNeeded<DampedTrackConstraint>("DampeTrack");
+            anyChanged |= SetIconIfNeeded<DampedTrackChainConstraint>("DampeTrackChain");
+            
             // Chỉ SaveAssets khi thực sự có thay đổi — tránh ghi đĩa vô ích mỗi lần mở Unity.
             if (anyChanged)
             {

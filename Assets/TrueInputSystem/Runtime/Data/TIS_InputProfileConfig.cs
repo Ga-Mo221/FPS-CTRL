@@ -49,6 +49,9 @@ namespace GaMo.TrueInputSystem
         [Header("Gamepad Settings")]
         public TISGamepadSettings gamepadSettings = new();
 
+        [Header("Motion Settings (Gyro + Touchpad)")]
+        public TISMotionSettings motionSettings = new();
+
         // ── Validation (runtime, không serialize) ─────────────
 
         //[System.NonSerialized]
@@ -157,6 +160,19 @@ namespace GaMo.TrueInputSystem
                             $"OneModifier composite chỉ trả về Button (bool). " +
                             $"Xoá Gamepad Modifier hoặc đổi Action Type sang Button.");
                     }
+
+                    // Gyro / touchpad đang tắt trong Motion Settings nhưng action vẫn dùng
+                    var ms = motionSettings;
+                    if (ms != null)
+                    {
+                        string gp = action.bindingGamepad ?? "";
+                        bool usesGyro  = action.gamepadMixGyro     || TISMotionPaths.IsGyroPath(gp);
+                        bool usesTouch = action.gamepadMixTouchpad || (TISMotionPaths.IsMotionPath(gp) && !TISMotionPaths.IsGyroPath(gp));
+                        if (usesGyro && !ms.enableGyro)
+                            errors.Add($"[{map.mapName}] \"{action.actionName}\": dùng Gyro nhưng Motion Settings › Enable Gyro đang tắt.");
+                        if (usesTouch && !ms.enableTouchpad)
+                            errors.Add($"[{map.mapName}] \"{action.actionName}\": dùng Touchpad nhưng Motion Settings › Enable Touchpad đang tắt.");
+                    }
                 }
             }
 
@@ -178,6 +194,7 @@ namespace GaMo.TrueInputSystem
             copy.mobileSettings  = JsonUtility.FromJson<TISMobileSettings>(JsonUtility.ToJson(this.mobileSettings));
             copy.cameraSettings  = JsonUtility.FromJson<TISCameraSettings>(JsonUtility.ToJson(this.cameraSettings));
             copy.gamepadSettings = JsonUtility.FromJson<TISGamepadSettings>(JsonUtility.ToJson(this.gamepadSettings));
+            copy.motionSettings  = JsonUtility.FromJson<TISMotionSettings>(JsonUtility.ToJson(this.motionSettings ?? new TISMotionSettings()));
             copy.actionMaps      = this.actionMaps.Select(m => m.Clone()).ToList();
             return copy;
         }

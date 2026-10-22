@@ -69,6 +69,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
                     killTarget = GameManager.Instance.KillTarget;
                 
                 state.SetKillTarget(killTarget);
+                if (GameManager.Instance != null) state.SetRoundMinutes(GameManager.Instance.RoundMinutes); // phong tuy chinh
             });
         }
         else if (_networkGameState == null && NetworkGameState.Instance != null)
@@ -301,8 +302,12 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log($"<color=orange>[Spawner]</color> RecalculateTeamCounts: Blue={BlueCount}, Red={RedCount}");
     }
     
+    // Phat danh sach phong cho QuickJoin (vao tran dang dien ra) o MenuShell.
+    public static event System.Action<List<SessionInfo>> SessionListUpdated;
+
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
     {
+        if (SessionListUpdated != null) SessionListUpdated(sessionList);
         if (_uiSessionListHandler == null) return;
 
         if (sessionList.Count == 0)

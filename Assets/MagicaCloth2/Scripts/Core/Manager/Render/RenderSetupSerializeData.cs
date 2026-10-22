@@ -338,16 +338,16 @@ namespace MagicaCloth2
             }
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             if (transformArray == null)
                 return;
             for (int i = 0; i < transformArray.Length; i++)
             {
                 var t = transformArray[i];
-                if (t && replaceDict.ContainsKey(t.GetInstanceID()))
+                if (t && replaceDict.ContainsKey(t.GetMagicaId()))
                 {
-                    transformArray[i] = replaceDict[t.GetInstanceID()];
+                    transformArray[i] = replaceDict[t.GetMagicaId()];
                 }
             }
         }

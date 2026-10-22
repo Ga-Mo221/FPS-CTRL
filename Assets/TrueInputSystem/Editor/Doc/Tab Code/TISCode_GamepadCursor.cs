@@ -43,6 +43,22 @@ namespace GaMo.TrueInputSystem.Editor
                 "// → UI EventSystem nhận event click khi nhấn buttonSouth (A/Cross)\n" +
                 "// → Tương thích với mọi Unity UI Button, Toggle, Slider");
 
+            win.Sep();
+            win.H2("Left Stick Dành Cho Cursor & Tự Thoát");
+            win.Body("Khi cursor bật, left stick chỉ điều khiển cursor (button TIS không bị điều hướng, nút A không submit button đang chọn). Cursor tự tắt và focus lại button cũ khi:");
+            win.CodeBlock(
+                "// • Nhấn D-pad / LB / RB / LT / RT  (Exit On Dpad / Shoulders / Triggers)\n" +
+                "// • Dùng chuột thật                  (Exit On Mouse — không focus lại button)\n\n" +
+                "var cursor = FindAnyObjectByType<TISGamepadVirtualCursor>();\n" +
+                "cursor.OnExitByNavigationInput += () => Debug.Log(\"Thoát cursor bằng D-pad / LB / RB\");\n" +
+                "cursor.OnExitByMouse           += () => Debug.Log(\"Người chơi chuyển sang chuột\");\n\n" +
+                "// Script khác kiểm tra cursor đang bật (left stick đang dành cho cursor):\n" +
+                "if (TISGamepadVirtualCursor.IsCursorActive) return;");
+
+            win.Sep();
+            win.H2("Touchpad / Gyro Điều Khiển Cursor");
+            win.Body("Profile › Motion Settings › Virtual Cursor: Touchpad Move (kéo như touchpad laptop), Touch Click (nhấn touchpad = click), Gyro Move (xoay tay cầm để trỏ).");
+
             win.Note("TISGamepadVirtualCursor tự tìm TISInputBridge.Instance trong Awake. Assign cursorTransform và parentCanvas trong Inspector là đủ.");
         }
     }

@@ -103,7 +103,7 @@
         LOD 300
 
     	HLSLINCLUDE
-    	// #define DR_DOTS_INSTANCING_ON // Uncomment to enable DOTS instancing
+    	#define DR_DOTS_INSTANCING_ON // Bật DOTS instancing: bắt buộc cho GPU Resident Drawer (BatchRendererGroup)
     	#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Version.hlsl"
     	ENDHLSL
 
@@ -237,6 +237,14 @@
 
             #pragma multi_compile _ DR_OUTLINE_ON
             #pragma multi_compile_fog
+
+            // GPU Instancing / DOTS instancing (GPU Resident Drawer). Thiếu phần này thì BatchRendererGroup báo
+            // "pass Outline ... does not define a DOTS_INSTANCING_ON variant".
+            #pragma multi_compile_instancing
+            #if defined(DR_DOTS_INSTANCING_ON)
+            #pragma target 4.5
+            #pragma multi_compile _ DOTS_INSTANCING_ON
+            #endif
 
             struct VertexInput
             {
@@ -433,7 +441,11 @@
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
+            // DOTS_INSTANCING_ON bắt buộc shader model 4.5 → khai báo giống các pass khác.
+            #if defined(DR_DOTS_INSTANCING_ON)
+            #pragma target 4.5
             #pragma multi_compile _ DOTS_INSTANCING_ON
+            #endif
 
             #include "LibraryUrp/StylizedInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/DepthOnlyPass.hlsl"

@@ -382,7 +382,7 @@ namespace MagicaCloth2
             [Unity.Collections.ReadOnly]
             public NativeArray<VirtualMeshBoneWeight> boneWeights;
             [Unity.Collections.ReadOnly]
-            public NativeArray<int> transformIds;
+            public NativeArray<MagicaObjectId> transformIds;
             [Unity.Collections.WriteOnly]
             public NativeArray<VertexAttribute> attributes;
 
@@ -396,7 +396,7 @@ namespace MagicaCloth2
             [Unity.Collections.ReadOnly]
             public NativeArray<VirtualMeshBoneWeight> proxyBoneWeights;
             [Unity.Collections.ReadOnly]
-            public NativeArray<int> proxyTransformIds;
+            public NativeArray<MagicaObjectId> proxyTransformIds;
 
             // out
             [Unity.Collections.WriteOnly]
@@ -414,7 +414,7 @@ namespace MagicaCloth2
                     Debug.Assert(bw.IsValid);
 
                     // もっともウエイトが重いボーンのハッシュ
-                    int boneId = transformIds[bw.boneIndices[0]];
+                    MagicaObjectId boneId = transformIds[bw.boneIndices[0]];
 
 
                     // グリッド範囲を検索する
@@ -441,7 +441,7 @@ namespace MagicaCloth2
                             bool hasBone = false;
                             for (int j = 0; j < tbw.Count && hasBone == false; j++)
                             {
-                                int tboneId = proxyTransformIds[tbw.boneIndices[j]];
+                                MagicaObjectId tboneId = proxyTransformIds[tbw.boneIndices[j]];
                                 if (tboneId == boneId)
                                     hasBone = true;
                             }

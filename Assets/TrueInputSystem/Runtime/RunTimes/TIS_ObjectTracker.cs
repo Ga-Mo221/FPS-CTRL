@@ -111,6 +111,10 @@ namespace GaMo.TrueInputSystem
         /// </summary>
         public void Tick()
         {
+            // Tracker dùng EnhancedTouch. Trước đây nó "ăn theo" camera zone / joystick bật hộ;
+            // giờ các control mobile đã chuyển sang uGUI pointer nên tracker tự bật (1 lần).
+            EnsureEnhancedTouch();
+
             _doubleTappedThisFrame.Clear();
             _screenDoubleTappedThisFrame = false;
             _singleTouchThisFrame        = null;
@@ -178,7 +182,7 @@ namespace GaMo.TrueInputSystem
 
         private void ProcessMouseFallback()
         {
-            var mouse = Mouse.current;
+            var mouse = TISPhysicalMouse.Current;   // chỉ chuột thật — click của virtual cursor không phải "touch"
             if (mouse == null) return;
 
             const int MousePointerID = -9999;
@@ -214,7 +218,7 @@ namespace GaMo.TrueInputSystem
             // Mouse fallback — desktop/editor only, kiểm tra runtime
             if (!Application.isMobilePlatform)
             {
-                var mouse = Mouse.current;
+                var mouse = TISPhysicalMouse.Current;
                 if (mouse != null && mouse.leftButton.isPressed)
                 {
                     _currentPointerScreenPos = mouse.position.ReadValue();
@@ -358,6 +362,23 @@ namespace GaMo.TrueInputSystem
         }
 
         /// <summary>Xóa toàn bộ trạng thái: danh sách, double-tap, màn hình.</summary>
+        private bool _enhancedTouchEnabledByTracker;
+
+        private void EnsureEnhancedTouch()
+        {
+            if (_enhancedTouchEnabledByTracker) return;
+            EnhancedTouchSupport.Enable();
+            _enhancedTouchEnabledByTracker = true;
+        }
+
+        /// <summary>Trả lại EnhancedTouch đã bật — TISInputBridge gọi khi bị huỷ.</summary>
+        public void Dispose()
+        {
+            if (!_enhancedTouchEnabledByTracker) return;
+            EnhancedTouchSupport.Disable();
+            _enhancedTouchEnabledByTracker = false;
+        }
+
         public void ClearAll()
         {
             ClearTouchedList();

@@ -29,13 +29,37 @@ namespace GaMo.TrueInputSystem
         //  INNER TYPES
         // ══════════════════════════════════════════════════════
 
-        private struct CachedAction
+        internal struct CachedAction
         {
             public InputAction       action;
             public TISButtonReadMode readMode;
             public bool              isAnalogTrigger;
             public string            mobileBinding;
             public int               triggerIndex;
+        }
+
+        /// <summary>
+        /// Kết quả tra cứu đã resolve cho 1 tên action (1 slot / tên, không phân biệt hoa thường).
+        /// Hợp lệ khi *Version == _cacheVersion; mọi thay đổi 3 cache bên dưới đều tăng
+        /// _cacheVersion → slot tự resolve lại → kết quả luôn giống hệt đường tra bằng string.
+        /// </summary>
+        internal sealed class ActionSlot
+        {
+            public readonly string name;
+            public int          skillVersion, v2Version, axisVersion;
+            public CachedAction skill;
+            public InputAction  v2;
+            public InputAction  axis;
+            public bool         axisIsTrigger;
+            public ActionSlot(string name) => this.name = name;
+        }
+
+        /// <summary>So sánh tham chiếu — string literal được intern nên cùng 1 instance mỗi lần gọi.</summary>
+        private sealed class RefComparer : IEqualityComparer<string>
+        {
+            public static readonly RefComparer Instance = new RefComparer();
+            public bool Equals(string a, string b) => ReferenceEquals(a, b);
+            public int  GetHashCode(string s)      => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(s);
         }
 
         // ══════════════════════════════════════════════════════
@@ -60,10 +84,21 @@ namespace GaMo.TrueInputSystem
         private readonly Dictionary<string, InputAction> _axisCache =
             new Dictionary<string, InputAction>(StringComparer.OrdinalIgnoreCase);
 
+        // Slot cache cho TISActionHandle và đường string nhanh. Slot sống qua Load() để handle
+        // không bao giờ hỏng; dữ liệu trong slot được làm mới theo _cacheVersion.
+        private readonly Dictionary<string, ActionSlot> _slotByName =
+            new Dictionary<string, ActionSlot>(StringComparer.OrdinalIgnoreCase);
+        // Tra theo tham chiếu (rẻ hơn băm OrdinalIgnoreCase); giới hạn kích thước để
+        // string tạo động mỗi frame (vd. $"Skill{i}") không làm phình bộ nhớ.
+        private readonly Dictionary<string, ActionSlot> _slotByRef =
+            new Dictionary<string, ActionSlot>(RefComparer.Instance);
+        private const int MaxRefSlots = 256;
+        private int _cacheVersion = 1;
+
         // Trigger per-frame state (P1 FIX #3)
         private readonly bool[] _triggerHeldLastFrame = new bool[TISConstants.MaxAnalogTriggers];
         private readonly bool[] _triggerHeldThisFrame = new bool[TISConstants.MaxAnalogTriggers];
-        private readonly bool[] _triggerHeldLastFrameSnapshot = new bool[TISConstants.MaxAnalogTriggers];
+        private readonly InputAction[] _triggerActions = new InputAction[TISConstants.MaxAnalogTriggers];
         private int _triggerCount;
 
         // P2 FIX #8: cached once, refreshed on Load() and when simulateMobile changes
@@ -94,20 +129,30 @@ namespace GaMo.TrueInputSystem
             ClearCaches();
             BuildCommonActionCache();
             BuildSkillCache();
-            Array.Clear(_triggerHeldLastFrameSnapshot, 0, _triggerHeldLastFrameSnapshot.Length);
         }
 
         /// <summary>Cập nhật _isMobileMode khi SimulateMobile thay đổi lúc runtime (Editor only).</summary>
         public void SetMobileMode(bool isMobileMode) => _isMobileMode = isMobileMode;
 
         /// <summary>
-        /// Gọi từ TISInputBridge.LateUpdate() — snapshot trigger buffer cuối frame (P1 FIX #3).
+        /// Gọi ĐẦU mỗi frame từ TISInputBridge.Update() (ExecutionOrder -100, trước script game):
+        /// lấy mẫu trạng thái giữ của MỌI analog trigger đã cache.
+        /// Trước đây trạng thái chỉ cập nhật khi có code gọi GetSkillAction() → game đọc
+        /// không đều (chỉ theo tick Fusion, chỉ khi GameStarted...) làm PressDown bắn đôi / bị mất.
         /// </summary>
-        public void SnapshotTriggerState()
+        public void SampleTriggers()
         {
-            Array.Copy(_triggerHeldThisFrame, _triggerHeldLastFrame, TISConstants.MaxAnalogTriggers);
-            Array.Copy(_triggerHeldThisFrame, _triggerHeldLastFrameSnapshot, TISConstants.MaxAnalogTriggers);
+            for (int i = 0; i < _triggerCount; i++)
+            {
+                _triggerHeldLastFrame[i] = _triggerHeldThisFrame[i];
+                var a = _triggerActions[i];
+                _triggerHeldThisFrame[i] = a != null && a.ReadValue<float>() >= TISConstants.TriggerPressPoint;
+            }
         }
+
+        /// <summary>Giữ để tương thích — trigger giờ được lấy mẫu trong <see cref="SampleTriggers"/>.</summary>
+        [Obsolete("Trigger được lấy mẫu đầu frame trong SampleTriggers(); không cần gọi nữa.")]
+        public void SnapshotTriggerState() { }
 
         // ══════════════════════════════════════════════════════
         //  COMMON ACTION PROPERTIES
@@ -122,19 +167,37 @@ namespace GaMo.TrueInputSystem
         // ══════════════════════════════════════════════════════
 
         public bool GetSkillAction(string actionName)
+            => SkillDefaultMode(actionName, GetSlot(actionName));
+
+        public bool GetSkillAction(string actionName, TISButtonReadMode mode)
+            => SkillWithMode(actionName, mode, GetSlot(actionName));
+
+        private bool SkillDefaultMode(string actionName, ActionSlot slot)
         {
+            if (slot != null && slot.skillVersion == _cacheVersion)
+                return EvalCachedAction(actionName, slot.skill.readMode, in slot.skill);
+
             if (_skillCache.TryGetValue(actionName, out var ca))
+            {
+                RememberSkill(slot, in ca);
                 return EvalCachedAction(actionName, ca.readMode, in ca);
+            }
 
             var def  = _activeProfile?.FindAction(actionName);
             var mode = def?.readMode ?? TISButtonReadMode.PressDown;
-            return GetSkillAction(actionName, mode);
+            return SkillWithMode(actionName, mode, slot);
         }
 
-        public bool GetSkillAction(string actionName, TISButtonReadMode mode)
+        private bool SkillWithMode(string actionName, TISButtonReadMode mode, ActionSlot slot)
         {
+            if (slot != null && slot.skillVersion == _cacheVersion)
+                return EvalCachedAction(actionName, mode, in slot.skill);
+
             if (_skillCache.TryGetValue(actionName, out var ca))
+            {
+                RememberSkill(slot, in ca);
                 return EvalCachedAction(actionName, mode, in ca);
+            }
 
             // Lazy-build cache entry for unknown action name
             var found = _asset?.FindAction(actionName, throwIfNotFound: false);
@@ -149,17 +212,38 @@ namespace GaMo.TrueInputSystem
                     readMode        = mode,
                     isAnalogTrigger = isAnalogTrigger,
                     mobileBinding   = def?.bindingMobile ?? "",
-                    triggerIndex    = isAnalogTrigger && _triggerCount < TISConstants.MaxAnalogTriggers
-                                        ? _triggerCount++ : -1,
+                    triggerIndex    = isAnalogTrigger ? RegisterTrigger(found) : -1,
                 };
                 _skillCache[actionName] = newCa;
+                _cacheVersion++;
+                RememberSkill(slot, in newCa);
                 return EvalCachedAction(actionName, mode, in newCa);
             }
 
+            // Cache "không tồn tại" → cảnh báo 1 lần; các lần gọi sau (mỗi frame) trả false ngay,
+            // không tạo string + Debug.LogWarning mỗi frame (rất tốn trên mobile).
+            // Cache được xoá khi Load() (đổi / swap profile) → tên hợp lệ sau đó vẫn hoạt động.
+            var missing = new CachedAction
+            {
+                action        = null,
+                readMode      = mode,
+                mobileBinding = "",
+                triggerIndex  = -1,
+            };
+            _skillCache[actionName] = missing;
+            _cacheVersion++;
+            RememberSkill(slot, in missing);
             Debug.LogWarning(
                 $"[TISActionReader] GetSkillAction: không tìm thấy \"{actionName}\".\n" +
                 $"→ Kiểm tra tên trong TISInputProfileConfig.asset.");
             return false;
+        }
+
+        private void RememberSkill(ActionSlot slot, in CachedAction ca)
+        {
+            if (slot == null) return;
+            slot.skill        = ca;
+            slot.skillVersion = _cacheVersion;
         }
 
         // ══════════════════════════════════════════════════════
@@ -167,34 +251,113 @@ namespace GaMo.TrueInputSystem
         // ══════════════════════════════════════════════════════
 
         public Vector2 GetVector2Action(string actionName)
+            => Vector2Core(actionName, GetSlot(actionName));
+
+        public float GetAxisAction(string actionName)
+            => AxisCore(actionName, GetSlot(actionName));
+
+        private Vector2 Vector2Core(string actionName, ActionSlot slot)
         {
             // P3: TISDirectionalSkillButton có thể override action này real-time
             if (TISDirectionalRegistry.TryGetVector2Override(actionName, out var overrideVal))
                 return overrideVal;
 
-            if (!_v2Cache.TryGetValue(actionName, out var action))
+            InputAction action;
+            if (slot != null && slot.v2Version == _cacheVersion)
+                action = slot.v2;
+            else
             {
-                action = _asset?.FindAction(actionName, throwIfNotFound: false);
-                _v2Cache[actionName] = action;
+                if (!_v2Cache.TryGetValue(actionName, out action))
+                {
+                    action = _asset?.FindAction(actionName, throwIfNotFound: false);
+                    _v2Cache[actionName] = action;
+                    _cacheVersion++;
+                }
+                if (slot != null) { slot.v2 = action; slot.v2Version = _cacheVersion; }
             }
             return action?.ReadValue<Vector2>() ?? Vector2.zero;
         }
 
-        public float GetAxisAction(string actionName)
+        private float AxisCore(string actionName, ActionSlot slot)
         {
-            if (!_axisCache.TryGetValue(actionName, out var action))
+            InputAction action;
+            bool isTrigger;
+            if (slot != null && slot.axisVersion == _cacheVersion)
             {
-                action = _asset?.FindAction(actionName, throwIfNotFound: false);
-                _axisCache[actionName] = action;
+                action    = slot.axis;
+                isTrigger = slot.axisIsTrigger;
+            }
+            else
+            {
+                if (!_axisCache.TryGetValue(actionName, out action))
+                {
+                    action = _asset?.FindAction(actionName, throwIfNotFound: false);
+                    _axisCache[actionName] = action;
+                    _cacheVersion++;
+                }
+                // Tra _skillCache cả khi action null (không side effect) để slot lưu đủ cả 2 giá trị
+                isTrigger = _skillCache.TryGetValue(actionName, out var ca) && ca.isAnalogTrigger;
+                if (slot != null) { slot.axis = action; slot.axisIsTrigger = isTrigger; slot.axisVersion = _cacheVersion; }
             }
             if (action == null) return 0f;
 
             float rawVal = action.ReadValue<float>();
 
-            if (_skillCache.TryGetValue(actionName, out var ca) && ca.isAnalogTrigger)
+            if (isTrigger)
                 return ApplyTriggerCurve(rawVal);
 
             return rawVal;
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  ACTION HANDLE — tra tên 1 lần, đọc mỗi frame không băm string
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Lấy handle cho <paramref name="actionName"/> (gọi 1 lần, vd. trong Awake/Start, rồi giữ lại).
+        /// Handle vẫn đúng sau khi đổi / swap profile. Tên chưa có trong profile vẫn lấy được handle —
+        /// kết quả đọc giống hệt API string (kể cả cảnh báo 1 lần khi không tìm thấy).
+        /// </summary>
+        public TISActionHandle GetHandle(string actionName)
+            => actionName == null ? default : new TISActionHandle(this, GetSlot(actionName), actionName);
+
+        public bool GetSkillAction(in TISActionHandle handle)
+        {
+            if (handle.Reader == this) return SkillDefaultMode(handle.Name, handle.Slot);
+            return handle.Name != null && GetSkillAction(handle.Name);
+        }
+
+        public bool GetSkillAction(in TISActionHandle handle, TISButtonReadMode mode)
+        {
+            if (handle.Reader == this) return SkillWithMode(handle.Name, mode, handle.Slot);
+            return handle.Name != null && GetSkillAction(handle.Name, mode);
+        }
+
+        public Vector2 GetVector2Action(in TISActionHandle handle)
+        {
+            if (handle.Reader == this) return Vector2Core(handle.Name, handle.Slot);
+            return handle.Name != null ? GetVector2Action(handle.Name) : Vector2.zero;
+        }
+
+        public float GetAxisAction(in TISActionHandle handle)
+        {
+            if (handle.Reader == this) return AxisCore(handle.Name, handle.Slot);
+            return handle.Name != null ? GetAxisAction(handle.Name) : 0f;
+        }
+
+        /// <summary>Slot của tên action; <c>null</c> khi tên null (đường string giữ hành vi cũ: ném ArgumentNullException).</summary>
+        private ActionSlot GetSlot(string actionName)
+        {
+            if (actionName == null) return null;
+            if (_slotByRef.TryGetValue(actionName, out var slot)) return slot;
+
+            if (!_slotByName.TryGetValue(actionName, out slot))
+            {
+                slot = new ActionSlot(actionName);
+                _slotByName[actionName] = slot;
+            }
+            if (_slotByRef.Count < MaxRefSlots) _slotByRef[actionName] = slot;
+            return slot;
         }
 
         // ══════════════════════════════════════════════════════
@@ -260,6 +423,14 @@ namespace GaMo.TrueInputSystem
                 };
 
                 if (result) EditorHook_LogSkillAction?.Invoke(actionName, mode, "TISMobileSkillButton", _debugSkillAction);
+
+                // Nút ảo chưa kích hoạt → vẫn đọc InputAction: tay cầm / bàn phím Bluetooth
+                // cắm vào điện thoại / tablet phải dùng được cùng lúc với nút ảo.
+                // Editor giả lập mobile: chuột đang đóng vai ngón tay → bỏ qua action do chuột kích hoạt
+                // (không thì kéo chuột xoay camera sẽ bắn luôn Attack = <Mouse>/leftButton).
+                if (!result && ca.action != null
+                    && !(Application.isEditor && ca.action.activeControl?.device is Pointer))
+                    result = ReadButton(ca.action, mode, ca.isAnalogTrigger, ca.triggerIndex);
 #if DEVELOPMENT_BUILD
                 if (result && _debugSkillAction)
                     Debug.Log(
@@ -298,17 +469,19 @@ namespace GaMo.TrueInputSystem
 
             if (isAnalogTrigger)
             {
-                float val  = action.ReadValue<float>();
-                bool  held = val >= TISConstants.TriggerPressPoint;
-
-                // Cập nhật _triggerHeldThisFrame (state hiện tại)
-                if (triggerIndex >= 0 && triggerIndex < TISConstants.MaxAnalogTriggers)
-                    _triggerHeldThisFrame[triggerIndex] = held;
-
-                // Đọc từ snapshot (không mutate):
-                bool wasHeldLastFrame = triggerIndex >= 0 && triggerIndex < TISConstants.MaxAnalogTriggers
-                    ? _triggerHeldLastFrameSnapshot[triggerIndex]
-                    : false;
+                bool held, wasHeldLastFrame;
+                if (triggerIndex >= 0 && triggerIndex < _triggerCount)
+                {
+                    // Lấy từ mẫu đầu frame — không mutate, đọc bao nhiêu lần cũng nhất quán
+                    held             = _triggerHeldThisFrame[triggerIndex];
+                    wasHeldLastFrame = _triggerHeldLastFrame[triggerIndex];
+                }
+                else
+                {
+                    // Vượt MaxAnalogTriggers → không theo dõi được cạnh, chỉ trả Hold đúng
+                    held             = action.ReadValue<float>() >= TISConstants.TriggerPressPoint;
+                    wasHeldLastFrame = held;
+                }
 
                 return mode switch
                 {
@@ -339,7 +512,9 @@ namespace GaMo.TrueInputSystem
             _axisCache.Clear();
             System.Array.Clear(_triggerHeldLastFrame, 0, _triggerHeldLastFrame.Length);
             System.Array.Clear(_triggerHeldThisFrame, 0, _triggerHeldThisFrame.Length);
+            System.Array.Clear(_triggerActions, 0, _triggerActions.Length);
             _triggerCount = 0;
+            _cacheVersion++;   // slot của TISActionHandle resolve lại
         }
 
         private void BuildCommonActionCache()
@@ -380,10 +555,10 @@ namespace GaMo.TrueInputSystem
                     readMode        = def.readMode,
                     isAnalogTrigger = isAnalogTrigger,
                     mobileBinding   = def.bindingMobile,
-                    triggerIndex    = isAnalogTrigger && _triggerCount < TISConstants.MaxAnalogTriggers
-                                        ? _triggerCount++ : -1,
+                    triggerIndex    = isAnalogTrigger ? RegisterTrigger(act) : -1,
                 };
             }
+            _cacheVersion++;
         }
 
         // ══════════════════════════════════════════════════════
@@ -397,11 +572,53 @@ namespace GaMo.TrueInputSystem
             return Mathf.Pow(Mathf.Clamp01(rawVal), curve);
         }
 
+        /// <summary>
+        /// Đăng ký trigger để SampleTriggers() theo dõi. Lấy mẫu ngay để frame đầu không
+        /// sinh PressDown giả (last = this = trạng thái hiện tại).
+        /// </summary>
+        private int RegisterTrigger(InputAction action)
+        {
+            if (_triggerCount >= TISConstants.MaxAnalogTriggers) return -1;
+            int i = _triggerCount++;
+            _triggerActions[i] = action;
+            bool held = action != null && action.ReadValue<float>() >= TISConstants.TriggerPressPoint;
+            _triggerHeldThisFrame[i] = held;
+            _triggerHeldLastFrame[i] = held;
+            return i;
+        }
+
         private static bool IsAnalogTriggerAction(InputAction action)
         {
             foreach (var binding in action.bindings)
                 if (TISProfileBuilder.IsTriggerAnalogPath(binding.effectivePath)) return true;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Handle tra cứu action đã resolve sẵn — lấy 1 lần qua <c>TISInputBridge.GetActionHandle(name)</c>,
+    /// đọc mỗi frame qua các overload nhận handle (không băm / so sánh string).
+    /// Kết quả giống hệt API string cùng tên; vẫn đúng sau khi đổi / swap profile.
+    /// <c>default</c> (handle rỗng) luôn đọc ra false / 0.
+    /// </summary>
+    public readonly struct TISActionHandle
+    {
+        internal readonly TISActionReader              Reader;
+        internal readonly TISActionReader.ActionSlot   Slot;
+
+        /// <summary>Tên action đã dùng để lấy handle.</summary>
+        public readonly string Name;
+
+        /// <summary><c>true</c> nếu handle được tạo từ một tên (không phải <c>default</c>).</summary>
+        public bool IsValid => Name != null;
+
+        internal TISActionHandle(TISActionReader reader, TISActionReader.ActionSlot slot, string name)
+        {
+            Reader = reader;
+            Slot   = slot;
+            Name   = name;
+        }
+
+        public override string ToString() => Name ?? "(none)";
     }
 }

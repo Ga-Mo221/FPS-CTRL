@@ -81,14 +81,36 @@ namespace GaMo.TrueInputSystem.Editor
 
         private void BeginRename(int index)
         {
-            _isRenaming    = true;
-            _renamingIndex = index;
-            _renameBuffer  = _workingProfile.actionMaps[index].mapName;
+            _isRenaming     = true;
+            _renamingAction = false;
+            _renamingIndex  = index;
+            _renameBuffer   = _workingProfile.actionMaps[index].mapName;
+        }
+
+        /// <summary>Đổi tên hành động thứ <paramref name="index"/> trong nhóm đang chọn.</summary>
+        private void BeginRenameAction(int index)
+        {
+            var actions = _workingProfile.actionMaps[_selectedMapIndex].actions;
+            if (actions == null || index < 0 || index >= actions.Count) return;
+            _isRenaming     = true;
+            _renamingAction = true;
+            _renamingIndex  = index;
+            _renameBuffer   = actions[index].actionName;
         }
 
         private void CommitRename()
         {
-            if (_renamingIndex >= 0 && _renamingIndex < _workingProfile.actionMaps.Count)
+            if (_renamingAction)
+            {
+                var actions = _workingProfile.actionMaps[_selectedMapIndex].actions;
+                if (actions != null && _renamingIndex >= 0 && _renamingIndex < actions.Count)
+                {
+                    SafeRecord("Đổi tên hành động");
+                    actions[_renamingIndex].actionName = _renameBuffer;
+                    MarkDirty();
+                }
+            }
+            else if (_renamingIndex >= 0 && _renamingIndex < _workingProfile.actionMaps.Count)
             {
                 SafeRecord("Rename Map");
                 _workingProfile.actionMaps[_renamingIndex].mapName = _renameBuffer;
@@ -99,9 +121,11 @@ namespace GaMo.TrueInputSystem.Editor
 
         private void CancelRename()
         {
-            _isRenaming    = false;
-            _renamingIndex = -1;
-            _renameBuffer  = "";
+            _isRenaming     = false;
+            _renamingAction = false;
+            _renamingIndex  = -1;
+            _renameBuffer   = "";
+            _renameFieldScreenRect = default;
         }
 
         // ══════════════════════════════════════════════════════
@@ -251,6 +275,7 @@ namespace GaMo.TrueInputSystem.Editor
             targetAsset.mobileSettings  = _workingProfile.mobileSettings;
             targetAsset.cameraSettings  = _workingProfile.cameraSettings;
             targetAsset.gamepadSettings = _workingProfile.gamepadSettings;
+            targetAsset.motionSettings  = _workingProfile.motionSettings;
             targetAsset.actionMaps      = _workingProfile.actionMaps.Select(m => m.Clone()).ToList();
 
             if (_sourceAsset != null)
@@ -356,6 +381,7 @@ namespace GaMo.TrueInputSystem.Editor
             target.mobileSettings  = _workingProfile.mobileSettings;
             target.cameraSettings  = _workingProfile.cameraSettings;
             target.gamepadSettings = _workingProfile.gamepadSettings;
+            target.motionSettings  = _workingProfile.motionSettings;
             target.actionMaps      = _workingProfile.actionMaps.Select(m => m.Clone()).ToList();
             EditorUtility.SetDirty(target);
             AssetDatabase.SaveAssets();

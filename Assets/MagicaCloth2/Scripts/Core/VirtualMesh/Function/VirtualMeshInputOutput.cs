@@ -518,7 +518,7 @@ namespace MagicaCloth2
             {
                 // Mesh接続
                 // トランスフォームIDからインデックスへの辞書を作成
-                var idToIndexDict = new Dictionary<int, int>(vcnt);
+                var idToIndexDict = new Dictionary<MagicaObjectId, int>(vcnt);
                 for (int i = 0; i < vcnt; i++)
                 {
                     if (idToIndexDict.ContainsKey(rsetup.transformIdList[i]) == false)
@@ -533,7 +533,7 @@ namespace MagicaCloth2
                     || rsetup.boneConnectionMode == RenderSetupData.BoneConnectionMode.SequentialNonLoopMesh;
 
                 // ルートリスト
-                var rootTransformIdList = new List<int>(rsetup.rootTransformIdList); // copy
+                var rootTransformIdList = new List<MagicaObjectId>(rsetup.rootTransformIdList); // copy
                 int rootCnt = rootTransformIdList.Count;
                 const int firstRootIndex = 0;
                 int lastRootIndex = rootCnt - 1;
@@ -541,24 +541,24 @@ namespace MagicaCloth2
                 // オート接続の場合はルート同士が最近接点になるように並べ替える
                 if (rsetup.boneConnectionMode == RenderSetupData.BoneConnectionMode.AutomaticMesh)
                 {
-                    var tempRootIdList = new List<int>(rootTransformIdList);
+                    var tempRootIdList = new List<MagicaObjectId>(rootTransformIdList);
 
                     rootTransformIdList.Clear();
                     rootTransformIdList.Add(tempRootIdList[0]);
                     float lastDist = 0;
                     while (tempRootIdList.Count > 0)
                     {
-                        int rootId = rootTransformIdList[rootTransformIdList.Count - 1];
+                        MagicaObjectId rootId = rootTransformIdList[rootTransformIdList.Count - 1];
                         tempRootIdList.Remove(rootId);
                         int vindex = idToIndexDict[rootId];
                         var pos = localPositions[vindex];
 
                         // next connection
                         float minDist = float.MaxValue;
-                        int minId = 0;
+                        MagicaObjectId minId = MagicaObjectId.Invalid;
                         for (int i = 0; i < tempRootIdList.Count; i++)
                         {
-                            int rootId2 = tempRootIdList[i];
+                            MagicaObjectId rootId2 = tempRootIdList[i];
                             int vindex2 = idToIndexDict[rootId2];
                             var pos2 = localPositions[vindex2];
 
@@ -570,7 +570,7 @@ namespace MagicaCloth2
                             }
 
                         }
-                        if (minId != 0)
+                        if (minId.IsValid())
                         {
                             if (lastDist == 0 || minDist < lastDist * 1.5f)
                             {
@@ -589,8 +589,8 @@ namespace MagicaCloth2
                     // 最初と最後のルート距離が平均以下ならばループ接続にする
                     if (rootTransformIdList.Count >= 3)
                     {
-                        int rootId1 = rootTransformIdList[0];
-                        int rootId2 = rootTransformIdList[rootTransformIdList.Count - 1];
+                        MagicaObjectId rootId1 = rootTransformIdList[0];
+                        MagicaObjectId rootId2 = rootTransformIdList[rootTransformIdList.Count - 1];
                         int vindex1 = idToIndexDict[rootId1];
                         int vindex2 = idToIndexDict[rootId2];
                         var pos1 = localPositions[vindex1];
@@ -619,7 +619,7 @@ namespace MagicaCloth2
                 var mainEdgeSet = new HashSet<uint>(); // メインエッジ
 
                 // まずトランスフォームの親子関係に接続
-                var stack = new Stack<int>(vcnt);
+                var stack = new Stack<MagicaObjectId>(vcnt);
                 var lvstack = new Stack<int>(vcnt);
                 for (int i = 0; i < rootCnt; i++)
                 {
@@ -630,7 +630,7 @@ namespace MagicaCloth2
 
                     while (stack.Count > 0)
                     {
-                        int id = stack.Pop();
+                        MagicaObjectId id = stack.Pop();
                         int lv = lvstack.Pop();
                         int vindex = idToIndexDict[id];
                         var pos = localPositions[vindex];
@@ -644,7 +644,7 @@ namespace MagicaCloth2
                         var link = new FixedList128Bytes<int>();
 
                         // parent
-                        int pid = rsetup.transformParentIdList[vindex];
+                        MagicaObjectId pid = rsetup.transformParentIdList[vindex];
                         if (idToIndexDict.ContainsKey(pid))
                         {
                             int vindex2 = idToIndexDict[pid];
@@ -661,7 +661,7 @@ namespace MagicaCloth2
                         {
                             for (int j = 0; j < clist.Length; j++)
                             {
-                                int cid = clist[j];
+                                MagicaObjectId cid = clist[j];
                                 stack.Push(cid);
                                 lvstack.Push(lv + 1);
 
@@ -1706,8 +1706,11 @@ namespace MagicaCloth2
         /// メッシュの基準トランスフォームを設定する（メインスレッドのみ）
         /// </summary>
         /// <param name="center"></param>
-        /// <param name="skinRoot"></param>
-        public void SetTransform(Transform center, Transform skinRoot = null, int centerId = 0, int skinRootId = 0)
+        /// <param name="skinRoot">不要ならnull</param>
+        /// <param name="centerId">不要ならInvalid</param>
+        /// <param name="skinRootId">不要ならInvalid</param>
+        //public void SetTransform(Transform center, Transform skinRoot = null, int centerId = 0, int skinRootId = 0)
+        public void SetTransform(Transform center, Transform skinRoot, MagicaObjectId centerId, MagicaObjectId skinRootId)
         {
             SetCenterTransform(center, centerId);
             if (skinRoot != null)
@@ -1729,9 +1732,9 @@ namespace MagicaCloth2
         /// <param name="record"></param>
         public void SetTransform(TransformRecord centerRecord, TransformRecord skinRootRecord = null)
         {
-            centerTransformIndex = transformData.AddTransform(centerRecord);
+            centerTransformIndex = transformData.AddTransform(centerRecord, MagicaObjectId.Invalid);
             if (skinRootRecord != null)
-                skinRootIndex = transformData.AddTransform(skinRootRecord);
+                skinRootIndex = transformData.AddTransform(skinRootRecord, MagicaObjectId.Invalid);
             else
                 skinRootIndex = centerTransformIndex;
 
@@ -1743,34 +1746,36 @@ namespace MagicaCloth2
             initScale = centerRecord.scale;
         }
 
-        public void SetCenterTransform(Transform t, int tid = 0)
+        //public void SetCenterTransform(Transform t, int tid = 0)
+        public void SetCenterTransform(Transform t, MagicaObjectId tid)
         {
             if (t)
             {
                 // すでに存在する場合は入れ替え
                 if (centerTransformIndex >= 0)
                 {
-                    transformData.ReplaceTransform(centerTransformIndex, t, tid);
+                    transformData.ReplaceTransform(centerTransformIndex, t, tid, MagicaObjectId.Invalid);
                 }
                 else
                 {
-                    centerTransformIndex = transformData.AddTransform(t, tid);
+                    centerTransformIndex = transformData.AddTransform(t, tid, MagicaObjectId.Invalid);
                 }
             }
         }
 
-        public void SetSkinRoot(Transform t, int tid = 0)
+        //public void SetSkinRoot(Transform t, int tid = 0)
+        public void SetSkinRoot(Transform t, MagicaObjectId tid)
         {
             if (t)
             {
                 // すでに存在する場合は入れ替え
                 if (skinRootIndex >= 0)
                 {
-                    transformData.ReplaceTransform(skinRootIndex, t, tid);
+                    transformData.ReplaceTransform(skinRootIndex, t, tid, MagicaObjectId.Invalid);
                 }
                 else
                 {
-                    skinRootIndex = transformData.AddTransform(t, tid);
+                    skinRootIndex = transformData.AddTransform(t, tid, MagicaObjectId.Invalid);
                 }
             }
         }
@@ -1801,7 +1806,7 @@ namespace MagicaCloth2
 
                     // ボーンの登録。スキニング用ボーンとしても登録。
                     index = skinBoneTransformIndices.Count;
-                    int tindex = transformData.AddTransform(rd, checkDuplicate: false); // 重複ありで最後に追加する
+                    int tindex = transformData.AddTransform(rd, pid: MagicaObjectId.Invalid, checkDuplicate: false); // 重複ありで最後に追加する
                     skinBoneTransformIndices.Add(tindex);
                     var bindPose = math.mul(rd.worldToLocalMatrix, initLocalToWorld); // bind pose
                     skinBoneBindPoses.Add(bindPose);

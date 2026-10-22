@@ -378,12 +378,12 @@ namespace MagicaCloth2
                 transformSet.Add(symmetryTarget);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             if (symmetryTarget)
             {
-                int id = symmetryTarget.GetInstanceID();
-                if (id != 0 && replaceDict.ContainsKey(id))
+                MagicaObjectId id = symmetryTarget.GetMagicaId();
+                if (id.IsValid() && replaceDict.ContainsKey(id))
                     symmetryTarget = replaceDict[id];
             }
         }

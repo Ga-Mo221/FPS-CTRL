@@ -37,6 +37,16 @@ namespace GaMo.TrueInputSystem
                  "Chọn từ dropdown hoặc tự gõ path tuỳ chỉnh.")]
         public string bindingGamepadModifier = "";
 
+        [Tooltip("Chỉ áp dụng khi Gamepad Binding là Left / Right Stick:\n" +
+                 "cộng thêm gyro tay cầm vào giá trị của cần (vd. Look = right stick + gyro).\n" +
+                 "Độ nhạy: Motion Settings › Gyro Sensitivity.")]
+        public bool gamepadMixGyro = false;
+
+        [Tooltip("Chỉ áp dụng khi Gamepad Binding là Left / Right Stick:\n" +
+                 "cộng thêm tốc độ vuốt touchpad vào giá trị của cần.\n" +
+                 "Độ nhạy: Motion Settings › Touchpad Look Sensitivity.")]
+        public bool gamepadMixTouchpad = false;
+
         // ── Mobile Binding ────────────────────────────────────
 
         [Tooltip("ID của virtual control trên mobile.\n" +
@@ -111,6 +121,8 @@ namespace GaMo.TrueInputSystem
                 bindingPCModifier      = this.bindingPCModifier,
                 bindingGamepad         = this.bindingGamepad,
                 bindingGamepadModifier = this.bindingGamepadModifier,
+                gamepadMixGyro         = this.gamepadMixGyro,
+                gamepadMixTouchpad     = this.gamepadMixTouchpad,
                 bindingMobile          = this.bindingMobile,
                 readMode               = this.readMode,
                 isSinglePress          = this.isSinglePress,

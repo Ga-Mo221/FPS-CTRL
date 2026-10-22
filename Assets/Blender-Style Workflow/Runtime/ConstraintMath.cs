@@ -165,33 +165,29 @@ namespace GaMo.BlenderEditorTools
             // trên cùng trục, ghép twist của delta vào. Kỹ thuật giống ComputeWorldAbsoluteRotation.
             Quaternion targetDeltaLocal = Quaternion.Inverse(targetInitialLocalRot) * target.localRotation;
 
-            if (copyX && copyY && copyZ)
-                return currentLocalRot * targetDeltaLocal;
+            // Delta = CỘNG THÊM lượng xoay của target lên pose hiện tại của B (nhân bên phải, trong
+            // hệ trục local của bone) — giống nhánh copy đủ 3 trục.
+            // BUG CŨ: khi chỉ copy 1–2 trục, code dùng lại công thức của Absolute
+            // (twistDelta * Inverse(twistCurrent) * result) → THAY twist của B bằng twist của delta
+            // thay vì cộng thêm, nên B mất góc xoay animation của chính nó quanh trục đó
+            // (vd. B đang 43° quanh X, A xoay thêm 10° → B thành 10° thay vì 53°).
+            return currentLocalRot * FilterDeltaAxes(targetDeltaLocal, copyX, copyY, copyZ);
+        }
 
-            Quaternion result = currentLocalRot;
+        // Lọc delta rotation theo các trục được copy (swing-twist, không qua Euler).
+        // • 1 trục: chỉ giữ twist quanh trục đó.
+        // • 2 trục: bỏ twist quanh trục KHÔNG copy, giữ phần swing (trục swing ⟂ trục bị bỏ).
+        private static Quaternion FilterDeltaAxes(Quaternion delta, bool copyX, bool copyY, bool copyZ)
+        {
+            int axisCount = (copyX ? 1 : 0) + (copyY ? 1 : 0) + (copyZ ? 1 : 0);
+            if (axisCount == 3) return delta;
+            if (axisCount == 0) return Quaternion.identity;
 
-            if (copyX)
-            {
-                Quaternion twistDelta   = GetTwist(targetDeltaLocal, Vector3.right);
-                Quaternion twistCurrent = GetTwist(result, Vector3.right);
-                result = twistDelta * Quaternion.Inverse(twistCurrent) * result;
-            }
+            if (axisCount == 1)
+                return GetTwist(delta, copyX ? Vector3.right : copyY ? Vector3.up : Vector3.forward);
 
-            if (copyY)
-            {
-                Quaternion twistDelta   = GetTwist(targetDeltaLocal, Vector3.up);
-                Quaternion twistCurrent = GetTwist(result, Vector3.up);
-                result = twistDelta * Quaternion.Inverse(twistCurrent) * result;
-            }
-
-            if (copyZ)
-            {
-                Quaternion twistDelta   = GetTwist(targetDeltaLocal, Vector3.forward);
-                Quaternion twistCurrent = GetTwist(result, Vector3.forward);
-                result = twistDelta * Quaternion.Inverse(twistCurrent) * result;
-            }
-
-            return result;
+            Vector3 excludedAxis = !copyX ? Vector3.right : !copyY ? Vector3.up : Vector3.forward;
+            return delta * Quaternion.Inverse(GetTwist(delta, excludedAxis));
         }
 
         public static Quaternion ComputeLocalAbsoluteRotation(

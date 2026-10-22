@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: M4 Data
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
   _icon: {fileID: 21300000, guid: f7e8a4c8b0fe53d44b8876d306f58ce2, type: 3}
-  _iD: M4
+  _iD: Umbra
   _index: 1
-  _name: M4
+  _name: Umbra
   _recoilData: {fileID: 11400000, guid: bbe832d56560aef4694835b656d3979b, type: 2}
   _dropItemPrefab: {fileID: 9050542745613523368, guid: 630da6b77a8fb6f4f8d4d3b5199ea6bd, type: 3}
-  _damage: 25
+  _damage: 50
   _range: 100
-  _fireDelay: 0.12
+  _fireDelay: 0.09
   _defaultBullet: 30
   _bulletPlusCount: 30
   _maxBullet: 120
@@ -29,8 +29,9 @@ MonoBehaviour:
   _aDS_Zoom_Z: 0.1
   _stamd_Zoom_Z: 0
   _aDS_duration: 0.2
-  _ads_Pivot_Height: 0
-  _stand_Pivot_Height: 0
+  _ads_Origin_Pivot_Offset: {x: 0, y: 0, z: 0}
+  _ads_stand_Pivot_Offset: {x: 0, y: 0, z: 0}
+  _ads_crouch_Pivot_Offset: {x: 0, y: 0, z: 0}
   _rightDamage: 20
   _meeleRadius: 0.6
   _meleeHitDelay: 0.2

@@ -77,6 +77,12 @@ namespace GaMo.TrueInputSystem.Editor
                 new TISCode_GamepadUIButton(),
                 // index 20
                 new TISCode_PointerPosition(),
+                // index 21
+                new TISCode_GyroTouchpad(),
+                // index 22
+                new TISCode_MotionToggle(),
+                // index 23
+                new TISCode_Tutorials(),
 
                 // ── THÊM MODULE MỚI Ở ĐÂY ──────────────────
                 // new TISCode_MyNewFeature(),
