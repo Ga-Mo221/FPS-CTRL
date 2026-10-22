@@ -9,7 +9,7 @@ namespace Game.UI
 {
     /// <summary>
     /// Chi trinh bay + phat su kien (SRP). MenuShellBinder lo tao phong / vao phong / dong bo to doi.
-    /// - Luat: 2 nut TEAM DM / FFA.
+    /// - Luat: 3 nut TEAM DM / FFA / NGAU NHIEN (ngau nhien: boc TDM/FFA luc tao phong - ResolveRule).
     /// - Moc ha guc: ◄ gia tri ► (10 · 20 · 30 · 50 · 75 · 100).
     /// - [Aemy 2026-10-19] Thoi gian: ◄ gia tri ► (5 · 10 · 15 · 20 · 30 phut, mac dinh 10).
     /// - Ma phong: o nhap + nut VAO PHONG (phong rieng, nguoi la khong vao duoc).
@@ -18,6 +18,7 @@ namespace Game.UI
     {
         [SerializeField] private Button _ruleTdm;
         [SerializeField] private Button _ruleFfa;
+        [SerializeField] private Button _ruleRandom; // [2026-10-21]
         [SerializeField] private Button _killPrev;
         [SerializeField] private Button _killNext;
         [SerializeField] private TMP_Text _killValue;
@@ -46,7 +47,13 @@ namespace Game.UI
         private int _timeIdx = 1;
         private bool _locked;
 
+        /// <summary>Luat that. Dang chon NGAU NHIEN -> la luat da boc o lan ResolveRule gan nhat.</summary>
         public MatchMode Rule { get; private set; } = MatchMode.TDM;
+        /// <summary>[2026-10-21] Dang chon o NGAU NHIEN.</summary>
+        public bool RandomRule { get; private set; }
+        /// <summary>Khoa dong bo to doi: "TDM" / "FFA" / "RANDOM".</summary>
+        public string RuleKey { get { return RandomRule ? RandomKey : Rule.ToString(); } }
+        public const string RandomKey = "RANDOM";
         public int KillTarget { get { return KillSteps[Mathf.Clamp(_killIdx, 0, KillSteps.Length - 1)]; } }
         /// <summary>Thoi gian tran (phut).</summary>
         public int MatchMinutes { get { return TimeSteps[Mathf.Clamp(_timeIdx, 0, TimeSteps.Length - 1)]; } }
@@ -60,6 +67,7 @@ namespace Game.UI
         {
             if (_ruleTdm != null) _ruleTdm.onClick.AddListener(() => SetRule(MatchMode.TDM, true));
             if (_ruleFfa != null) _ruleFfa.onClick.AddListener(() => SetRule(MatchMode.FFA, true));
+            if (_ruleRandom != null) _ruleRandom.onClick.AddListener(() => SetRandomRule(true));
             if (_killPrev != null) _killPrev.onClick.AddListener(() => StepKill(-1));
             if (_killNext != null) _killNext.onClick.AddListener(() => StepKill(1));
             if (_timePrev != null) _timePrev.onClick.AddListener(() => StepTime(-1));
@@ -107,8 +115,28 @@ namespace Game.UI
         {
             if (_locked && notify) return;
             Rule = rule == MatchMode.TDM ? MatchMode.TDM : MatchMode.FFA;
+            RandomRule = false;
             Render();
             if (notify && Changed != null) Changed();
+        }
+
+        public void SetRandomRule(bool notify)
+        {
+            if (_locked && notify) return;
+            RandomRule = true;
+            Render();
+            if (notify && Changed != null) Changed();
+        }
+
+        /// <summary>Luc tao phong: dang NGAU NHIEN -> boc TDM/FFA (luu vao Rule). Tra luat that.</summary>
+        public MatchMode ResolveRule()
+        {
+            if (RandomRule)
+            {
+                Rule = UnityEngine.Random.Range(0, 2) == 0 ? MatchMode.TDM : MatchMode.FFA;
+                Debug.Log("[CustomRoomPanel] Luat ngau nhien -> " + Rule);
+            }
+            return Rule;
         }
 
         public void SetKillTarget(int kill)
@@ -122,7 +150,7 @@ namespace Game.UI
         public void SetLocked(bool locked)
         {
             _locked = locked;
-            foreach (var b in new[] { _ruleTdm, _ruleFfa, _killPrev, _killNext, _timePrev, _timeNext }) if (b != null) b.interactable = !locked;
+            foreach (var b in new[] { _ruleTdm, _ruleFfa, _ruleRandom, _killPrev, _killNext, _timePrev, _timeNext }) if (b != null) b.interactable = !locked;
         }
 
         public void SetStatus(string text)
@@ -132,8 +160,9 @@ namespace Game.UI
 
         private void Render()
         {
-            Paint(_ruleTdm, Rule == MatchMode.TDM);
-            Paint(_ruleFfa, Rule == MatchMode.FFA);
+            Paint(_ruleTdm, !RandomRule && Rule == MatchMode.TDM);
+            Paint(_ruleFfa, !RandomRule && Rule == MatchMode.FFA);
+            Paint(_ruleRandom, RandomRule);
             if (_killValue != null) _killValue.text = KillTarget.ToString();
             if (_timeValue != null) _timeValue.text = MatchMinutes.ToString();
         }

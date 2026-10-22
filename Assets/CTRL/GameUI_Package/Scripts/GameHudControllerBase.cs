@@ -95,6 +95,8 @@ namespace Game.UI
             => _crosshair?.SetADS(visible);
         
         public void CrosshairHit() => _crosshair?.Hit();
+
+        public void CrosshairFire(float multiplier = 1f) => _crosshair?.Fire(multiplier);
         
         // ============================ UI HP ======================================
 

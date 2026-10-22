@@ -54,11 +54,19 @@ public class NCharMovementHandler : NetworkBehaviour
 
     [Networked] public int ShootIndex { get; private set; } = 0;
 
-    [Networked] private TickTimer _meleeCooldownTimer { get; set; } // chặn input sau khi đánh
-    [Networked] private TickTimer _meleeComboTimer    { get; set; } // cửa sổ chờ click tiếp theo
-    private const float MELEE_COOLDOWN    = 0.2f; // chờ sau khi đánh xong
-    private const float MELEE_COMBO_WINDOW = 0.6f; // thời gian để nhấn đòn tiếp theo
-    [SerializeField] private bool _canNextAttackCombo = true;
+    // Toàn bộ gating combo dao CHỈ dựa vào state networked (ShootIndex, _meleeQueued, các TickTimer),
+    // không dùng cờ thường / animation event (chạy riêng từng máy, khác thời điểm → host/client lệch).
+    [Networked] private TickTimer _meleeCooldownTimer { get; set; } // sớm nhất được lên bậc combo tiếp
+    [Networked] private TickTimer _meleeComboTimer    { get; set; } // hết combo → reset ShootIndex
+    [Networked] private TickTimer _meleeSwingEndTimer { get; set; } // lúc clip đòn hiện tại kết thúc
+    [Networked] private byte _meleeQueued { get; set; }              // số click đang chờ
+    private const int MELEE_MAX_COMBO = 3;
+    [Tooltip("Độ dài clip từng đòn (SHOOT, SHOOT_2, SHOOT_3) trong Animator, dùng để biết khi nào đòn sau bắt đầu.")]
+    [SerializeField] private float[] _meleeSwingLengths = { 0.43f, 0.63f, 0.63f };
+    [Tooltip("Chờ (giây) sau khi 1 đòn bắt đầu rồi mới được tăng ShootIndex cho đòn kế tiếp.")]
+    [SerializeField] private float _meleeAdvanceDelay = 0.1f;
+    [Tooltip("Sau khi đòn cuối hết clip, chờ thêm (giây) rồi mới reset combo về 0.")]
+    [SerializeField] private float _meleeComboResetGrace = 0.3f;
 
     // Thêm networked timer — Host nhớ "đang trong trạng thái firing"
     // Mỗi khi nhận được Attack=true, gia hạn timer thêm N tick
@@ -81,6 +89,12 @@ public class NCharMovementHandler : NetworkBehaviour
 
     [Networked] private TickTimer _slideTimer { get; set; }
     [Networked] private TickTimer _respawnInvincibleTimer { get; set; }
+    // Khóa nhận lệnh ném mới sau khi thả Q/E, chờ animation ném chạy xong (ThrowGrenade từ animation event).
+    [Networked] private TickTimer _grenadeLockTimer { get; set; }
+    // Giữ nút ngắm trong lúc trượt / đổi súng / ném → bật ngắm khi hết trạng thái chặn (xem ADSHandler).
+    [Networked] private NetworkBool _adsQueued { get; set; }
+    [Tooltip("Thời gian (giây) không nhận lệnh ném mới sau khi thả Q/E, chờ animation ném của lần trước.")]
+    [SerializeField] private float _grenadeThrowLock = 1.2f;
     // _currentSpeed/_acceleration: tinh va dung ngay trong tick -> bien local (xem FixedUpdateNetwork)
     [Networked] private bool _isRespawnRequested { get; set; } = false;
     private CharacterState _stateLogic;
@@ -360,7 +374,13 @@ public class NCharMovementHandler : NetworkBehaviour
             return;
         }
 
-        switch (_playerMotionController.ActiveWeaponMode())
+        var weaponMode = _playerMotionController.ActiveWeaponMode();
+
+        // Đổi sang súng giữa combo dao → MeleeComboHandler không chạy nữa, phải tự reset.
+        if (weaponMode != GunRecoilController.FiringMode.Melee && (ShootIndex != 0 || _meleeQueued != 0))
+            ResetMeleeComboState();
+
+        switch (weaponMode)
         {
             case GunRecoilController.FiringMode.Semi:
             case GunRecoilController.FiringMode.Burst:
@@ -407,70 +427,84 @@ public class NCharMovementHandler : NetworkBehaviour
         var ctrl = _playerMotionController.ActiveWeponCTRL();
         var canShoot = false;
         if (ctrl != null)
-            canShoot = ctrl.OnFire(_rightPuchDelay, StateFl.IsCrouch);
+            canShoot = ctrl.WeaponType == WeaponType.Melee && !_rightPuchDelay
+                ? ctrl.MeleeSwing()   // chém trái: đã gate bằng state networked trong MeleeComboHandler
+                : ctrl.OnFire(_rightPuchDelay, StateFl.IsCrouch);
         StateFl = state;
         _rightPuchDelay = false;
         return canShoot;
     }
 
     /// <summary>
-    /// Xử lý combo melee 3 đòn.
-    /// ShootIndex: 0 = idle, 1 = đòn 1, 2 = đòn 2, 3 = đòn 3 → reset về 0.
-    /// Nếu trong 0.5s không nhấn tiếp → reset về 0.
+    /// Xử lý combo melee 3 đòn. ShootIndex: 0 = idle, 1..3 = đòn đang/sắp chạy.
+    ///
+    /// Animator chuyển đòn KHÔNG dùng trigger mà đọc ShootIndex ở cuối mỗi đòn
+    /// (SHOOT → "___" → SHOOT_2 nếu ShootIndex == 2, ngược lại về NULL). Vì vậy:
+    ///  • ShootIndex phải lên N+1 TRONG LÚC đòn N đang chạy (không thì combo bị cắt),
+    ///  • nhưng KHÔNG được vượt quá N+1 trước khi đòn N+1 bắt đầu ("___" chỉ nhận == hoặc &lt;, sẽ kẹt).
+    /// → Click được xếp hàng (_meleeQueued), mỗi lần chỉ tăng 1 bậc khi đòn hiện tại đã bắt đầu.
+    /// Thời điểm bắt đầu/kết thúc mỗi đòn tính theo độ dài clip (_meleeSwingLengths) bằng TickTimer
+    /// networked → host và client predict ra cùng ShootIndex.
     /// </summary>
     private void MeleeComboHandler(NInputData input)
     {
         if (RightPuch)
             return;
-        
+
         IsFiring = false;
 
-        // Đang trong cooldown → chưa nhận click
-        if (!_meleeCooldownTimer.ExpiredOrNotRunning(Runner))
-            return;
-
-        // Hết cửa sổ combo mà không click → reset
-        if (ShootIndex > 0 && _meleeComboTimer.Expired(Runner))
+        // Combo đã chạy xong (đòn cuối hết + grace) và không còn click chờ → về idle.
+        if (ShootIndex > 0 && _meleeQueued == 0 && _meleeComboTimer.Expired(Runner))
         {
             ShootIndex = 0;
             _meleeComboTimer = default;
             _meleeCooldownTimer = default;
-            ResetMeleeCombo();
+            _meleeSwingEndTimer = default;
         }
 
-        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack))
+        // Xếp hàng click (tối đa đủ 3 đòn tính cả đòn đang chạy).
+        if (input.Buttons.WasPressed(_previousButtons, InputButtons.Attack)
+            && ShootIndex + _meleeQueued < MELEE_MAX_COMBO)
         {
-            if (ShootIndex > 3)
-                return;
-            
-            if (!_canNextAttackCombo)
-                return;
-            
+            _meleeQueued++;
+        }
+
+        // Tiến lên đòn tiếp theo khi đòn hiện tại đã thực sự bắt đầu.
+        if (_meleeQueued > 0 && _meleeCooldownTimer.ExpiredOrNotRunning(Runner))
+        {
+            _meleeQueued--;
+
+            // Đòn 1 bắt đầu ngay (trigger IsShooting qua FireCount); đòn sau bắt đầu khi đòn trước hết clip.
+            float startDelay = 0f;
+            if (ShootIndex > 0)
+                startDelay = _meleeSwingEndTimer.RemainingTime(Runner) ?? 0f;
+            else
+                IsFiring = true;
+
             ShootIndex++;
-            _canNextAttackCombo = false;
-            
-            IsFiring = true;
+
+            float swingLength = MeleeSwingLength(ShootIndex);
+            _meleeSwingEndTimer = TickTimer.CreateFromSeconds(Runner, startDelay + swingLength);
+            _meleeComboTimer    = TickTimer.CreateFromSeconds(Runner, startDelay + swingLength + _meleeComboResetGrace);
+            // Chỉ cho lên bậc tiếp sau khi đòn này đã vào state trong Animator.
+            _meleeCooldownTimer = TickTimer.CreateFromSeconds(Runner, startDelay + _meleeAdvanceDelay);
         }
     }
 
-    public void ResetMeleeCombo()
+    private void ResetMeleeComboState()
     {
-        _canNextAttackCombo = true;
+        ShootIndex = 0;
+        _meleeQueued = 0;
+        _meleeCooldownTimer = default;
+        _meleeComboTimer = default;
+        _meleeSwingEndTimer = default;
     }
 
-    public void StartCoolDownCombat()
+    private float MeleeSwingLength(int index)
     {
-        if (!Object.HasStateAuthority) return;
-        
-        //Debug.Log("StartCoolDownCombat");
-        _canNextAttackCombo = true;
-        _meleeComboTimer = default;
-        _meleeCooldownTimer = default;
-        // Bắt đầu cooldown → chặn input trong 0.5s
-        _meleeCooldownTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN);
-
-        // Bắt đầu cửa sổ chờ click tiếp theo 0.5s (tính từ khi hết cooldown)
-        _meleeComboTimer = TickTimer.CreateFromSeconds(Runner, MELEE_COOLDOWN + MELEE_COMBO_WINDOW);
+        int i = index - 1;
+        if (_meleeSwingLengths == null || i < 0 || i >= _meleeSwingLengths.Length) return 0.5f;
+        return _meleeSwingLengths[i];
     }
     
     private void ADSHandler(NInputData input, ref PlayerStateFlags state)
@@ -496,27 +530,32 @@ public class NCharMovementHandler : NetworkBehaviour
                 _rightPuchDelay = true;
                 IsFiring = true;
                 _stateLogic.EnterADS(ref state, _constraintManager);
+                ADSLookSpeedMultiplier = 1f; // đấm phải bằng dao: không giảm tốc xoay
             }
         }
         else
         {
-            if (state.IsSwitching || state.IsThrow || state.IsSlide)
-                return;
+            bool held = input.Buttons.IsSet(InputButtons.ADS);
 
-            if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS))
+            // Đang trượt / đổi súng / ném: chưa ngắm được. Trước đây bỏ qua luôn lần bấm → giữ chuột phải
+            // suốt lúc trượt thì trượt xong vẫn không ngắm. Giờ ghi nhớ (networked) "đang giữ ngắm" và
+            // bật ngắm ngay khi hết trạng thái chặn. Không áp cho nạp đạn: EnterADS huỷ reload.
+            if (state.IsSwitching || state.IsThrow || state.IsSlide)
+            {
+                _adsQueued = held;
+                if (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
+                    _stateLogic.ExitADS(ref state);
+                return;
+            }
+
+            bool queuedHeld = _adsQueued && held;
+            _adsQueued = false;
+
+            if (input.Buttons.WasPressed(_previousButtons, InputButtons.ADS) || (queuedHeld && !state.IsADS))
             {
                 _stateLogic.EnterADS(ref state, _constraintManager);
-                if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper )
-                {
-                    // Sniper ADS → giảm tốc độ xoay camera
-                    ADSLookSpeedMultiplier = _sniperAds;
-                }
-                else if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle || 
-                         _weaponManager.Weapon_Active().WeaponType == WeaponType.Shotgun)
-                {
-                    // Rifle ADS → giảm tốc độ xoay camera
-                    ADSLookSpeedMultiplier = _rifleAds;
-                }
+                // Luôn gán theo vũ khí HIỆN TẠI (trước đây loại khác giữ nguyên hệ số cũ của lần ngắm trước).
+                ADSLookSpeedMultiplier = AdsMultiplierFor(_weaponManager.Weapon_Active()?.WeaponType);
             }
 
             if (input.Buttons.WasReleased(_previousButtons, InputButtons.ADS))
@@ -529,7 +568,8 @@ public class NCharMovementHandler : NetworkBehaviour
         if (!Object.HasStateAuthority) return;
         RightPuch = false;
         ShootIndex = 0;
-        _canNextAttackCombo = true;
+        _meleeQueued = 0;
+        _meleeSwingEndTimer = default;
         _meleeComboTimer = default;
         _meleeCooldownTimer = default;
     }
@@ -554,10 +594,20 @@ public class NCharMovementHandler : NetworkBehaviour
     }
 
     /// <summary>Luu he so ADS (moi may) va CameraSpeed (chi host). Goi tu Rpc_SetLookSettings / NPlayer.Rpc_InitPlayer.</summary>
+    // Hệ số tối thiểu: slider setting kéo về 0 thì ngắm sẽ không xoay được → kẹp lại.
+    private const float MIN_ADS_MULTIPLIER = 0.05f;
+
+    private float AdsMultiplierFor(WeaponType? type)
+    {
+        if (type == WeaponType.Sniper) return _sniperAds;
+        if (type == WeaponType.Rifle || type == WeaponType.Shotgun) return _rifleAds;
+        return 1f;
+    }
+
     public void ApplyLookSettings(float camSpeed, float sniperAds, float rifleAds)
     {
-        _sniperAds = sniperAds;
-        _rifleAds  = rifleAds;
+        _sniperAds = Mathf.Max(MIN_ADS_MULTIPLIER, sniperAds);
+        _rifleAds  = Mathf.Max(MIN_ADS_MULTIPLIER, rifleAds);
         if (Object != null && Object.IsValid && Object.HasStateAuthority)
             CameraSpeed = camSpeed; // [Networked] field
     }
@@ -643,6 +693,9 @@ public class NCharMovementHandler : NetworkBehaviour
 
         if ((QKey_Pressed || EKey_Pressed) && !state.IsThrow)
         {
+            // Lần ném trước chưa xong (animation chưa tới event ném) → bỏ qua lệnh mới.
+            if (!_grenadeLockTimer.ExpiredOrNotRunning(Runner)) return;
+
             if (QKey_Pressed && !Grenade_Q)
             {
                 GrenadeID = GetIDGrenade(true);
@@ -671,20 +724,28 @@ public class NCharMovementHandler : NetworkBehaviour
 
             if (shouldStop)
             {
-                if (QKey)
-                {
-                    QKey = false;
-                    Grenade_Q = true;
-                }
-                if (EKey)
-                {
-                    EKey = false;
-                    Grenade_E = true;
-                }
+                // KHÔNG đánh dấu Grenade_Q/E đã dùng ở đây: nếu animation ném không chạy được
+                // (đang di chuyển, Spine layer chưa về NULL...) thì lựu đạn bị mất oan.
+                // Việc đánh dấu chuyển sang OnGrenadeThrown(), gọi khi ThrowGrenade() thực sự spawn lựu đạn.
+                QKey = false;
+                EKey = false;
                 GrenadeID = 0;
                 _stateLogic.StopThrow(ref state);
+                _grenadeLockTimer = TickTimer.CreateFromSeconds(Runner, _grenadeThrowLock);
             }
         }
+    }
+
+    /// <summary>
+    /// Host: gọi từ NShootHandler.ThrowGrenade() sau khi lựu đạn đã được spawn.
+    /// slot: 1 = Q, 2 = E (giống SetGrenadeQ_E).
+    /// </summary>
+    public void OnGrenadeThrown(byte slot)
+    {
+        if (!Object.HasStateAuthority) return;
+        if (slot == 1) Grenade_Q = true;
+        else if (slot == 2) Grenade_E = true;
+        _grenadeLockTimer = TickTimer.None; // ném xong → nhận lệnh ném tiếp ngay
     }
 
     private int GetIDGrenade(bool Q)
@@ -781,6 +842,9 @@ public class NCharMovementHandler : NetworkBehaviour
         Grenade_Q = false;
         QKey = false;
         EKey = false;
+        GrenadeID = 0;
+        _grenadeLockTimer = TickTimer.None;
+        ResetMeleeComboState();
     }
 #endregion
 }

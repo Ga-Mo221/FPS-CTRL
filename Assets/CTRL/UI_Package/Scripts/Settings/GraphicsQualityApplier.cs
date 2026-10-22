@@ -24,7 +24,7 @@ public static class GraphicsQualityApplier
     private static readonly float[] LodBias = { 0.7f, 1f, 1.5f, 2f };
     private static readonly AnisotropicFiltering[] Aniso = { AnisotropicFiltering.Disable, AnisotropicFiltering.Enable, AnisotropicFiltering.ForceEnable, AnisotropicFiltering.ForceEnable };
     private static readonly bool[] Ssao = { false, false, true, true };
-    private static readonly bool[] VolumetricFog = { false, true, true, true };
+    private static readonly bool[] VolumetricFog = { false, false, true, true }; // Thap + Vua: tat suong mu the tich
 
     private static UniversalRenderPipelineAsset _base, _runtime;
     private static readonly Dictionary<ScriptableRendererFeature, bool> _featureDefaults = new Dictionary<ScriptableRendererFeature, bool>();
@@ -79,20 +79,31 @@ public static class GraphicsQualityApplier
         foreach (var c in Camera.allCameras) if (c != null && c.targetTexture == null) ApplyCamera(c);
     }
 
-    /// <summary>Hieu ung hau ky "nang" tat o bac thap (giu nguyen lua chon Bloom/Vignette/Motion Blur cua nguoi choi).</summary>
-    public static void ApplyVolumeTier(VolumeProfile profile, Dictionary<VolumeComponent, bool> defaults)
+    /// <summary>Hieu ung hau ky "nang" tat o bac thap (giu nguyen lua chon Bloom/Vignette/Motion Blur cua nguoi choi).
+    /// Trang thai mac dinh doc tu sharedProfile (asset goc, khong bi sua luc runtime) -> bac CAO/TOI DA luon bat lai dung,
+    /// ke ca khi ban sao profile da bi tat truoc do. TOI DA luon bat Depth of Field.</summary>
+    public static void ApplyVolumeTier(Volume volume)
     {
-        if (profile == null) return;
-        foreach (var c in profile.components)
+        if (volume == null || volume.profile == null) return;
+        var shared = volume.sharedProfile;
+        foreach (var c in volume.profile.components)
         {
             if (c == null) continue;
-            if (!defaults.ContainsKey(c)) defaults[c] = c.active;
             bool heavy = c is DepthOfField || c is ChromaticAberration || c is FilmGrain || c is LensDistortion || c is ScreenSpaceLensFlare;
             bool medium = c is DepthOfField || c is FilmGrain || c is ScreenSpaceLensFlare;
-            if (_tier == 0 && heavy) c.active = false;
+            if (!heavy) continue;
+            if (_tier == 0) c.active = false;
             else if (_tier == 1 && medium) c.active = false;
-            else if (heavy) c.active = defaults[c];
+            else c.active = (_tier == 3 && c is DepthOfField) || DefaultActive(shared, c);
         }
+    }
+
+    private static bool DefaultActive(VolumeProfile shared, VolumeComponent c)
+    {
+        if (shared != null)
+            foreach (var s in shared.components)
+                if (s != null && s.GetType() == c.GetType()) return s.active;
+        return true;
     }
 
     // ---------------------------------------------------------------

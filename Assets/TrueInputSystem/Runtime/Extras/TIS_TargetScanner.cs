@@ -68,7 +68,10 @@ namespace GaMo.TrueInputSystem
         // Thêm vào vùng INSPECTOR fields
         [Header("Debug Overlay")]
         [Tooltip("Hiển thị thông tin target trên Game View (chỉ hoạt động trong Editor).")]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] private bool _showDebugOverlay = false;
+#pragma warning restore CS0414
 
         [Tooltip("Vị trí hiển thị overlay trên màn hình.")]
         [SerializeField] private Vector2 _overlayPosition = new Vector2(10f, 10f);

@@ -18,7 +18,10 @@ namespace GaMo.TrueInputSystem.Tutorials
     public class TISTutForceMobile : MonoBehaviour
     {
         [Tooltip("Bật: chế độ mobile chạy cả trong Game view.\nTắt: theo mặc định của TIS — chỉ khi chạy trong Device Simulator.")]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] bool _forceInGameView = true;
+#pragma warning restore CS0414
 
 #if UNITY_EDITOR
         Func<bool> _original;

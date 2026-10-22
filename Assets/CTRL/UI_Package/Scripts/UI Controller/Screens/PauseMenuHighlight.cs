@@ -36,6 +36,7 @@ namespace Game.UI
         private int _hover = -1;
         // [Aemy 2026-10-09] Muc dang duoc chon bang tay cam (EventSystem selection). -1 = khong co.
         private int _selected = -1;
+        private GaMo.TrueInputSystem.TISUINavigationContext _navContext;
 
         private void Awake()
         {
@@ -70,6 +71,19 @@ namespace Game.UI
             if (sel != null)
                 for (int i = 0; i < _entries.Length; i++)
                     if (_entries[i] != null && _entries[i].hoverArea == sel) { idx = i; break; }
+
+            // Focus đang nằm trong panel Cài đặt (không phải dòng menu) → sáng theo tab đang active (LT/RT).
+            if (idx < 0)
+            {
+                if (_navContext == null) _navContext = GetComponentInParent<GaMo.TrueInputSystem.TISUINavigationContext>();
+                var activeTab = _navContext != null
+                    ? _navContext.GetActiveInLayer(GaMo.TrueInputSystem.TISGamepadUIButton.NavigationLayer.Tab)
+                    : null;
+                if (activeTab != null)
+                    for (int i = 0; i < _entries.Length; i++)
+                        if (_entries[i] != null && _entries[i].hoverArea == activeTab.gameObject) { idx = i; break; }
+            }
+
             if (idx != _selected) { _selected = idx; Apply(); }
         }
 

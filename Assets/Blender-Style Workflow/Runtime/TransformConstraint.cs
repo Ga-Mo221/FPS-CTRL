@@ -4,8 +4,7 @@ using UnityEngine;
 
 namespace GaMo.BlenderEditorTools
 {
-    [AddComponentMenu("Copy Transform")]
-    public class TransformConstraint : MonoBehaviour
+    public class TransformConstraint : ConstraintBehaviour
     {
         public enum SpaceMode
         {
@@ -70,7 +69,7 @@ namespace GaMo.BlenderEditorTools
         private bool _restPoseCaptured = false;
 
         [Tooltip("✔ TRUE: Bật tính năng bắt chước Vị trí (Position) từ Target.\n❌ FALSE: Bỏ qua không xử lý vị trí.")]
-        public bool enablePositionConstraint = true;
+        public bool enablePositionConstraint = false;
 
         [Tooltip(
             "Không gian tính toán tọa độ:\n• World: Bám theo vị trí tuyệt đối trong thế giới game.\n• Local: Tính toán dựa trên khoảng cách tương đối với cha (Phù hợp làm chuỗi xương nhân vật, tránh lỗi giật khớp khi nhân vật di chuyển).")]
@@ -105,7 +104,7 @@ namespace GaMo.BlenderEditorTools
 
         [Tooltip(
             "✔ TRUE: Bật tính năng bắt chước Góc xoay (Rotation) từ Target.\n❌ FALSE: Bỏ qua không xử lý góc xoay.")]
-        public bool enableRotationConstraint = true;
+        public bool enableRotationConstraint = false;
 
         [Tooltip(
             "Không gian tính toán góc xoay:\n• World: Xoay hướng tuyệt đối theo thế giới game.\n• Local: Chỉ tính toán góc xoay tương đối so với vật thể cha.")]
@@ -144,11 +143,18 @@ namespace GaMo.BlenderEditorTools
 
         private Coroutine switchCoroutine;
 
+        // Coroutine fade weight riêng cho từng Target (SetTargetWeight có duration), key = id
+        private readonly Dictionary<string, Coroutine> _weightRoutines = new Dictionary<string, Coroutine>();
+
+        // Coroutine fade Influence (SetPositionInfluence / SetRotationInfluence có duration)
+        private Coroutine _positionInfluenceRoutine;
+        private Coroutine _rotationInfluenceRoutine;
+
         // Cache để tránh alloc mỗi lần gọi SwitchTarget
         private float[] _cachedStartWeights = new float[0];
 
         // ── Frame Snapshot ────────────────────────────────────────────────────────────
-        // Snapshot được chụp MỘT LẦN ở đầu LateUpdate, trước khi bất kỳ hàm Compute nào chạy.
+        // Snapshot được chụp MỘT LẦN ở đầu Evaluate(), trước khi bất kỳ hàm Compute nào chạy.
         // Mục đích:
         //   • Loại bỏ feedback loop Position → Rotation: UpdatePosition không đọc lại
         //     rotation hiện tại của constraintObject (có thể đã bị Animator/IK thay đổi),
@@ -166,11 +172,31 @@ namespace GaMo.BlenderEditorTools
         
         private bool _restPoseReady = false;
 
-        void OnEnable()
+        // ── Chống drift khi hasExternalPoseDriver = true nhưng driver KHÔNG ghi lại transform ──
+        // Animator có thể bỏ qua một số bone (vd. curve hằng mà Unity tối ưu bỏ đi, bone không có curve,
+        // Animator bị cull/disable). Khi đó transform vẫn giữ nguyên OUTPUT constraint frame trước, và nếu
+        // đọc nó làm baseline thì Delta bị cộng dồn mỗi frame (bone quay tròn).
+        // Cách phát hiện: lưu giá trị ĐỌC LẠI ngay sau khi ghi (Unity chuẩn hoá quaternion khi set, nên
+        // phải so với giá trị đọc lại chứ không phải giá trị đã gán). Frame sau nếu transform trùng khít
+        // từng bit → không ai ghi đè → dùng lại baseline của frame trước.
+        private bool _hasLastOutput;
+        private bool _driverSkippedThisFrame;
+        private Vector3 _lastOutLocalPos;
+        private Quaternion _lastOutLocalRot;
+        private Vector3 _lastBaseLocalPos;
+        private Quaternion _lastBaseLocalRot;
+
+        protected override void OnEnable()
         {
+            base.OnEnable(); // đăng ký với ConstraintScheduler
             CaptureInitialStates();
-            
+
+            _hasLastOutput = false;
             _restPoseReady = false;
+
+            _weightRoutines.Clear();
+            _positionInfluenceRoutine = null;
+            _rotationInfluenceRoutine = null;
             
             if (!hasExternalPoseDriver)
                 StartCoroutine(CaptureRestPoseNextFrame());
@@ -208,34 +234,67 @@ namespace GaMo.BlenderEditorTools
         /// </summary>
         private Vector3 GetBaselineWorldPos()
         {
-            if (hasExternalPoseDriver) return constraintObject.position;
-            if (!_restPoseCaptured) CaptureRestPose();
+            if (hasExternalPoseDriver && !_driverSkippedThisFrame) return constraintObject.position;
 
+            Vector3 localPos = GetBaselineLocalPos();
             Transform parent = constraintObject.parent;
-            return parent != null ? parent.TransformPoint(_restLocalPos) : _restLocalPos;
+            return parent != null ? parent.TransformPoint(localPos) : localPos;
         }
 
         private Vector3 GetBaselineLocalPos()
         {
-            if (hasExternalPoseDriver) return constraintObject.localPosition;
+            if (hasExternalPoseDriver)
+                return _driverSkippedThisFrame ? _lastBaseLocalPos : constraintObject.localPosition;
             if (!_restPoseCaptured) CaptureRestPose();
             return _restLocalPos;
         }
 
         private Quaternion GetBaselineWorldRot()
         {
-            if (hasExternalPoseDriver) return constraintObject.rotation;
-            if (!_restPoseCaptured) CaptureRestPose();
+            if (hasExternalPoseDriver && !_driverSkippedThisFrame) return constraintObject.rotation;
 
+            Quaternion localRot = GetBaselineLocalRot();
             Transform parent = constraintObject.parent;
-            return parent != null ? parent.rotation * _restLocalRot : _restLocalRot;
+            return parent != null ? parent.rotation * localRot : localRot;
         }
 
         private Quaternion GetBaselineLocalRot()
         {
-            if (hasExternalPoseDriver) return constraintObject.localRotation;
+            if (hasExternalPoseDriver)
+                return _driverSkippedThisFrame ? _lastBaseLocalRot : constraintObject.localRotation;
             if (!_restPoseCaptured) CaptureRestPose();
             return _restLocalRot;
+        }
+
+        private static bool BitEqual(Quaternion a, Quaternion b)
+        {
+            return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+        }
+
+        private static bool BitEqual(Vector3 a, Vector3 b)
+        {
+            return a.x == b.x && a.y == b.y && a.z == b.z;
+        }
+
+        /// <summary>
+        /// true nếu transform vẫn giữ nguyên output constraint frame trước ở mọi kênh mà constraint ghi
+        /// → driver (Animator) đã KHÔNG ghi đè frame này.
+        /// </summary>
+        private bool DetectDriverSkipped()
+        {
+            if (!hasExternalPoseDriver || !_hasLastOutput) return false;
+            if (enablePositionConstraint && !BitEqual(constraintObject.localPosition, _lastOutLocalPos)) return false;
+            if (enableRotationConstraint && !BitEqual(constraintObject.localRotation, _lastOutLocalRot)) return false;
+            return enablePositionConstraint || enableRotationConstraint;
+        }
+
+        private void RecordOutput(Vector3 baseLocalPos, Quaternion baseLocalRot)
+        {
+            _lastBaseLocalPos = baseLocalPos;
+            _lastBaseLocalRot = baseLocalRot;
+            _lastOutLocalPos = constraintObject.localPosition;
+            _lastOutLocalRot = constraintObject.localRotation;
+            _hasLastOutput = true;
         }
 
         /// <summary>
@@ -326,6 +385,7 @@ namespace GaMo.BlenderEditorTools
             };
 
             targets.Add(newTarget);
+            ConstraintScheduler.MarkDirty();
             return true;
         }
 
@@ -340,7 +400,9 @@ namespace GaMo.BlenderEditorTools
             {
                 if (targets[i].id == id)
                 {
+                    CancelWeightRoutine(id);
                     targets.RemoveAt(i);
+                    ConstraintScheduler.MarkDirty();
                     return true;
                 }
             }
@@ -363,6 +425,7 @@ namespace GaMo.BlenderEditorTools
             {
                 if (targets[i].id == id)
                 {
+                    CancelWeightRoutine(id);
                     targets[i].weight = Mathf.Clamp01(weight);
                     return true;
                 }
@@ -373,19 +436,182 @@ namespace GaMo.BlenderEditorTools
         }
 
         /// <summary>
+        /// Đổi Weight của một Target MƯỢT MÀ (lerp) từ giá trị hiện tại tới <paramref name="weight"/> trong
+        /// <paramref name="duration"/> giây. Chỉ ảnh hưởng Target có id này (khác SwitchTarget: không đụng
+        /// các Target khác). Gọi lại cùng id sẽ thay thế lần fade đang chạy. duration &lt;= 0 (hoặc đang ở
+        /// Edit Mode / component bị tắt) → set ngay lập tức.
+        /// Lưu ý: SwitchTarget đang chạy sẽ bị huỷ khi gọi hàm này.
+        /// </summary>
+        /// <returns>false nếu không tìm thấy Target có id này.</returns>
+        public bool SetTargetWeight(string id, float weight, float duration)
+        {
+            int count = targets.Count;
+            for (int i = 0; i < count; i++)
+            {
+                TargetData data = targets[i];
+                if (data.id != id) continue;
+
+                float goal = Mathf.Clamp01(weight);
+                CancelWeightRoutine(id);
+
+                if (duration <= 0f || !Application.isPlaying || !isActiveAndEnabled)
+                {
+                    data.weight = goal;
+                    return true;
+                }
+
+                // Tránh SwitchTarget đang chạy ghi đè weight song song
+                if (switchCoroutine != null)
+                {
+                    StopCoroutine(switchCoroutine);
+                    switchCoroutine = null;
+                }
+
+                _weightRoutines[id] = StartCoroutine(SetWeightRoutine(data, id, goal, duration));
+                return true;
+            }
+
+            Debug.LogWarning($"Không tìm thấy Target nào có ID '{id}' để set weight!");
+            return false;
+        }
+
+        private IEnumerator SetWeightRoutine(TargetData data, string id, float goal, float duration)
+        {
+            float startWeight = data.weight;
+            float invDuration = 1f / duration;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                data.weight = Mathf.Lerp(startWeight, goal, Mathf.Min(elapsed * invDuration, 1f));
+                yield return null;
+            }
+
+            data.weight = goal; // giá trị chính xác cuối cùng
+            _weightRoutines.Remove(id);
+        }
+
+        private void CancelWeightRoutine(string id)
+        {
+            if (_weightRoutines.TryGetValue(id, out Coroutine routine))
+            {
+                if (routine != null) StopCoroutine(routine);
+                _weightRoutines.Remove(id);
+            }
+        }
+
+        private void CancelAllWeightRoutines()
+        {
+            foreach (var kv in _weightRoutines)
+                if (kv.Value != null) StopCoroutine(kv.Value);
+            _weightRoutines.Clear();
+        }
+
+        /// <summary>
         /// Thay đổi nhanh giá trị Position Influence của tổng thể Constraint
+        /// (huỷ fade Position Influence đang chạy nếu có)
         /// </summary>
         public void SetPositionInfluence(float influence)
         {
+            CancelPositionInfluenceRoutine();
             positionInfluence = Mathf.Clamp01(influence);
         }
 
         /// <summary>
+        /// Đổi Position Influence MƯỢT MÀ (lerp) từ giá trị hiện tại tới <paramref name="influence"/> trong
+        /// <paramref name="duration"/> giây. Gọi lại sẽ thay thế lần fade đang chạy.
+        /// duration &lt;= 0 (hoặc đang ở Edit Mode / component bị tắt) → set ngay lập tức.
+        /// </summary>
+        public void SetPositionInfluence(float influence, float duration)
+        {
+            CancelPositionInfluenceRoutine();
+            float goal = Mathf.Clamp01(influence);
+
+            if (duration <= 0f || !Application.isPlaying || !isActiveAndEnabled)
+            {
+                positionInfluence = goal;
+                return;
+            }
+
+            _positionInfluenceRoutine = StartCoroutine(SetPositionInfluenceRoutine(goal, duration));
+        }
+
+        private IEnumerator SetPositionInfluenceRoutine(float goal, float duration)
+        {
+            float startValue = positionInfluence;
+            float invDuration = 1f / duration;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                positionInfluence = Mathf.Lerp(startValue, goal, Mathf.Min(elapsed * invDuration, 1f));
+                yield return null;
+            }
+
+            positionInfluence = goal;
+            _positionInfluenceRoutine = null;
+        }
+
+        private void CancelPositionInfluenceRoutine()
+        {
+            if (_positionInfluenceRoutine == null) return;
+            StopCoroutine(_positionInfluenceRoutine);
+            _positionInfluenceRoutine = null;
+        }
+
+        /// <summary>
         /// Thay đổi nhanh giá trị Rotation Influence của tổng thể Constraint
+        /// (huỷ fade Rotation Influence đang chạy nếu có)
         /// </summary>
         public void SetRotationInfluence(float influence)
         {
+            CancelRotationInfluenceRoutine();
             rotationInfluence = Mathf.Clamp01(influence);
+        }
+
+        /// <summary>
+        /// Đổi Rotation Influence MƯỢT MÀ (lerp) từ giá trị hiện tại tới <paramref name="influence"/> trong
+        /// <paramref name="duration"/> giây. Gọi lại sẽ thay thế lần fade đang chạy.
+        /// duration &lt;= 0 (hoặc đang ở Edit Mode / component bị tắt) → set ngay lập tức.
+        /// </summary>
+        public void SetRotationInfluence(float influence, float duration)
+        {
+            CancelRotationInfluenceRoutine();
+            float goal = Mathf.Clamp01(influence);
+
+            if (duration <= 0f || !Application.isPlaying || !isActiveAndEnabled)
+            {
+                rotationInfluence = goal;
+                return;
+            }
+
+            _rotationInfluenceRoutine = StartCoroutine(SetRotationInfluenceRoutine(goal, duration));
+        }
+
+        private IEnumerator SetRotationInfluenceRoutine(float goal, float duration)
+        {
+            float startValue = rotationInfluence;
+            float invDuration = 1f / duration;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                rotationInfluence = Mathf.Lerp(startValue, goal, Mathf.Min(elapsed * invDuration, 1f));
+                yield return null;
+            }
+
+            rotationInfluence = goal;
+            _rotationInfluenceRoutine = null;
+        }
+
+        private void CancelRotationInfluenceRoutine()
+        {
+            if (_rotationInfluenceRoutine == null) return;
+            StopCoroutine(_rotationInfluenceRoutine);
+            _rotationInfluenceRoutine = null;
         }
 
         /// <summary>
@@ -399,6 +625,7 @@ namespace GaMo.BlenderEditorTools
         /// <param name="duration">Thời gian chuyển đổi (tính bằng giây)</param>
         public void SwitchTarget(string targetId, float duration)
         {
+            CancelAllWeightRoutines(); // tránh fade weight riêng lẻ ghi đè song song
             if (switchCoroutine != null) StopCoroutine(switchCoroutine);
             switchCoroutine = StartCoroutine(SwitchTargetRoutine(targetId, duration));
         }
@@ -471,8 +698,41 @@ namespace GaMo.BlenderEditorTools
                 targets[i].weight = (targets[i].id == targetId) ? 1f : 0f;
         }
 
-        void LateUpdate()
+        // ══════════════════════════════ SCHEDULER ══════════════════════════════
+        // Không còn LateUpdate() riêng: ConstraintScheduler gọi Solve() theo thứ tự phụ thuộc
+        // (constraint ghi Transform mà target của ta nằm dưới → chạy trước ta). ExternallyDriven
+        // (khai báo ở ConstraintBehaviour) vẫn giữ để script ngoài tự gọi Evaluate() như cũ.
+
+        public override int DefaultTypeOrder => TypeOrderTransform;
+
+        public override void Solve() => Evaluate();
+
+        public override void CollectDependencies(List<Transform> inputs, List<Transform> outputs)
         {
+            if (constraintObject == null) return;
+            outputs.Add(constraintObject);
+            // Baseline/World space đọc world pose của cha constraintObject
+            inputs.Add(constraintObject.parent);
+            if (ReadsTargetsLocalOnly) return; // target khai báo ở CollectLocalDependencies
+            for (int i = 0; i < targets.Count; i++)
+                if (targets[i] != null) inputs.Add(targets[i].target);
+        }
+
+        // Chỉ copy rotation ở Local space → chỉ đọc target.localRotation (ComputeLocal*Rotation),
+        // world pose của cha target không ảnh hưởng. Position Local vẫn đọc world position nên không tính.
+        private bool ReadsTargetsLocalOnly => !enablePositionConstraint && rotationSpace == SpaceMode.Local;
+
+        public override void CollectLocalDependencies(List<Transform> localInputs)
+        {
+            if (constraintObject == null || !ReadsTargetsLocalOnly) return;
+            for (int i = 0; i < targets.Count; i++)
+                if (targets[i] != null) localInputs.Add(targets[i].target);
+        }
+
+        /// <summary>Tính và áp constraint cho frame hiện tại (scheduler gọi qua <see cref="Solve"/>).</summary>
+        public void Evaluate()
+        {
+            if (!isActiveAndEnabled) return;
             if (!_restPoseReady) return;
             int count = targets.Count;
             if (constraintObject == null || count == 0) return;
@@ -484,12 +744,17 @@ namespace GaMo.BlenderEditorTools
                 if (t.target != null) totalWeight += t.weight;
             }
 
+            _driverSkippedThisFrame = DetectDriverSkipped();
+
             if (totalWeight <= 0f)
             {
+                Vector3 baseLocalPos = GetBaselineLocalPos();
+                Quaternion baseLocalRot = GetBaselineLocalRot();
                 if (enablePositionConstraint)
-                    constraintObject.localPosition = GetBaselineLocalPos();
+                    constraintObject.localPosition = baseLocalPos;
                 if (enableRotationConstraint)
-                    constraintObject.localRotation = GetBaselineLocalRot();
+                    constraintObject.localRotation = baseLocalRot;
+                RecordOutput(baseLocalPos, baseLocalRot);
                 return;
             }
 
@@ -537,6 +802,8 @@ namespace GaMo.BlenderEditorTools
             {
                 UpdateRotation(invTotalWeight, blendRotInfluence);
             }
+
+            RecordOutput(_snapBaseLocalPos, _snapBaseLocalRot);
         }
 
         private void UpdatePosition(float invTotalWeight, float finalInfluence)

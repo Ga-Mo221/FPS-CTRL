@@ -222,10 +222,13 @@ public class WeaponController : NetworkBehaviour
     {
         AttachToOwner();
 
+        // Chỉ TẮT (không Destroy): sau host migration súng được spawn lại khi chưa có InputAuthority,
+        // IA được gán lại sau (xem SyncInputAuthorityWithOwner) → Destroy sẽ mất camera scope vĩnh viễn.
+        // SniperADS() sẽ bật lại khi local player ngắm.
         if (_type == WeaponType.Sniper && !Object.HasInputAuthority)
         {
             if (_zoomCamera != null)
-                Destroy(_zoomCamera.gameObject);
+                _zoomCamera.gameObject.SetActive(false);
         }
         
         switch (_type)
@@ -282,8 +285,29 @@ public class WeaponController : NetworkBehaviour
         transform.localRotation = Quaternion.identity;
     }
 
+    public override void FixedUpdateNetwork()
+    {
+        SyncInputAuthorityWithOwner();
+    }
+
+    /// <summary>
+    /// Host: giữ InputAuthority của súng trùng với nhân vật sở hữu.
+    /// Sau host migration súng được runner.Spawn lại với IA = None, còn IA của NPlayer chỉ được
+    /// gán lại khi client đăng ký token → không có chỗ nào gán IA cho súng, khiến Update()/ADS
+    /// (gate bằng HasInputAuthority) không chạy: sniper không tắt glass, không gọi VolumeController.
+    /// </summary>
+    private void SyncInputAuthorityWithOwner()
+    {
+        if (!Object.HasStateAuthority) return;
+        if (OwnerCharacter == null || !OwnerCharacter.IsValid) return;
+
+        PlayerRef ownerIA = OwnerCharacter.InputAuthority;
+        if (Object.InputAuthority != ownerIA)
+            Object.AssignInputAuthority(ownerIA);
+    }
+
     public void Respawn()
-    { 
+    {
         _ads = false;
         _lastAdsState = true;
         
@@ -327,6 +351,8 @@ public class WeaponController : NetworkBehaviour
         _gun_Recoil_CTRL.OnShotFired -= HandleShot;
         if (_parrentBullet != null)
             Destroy(_parrentBullet.gameObject);
+        if (_sniperVolumeOn && GameManager.Instance != null && GameManager.Instance.VolumeController != null)
+            GameManager.Instance.VolumeController.TriggerADS(false, 0.1f);
     }
 
     public bool CanSwitchLayout()
@@ -358,6 +384,10 @@ public class WeaponController : NetworkBehaviour
                 
                 if (Object.HasInputAuthority && _bridge != null)
                     _bridge.TryRumble(0.2f, 0.5f, 0.1f);
+
+                // Tâm bắn (khi không ngắm) giãn ra mỗi phát — chỉ HUD của local player.
+                if (Object.HasInputAuthority && _gameHudController != null)
+                    _gameHudController.CrosshairFire(_type == WeaponType.Shotgun ? 2f : 1f);
                 
                 if (_audio != null) _audio.PlayClip(_sound_shoot, Data.FireClip, Data.Volume_Fire);
                 break;
@@ -386,7 +416,8 @@ public class WeaponController : NetworkBehaviour
         if (_type == WeaponType.Sniper && _isDead && GameManager.Instance != null)
         {
             _ads = false;
-            GameManager.Instance.VolumeController.TriggerADS(false, 0.25f);
+            if (GameManager.Instance.VolumeController != null)
+                GameManager.Instance.VolumeController.TriggerADS(false, 0.25f);
         }
         
         ADSHandler();
@@ -417,6 +448,21 @@ public class WeaponController : NetworkBehaviour
     /// (ví dụ NCharMovementHandler.ADSHandler() cho melee). Nếu cần query
     /// nhiều lần trong cùng tick mà không muốn advance lại, dùng CanFireQuery().
     /// </summary>
+    /// <summary>
+    /// Melee chém trái: gating đã do NCharMovementHandler quyết định bằng state networked
+    /// (ShootIndex + TickTimer) → luôn hợp lệ, KHÔNG dùng _nextFireTime local (không rollback được,
+    /// làm client/host lệch nhau). Host phát visual (animation vũ khí) ngay; client tự predict
+    /// visual qua OnFireVisualOnly() trong NShootHandler.
+    /// </summary>
+    public bool MeleeSwing()
+    {
+        _rightPuch = false;
+        AdvanceRecoilTick();
+        if (Object.HasStateAuthority)
+            _gun_Recoil_CTRL.TriggerRecoilVisual();
+        return true;
+    }
+
     public bool CanFire()
     {
         AdvanceRecoilTick();
@@ -537,9 +583,15 @@ public class WeaponController : NetworkBehaviour
             _glass.gameObject.SetActive(!ads);
         if (_zoomCamera != null)
             _zoomCamera.gameObject.SetActive(ads);
-        if (GameManager.Instance != null)
+        // Volume nằm trong scene map → có thể chưa đăng ký / đã bị huỷ khi đổi scene.
+        if (GameManager.Instance != null && GameManager.Instance.VolumeController != null)
             GameManager.Instance.VolumeController.TriggerADS(ads, 0.25f);
+        _sniperVolumeOn = ads;
     }
+
+    // Sniper đang ngắm mà bị despawn (vứt súng / đổi balo) → Update không còn chạy để tắt hiệu ứng ngắm
+    // của VolumeController → màn hình mờ mãi. OnDestroy tự tắt.
+    private bool _sniperVolumeOn;
     
     // ======================= WEAPON SWAY =============================
     
@@ -628,7 +680,12 @@ public class WeaponController : NetworkBehaviour
                         ApplyFireFailedAudio();
                     return false;
                 }
-                return _cam_Recoil.OnFire() && _gun_Recoil_CTRL.OnFire(_data.FireDelay);
+                // Chỉ cooldown theo thời gian simulation (GunRecoilController) quyết định có bắn hay không.
+                // Trước đây "_cam_Recoil.OnFire() && ..." để recoil camera (cooldown theo Time.time của frame)
+                // chặn oan phát bắn hợp lệ → auto bắn chậm hơn FireDelay, nhất là ở client.
+                if (!_gun_Recoil_CTRL.OnFire(_data.FireDelay)) return false;
+                _cam_Recoil.FireVisual();
+                return true;
             case WeaponType.Melee:
                 float delay = !right ? _data.FireDelay : crounch ? _data.FireCrouchRightDelay : _data.FireStandRightDelay;
                 return _gun_Recoil_CTRL.OnFire(delay);
@@ -673,7 +730,7 @@ public class WeaponController : NetworkBehaviour
     {
         _gun_Recoil_CTRL.TriggerRecoilVisual();
         if (_type == WeaponType.Melee) return;
-        _cam_Recoil.OnFire();
+        _cam_Recoil.FireVisual();
     }
 
     public void SpawnProjectileVisual(Vector3 hitPosition, Vector3 hitNormal, bool showEffect)
@@ -825,6 +882,9 @@ public class WeaponController : NetworkBehaviour
     
     private void CurrentBullet(int value)
     {
+        // Dao không có đạn → Animator của dao không có parameter "CurrentBullet" (Unity log lỗi nếu set).
+        if (_type == WeaponType.Melee) return;
+
         _anim.SetInteger("CurrentBullet", value);
         if (_componentManager != null && _componentManager.Animator != null)
             _componentManager.Animator.SetInteger("CurrentBullet", value);

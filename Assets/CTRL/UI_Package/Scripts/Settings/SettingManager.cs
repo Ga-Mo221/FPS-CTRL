@@ -30,6 +30,7 @@ public class SettingManager : MonoBehaviour
 
     [SerializeField] private SettingData _settingData;
     public SettingData SettingData { get { return _settingData; } }
+    public Volume PostVolume { get { return _postVolume; } }
 
     [Header("Audio (tuy chon)")]
     [SerializeField] private UnityEngine.Audio.AudioMixer _mixer;
@@ -58,7 +59,6 @@ public class SettingManager : MonoBehaviour
 
     // cached Volume overrides
     private ColorAdjustments _color; private Bloom _bloom; private Vignette _vignette; private MotionBlur _motionBlur;
-    private readonly System.Collections.Generic.Dictionary<VolumeComponent, bool> _volumeDefaults = new System.Collections.Generic.Dictionary<VolumeComponent, bool>();
     private Camera _aaCamera; private float _aaCheckAt;
 
     private void Awake()
@@ -217,7 +217,15 @@ public class SettingManager : MonoBehaviour
         // Project chi co 2 muc QualitySettings (Mobile/PC) -> tu ap bac THAP..TOI DA + texture + AA.
         GraphicsQualityApplier.Apply(_settingData);
         DisplaySettingsApplier.Apply(_settingData); // che do man hinh / do phan giai / Hz / gioi han FPS
-        if (_postVolume != null && _postVolume.profile != null) GraphicsQualityApplier.ApplyVolumeTier(_postVolume.profile, _volumeDefaults);
+        ApplyPostVolume();
+    }
+
+    /// <summary>Ap lai trang thai Volume theo setting (bac chat luong + mau + Bloom/Vignette/Motion Blur).
+    /// VolumeController goi sau khi hieu ung flashbang / ADS ket thuc de tra Volume ve dung setting.</summary>
+    public void ApplyPostVolume()
+    {
+        if (_settingData == null) return;
+        if (_postVolume != null && _postVolume.profile != null) GraphicsQualityApplier.ApplyVolumeTier(_postVolume);
         if (_color != null)
         {
             _color.postExposure.overrideState = true; _color.postExposure.value = _settingData.Brightness;
@@ -270,7 +278,7 @@ public class SettingManager : MonoBehaviour
                 _settingData.MouseSensitivity = d.MouseSensitivity; _settingData.RifleADSSensitivity = d.RifleADSSensitivity; _settingData.SniperADSSensitivity = d.SniperADSSensitivity; _settingData.InvertY = d.InvertY; _settingData.MouseAccel = d.MouseAccel;
                 _settingData.GyroMode = d.GyroMode; _settingData.GyroSensX = d.GyroSensX; _settingData.GyroSensY = d.GyroSensY; _settingData.GyroInvertX = d.GyroInvertX; _settingData.GyroInvertY = d.GyroInvertY; break;
             case "graphics":
-                _settingData.Fov = d.Fov; _settingData.VSync = d.VSync; _settingData.Brightness = d.Brightness; _settingData.Contrast = d.Contrast; _settingData.Saturation = d.Saturation; _settingData.BloomOn = d.BloomOn; _settingData.BloomIntensity = d.BloomIntensity; _settingData.VignetteOn = d.VignetteOn; _settingData.MotionBlurOn = d.MotionBlurOn; _settingData.QualityLevel = d.QualityLevel; _settingData.TextureQuality = d.TextureQuality; _settingData.AntiAliasing = d.AntiAliasing; _settingData.DisplayMode = d.DisplayMode; _settingData.ResolutionWidth = d.ResolutionWidth; _settingData.ResolutionHeight = d.ResolutionHeight; _settingData.RefreshRate = d.RefreshRate; _settingData.FpsLimit = d.FpsLimit; break;
+                _settingData.Fov = d.Fov; _settingData.VSync = d.VSync; _settingData.Brightness = d.Brightness; _settingData.Contrast = d.Contrast; _settingData.Saturation = d.Saturation; _settingData.BloomOn = d.BloomOn; _settingData.BloomIntensity = d.BloomIntensity; _settingData.VignetteOn = d.VignetteOn; _settingData.MotionBlurOn = d.MotionBlurOn; _settingData.StableCamera = d.StableCamera;_settingData.QualityLevel = d.QualityLevel; _settingData.TextureQuality = d.TextureQuality; _settingData.AntiAliasing = d.AntiAliasing; _settingData.DisplayMode = d.DisplayMode; _settingData.ResolutionWidth = d.ResolutionWidth; _settingData.ResolutionHeight = d.ResolutionHeight; _settingData.RefreshRate = d.RefreshRate; _settingData.FpsLimit = d.FpsLimit; break;
             case "crosshair":
                 _settingData.CrosshairColorIndex = d.CrosshairColorIndex; _settingData.CrosshairThickness = d.CrosshairThickness; _settingData.CrosshairSize = d.CrosshairSize; _settingData.CrosshairGap = d.CrosshairGap; _settingData.CrosshairOpacity = d.CrosshairOpacity; _settingData.CrosshairCenterDot = d.CrosshairCenterDot; _settingData.CrosshairOutline = d.CrosshairOutline; break;
             case "privacy":

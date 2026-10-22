@@ -349,7 +349,8 @@ namespace Game.UI
             lrt.anchoredPosition = new Vector2(-20f, 11f); lrt.sizeDelta = new Vector2(200f, 30f);
             var ltxt = lockGo.GetComponent<TextMeshProUGUI>();
             ltxt.text = "KHÓA"; ltxt.alignment = TextAlignmentOptions.Right; ltxt.fontSize = 22f; ltxt.fontStyle = FontStyles.Bold;
-            ltxt.color = new Color(0.93f, 0.95f, 0.98f, 1f); ltxt.raycastTarget = false; ltxt.enableWordWrapping = false;
+            ltxt.color = new Color(0.93f, 0.95f, 0.98f, 1f); ltxt.raycastTarget = false;
+            ltxt.textWrappingMode = TextWrappingModes.NoWrap;
             if (srcFont != null && srcFont.font != null) ltxt.font = srcFont.font;
 
             var priceGo = new GameObject("LockPrice", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
@@ -359,7 +360,8 @@ namespace Game.UI
             prt.anchoredPosition = new Vector2(-20f, -13f); prt.sizeDelta = new Vector2(220f, 24f);
             var ptxt = priceGo.GetComponent<TextMeshProUGUI>();
             ptxt.alignment = TextAlignmentOptions.Right; ptxt.fontSize = 15f; ptxt.fontStyle = FontStyles.Bold;
-            ptxt.color = new Color(0.31f, 0.86f, 0.80f, 1f); ptxt.raycastTarget = false; ptxt.enableWordWrapping = false;
+            ptxt.color = new Color(0.31f, 0.86f, 0.80f, 1f); ptxt.raycastTarget = false;
+            ptxt.textWrappingMode = TextWrappingModes.NoWrap;
             if (srcFont != null && srcFont.font != null) ptxt.font = srcFont.font;
 
             _lockOverlays[index] = ov;

@@ -51,6 +51,9 @@ public class UIGameplay : MonoBehaviour
             else
                 won = Solo(gs);
 
+            // am thanh victory / gameover (chi may local)
+            GameplayAudio.Instance?.PlayMatchResult(won);
+
             //  Day stats + EXP len PlayFab, roi hien phan thuong (EXP/Level).
             ReportAndShowRewards(killInfo, won);
 

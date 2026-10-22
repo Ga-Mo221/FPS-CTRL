@@ -126,7 +126,8 @@ namespace Game.UI
             var t = go.AddComponent<TextMeshProUGUI>();
             var src = slots[0].nameLabel;
             if (src != null) { t.font = src.font; t.fontSharedMaterial = src.fontSharedMaterial; }
-            t.fontSize = 18; t.fontStyle = FontStyles.Bold; t.raycastTarget = false; t.enableWordWrapping = false;
+            t.fontSize = 18; t.fontStyle = FontStyles.Bold; t.raycastTarget = false;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
             t.alignment = TextAlignmentOptions.MidlineLeft;
             return t;
         }

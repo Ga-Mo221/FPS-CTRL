@@ -102,7 +102,9 @@ namespace Game.UI
             {
                 var src = _modeGroup.GetComponent<TMP_Text>();
                 var go = new GameObject("PartyLockHint", typeof(RectTransform));
+                // Giu cung cha voi nhom CHE DO (khong dat trong nhom -> khong bi CanvasGroup lam mo 0.55).
                 go.transform.SetParent(_modeGroup.transform.parent, false);
+                go.AddComponent<LayoutElement>().ignoreLayout = true;
                 var rt = (RectTransform)go.transform;
                 var head = (RectTransform)_modeGroup.transform;
                 rt.anchorMin = head.anchorMin; rt.anchorMax = head.anchorMax; rt.pivot = new Vector2(1f, 0.5f);
@@ -110,9 +112,34 @@ namespace Game.UI
                 _lockHint = go.AddComponent<TextMeshProUGUI>();
                 if (src != null) { _lockHint.font = src.font; }
                 _lockHint.fontSize = 15; _lockHint.alignment = TextAlignmentOptions.MidlineRight; _lockHint.raycastTarget = false;
-                _lockHint.color = new Color(0.31f, 0.84f, 0.79f, 1f); _lockHint.enableWordWrapping = false;
+                _lockHint.color = new Color(0.31f, 0.84f, 0.79f, 1f);
+                _lockHint.textWrappingMode = TextWrappingModes.NoWrap;
             }
-            if (_lockHint != null) { _lockHint.gameObject.SetActive(locked); if (!string.IsNullOrEmpty(hint)) _lockHint.text = hint; }
+            if (_lockHint != null)
+            {
+                _lockHint.gameObject.SetActive(locked);
+                if (!string.IsNullOrEmpty(hint)) _lockHint.text = hint;
+                if (locked) PlaceLockHintAtDescription();
+            }
+        }
+
+        // [2026-10-21] Dat nhan "THEO TRUONG NHOM" ngay tren goc tren-trai khung "Mo ta" (cha cua _modeTitle/_modeDescription).
+        private static readonly Vector2 LockHintOffset = new Vector2(0f, 4f);
+        private void PlaceLockHintAtDescription()
+        {
+            var box = _modeDescription != null ? _modeDescription.transform.parent as RectTransform
+                    : _modeTitle != null ? _modeTitle.transform.parent as RectTransform : null;
+            var rt = (RectTransform)_lockHint.transform;
+            var parent = rt.parent as RectTransform;
+            if (box == null || parent == null) return;
+            Canvas.ForceUpdateCanvases(); // layout cua khung "Mo ta" phai xong truoc khi doc goc
+            var corners = new Vector3[4];
+            box.GetWorldCorners(corners); // [1] = goc tren-trai
+            Vector2 local = parent.InverseTransformPoint(corners[1]);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0f, 0f); // day chu nam ngay tren canh tren khung, can trai
+            rt.anchoredPosition = local - parent.rect.center + LockHintOffset;
+            _lockHint.alignment = TextAlignmentOptions.BottomLeft;
         }
         private static void LockGroup(UISelectionGroup g, bool locked)
         {

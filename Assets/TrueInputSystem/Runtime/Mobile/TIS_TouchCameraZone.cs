@@ -77,7 +77,10 @@ namespace GaMo.TrueInputSystem
         [SerializeField] private float _pinchDeadzone = 5f;
 
         [Header("Debug")]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] private bool _debugDrawZone = false;
+#pragma warning restore CS0414
 
         // ══════════════════════════════════════════════════════════════════════
         //  OWNED POINTERS

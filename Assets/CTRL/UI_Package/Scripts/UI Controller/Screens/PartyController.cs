@@ -73,10 +73,32 @@ namespace Game.UI
 
         private static string SelfId() { return BackendBootstrap.AuthService != null ? BackendBootstrap.AuthService.CurrentUserId : null; }
 
-        public void InviteFriend(string friendPlayFabId)
+        // [2026-10-21] Moi cung 1 nguoi: cho 5s moi duoc moi lai (static -> giu qua viec dung lai dong ban / mo lai panel).
+        public const float InviteCooldown = 5f;
+        private static readonly System.Collections.Generic.Dictionary<string, float> _lastInviteAt = new System.Collections.Generic.Dictionary<string, float>();
+        /// <summary>So giay con lai truoc khi duoc moi lai nguoi nay (0 = moi duoc).</summary>
+        public static float InviteCooldownLeft(string playFabId)
+        {
+            float t;
+            if (string.IsNullOrEmpty(playFabId) || !_lastInviteAt.TryGetValue(playFabId, out t)) return 0f;
+            float elapsed = Time.unscaledTime - t;
+            if (elapsed < 0f) return 0f; // moc tu lan Play truoc (Editor tat domain reload) -> bo qua
+            return Mathf.Max(0f, InviteCooldown - elapsed);
+        }
+
+        /// <summary>Moi ban vao party. Tra false neu dang trong thoi gian cho (5s) hoac thieu du lieu.</summary>
+        public bool InviteFriend(string friendPlayFabId)
         {
             var svc = BackendBootstrap.PartyService;
-            if (svc == null || string.IsNullOrEmpty(friendPlayFabId)) { Debug.LogWarning("[Party-DIAG] SEND huy: thieu svc/id"); return; }
+            if (svc == null || string.IsNullOrEmpty(friendPlayFabId)) { Debug.LogWarning("[Party-DIAG] SEND huy: thieu svc/id"); return false; }
+            if (InviteCooldownLeft(friendPlayFabId) > 0f) return false;
+            _lastInviteAt[friendPlayFabId] = Time.unscaledTime;
+            InviteFriendNow(svc, friendPlayFabId);
+            return true;
+        }
+
+        private void InviteFriendNow(IPartyService svc, string friendPlayFabId)
+        {
             Debug.Log("[Party-DIAG] SEND: moi " + friendPlayFabId + " (InParty=" + InParty + ")");
             if (InParty) { svc.SendInvite(friendPlayFabId, Code, SendOk, SendErr); return; }
             svc.CreateParty(code =>

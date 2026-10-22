@@ -36,7 +36,19 @@ public class LocalInputController : MonoBehaviour
 
         OnDragItem();
 
+        OnDropWeapon();
+
         OpenLoadOut();
+    }
+
+    // Vứt súng đang cầm (G / D-pad phải). Host tự kiểm tra luật (không vứt dao, không vứt món cuối...).
+    private void OnDropWeapon()
+    {
+        if (!_input.GetSkillAction("Drop", TISButtonReadMode.PressDown)) return;
+        var gm = GameManager.Instance;
+        if (gm != null && (gm.OnUIChatBox() || gm.OnUIOption())) return; // đang gõ chat / mở menu
+        if (_weaponManager != null)
+            _weaponManager.Rpc_RequestDrop();
     }
     
     private void OnUI()
@@ -93,10 +105,10 @@ public class LocalInputController : MonoBehaviour
             if (gm != null && gm.GetCanDragItem())
             {
                 var item = gm.GetDropItemWeapon;
-                if (item != null)
+                if (item != null && item.Object != null && item.Object.IsValid)
                 {
-                    _weaponManager.Rpc_RequestChangeWeapon(item.WeaponID.ToString(), item.CurrentBullet, item.MaxBullet);
-                    item.Despawn();
+                    // Chi gui id item; host tu kiem tra + lay loai sung / so dan tu item.
+                    _weaponManager.Rpc_RequestPickup(item.Object.Id);
                 }
             }
         }

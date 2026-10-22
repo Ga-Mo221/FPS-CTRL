@@ -117,7 +117,9 @@ namespace Game.UI
             public UnityEngine.UI.ContentSizeFitter csf;   // CSF ngang da tat (co prefab gan 2 CSF tren 1 text)
             public HorizontalAlignmentOptions align;
             public UnityEngine.UI.LayoutElement addedLE;
-            public bool wrap, autoSize; public float fontSize, min, max;
+            public TextWrappingModes wrap;
+            public bool autoSize;
+            public float fontSize, min, max;
             public TextOverflowModes overflow;
             public float baseSize = -1f, room = -1f;
         }
@@ -215,7 +217,7 @@ namespace Game.UI
             var rt = t.rectTransform;
             var f = new Freeze
             {
-                align = t.horizontalAlignment, wrap = t.enableWordWrapping, autoSize = t.enableAutoSizing,
+                align = t.horizontalAlignment, wrap = t.textWrappingMode, autoSize = t.enableAutoSizing,
                 fontSize = t.fontSize, min = t.fontSizeMin, max = t.fontSizeMax, overflow = t.overflowMode
             };
             foreach (var csf in t.GetComponents<UnityEngine.UI.ContentSizeFitter>())
@@ -236,10 +238,11 @@ namespace Game.UI
             }
             _freeze[t] = f;
 
-            bool singleLine = !string.IsNullOrEmpty(vi) && vi.IndexOf('\n') < 0 && (f.hadCsf || !f.wrap || vi.Trim().Length <= 24);
+            bool singleLine = !string.IsNullOrEmpty(vi) && vi.IndexOf('\n') < 0
+                                                        && (f.hadCsf || f.wrap == TextWrappingModes.NoWrap || vi.Trim().Length <= 24);
             if (singleLine && (f.hadCsf || vi.Trim().Length <= 24))
             {
-                t.enableWordWrapping = false;
+                t.textWrappingMode = TextWrappingModes.NoWrap;
                 if (t.overflowMode == TextOverflowModes.Truncate || t.overflowMode == TextOverflowModes.Ellipsis) { }
                 else t.overflowMode = TextOverflowModes.Overflow;
             }
@@ -312,7 +315,7 @@ namespace Game.UI
             Freeze f;
             if (!_freeze.TryGetValue(t, out f)) return;
             float w = t.rectTransform.rect.width;
-            if (w < 2f || t.enableWordWrapping) return;
+            if (w < 2f || t.textWrappingMode != TextWrappingModes.NoWrap) return;
             float baseSize = f.autoSize ? Mathf.Max(t.fontSize, 1f) : f.fontSize; // co dang hien thi o ban Viet
             if (f.baseSize <= 0f) f.baseSize = baseSize; else baseSize = f.baseSize;
             t.enableAutoSizing = false; t.fontSize = baseSize;
@@ -378,7 +381,7 @@ namespace Game.UI
             if (f.hadCsf && f.csf != null) f.csf.horizontalFit = f.csfFit;
             if (f.addedLE != null) Destroy(f.addedLE);
             t.horizontalAlignment = f.align;
-            t.enableWordWrapping = f.wrap; t.overflowMode = f.overflow;
+            t.textWrappingMode = f.wrap; t.overflowMode = f.overflow;
             t.fontSizeMin = f.min; t.fontSizeMax = f.max; t.enableAutoSizing = f.autoSize;
             if (!f.autoSize) t.fontSize = f.fontSize;
         }

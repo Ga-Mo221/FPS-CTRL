@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Game.UI;
+using TMPro;
 
 /// <summary>
 /// Noi UI panel Settings <-> SettingData (qua SettingManager).
@@ -112,6 +113,9 @@ public class SettingsBinder : MonoBehaviour
         BindSlider("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom", () => Data.BloomIntensity, v => Data.BloomIntensity = v);
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Vignette",    () => Data.VignetteOn, v => Data.VignetteOn = v);
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Motion Blur", () => Data.MotionBlurOn, v => Data.MotionBlurOn = v);
+        // Chong rung camera (CameraStabilizer): dong moi tao luc chay tu dong Motion Blur -> khong can sua scene/prefab.
+        EnsureSwitchRowBelow("Do hoa Scroll/Content/HINH ANH/Motion Blur", "Chống rung camera");
+        BindSwitch("Do hoa Scroll/Content/HINH ANH/Chong rung camera", () => Data.StableCamera, v => Data.StableCamera = v);
         BindQuality("Do hoa Scroll/Content/CHAT LUONG/Chat luong tong the", () => Data.QualityLevel, v => Data.QualityLevel = v);
         // Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
         BindCycler("Do hoa Scroll/Content/CHAT LUONG/Ket cau (Texture)", GraphicsQualityApplier.TextureOptions, () => Data.TextureQuality, v => Data.TextureQuality = v);
@@ -207,7 +211,7 @@ public class SettingsBinder : MonoBehaviour
     {
         if (string.IsNullOrEmpty(s)) return s;
         s = s.ToLowerInvariant().Trim();
-        string from = "aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd";
+        //string from = "aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd";
         // dung bang thay the don gian
         var sb = new System.Text.StringBuilder();
         foreach (char ch in s)
@@ -280,6 +284,51 @@ public class SettingsBinder : MonoBehaviour
         _refreshers.Add(() => { if (Data != null) c.SetIndex(get(), false); });
     }
 
+    // Them 1 dong switch ngay duoi dong mau (clone ca nhan + switch + TIS), khong can sua scene/prefab.
+    // Cac dong dat theo vi tri tuyet doi -> tu tinh buoc = khoang cach dong mau voi dong tren no,
+    // day cac muc ben duoi xuong 1 buoc va keo dai vung cuon.
+    private void EnsureSwitchRowBelow(string templatePath, string label)
+    {
+        var tpl = Find(templatePath) as RectTransform; if (tpl == null) { Missing(templatePath); return; }
+        var section = tpl.parent;
+        foreach (Transform c in section) if (Normalize(c.name) == Normalize(label)) return; // da co (scene da them tay)
+
+        int idx = tpl.GetSiblingIndex();
+        float step = 64f;
+        if (idx > 0 && section.GetChild(idx - 1) is RectTransform above)
+            step = Mathf.Abs(above.anchoredPosition.y - tpl.anchoredPosition.y);
+
+        // Dong cung muc ben duoi dong mau + cac muc khac trong Content nam duoi muc nay -> day xuong.
+        for (int i = idx + 1; i < section.childCount; i++)
+            if (section.GetChild(i) is RectTransform below) below.anchoredPosition -= new Vector2(0f, step);
+        var content = section.parent as RectTransform;
+        if (content != null && section is RectTransform sectionRt)
+        {
+            foreach (Transform c in content)
+                if (c != section && c is RectTransform other && other.anchoredPosition.y < sectionRt.anchoredPosition.y)
+                    other.anchoredPosition -= new Vector2(0f, step);
+            content.sizeDelta += new Vector2(0f, step);
+        }
+
+        var row = (RectTransform)Instantiate(tpl.gameObject, section, false).transform;
+        row.name = label;
+        row.SetSiblingIndex(idx + 1);
+        row.anchoredPosition = tpl.anchoredPosition - new Vector2(0f, step);
+        var txt = row.GetComponent<TMPro.TMP_Text>(); if (txt != null) txt.text = label;
+
+        // Nhan can giua + ContentSizeFitter, x moi dong duoc canh tay theo do rong chu -> giu MEP TRAI nhu dong mau
+        // (chu dai hon se lan sang trai bi mask cat), roi day con (switch, vach ke) ve dung cho cu.
+        UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(row);
+        float tplLeft = tpl.anchoredPosition.x - tpl.rect.width * tpl.pivot.x;
+        float dx = tplLeft + row.rect.width * row.pivot.x - row.anchoredPosition.x;
+        row.anchoredPosition += new Vector2(dx, 0f);
+        foreach (Transform c in row) if (c is RectTransform crt) crt.anchoredPosition -= new Vector2(dx, 0f);
+
+        // Tay cam: dang ky nut moi voi khung dieu huong TIS
+        var ctx = row.GetComponentInParent<GaMo.TrueInputSystem.TISUINavigationContext>(true);
+        if (ctx != null) ctx.ScanChildButtons();
+    }
+
     private void BindReset(string buttonPath)
     {
         var t = Find(buttonPath); if (t == null) { Missing(buttonPath); return; }
@@ -326,7 +375,7 @@ public class SettingsBinder : MonoBehaviour
         var txt = lbl.GetComponent<TMPro.TextMeshProUGUI>();
         txt.text = "THOÁT GAME";
         txt.alignment = TMPro.TextAlignmentOptions.Left;
-        txt.enableWordWrapping = false;
+        txt.textWrappingMode = TextWrappingModes.NoWrap;
         if (tTxt != null) { txt.font = tTxt.font; txt.fontSize = tTxt.fontSize; txt.fontStyle = tTxt.fontStyle; }
         else txt.fontSize = 20f;
         txt.color = new Color(0.92f, 0.26f, 0.26f, 1f); // [QUIT-FIX] chu MAU DO

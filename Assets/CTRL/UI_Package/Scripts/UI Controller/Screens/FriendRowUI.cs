@@ -46,6 +46,22 @@ namespace Game.UI
 
         public void SetAvatar(Sprite s) { if (_avatar != null && s != null) _avatar.sprite = s; }
 
+        // [2026-10-21] Dem nguoc 5s tren nut MOI sau moi lan moi nguoi nay (khoa nut trong luc dem).
+        private TMP_Text _inviteLabel;
+        private string _inviteLabelText;
+        private int _shownCountdown = -1;
+        private void Update()
+        {
+            if (_inviteButton == null || _info == null || !_inviteButton.gameObject.activeInHierarchy) return;
+            int left = Mathf.CeilToInt(PartyController.InviteCooldownLeft(_info.PlayFabId));
+            if (left == _shownCountdown) return;
+            if (_inviteLabel == null) _inviteLabel = _inviteButton.GetComponentInChildren<TMP_Text>(true);
+            if (_shownCountdown <= 0 && _inviteLabel != null) _inviteLabelText = _inviteLabel.text; // nho chu goc truoc khi dem
+            _shownCountdown = left;
+            _inviteButton.interactable = left <= 0;
+            if (_inviteLabel != null) _inviteLabel.text = left > 0 ? left + "s" : _inviteLabelText;
+        }
+
         // [CTX 2026-09-29 Aemy] Chuot phai -> menu hanh dong (copy id/ten, moi party, xoa ban, lich su).
         private static UnityEngine.GameObject _ctxMenu;
         public void OnPointerClick(UnityEngine.EventSystems.PointerEventData e)

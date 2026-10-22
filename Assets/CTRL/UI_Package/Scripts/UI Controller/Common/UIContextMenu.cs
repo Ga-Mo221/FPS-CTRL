@@ -163,7 +163,7 @@ namespace Game.UI
             var rt = NewChild(name, parent);
             var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
             t.text = text; t.fontSize = size; t.alignment = TextAlignmentOptions.MidlineLeft; t.raycastTarget = false;
-            t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Ellipsis;
+            t.textWrappingMode = TextWrappingModes.NoWrap; t.overflowMode = TextOverflowModes.Ellipsis;
             if (theme != null) theme.StyleBody(t);
             t.color = new Color(0.92f, 0.94f, 0.96f, 1f);
             return t;

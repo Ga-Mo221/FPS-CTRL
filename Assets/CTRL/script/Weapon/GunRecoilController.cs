@@ -602,9 +602,27 @@ public class GunRecoilController : MonoBehaviour
     // FIX: noise fade ra 0 khi idle (sau idleNoiseDecayTime giây)
     // ─────────────────────────────────────────────
 
+    // FIX: lò xo tích phân Euler "v -= v * damp * dt" MẤT ỔN ĐỊNH khi damp * dt > 2
+    // (vd noiseDamp = 9 → chỉ cần 1 frame > 0.22s: load trận, Editor khựng...). Vận tốc đổi dấu và lớn dần
+    // → 1e32 → NaN, không bao giờ tự hồi → súng quay vòng liên tục. Giờ: kẹp dt, tắt dần bằng exp (ổn định
+    // với mọi dt), và tự reset nếu lỡ dính NaN/Infinity.
+    private const float MAX_SPRING_DT = 1f / 20f;
+
+    private static void StepSpring(ref float pos, ref float vel, float target, float accel, float damp, float dt)
+    {
+        vel += (target - pos) * accel * dt;
+        vel *= Mathf.Exp(-damp * dt);
+        pos += vel * dt;
+        if (float.IsNaN(pos) || float.IsInfinity(pos) || float.IsNaN(vel) || float.IsInfinity(vel))
+        {
+            pos = 0f;
+            vel = 0f;
+        }
+    }
+
     private void UpdateNoise()
     {
-        float dt = Time.deltaTime;
+        float dt = Mathf.Min(Time.deltaTime, MAX_SPRING_DT);
 
         // Scale noise về 0 khi không bắn
         float timeSinceFire  = Time.time - _lastFireTime;
@@ -613,15 +631,11 @@ public class GunRecoilController : MonoBehaviour
 
         // Spring-damper X
         float targetNX = Random.Range(data.noiseX.x, data.noiseX.y) * noiseIntensity;
-        _noiseVelocity.x += (targetNX - _noisePos.x) * data.noiseAccel.x * dt;
-        _noiseVelocity.x -= _noiseVelocity.x * data.noiseDamp.x * dt;
-        _noisePos.x      += _noiseVelocity.x * dt;
+        StepSpring(ref _noisePos.x, ref _noiseVelocity.x, targetNX, data.noiseAccel.x, data.noiseDamp.x, dt);
 
         // Spring-damper Y
         float targetNY = Random.Range(data.noiseY.x, data.noiseY.y) * noiseIntensity;
-        _noiseVelocity.y += (targetNY - _noisePos.y) * data.noiseAccel.y * dt;
-        _noiseVelocity.y -= _noiseVelocity.y * data.noiseDamp.y * dt;
-        _noisePos.y      += _noiseVelocity.y * dt;
+        StepSpring(ref _noisePos.y, ref _noiseVelocity.y, targetNY, data.noiseAccel.y, data.noiseDamp.y, dt);
     }
 
     // ─────────────────────────────────────────────
@@ -630,10 +644,9 @@ public class GunRecoilController : MonoBehaviour
 
     private void UpdatePushback()
     {
-        float dt = Time.deltaTime;
-        _pushVelocity += (0f - _pushCurrent) * data.pushAccel * dt;
-        _pushVelocity -= _pushVelocity * data.pushDamp * dt;
-        _pushCurrent  += _pushVelocity * dt;
+        // Cùng lỗi mất ổn định như noise (pushDamp * dt > 2) → dùng chung StepSpring + kẹp dt.
+        float dt = Mathf.Min(Time.deltaTime, MAX_SPRING_DT);
+        StepSpring(ref _pushCurrent, ref _pushVelocity, 0f, data.pushAccel, data.pushDamp, dt);
 
         // FIX: clamp _pushCurrent để spring không tích lũy vô hạn khi bắn Auto/Burst liên tục
         // dẫn đến vũ khí bị đẩy xa theo trục Z rồi bay khỏi map.

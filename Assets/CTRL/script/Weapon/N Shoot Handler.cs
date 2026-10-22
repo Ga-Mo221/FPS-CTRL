@@ -268,8 +268,22 @@ public class NShootHandler : NetworkBehaviour
             {
                 var weaponType = _weaponManager.Weapon_Active()?.WeaponType;
 
-                // Visual ngay: animation recoil, camera recoil, muzzle flash, âm thanh
-                _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
+                // Visual ngay: animation recoil, camera recoil, muzzle flash, âm thanh.
+                // Súng: FireOnce() → WeaponController.OnFire() đã tự phát toàn bộ visual (OnShotFired),
+                // gọi thêm OnFireVisualOnly() sẽ nhân đôi recoil/âm thanh/anim mỗi phát.
+                // Dao: MeleeSwing() không phát visual trên client → cần OnFireVisualOnly().
+                if (weaponType == WeaponType.Melee)
+                    _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
+
+                // Melee: predict luôn animation NHÂN VẬT cùng tick với animation VŨ KHÍ ở trên.
+                // Trước đây nhân vật chờ FireCount từ host (Render) còn vũ khí predict ngay →
+                // 2 nguồn khác nhau, đôi khi chỉ 1 bên chạy. NCharacterAnimationHandler bỏ qua
+                // trigger theo FireCount cho trường hợp này để không chém 2 lần.
+                if (weaponType == WeaponType.Melee && !_movementHandler.RightPuch)
+                {
+                    _playerMotionController.SetShootIndex(_movementHandler.ShootIndex);
+                    _playerMotionController.IsShooting();
+                }
 
                 // Spawn projectile visual dựa trên raycast cục bộ (chỉ để visual, không deal damage)
                 if (weaponType == WeaponType.Rifle || weaponType == WeaponType.Sniper)
@@ -838,7 +852,8 @@ public class NShootHandler : NetworkBehaviour
         var weaponIcon = ctrl?.Data.WeaponName;
 
         // OnTakeDamage sẽ invoke OnDamageDealt bên trong → _damageAccumulated update
-        bool isKill = HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), weaponIcon, Object.Id);
+        bool isKill = HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), weaponIcon, Object.Id,
+            headshot: bodyParts.GetBodyParts() == BodyParts.Head);
 
         if (isKill)
         {
@@ -1025,7 +1040,9 @@ public class NShootHandler : NetworkBehaviour
     // ── Grenade ───────────────────────────────────────────────────────────
     public void ThrowGrenade()
     {
-        if (!Object.HasStateAuthority) return;
+        // Client người ném: không spawn được NetworkObject → hiện lựu đạn ảo ngay (bản mạng tới sau ~1 RTT sẽ nối tiếp).
+        bool localVisualOnly = !Object.HasStateAuthority && Object.HasInputAuthority;
+        if (!Object.HasStateAuthority && !localVisualOnly) return;
         var gm = GameManager.Instance;
         if (gm == null) return;
 
@@ -1039,7 +1056,12 @@ public class NShootHandler : NetworkBehaviour
 
         // null-check TRUOC khi doc GrenadeType (truoc day NRE),
         // va van reset _grende_ID de khong ket trang thai nem.
-        if (grenade == null) { _grende_ID = 0; return; }
+        if (grenade == null)
+        {
+            if (localVisualOnly) Debug.LogWarning($"[Grenade] Client ném nhưng không tìm thấy lựu đạn (slot={_grende_ID}, Q={GrenadeQ}, E={GrenadeE}).");
+            _grende_ID = 0;
+            return;
+        }
 
         switch (grenade.GrenadeType)
         {
@@ -1053,6 +1075,12 @@ public class NShootHandler : NetworkBehaviour
         }
 
         Vector3 dir = _aimForward.sqrMagnitude > 0.0001f ? _aimForward : transform.forward;
+        if (localVisualOnly)
+        {
+            GrenadeLocalVisual.Spawn(Runner, grenade, throwPoint + dir, dir * _fore);
+            _grende_ID = 0;
+            return;
+        }
         Runner.Spawn(grenade, throwPoint + dir, Quaternion.LookRotation(dir),
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
@@ -1066,6 +1094,9 @@ public class NShootHandler : NetworkBehaviour
                     this);
             });
 
+        // Chỉ đánh dấu lựu đạn đã dùng khi thực sự ném (trước đây đánh dấu lúc thả phím,
+        // nên nếu animation ném không chạy thì lựu đạn bị mất).
+        _movementHandler.OnGrenadeThrown(_grende_ID);
         _grende_ID = 0;
     }
 
@@ -1073,7 +1104,11 @@ public class NShootHandler : NetworkBehaviour
     void OnKillChange()
     {
         if (GameManager.Instance != null && Object.HasInputAuthority)
+        {
             GameManager.Instance.SetBestStreak();
+            // chuoi kill (am thanh + UI dominating/rampage...) chi tren may cua nguoi giet
+            LocalKillEvents.RaiseKill(GameManager.Instance.GetCurrentStreak());
+        }
     }
 
     void OnAssistChange()

@@ -42,6 +42,9 @@ public class VolumeController : MonoBehaviour
     private bool isAiming = false;
     private bool isFlashbanging = false;
 
+    // Trạng thái bật/tắt ban đầu của các Override — chỉ dùng khi không có SettingManager để trả lại.
+    private bool bloomWasActive, chromaticWasActive, distortionWasActive, dofWasActive;
+
     private void Awake()
     {
         if (volume == null)
@@ -55,12 +58,40 @@ public class VolumeController : MonoBehaviour
             volume.profile.TryGet(out lensDistortion);
             volume.profile.TryGet(out depthOfField);
         }
+
+        bloomWasActive      = bloom != null && bloom.active;
+        chromaticWasActive  = chromaticAberration != null && chromaticAberration.active;
+        distortionWasActive = lensDistortion != null && lensDistortion.active;
+        dofWasActive        = depthOfField != null && depthOfField.active;
     }
 
     private void Start()
     {
         if (GameManager.Instance != null)
             GameManager.Instance.VolumeController = this;
+
+        // Đưa DoF / Chromatic / Distortion về giá trị nghỉ ngay từ đầu (trước đây chỉ reset sau lần ADS/flashbang đầu tiên).
+        SetOverridesState(true);
+        ResetToDefault();
+        RestoreSettingState();
+    }
+
+    // Setting đồ họa (Thấp/Vừa) tắt DoF, Chromatic, Lens Distortion; người chơi có thể tắt Bloom.
+    // Trong lúc hiệu ứng đang chạy, giữ bật các Override cần thiết (kể cả khi SettingManager vừa áp lại setting).
+    // Chạy ở LateUpdate -> sau mọi Update/UI apply trong frame, nên không bị nháy.
+    private void LateUpdate()
+    {
+        if (isFlashbanging)
+        {
+            ForceActive(bloom);
+            ForceActive(chromaticAberration);
+            ForceActive(lensDistortion);
+            ForceActive(depthOfField);
+        }
+        else if (isAiming || adsCoroutine != null)
+        {
+            ForceActive(depthOfField);
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -92,6 +123,7 @@ public class VolumeController : MonoBehaviour
         float timer = 0f;
 
         SetOverridesState(true);
+        float baseBloom = RestBloomIntensity();
 
         while (timer < duration)
         {
@@ -102,7 +134,7 @@ public class VolumeController : MonoBehaviour
             float t = Mathf.SmoothStep(1f, 0f, progress);
 
             if (bloom != null)
-                bloom.intensity.value = Mathf.Lerp(defaultBloomIntensity, peakBloomIntensity, t);
+                bloom.intensity.value = Mathf.Lerp(baseBloom, peakBloomIntensity, t);
 
             if (chromaticAberration != null)
                 chromaticAberration.intensity.value = Mathf.Lerp(0f, peakChromatic, t);
@@ -127,11 +159,16 @@ public class VolumeController : MonoBehaviour
         if (isAiming)
         {
             // Khởi lại ADS blend từ giá trị hiện tại (không snap cứng)
+            if (bloom != null) bloom.intensity.value = baseBloom;
+            if (chromaticAberration != null) chromaticAberration.intensity.value = 0f;
+            if (lensDistortion != null) lensDistortion.intensity.value = 0f;
+            RestoreSettingState(); // DoF vẫn được LateUpdate giữ bật vì đang ADS
             adsCoroutine = StartCoroutine(ADSRoutine(true, 0.15f));
         }
         else
         {
             ResetToDefault();
+            RestoreSettingState();
         }
     }
 
@@ -196,6 +233,9 @@ public class VolumeController : MonoBehaviour
         }
 
         adsCoroutine = null;
+
+        // Thôi ngắm -> trả DoF về đúng setting (tắt nếu bậc đồ họa đang tắt DoF, giữ nguyên nếu đang bật).
+        if (!ads) RestoreSettingState();
     }
 
     // ─────────────────────────────────────────────
@@ -216,7 +256,7 @@ public class VolumeController : MonoBehaviour
 
     private void ResetToDefault()
     {
-        if (bloom != null) bloom.intensity.value = defaultBloomIntensity;
+        if (bloom != null) bloom.intensity.value = RestBloomIntensity();
         if (chromaticAberration != null) chromaticAberration.intensity.value = 0f;
         if (lensDistortion != null) lensDistortion.intensity.value = 0f;
         if (depthOfField != null)
@@ -224,5 +264,34 @@ public class VolumeController : MonoBehaviour
             depthOfField.focusDistance.value = defaultFocusDistance;
             depthOfField.focalLength.value   = defaultFocalLength;
         }
+    }
+
+    private static void ForceActive(VolumeComponent c)
+    {
+        if (c != null && !c.active) c.active = true;
+    }
+
+    /// <summary>Trả bật/tắt các Override về đúng setting đồ họa (tắt nếu setting tắt, giữ nguyên nếu setting bật).</summary>
+    private void RestoreSettingState()
+    {
+        var sm = SettingManager.Instance;
+        if (sm != null && sm.SettingData != null && volume != null)
+        {
+            if (sm.PostVolume != volume) sm.SetPostVolume(volume); // dam bao SettingManager dang quan ly dung Volume nay
+            else sm.ApplyPostVolume();
+            return;
+        }
+        if (bloom != null) bloom.active = bloomWasActive;
+        if (chromaticAberration != null) chromaticAberration.active = chromaticWasActive;
+        if (lensDistortion != null) lensDistortion.active = distortionWasActive;
+        if (depthOfField != null) depthOfField.active = dofWasActive;
+    }
+
+    /// <summary>Cường độ Bloom lúc nghỉ = giá trị người chơi chọn trong setting (0 nếu tắt Bloom).</summary>
+    private float RestBloomIntensity()
+    {
+        var data = SettingManager.Instance != null ? SettingManager.Instance.SettingData : null;
+        if (data == null) return defaultBloomIntensity;
+        return data.BloomOn ? data.BloomIntensity : 0f;
     }
 }
