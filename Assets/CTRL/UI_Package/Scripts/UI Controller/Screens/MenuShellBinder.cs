@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Backend.Bootstrap;
 using Backend.Models;
+using TMPro;
 
 namespace Game.UI
 {
@@ -25,6 +26,7 @@ namespace Game.UI
             [TextArea] public string description;
             public MatchMode mode;   // FFA / TDM -> dùng khi bắt đầu tìm trận
             public bool custom;      // [Aemy 2026-10-17] PHONG TUY CHINH (phong rieng co ma) -> luat lay tu CustomRoomPanel
+            public bool random;      // [2026-10-21] NGAU NHIEN: luc bam tim tran boc 1 mode ghep duoc (cac o khong custom/random)
         }
 
         [Header("Views (kéo thả trong MenuShell)")]
@@ -282,7 +284,7 @@ namespace Game.UI
                 for (int i = 0; i < t.transform.childCount; i++)
                 {
                     var c = t.transform.GetChild(i).GetComponent<TMPro.TextMeshProUGUI>();
-                    if (c != null) { c.text = value; c.enableWordWrapping = false; c.overflowMode = TMPro.TextOverflowModes.Overflow; break; } // [KDA 2026-10-04] NoWrap
+                    if (c != null) { c.text = value; c.textWrappingMode = TextWrappingModes.NoWrap; c.overflowMode = TMPro.TextOverflowModes.Overflow; break; } // [KDA 2026-10-04] NoWrap
                 }
                 break;
             }
@@ -368,7 +370,8 @@ namespace Game.UI
                 // [LOADOUT-3BALO 2026-10-11 Aemy] Map CO DINH: ALPHA -> Balo 1, BRAVO -> Balo 2, CHARLIE -> Balo 3
                 // (truoc day slot "dang chon" bi day len Balo 1 -> thu tu trong tran bi xoay). Vao tran luon cam Balo 1 (Nyx chot).
                 // Utility chuan hoa ve codename (GetGrenade khop Contains). Slot/utility trong -> fallback mac dinh.
-                BaloData _def = new BaloData(WeaponID._9MM_DEMON, WeaponID._9MM_DEMON, WeaponID._FRAG_M67, WeaponID._FLASH_M84);
+                // Slot trống / vũ khí không còn tồn tại → bộ trang bị mặc định (dùng chung, xem DefaultLoadout).
+                BaloData _def = new BaloData(DefaultLoadout.Weapon_One, DefaultLoadout.Weapon_Two, DefaultLoadout.Grenade_Q, DefaultLoadout.Grenade_E);
 
                 System.Func<string, string> _normUtil = raw =>
                 {
@@ -392,6 +395,10 @@ namespace Game.UI
                     string u1 = _normUtil(u1raw); if (string.IsNullOrEmpty(u1)) u1 = fb.Grenade_E;
                     // [Aemy 2026-10-10] Skin dang trang bi -> spawn theo ID skin (vd Umbra -> M4_DR). Spawn qua mang nen ai cung thay.
                     w0 = Game.Skins.WeaponSkinService.Resolve(w0); w1 = Game.Skins.WeaponSkinService.Resolve(w1);
+                    // Ten khong con prefab trong GameManager (du lieu cu, skin bi go...) -> truoc day spawn slot rong
+                    // (khong co vu khi). Nay coi nhu bo trong -> dung bo mac dinh.
+                    if (_gmi.GetWeapon(w0) == null) w0 = fb.Weapon_One;
+                    if (_gmi.GetWeapon(w1) == null) w1 = fb.Weapon_Two;
                     return new BaloData(w0, w1, u0, u1);
                 };
 
@@ -470,7 +477,7 @@ namespace Game.UI
         private Backend.Models.PartySettings CurrentPartySettings()
         {
             var s = new Backend.Models.PartySettings { modeIndex = _selectedModeIndex, mapIndex = _selectedMapIndex };
-            if (_customRoom != null) { s.killTarget = _customRoom.KillTarget; s.customRule = _customRoom.Rule.ToString(); s.matchMinutes = _customRoom.MatchMinutes; }
+            if (_customRoom != null) { s.killTarget = _customRoom.KillTarget; s.customRule = _customRoom.RuleKey; s.matchMinutes = _customRoom.MatchMinutes; }
             return s;
         }
 
@@ -501,7 +508,8 @@ namespace Game.UI
             {
                 if (s.killTarget > 0) _customRoom.SetKillTarget(s.killTarget);
                 if (s.matchMinutes > 0) _customRoom.SetMatchMinutes(s.matchMinutes); // [Aemy 2026-10-19]
-                if (!string.IsNullOrEmpty(s.customRule)) _customRoom.SetRule(s.customRule == "TDM" ? MatchMode.TDM : MatchMode.FFA, false);
+                if (s.customRule == CustomRoomPanel.RandomKey) _customRoom.SetRandomRule(false); // [2026-10-21]
+                else if (!string.IsNullOrEmpty(s.customRule)) _customRoom.SetRule(s.customRule == "TDM" ? MatchMode.TDM : MatchMode.FFA, false);
                 _customRoom.SetLocked(true);
             }
             if (_play != null) _play.SetChoiceLocked(true, "THEO TRƯỞNG NHÓM");
@@ -571,7 +579,7 @@ namespace Game.UI
             var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
             if (ho == null) { Debug.LogWarning("[MenuShellBinder] Khong co FusionMatchHandoff."); return; }
             ResolveRandomMap();
-            var rule = _customRoom.Rule;
+            var rule = _customRoom.ResolveRule(); // [2026-10-21] NGAU NHIEN -> boc TDM/FFA (ma phong mang luat that)
             string code = Game.UI.CustomRoomSession.NewCode(rule);
             Game.UI.CustomRoomSession.Begin(code, _customRoom.KillTarget, _customRoom.MatchMinutes, true);
             GUIUtility.systemCopyBuffer = code;
@@ -686,9 +694,70 @@ namespace Game.UI
         private MatchMode CurrentMode()
         {
             if (IsCustomSelected() && _customRoom != null) return _customRoom.Rule; // [Aemy 2026-10-17]
+            if (IsRandomModeSelected()) return _randomModePick; // mode da boc o lan bam tim tran gan nhat
             if (_modes != null && _modes.Length > 0)
                 return _modes[Mathf.Clamp(_selectedModeIndex, 0, _modes.Length - 1)].mode;
             return MatchMode.FFA;
+        }
+
+        // ===== [2026-10-21] CHE DO NGAU NHIEN =====
+        private MatchMode _randomModePick = MatchMode.FFA;
+        private bool IsRandomModeSelected()
+        {
+            return _modes != null && _modes.Length > 0 && _modes[Mathf.Clamp(_selectedModeIndex, 0, _modes.Length - 1)].random;
+        }
+        /// <summary>Cac mode ghep tran duoc (bo o Tuy chinh / Ngau nhien), khong trung lap.</summary>
+        private List<MatchMode> MatchmakingModePool()
+        {
+            var pool = new List<MatchMode>();
+            if (_modes != null)
+                foreach (var m in _modes) if (!m.custom && !m.random && !pool.Contains(m.mode)) pool.Add(m.mode);
+            if (pool.Count == 0) pool.Add(MatchMode.FFA);
+            return pool;
+        }
+        /// <summary>Boc 1 mode ngau nhien trong pool, luu lai cho CurrentMode().</summary>
+        private MatchMode PickRandomMode()
+        {
+            var pool = MatchmakingModePool();
+            _randomModePick = pool[UnityEngine.Random.Range(0, pool.Count)];
+            Debug.Log("[MenuShellBinder] Che do ngau nhien -> " + _randomModePick);
+            return _randomModePick;
+        }
+        private string ModeTitle(MatchMode mode)
+        {
+            if (_modes != null)
+                foreach (var m in _modes) if (!m.custom && !m.random && m.mode == mode && !string.IsNullOrEmpty(m.title)) return m.title;
+            return mode == MatchMode.TDM ? "TEAM DEATHMATCH" : "FREE FOR ALL";
+        }
+        // Trang thai khi dang tim: ngau nhien -> cho nguoi choi biet mode da boc.
+        private string SearchingStatus()
+        {
+            return IsRandomModeSelected() ? "Ngẫu nhiên · " + ModeTitle(_randomModePick) : "Đang tìm trận...";
+        }
+
+        /// <summary>Ngau nhien (ghep don): hoi lobby cua MOI mode ghep duoc, uu tien phong dang cho dong nguoi nhat.
+        /// Khong co phong nao -> boc 1 mode va tim tran PlayFab. Lobby cua mode da boc duoc hoi SAU CUNG
+        /// de BackfillWatch (doc LastSessionList cua lobby dang o) theo doi dung mode do.</summary>
+        private void QueryJoinableAnyMode(bool anyMap, Action<Fusion.SessionInfo, MatchMode> onDone)
+        {
+            var pick = PickRandomMode();
+            var order = MatchmakingModePool();
+            order.Remove(pick); order.Add(pick);
+            Fusion.SessionInfo best = null; MatchMode bestMode = pick;
+            int k = 0;
+            Action next = null;
+            next = () =>
+            {
+                if (k >= order.Count) { onDone(best, best != null ? bestMode : pick); return; }
+                var m = order[k++];
+                QueryJoinable(m, anyMap, s =>
+                {
+                    if (s != null && (best == null || s.PlayerCount > best.PlayerCount)) { best = s; bestMode = m; }
+                    if (!_searching) { onDone(null, pick); return; }
+                    next();
+                });
+            };
+            next();
         }
 
         // Nhấn Ready/Start -> bắt đầu tìm trận theo mode đang chọn.
@@ -846,6 +915,9 @@ namespace Game.UI
             // [Aemy 2026-10-17] Phong tuy chinh khong o to doi -> tao phong rieng (Host) ngay, khong qua ghep tran.
             if (IsCustomSelected() && !inParty) { StartCustomHost(); return; }
             if (!inParty || _partyController.IsLeader) ResolveRandomMap(); // NGAU NHIEN -> boc map that truoc khi vao
+            // [2026-10-21] Che do NGAU NHIEN: to doi / driver -> boc mode ngay; ghep don -> boc trong QueryJoinableAnyMode (uu tien phong dang cho)
+            bool randomMode = IsRandomModeSelected();
+            if (randomMode && (inParty || _matchmakingDriver != null)) mode = PickRandomMode();
             // [PARTY-FIX] Trong party: chi leader bat dau, va phai TAT CA san sang.
             if (_partyController != null && _partyController.InParty)
             {
@@ -860,7 +932,9 @@ namespace Game.UI
                 if (IsCustomSelected() && _customRoom != null)
                 {
                     // To doi + phong tuy chinh: truong nhom lam chu phong, thanh vien vao bang ma (qua MatchId party).
-                    string code = Game.UI.CustomRoomSession.NewCode(_customRoom.Rule);
+                    mode = _customRoom.ResolveRule(); // [2026-10-21] NGAU NHIEN -> boc luat that truoc khi tao ma
+                    _partyController.PendingMode = mode;
+                    string code = Game.UI.CustomRoomSession.NewCode(mode);
                     _partyLobbyPending = _partyController.StartPartyMatch(mode, scene, Game.UI.CustomRoomSession.SessionOf(code), Game.UI.CustomRoomSession.MakePartyExtra(_customRoom.KillTarget, _customRoom.MatchMinutes));
                 }
                 else _partyLobbyPending = _partyController.StartPartyMatch(mode, scene);
@@ -883,6 +957,18 @@ namespace Game.UI
 
             // [MM-BACKFILL 2026-10-18 Aemy] Uu tien VAO TRAN DANG DIEN RA con cho (lobby Fusion) truoc khi tao ve PlayFab.
             bool anyMap = IsRandomMapSelected();
+            if (randomMode)
+            {
+                QueryJoinableAnyMode(anyMap, (s, m) =>
+                {
+                    if (!_searching) return;
+                    _randomModePick = m;
+                    if (_play != null) _play.SetQueueStatus(SearchingStatus());
+                    if (s != null) { JoinExistingMatch(s, m, anyMap); return; }
+                    StartPlayFabSearch(m, anyMap);
+                });
+                return;
+            }
             QueryJoinable(mode, anyMap, s =>
             {
                 if (!_searching) return; // nguoi choi da huy trong luc hoi
@@ -909,7 +995,7 @@ namespace Game.UI
                     StopSearchTimer();
                     EnterLobby(m, mode); // [UI-INTEGRATION] lobby roster THAT (PlayFab GetMatch) roi vao tran
                 },
-                onProgress: _ => { if (_play != null) _play.SetQueueStatus("Đang tìm trận..."); },
+                onProgress: _ => { if (_play != null) _play.SetQueueStatus(SearchingStatus()); },
                 onError: e =>
                 {
                     StopBackfillWatch();
@@ -1055,7 +1141,7 @@ namespace Game.UI
                 // Phong vua day/dong -> quay lai tim tran binh thuong
                 Debug.LogWarning("[MenuShellBinder] Vao tran dang dien ra that bai (" + why + ") -> tim tran PlayFab.");
                 if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);
-                if (_play != null) _play.SetQueueStatus("Đang tìm trận...");
+                if (_play != null) _play.SetQueueStatus(SearchingStatus());
                 _searching = true;
                 StartSearchTimer();
                 StartPlayFabSearch(mode, anyMap);

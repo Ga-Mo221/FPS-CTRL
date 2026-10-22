@@ -112,6 +112,26 @@ public class CameraRecoil : MonoBehaviour
     ///
     /// Trả về true nếu camera recoil thực sự được kích hoạt.
     /// </summary>
+    /// <summary>
+    /// Chỉ áp hiệu ứng recoil camera cho 1 phát đã được simulation xác nhận — KHÔNG có cooldown riêng.
+    /// Cooldown theo Time.time (thời gian frame) không được dùng để quyết định có bắn hay không:
+    /// Fusion có thể chạy nhiều tick trong 1 frame (Time.time đứng yên) → chặn oan phát bắn hợp lệ,
+    /// làm tốc độ bắn auto chậm hơn FireDelay (nhất là ở client).
+    /// Burst vẫn đi qua OnFire() vì CameraRecoil tự chạy cả loạt bên trong.
+    /// </summary>
+    public void FireVisual()
+    {
+        if (data == null) return;
+
+        if (firingMode == GunRecoilController.FiringMode.Burst)
+        {
+            OnFire();
+            return;
+        }
+
+        FireOnce();
+    }
+
     public bool OnFire()
     {
         if (data == null) return false;

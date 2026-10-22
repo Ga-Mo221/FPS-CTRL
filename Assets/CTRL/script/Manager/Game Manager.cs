@@ -187,6 +187,9 @@ public class GameManager : MonoBehaviour
     }
     
     public int GetBestStreak() => _bestStreak;
+
+    /// <summary>Chuoi kill hien tai cua local player (reset khi chet) - dung cho am thanh dominating/rampage.</summary>
+    public int GetCurrentStreak() => _lastBestStreak;
     
     public bool SetOnUIOptions(bool status)
     {

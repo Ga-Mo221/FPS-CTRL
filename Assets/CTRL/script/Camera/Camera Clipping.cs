@@ -8,6 +8,12 @@ public class CameraClipping : MonoBehaviour
 
     private Vector3 _originalLocalPosition;
 
+    public LayerMask ObstructionMask => _obstructionMask;
+    public float CameraRadius => _cameraRadius;
+
+    /// <summary>Trả về local position gốc (dùng khi tạm tắt component, vd. death camera).</summary>
+    public void ResetPose() => transform.localPosition = _originalLocalPosition;
+
     void Awake()
     {
         // Lưu local position gốc ngay khi start

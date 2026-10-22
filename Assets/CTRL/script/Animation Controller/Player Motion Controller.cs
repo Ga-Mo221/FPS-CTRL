@@ -124,9 +124,24 @@ public class PlayerMotionController : MonoBehaviour
         controller.ResetJumping();
     }
     
+    // IsShooting duoc set MOI phat ban cua moi loai sung, nhung trong Animator nhan vat chi dao / M24 / huy reload
+    // moi dung toi -> voi sung khac trigger nam cho mai, doi sang dao la chem ngay. Truoc day vá bang event
+    // RessetTrigger o Spine/NULL (xoa trigger moi khi Spine ve NULL) -> nuot nhat chem dao dau tien neu bam trung luc.
+    // Nay: trigger khong duoc dung trong khoang ngan thi tu xoa.
+    private const float SHOOT_TRIGGER_WINDOW = 0.2f;
+    private float _shootTriggerTime = -1f;
+
     public void IsShooting()
-    {        
+    {
         _anim.SetTrigger("IsShooting");
+        _shootTriggerTime = Time.time;
+    }
+
+    private void LateUpdate()
+    {
+        if (_shootTriggerTime < 0f || Time.time - _shootTriggerTime < SHOOT_TRIGGER_WINDOW) return;
+        _shootTriggerTime = -1f;
+        if (_anim != null) _anim.ResetTrigger("IsShooting");
     }
 
     public void SetShootIndex(int index)

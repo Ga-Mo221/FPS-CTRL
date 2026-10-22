@@ -281,7 +281,7 @@ namespace Game.UI
         private void MakeMessageRow(ChatMessage m, bool mine)
         {
             var t = NewText("Msg", _messageContent, _bodyFont, 14f, Color.white, TextAlignmentOptions.TopLeft);
-            t.enableWordWrapping = true;
+            t.textWrappingMode = TextWrappingModes.Normal;
             t.richText = true;
             string time = DateTimeOffset.FromUnixTimeMilliseconds(m.t).ToLocalTime().ToString("HH:mm");
             string nameCol = ColorUtility.ToHtmlStringRGB(mine ? Gold : Teal);
@@ -309,7 +309,7 @@ namespace Game.UI
 
             var name = NewText("Name", row.transform, _bodyFont, 15f, f.Presence == FriendPresence.Offline ? TextDim : Color.white, TextAlignmentOptions.MidlineLeft);
             Stretch((RectTransform)name.transform, 26f, 44f);
-            name.enableWordWrapping = false; name.overflowMode = TextOverflowModes.Ellipsis;
+            name.textWrappingMode = TextWrappingModes.NoWrap; name.overflowMode = TextOverflowModes.Ellipsis;
             name.text = Safe(string.IsNullOrEmpty(f.DisplayName) ? f.PlayFabId : f.DisplayName);
 
             int unread = _chat.UnreadOf(ChatController.DmKey(id));
@@ -471,7 +471,7 @@ namespace Game.UI
             backLabel.gameObject.AddComponent<LocIgnore>();
             _convTitle = NewText("Title", _convHeader.transform, _headFont, 14f, Color.white, TextAlignmentOptions.MidlineLeft);
             Stretch((RectTransform)_convTitle.transform, 34f, 8f);
-            _convTitle.enableWordWrapping = false; _convTitle.overflowMode = TextOverflowModes.Ellipsis;
+            _convTitle.textWrappingMode = TextWrappingModes.NoWrap; _convTitle.overflowMode = TextOverflowModes.Ellipsis;
             _convTitle.gameObject.AddComponent<LocIgnore>();
 
             _messageScroll = NewScroll("Messages", _body.transform, 0f, inputH, out _messageContent, 4f);
@@ -479,7 +479,7 @@ namespace Game.UI
 
             _hint = NewText("Hint", _body.transform, _bodyFont, 13f, TextDim, TextAlignmentOptions.Center);
             Stretch((RectTransform)_hint.transform, 16f, 16f, 40f, inputH + 10f);
-            _hint.enableWordWrapping = true;
+            _hint.textWrappingMode = TextWrappingModes.Normal;
             _hint.text = "Chưa có tin nhắn nào. Chào mọi người đi!";
 
             // ---- o nhap + nut GUI
@@ -499,10 +499,11 @@ namespace Game.UI
             Stretch((RectTransform)area.transform, 8f, 8f, 2f, 2f);
             var ph = NewText("Placeholder", area.transform, _bodyFont, 14f, TextDim, TextAlignmentOptions.MidlineLeft);
             Stretch((RectTransform)ph.transform, 0f, 0f);
-            ph.text = "Nhập tin nhắn…"; ph.enableWordWrapping = false; ph.fontStyle = FontStyles.Italic;
+            ph.text = "Nhập tin nhắn…"; ph.textWrappingMode = TextWrappingModes.NoWrap; ph.fontStyle = FontStyles.Italic;
             var tx = NewText("Text", area.transform, _bodyFont, 14f, Color.white, TextAlignmentOptions.MidlineLeft);
             Stretch((RectTransform)tx.transform, 0f, 0f);
-            tx.enableWordWrapping = false; tx.richText = false;
+            tx.textWrappingMode = TextWrappingModes.NoWrap;
+            tx.richText = false;
             _input = inGo.GetComponent<TMP_InputField>();
             _input.textViewport = (RectTransform)area.transform;
             _input.textComponent = tx;

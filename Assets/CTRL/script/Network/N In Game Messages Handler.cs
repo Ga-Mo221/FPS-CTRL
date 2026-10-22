@@ -7,12 +7,15 @@ using WebSocketSharp;
 // - Kill feed: RPC chi gui NetworkId nguoi giet + byte chi so vu khi (~5B thay vi 3 string ~50B); moi may tu tra ten.
 // - Chat: gui LEN HOST (RPC_SendChat); host lay ten that tu NPlayer (khong tin ten client tu dien),
 //   chi chuyen tin doi cho dung dong doi (RPC_ShowChat co [RpcTarget]) -> khong lo chat doi dich, khong gui thua.
-// - Chat dai: cat theo BYTE UTF-8 (tieng Viet 2-3 byte/ky tu) truoc khi gui de khong vuot gioi han payload RPC.
+// - Chat dai: payload 1 RPC toi da 512 byte (Fusion) -> chia tin thanh nhieu manh theo BYTE UTF-8
+//   (tieng Viet 2-3 byte/ky tu), moi manh 1 RPC kem msgId/part/count; may nhan ghep lai roi moi hien.
 // - Chong chen rich-text (<size=500>, <sprite>...): boc ten + noi dung bang <noparse>.
 public class NInGameMessagesHandler : NetworkBehaviour
 {
-    public const int MAX_CHAT_CHARS = 120;  // gioi han o nhap tren HUD
-    private const int MAX_CHAT_BYTES = 300; // chua cho header + tham so khac cua RPC
+    public const int MAX_CHAT_CHARS = 400;    // gioi han o nhap tren HUD
+    private const int CHAT_CHUNK_BYTES = 400; // 1 manh/RPC: con du cho header + PlayerRef + 4 byte tham so (< 512)
+    private const int MAX_CHAT_CHUNKS = 4;    // 4 x 400 byte >= 400 ky tu tieng Viet (toi da 3 byte/ky tu)
+    private const float CHAT_PART_TIMEOUT = 5f; // manh le qua lau khong du bo -> bo
     private const float CHAT_COOLDOWN = 0.4f;
 
     // Chi so vu khi dac biet cho kill feed (khong nam trong GameManager._weapon_Prefabs)
@@ -23,6 +26,18 @@ public class NInGameMessagesHandler : NetworkBehaviour
     private CharComponentManager _componentManager;
     private GameHudControllerBase _gameHudController;
     private float _lastChatTime = -10f;
+    private byte _nextChatMsgId;
+
+    // Manh chat dang cho ghep (tren handler cua NGUOI GUI, o moi may nhan) — key = msgId.
+    private class ChatPartial
+    {
+        public byte Channel;
+        public string[] Parts;
+        public int Received;
+        public float Time;
+    }
+    private readonly Dictionary<byte, ChatPartial> _chatPartials = new Dictionary<byte, ChatPartial>();
+    private readonly List<byte> _expiredChat = new List<byte>();
 
     // Ten theo NetworkId, cache lai de van hien dung khi nguoi giet vua thoat phong.
     private static readonly Dictionary<NetworkId, string> _nameCache = new Dictionary<NetworkId, string>();
@@ -39,7 +54,9 @@ public class NInGameMessagesHandler : NetworkBehaviour
     // ============================== KILL FEED ==============================
 
     /// <summary>Host goi khi co nguoi chet (tren handler cua NAN NHAN).</summary>
-    public void SendInGameRPCKill(NetworkId killerId, string killerName, string weaponName)
+    /// headshot: chi host biet bo phan trung dan -> gui kem 1 byte trong RPC kill feed san co
+    /// (khong them RPC/bien networked rieng) de may cua nguoi giet tu phat am "headshoot".
+    public void SendInGameRPCKill(NetworkId killerId, string killerName, string weaponName, bool headshot = false)
     {
         if (!Object.HasStateAuthority) return;
         byte idx = WeaponIndexOf(weaponName);
@@ -54,15 +71,20 @@ public class NInGameMessagesHandler : NetworkBehaviour
             RPC_KillGameStr(Truncate(killerName, 64), Truncate(weaponName, 64));
             return;
         }
-        RPC_KillGame(killerId, idx);
+        RPC_KillGame(killerId, idx, headshot);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_KillGame(NetworkId killerId, byte weaponIdx, RpcInfo info = default)
+    private void RPC_KillGame(NetworkId killerId, byte weaponIdx, NetworkBool headshot, RpcInfo info = default)
     {
         string weapon = WeaponNameOf(weaponIdx);
         string killer = weaponIdx == WEAPON_ZONE && killerId == default(NetworkId) ? "Out of Bounds" : NameOf(killerId);
         ShowKill(killer, weapon);
+
+        // Headshot (am thanh + UI): chi may cua nguoi giet (local player), bo qua tu sat.
+        if (headshot && killerId != Object.Id && NPlayer.Local != null && NPlayer.Local.Object != null
+            && NPlayer.Local.Object.Id == killerId)
+            LocalKillEvents.RaiseHeadshot();
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
@@ -160,18 +182,26 @@ public class NInGameMessagesHandler : NetworkBehaviour
         _lastChatTime = Time.unscaledTime;
 
         if (message.Length > MAX_CHAT_CHARS) message = message.Substring(0, MAX_CHAT_CHARS);
-        message = Truncate(message, MAX_CHAT_BYTES);
+
+        List<string> chunks = SplitUtf8(message, CHAT_CHUNK_BYTES, MAX_CHAT_CHUNKS);
+        if (chunks.Count == 0) return;
 
         // Gui tren handler cua NPlayer.Local (co InputAuthority) de host biet chinh xac ai gui.
         var self = NPlayer.Local != null ? NPlayer.Local.GetComponent<NInGameMessagesHandler>() : this;
         if (self == null) self = this;
-        self.RPC_SendChat(channel, message);
+
+        byte msgId = ++self._nextChatMsgId;
+        byte count = (byte)chunks.Count;
+        for (int i = 0; i < chunks.Count; i++)
+            self.RPC_SendChat(channel, msgId, (byte)i, count, chunks[i]);
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_SendChat(byte channel, string msg, RpcInfo info = default)
+    private void RPC_SendChat(byte channel, byte msgId, byte part, byte count, string msg, RpcInfo info = default)
     {
-        msg = Truncate(msg, MAX_CHAT_BYTES);
+        // Host khong tin client: chan so manh/chi so sai va manh qua dai.
+        if (count == 0 || count > MAX_CHAT_CHUNKS || part >= count) return;
+        msg = Truncate(msg, CHAT_CHUNK_BYTES);
         if (string.IsNullOrEmpty(msg)) return;
         var sender = GetComponent<NPlayer>(); // object cua nguoi gui (InputAuthority) -> ten that, khong gia mao duoc
         if (sender == null) return;
@@ -186,12 +216,53 @@ public class NInGameMessagesHandler : NetworkBehaviour
                 var np = o.GetComponent<NPlayer>();
                 if (np == null || np.NetworkedTeam != sender.NetworkedTeam) continue;
             }
-            RPC_ShowChat(p, channel, msg);
+            RPC_ShowChat(p, channel, msgId, part, count, msg);
         }
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_ShowChat([RpcTarget] PlayerRef target, byte channel, string msg, RpcInfo info = default)
+    private void RPC_ShowChat([RpcTarget] PlayerRef target, byte channel, byte msgId, byte part, byte count, string msg, RpcInfo info = default)
+    {
+        if (count == 0 || count > MAX_CHAT_CHUNKS || part >= count) return;
+
+        if (count == 1)
+        {
+            DisplayChat(channel, msg);
+            return;
+        }
+
+        // Ghep manh: RPC reliable nhung khong dua vao thu tu den -> dat theo chi so part.
+        float now = Time.unscaledTime;
+        DropExpiredChatParts(now);
+
+        if (!_chatPartials.TryGetValue(msgId, out var partial) || partial.Parts.Length != count)
+        {
+            partial = new ChatPartial { Channel = channel, Parts = new string[count] };
+            _chatPartials[msgId] = partial;
+        }
+        partial.Time = now;
+        if (partial.Parts[part] == null)
+        {
+            partial.Parts[part] = msg;
+            partial.Received++;
+        }
+
+        if (partial.Received < count) return;
+        _chatPartials.Remove(msgId);
+        DisplayChat(partial.Channel, string.Concat(partial.Parts));
+    }
+
+    private void DropExpiredChatParts(float now)
+    {
+        if (_chatPartials.Count == 0) return;
+        _expiredChat.Clear();
+        foreach (var kv in _chatPartials)
+            if (now - kv.Value.Time > CHAT_PART_TIMEOUT) _expiredChat.Add(kv.Key);
+        foreach (var id in _expiredChat)
+            _chatPartials.Remove(id);
+    }
+
+    private void DisplayChat(byte channel, string msg)
     {
         if (!EnsureHud()) return;
         var sender = GetComponent<NPlayer>();
@@ -216,6 +287,36 @@ public class NInGameMessagesHandler : NetworkBehaviour
     }
 
     // ================================ TIEN ICH ================================
+
+    /// <summary>
+    /// Chia chuoi thanh cac manh, moi manh &lt;= maxBytes byte UTF-8, khong cat doi surrogate pair.
+    /// Toi da maxChunks manh (phan du bi bo).
+    /// </summary>
+    public static List<string> SplitUtf8(string s, int maxBytes, int maxChunks)
+    {
+        var result = new List<string>();
+        if (string.IsNullOrEmpty(s)) return result;
+
+        var enc = System.Text.Encoding.UTF8;
+        int start = 0, bytes = 0;
+        for (int i = 0; i < s.Length && result.Count < maxChunks; )
+        {
+            int charLen = char.IsHighSurrogate(s[i]) && i + 1 < s.Length ? 2 : 1;
+            int charBytes = enc.GetByteCount(s.ToCharArray(i, charLen));
+            if (bytes + charBytes > maxBytes)
+            {
+                result.Add(s.Substring(start, i - start));
+                start = i;
+                bytes = 0;
+                continue;
+            }
+            bytes += charBytes;
+            i += charLen;
+        }
+        if (start < s.Length && result.Count < maxChunks)
+            result.Add(s.Substring(start));
+        return result;
+    }
 
     /// <summary>Cat chuoi de so byte UTF-8 &lt;= maxBytes (khong cat doi surrogate pair).</summary>
     public static string Truncate(string s, int maxBytes)

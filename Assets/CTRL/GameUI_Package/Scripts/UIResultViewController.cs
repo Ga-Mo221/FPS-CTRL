@@ -167,7 +167,7 @@ namespace Game.UI
         private static void NoWrap(TMP_Text t)
         {
             if (t == null) return;
-            t.enableWordWrapping = false;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
             t.overflowMode = TextOverflowModes.Overflow;
         }
 

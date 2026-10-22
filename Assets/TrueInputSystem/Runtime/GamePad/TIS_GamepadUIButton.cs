@@ -210,8 +210,19 @@ namespace GaMo.TrueInputSystem
 
             if (isFocused)
             {
-                // Button đang có real focus → đọc input, gửi lên Context xử lý
-                HandleContentInput();
+                // Tab/SubTab alwaysActive đang giữ focus (vd dòng menu Pause được focus để bấm A):
+                // LT/RT · LB/RB vẫn phải đổi tab qua Context (cập nhật layer + redirect SubTab/Content).
+                // Trước đây đi nhánh Content → chỉ dời focus EventSystem, Context không biết → lệch tab.
+                if (alwaysActive && layer != NavigationLayer.Content && !kbNav)
+                {
+                    if (context != null && context.IsActiveInLayer(this))
+                        HandleLayerInput();
+                }
+                else
+                {
+                    // Button đang có real focus → đọc input, gửi lên Context xử lý
+                    HandleContentInput();
+                }
             }
             else if (alwaysActive && !kbNav)
             {

@@ -40,6 +40,7 @@ public class SettingData : ScriptableObject
     [SerializeField, Range(0f,2f)] private float _bloomIntensity = 0.7f;
     [SerializeField] private bool _vignetteOn = true;
     [SerializeField] private bool _motionBlurOn = false;
+    [SerializeField] private bool _stableCamera = false; // Chong rung camera (CameraStabilizer giu RAW_Camera co dinh)
 
     [Header("Graphics - Engine")]
     [SerializeField] private bool _vSync = false;
@@ -116,6 +117,7 @@ public class SettingData : ScriptableObject
     public float BloomIntensity { get { return _bloomIntensity; } set { _bloomIntensity = value; } }
     public bool  VignetteOn     { get { return _vignetteOn; }     set { _vignetteOn = value; } }
     public bool  MotionBlurOn   { get { return _motionBlurOn; }   set { _motionBlurOn = value; } }
+    public bool  StableCamera   { get { return _stableCamera; }   set { _stableCamera = value; } }
 
     // -- Graphics engine --
     public bool  VSync        { get { return _vSync; }        set { _vSync = value; } }

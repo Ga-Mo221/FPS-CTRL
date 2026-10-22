@@ -60,6 +60,9 @@ namespace GaMo.TrueInputSystem.Editor
         private string _renameBuffer      = "";
         private bool   _isRenaming        = false;
         private int    _renamingIndex     = -1;
+        private bool   _renamingAction    = false;   // true = đổi tên hành động, false = đổi tên nhóm
+        private Rect   _renameFieldScreenRect;           // rect ô đổi tên (toạ độ màn hình)
+        private bool   _suppressNextContextClick = false; // chuột phải để huỷ đổi tên → không mở menu
 
         // ── Vị trí cuộn ───────────────────────────────────────
         private Vector2 _mapListScroll;
@@ -92,8 +95,16 @@ namespace GaMo.TrueInputSystem.Editor
         private bool    _showTooltip       = false;
         private bool    _tooltipRegistered = false;   // reset mỗi frame
         private Vector2 _tooltipMousePos   = Vector2.zero;
+        // Trễ hiện tooltip: chỉ hiện khi rê chuột trên cùng một phần tử đủ lâu
+        private const double TooltipDelay  = 0.6;
+        private Rect    _tooltipRect;                  // rect đăng ký ở frame hiện tại
+        private Rect    _tooltipHoverRect;             // rect đang đếm giờ
+        private string  _tooltipHoverText  = "";
+        private double  _tooltipHoverStart;
         // Mouse position trong window space — capture trước ScrollView để tránh bị offset
         private Vector2 _windowMousePos    = Vector2.zero;
+        // false khi chuột đã rời cửa sổ → tắt hover/tooltip ngay
+        private bool    _mouseInWindow     = false;
 
         // ══════════════════════════════════════════════════════
         //  BẢNG MÀU — Unity Editor Style
@@ -148,6 +159,11 @@ namespace GaMo.TrueInputSystem.Editor
         private void OnEnable()
         {
             _showLanding = (_workingProfile == null);
+
+            // Nhận MouseMove / MouseEnter-LeaveWindow để hover & tooltip cập nhật tức thì.
+            // Không bật thì EditorWindow chỉ Repaint khi có event khác → hover bị trễ.
+            wantsMouseMove             = true;
+            wantsMouseEnterLeaveWindow = true;
         }
 
         private void OnGUI()
@@ -158,6 +174,26 @@ namespace GaMo.TrueInputSystem.Editor
             // Bên trong ScrollView, Event.current.mousePosition bị transform
             // theo scroll offset nên không dùng được cho tooltip overlay.
             var ev = Event.current;
+
+            // Chuột rời cửa sổ: xoá tooltip và Repaint ngay.
+            // Khi đó mousePosition vẫn giữ vị trí cuối → đẩy ra xa để mọi phép
+            // kiểm tra hover (rect.Contains) đều false trong Layout/Repaint.
+            if (ev.type == EventType.MouseLeaveWindow)
+            {
+                _mouseInWindow     = false;
+                _showTooltip       = false;
+                _tooltipText       = "";
+                _tooltipRegistered = false;
+                _tooltipHoverText  = "";
+                Repaint();
+            }
+            else if (ev.type == EventType.MouseEnterWindow || ev.type == EventType.MouseMove)
+            {
+                _mouseInWindow = true;
+            }
+            if (!_mouseInWindow && (ev.type == EventType.Layout || ev.type == EventType.Repaint))
+                ev.mousePosition = new Vector2(-100000f, -100000f);
+
             if (ev.type == EventType.MouseMove ||
                 ev.type == EventType.MouseDrag  ||
                 ev.type == EventType.Repaint    ||
@@ -175,6 +211,8 @@ namespace GaMo.TrueInputSystem.Editor
                 DrawTooltipOverlay();
                 return;
             }
+
+            HandleRenameOutsideClick();
 
             DrawBanner();
             DrawToolbar();
@@ -232,14 +270,29 @@ namespace GaMo.TrueInputSystem.Editor
             {
                 if (!_tooltipRegistered)
                 {
-                    _showTooltip = false;
-                    _tooltipText = "";
+                    _showTooltip      = false;
+                    _tooltipText      = "";
+                    _tooltipHoverText = "";
+                }
+                else if (_tooltipText != _tooltipHoverText || _tooltipRect != _tooltipHoverRect)
+                {
+                    // Chuột vừa vào phần tử mới → bắt đầu đếm giờ lại
+                    _tooltipHoverText  = _tooltipText;
+                    _tooltipHoverRect  = _tooltipRect;
+                    _tooltipHoverStart = EditorApplication.timeSinceStartup;
                 }
                 _tooltipRegistered = false;
             }
 
             if (!_showTooltip || string.IsNullOrEmpty(_tooltipText)) return;
             if (Event.current.type != EventType.Repaint) return;
+
+            // Chưa đủ thời gian → chưa vẽ, Repaint tiếp để kiểm tra lại
+            if (EditorApplication.timeSinceStartup - _tooltipHoverStart < TooltipDelay)
+            {
+                Repaint();
+                return;
+            }
 
             var tipStyle = new GUIStyle()
             {
@@ -294,6 +347,7 @@ namespace GaMo.TrueInputSystem.Editor
             if (!rect.Contains(Event.current.mousePosition)) return;
 
             _tooltipText       = text;
+            _tooltipRect       = rect;
             _tooltipMousePos   = _windowMousePos;   // window space → vẽ đúng chỗ
             _showTooltip       = true;
             _tooltipRegistered = true;

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27cf95876c89cca4b82a63e500a4e51d, type: 3}
+  m_Name: Gameplay Audio Data
+  m_EditorClassIdentifier: Assembly-CSharp::GameplayAudioData
+  _three: {fileID: 8300000, guid: a16497c3ab85797468db98a51c851dfb, type: 3}
+  _two: {fileID: 8300000, guid: 0a842ffaea4cba74d879495f3df017c1, type: 3}
+  _one: {fileID: 8300000, guid: 5193b4bcd84caf342836032e6f6e6e31, type: 3}
+  _fight: {fileID: 8300000, guid: 5bb80f2f08772d142862fd312e2fdff1, type: 3}
+  _victory: {fileID: 8300000, guid: 04e65dbeff32bb7438456dd85ef3026b, type: 3}
+  _gameOver: {fileID: 8300000, guid: ccea6375112cf584db60de659f8c4bdc, type: 3}
+  _headshot: {fileID: 8300000, guid: 209acf7077588134b92fc95a2b6d7998, type: 3}
+  _streakTiers:
+  - kills: 3
+    clip: {fileID: 8300000, guid: 18a10d89725f90b4a93aebf05d8110cf, type: 3}
+  - kills: 5
+    clip: {fileID: 8300000, guid: 98dfa0b824e8b9b4cb686e164dd811ad, type: 3}
+  - kills: 7
+    clip: {fileID: 8300000, guid: 9e15184b7dbf5994bbc9895e64a1b6fb, type: 3}
+  - kills: 9
+    clip: {fileID: 8300000, guid: c0391a096a3ab81438e60ad04bd9c589, type: 3}
+  _streakRepeatClip: {fileID: 8300000, guid: 4ac8c3de312f6f64c9d94a8011f266fd, type: 3}
+  _streakRepeatEvery: 2
+  _volume: 1
+  _maxQueue: 3

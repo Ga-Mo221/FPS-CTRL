@@ -189,7 +189,7 @@ public class NHPHandler : NetworkBehaviour
     /// Xử lý nhận damage.
     /// Trả về true nếu đây là phát kill VÀ killer không phải chính mình (Object.Id != id).
     /// </summary>
-    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName, string weaponName, NetworkId id, float Trauma = 0.2f)
+    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName, string weaponName, NetworkId id, float Trauma = 0.2f, bool headshot = false)
     {
         if (_movementHandler != null && !_movementHandler.CanTakeDamage) return false;
         if (IsDead) return false;
@@ -211,7 +211,7 @@ public class NHPHandler : NetworkBehaviour
         {
             _lastKillerId = id;
             // gui NetworkId + chi so vu khi thay vi 3 chuoi
-            _inGameMessagesHandler.SendInGameRPCKill(id, damageCausedByPlayerNickName, weaponName);
+            _inGameMessagesHandler.SendInGameRPCKill(id, damageCausedByPlayerNickName, weaponName, headshot);
             IsDead = true;
             DeadCount++; // tang o simulation tren host, khong con o callback render
             StartServerRevive(GameManager.Instance.RespawnTime);

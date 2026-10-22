@@ -51,7 +51,10 @@ namespace GaMo.TrueInputSystem
         [SerializeField] private float _panSensitivity = 1f;
 
         [Header("Debug")]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] private bool _debugDraw = false;
+#pragma warning restore CS0414
 
         // ══════════════════════════════════════════════════════════════════
         //  PUBLIC DATA
@@ -371,15 +374,22 @@ namespace GaMo.TrueInputSystem
         [Header("Debug Size")]
         [Tooltip("Chiều rộng khung debug (pixel).")]
         [Range(180f, 600f)]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] private float _debugWidth  = 320f;
+#pragma warning restore CS0414
 
         [Tooltip("Khoảng cách từ cạnh trái màn hình.")]
         [Range(0f, 200f)]
+#pragma warning disable CS0414
         [SerializeField] private float _debugMarginLeft = 10f;
+#pragma warning restore CS0414
 
         [Tooltip("Khoảng cách từ cạnh trên màn hình.")]
         [Range(0f, 400f)]
+#pragma warning disable CS0414
         [SerializeField] private float _debugMarginTop = 60f;
+#pragma warning restore CS0414
 
         [Tooltip("Cỡ chữ khung debug.")]
         [Range(10, 28)]

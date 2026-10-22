@@ -303,9 +303,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         var yawModel = _data.YawModel;
         if (_movementHandler != null)
         {
-            if (_movementHandler.StateFl.IsADS || _movementHandler.StateFl.IsThrow)
+            // Chỉ giảm tốc khi NGẮM (giống pitch). Trước đây cả lúc ném lựu đạn → nhân với hệ số còn sót từ
+            // lần ngắm trước (vd sniper 0.1) → xoay trái/phải gần như đứng, còn lên/xuống vẫn bình thường.
+            if (_movementHandler.StateFl.IsADS)
             {
-                yawModel *= _movementHandler.ADSLookSpeedMultiplier; 
+                yawModel *= _movementHandler.ADSLookSpeedMultiplier;
             }
         }
 

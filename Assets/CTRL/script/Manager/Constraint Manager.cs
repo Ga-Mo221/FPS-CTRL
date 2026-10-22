@@ -3,6 +3,8 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using GaMo.BlenderEditorTools;
 
+// Chạy SAU TransformConstraint (100) và IKConstraint (200): xem LateUpdate().
+[DefaultExecutionOrder(300)]
 public class ConstraintManager : MonoBehaviour
 {
     [TabGroup("Constraint Manager", "List Constraints")]
@@ -34,6 +36,22 @@ public class ConstraintManager : MonoBehaviour
     [SerializeField] private IKConstraint _IK_hand_left;
     [TabGroup("Constraint Manager", "IK")]
     [SerializeField] private IKConstraint _IK_hand_right;
+
+    private void Awake()
+    {
+        // Xương lựu đạn trên người copy pose xương lựu đạn của rig VŨ KHÍ. Rig vũ khí bám camera qua
+        // chuỗi TransformConstraint (Camera Root → Camera Shake → ADS Pivot), recoil, sway, collision...
+        // cùng execution order 100 → Unity không đảm bảo thứ tự, lựu đạn có thể copy pose frame TRƯỚC
+        // → khi xoay màn hình quả bom bị giật, không bám tay. Tự evaluate ở LateUpdate (order 300).
+        foreach (var grenade in _list_Bone_Grenade)
+            if (grenade != null) grenade.ExternallyDriven = true;
+    }
+
+    private void LateUpdate()
+    {
+        foreach (var grenade in _list_Bone_Grenade)
+            if (grenade != null) grenade.Evaluate();
+    }
 
     public void AddNewWeapon(WeaponController ctrl, string ID, float weight = 0)
     {

@@ -2,7 +2,6 @@ using Fusion;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using WebSocketSharp;
-using System.Threading.Tasks;
 
 public class WeaponManager : NetworkBehaviour
 {
@@ -52,6 +51,13 @@ public class WeaponManager : NetworkBehaviour
     [ReadOnly]
     // Active Weapon
     [Networked] public byte _weapon_Active { get; set; } = 0;
+
+    // Âm thanh vứt / nhặt súng: host tăng bộ đếm khi thao tác THÀNH CÔNG, mọi máy thấy đổi trong Render()
+    // thì phát âm 3D tại Audio_Body của nhân vật (không cần thêm RPC; byte quay vòng là đủ).
+    [Networked] private byte _dropSoundCount { get; set; }
+    [Networked] private byte _pickupSoundCount { get; set; }
+    private byte _lastDropSound;
+    private byte _lastPickupSound;
 
     #if UNITY_EDITOR
     [TabGroup("Debug", "Debug")]
@@ -107,6 +113,35 @@ public class WeaponManager : NetworkBehaviour
     public override void Spawned()
     {
         InitWeapon();
+        // Người vào sau / host migration: không phát lại âm cũ.
+        _lastDropSound = _dropSoundCount;
+        _lastPickupSound = _pickupSoundCount;
+    }
+
+    public override void Render()
+    {
+        if (_componentManager == null) return;
+        if (_dropSoundCount != _lastDropSound)
+        {
+            _lastDropSound = _dropSoundCount;
+            var d = _componentManager.NCharMovementHandler != null ? _componentManager.NCharMovementHandler.Data : null;
+            if (d != null) PlayBodySound(d.DropWeaponClips, d.Volume_DropWeapon);
+        }
+        if (_pickupSoundCount != _lastPickupSound)
+        {
+            _lastPickupSound = _pickupSoundCount;
+            var d = _componentManager.NCharMovementHandler != null ? _componentManager.NCharMovementHandler.Data : null;
+            if (d != null) PlayBodySound(d.PickupWeaponClips, d.Volume_PickupWeapon);
+        }
+    }
+
+    private void PlayBodySound(AudioClip[] clips, float volume)
+    {
+        // Chưa gán clip trong PlayerData thì bỏ qua (AudioManager sẽ log lỗi nếu mảng rỗng).
+        if (clips == null || clips.Length == 0 || AudioManager.Instance == null) return;
+        var source = _componentManager.Audio_Body;
+        if (source == null) return;
+        AudioManager.Instance.PlayClip(source, clips, volume, false); // không cắt âm thân đang phát (bước chân, nhảy...)
     }
 
     #region Register / Unregister ConstraintManager
@@ -325,45 +360,130 @@ public class WeaponManager : NetworkBehaviour
         SwitchWeaponActive(1);
     }
     
+    // Host chap nhan nhat neu nguoi choi cach item <= khoang nay (client hien nut nhat o 1.5m, du cho tre mang).
+    private const float PICKUP_MAX_DISTANCE = 2.5f;
+    private const float PICKUP_READY_TIMEOUT = 2f;
+
     /// <summary>
-    /// duoc goi tu input local cua clients khi nhat mot vu khi
+    /// Client bam nhat vu khi: CHI gui NetworkId cua item. Host tu kiem tra (item con ton tai, chua bi ai nhat,
+    /// du gan), doc loai sung + so dan TU CHINH ITEM, xoa item roi trao sung.
+    /// Truoc day client gui ten sung + so dan (tin client -> sua goi tin la co dan) va 1 RPC xoa item rieng
+    /// (RpcSources.All, khong kiem tra) -> 2 nguoi nhat cung item deu nhan duoc sung.
     /// </summary>
-    /// <param name="weaponName"></param>
-    /// <param name="currentBullet"></param>
-    /// <param name="maxBullet"></param>
-    /// <param name="info"></param>
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    public async void Rpc_RequestChangeWeapon(string weaponName, int currentBullet, int maxBullet, RpcInfo info = default)
+    public void Rpc_RequestPickup(NetworkId itemId, RpcInfo info = default)
     {
-        SpawnWeapon(weaponName);
-        EquipNewWeapon(_weapon_Active);
+        if (!Runner.TryFindObject(itemId, out var itemObj) || itemObj == null || !itemObj.IsValid) { PickupReject("khong tim thay item " + itemId); return; }
+        var item = itemObj.GetComponent<DropItemWeapon>();
+        if (item == null) { PickupReject("object khong phai DropItemWeapon"); return; }
 
-        if (_weapon_Active == 1)
+        float dist = Vector3.Distance(itemObj.transform.position, Object.transform.position);
+        if (dist > PICKUP_MAX_DISTANCE) { PickupReject($"qua xa ({dist:F2}m > {PICKUP_MAX_DISTANCE}m)"); return; }
+
+        string weaponId = item.WeaponID;
+        if (string.IsNullOrEmpty(weaponId)) { PickupReject("item khong co WeaponID"); return; }
+        if (!item.TryClaim()) { PickupReject("item da duoc nhat"); return; } // da co nguoi nhat trong cung tick
+
+        int currentBullet = item.CurrentBullet;
+        int maxBullet = item.MaxBullet;
+        Runner.Despawn(itemObj);
+
+        // Ưu tiên lấp slot trống (sau khi vứt súng). Không có slot trống → thay món ĐANG CẦM:
+        //  - đang cầm súng → súng đó bị tung nhẹ ra trước (nhặt-đổi giống CS2);
+        //  - đang cầm dao  → súng mới thay chỗ dao, dao biến mất (dao không rơi ra), vd M4 + dao → 2 M4.
+        int slot = _weaponOneRef == null ? 1 : _weaponTwoRef == null ? 2 : _weapon_Active;
+
+        var replaced = slot == 1 ? Weapon_One_CTRL : Weapon_Two_CTRL;
+        if (replaced != null && replaced.WeaponType != WeaponType.Melee)
+            ThrowDropItem(replaced, SWAP_THROW_SPEED);
+
+        if (slot == 1) SpawnWeaponOne(weaponId);
+        else           SpawnWeaponTwo(weaponId);
+
+        if (_weapon_Active != slot)
         {
-            await WaitUntilReady(() => Weapon_One_CTRL != null && Weapon_One_CTRL.Object != null && Weapon_One_CTRL.Object.IsValid);
-            Weapon_One_CTRL.SetBullet(currentBullet, maxBullet);
+            _componentManager.NCharMovementHandler?.ResetADS();
+            _weapon_Active = (byte)slot; // cầm luôn súng vừa nhặt (OnWeaponRefsChanged → SwitchWeapon)
         }
-        else if (_weapon_Active == 2)
-        {
-            await WaitUntilReady(() => Weapon_Two_CTRL != null && Weapon_Two_CTRL.Object != null && Weapon_Two_CTRL.Object.IsValid);
-            Weapon_Two_CTRL.SetBullet(currentBullet, maxBullet);
-        }
+        EquipNewWeapon(slot);
+        _pickupSoundCount++; // nhặt-đổi chỉ phát âm nhặt (không chồng thêm âm vứt cho gọn)
+        StartCoroutine(SetBulletWhenReady(slot, currentBullet, maxBullet));
     }
 
-    private async Task WaitUntilReady(System.Func<bool> condition)
-    {
-        while (!condition())
-            await Task.Yield();
-    }
-    
-    // ✅ RPC từ client gửi position thật lên host để spawn
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void Rpc_RequestDropWeapon(Vector3 dropPosition, byte weaponSlot)
-    {
-        WeaponController ctrl = weaponSlot == 1 ? Weapon_One_CTRL : Weapon_Two_CTRL;
-        if (ctrl == null) return;
+    // ── Vứt súng (phím G / D-pad phải) ──────────────────────────────────────
+    private const string EMPTY_SLOT_ID = "-"; // ID giả cho slot trống (chỉ dùng so với balo)
 
-        SpawnDropItem(ctrl, dropPosition);
+    /// <summary>
+    /// Client bấm vứt súng đang cầm. Host quyết định: không vứt dao, không vứt món cuối cùng,
+    /// không vứt khi chết / đang đổi súng / nạp đạn / ném lựu đạn. Slot vừa vứt để TRỐNG,
+    /// tự đổi sang súng ở slot còn lại; nhặt súng sau đó sẽ lấp vào slot trống.
+    /// </summary>
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void Rpc_RequestDrop(RpcInfo info = default)
+    {
+        int slot = _weapon_Active;
+        var ctrl = slot == 1 ? Weapon_One_CTRL : slot == 2 ? Weapon_Two_CTRL : null;
+        var otherRef = slot == 1 ? _weaponTwoRef : _weaponOneRef;
+
+        if (ctrl == null) { DropReject("khong cam sung"); return; }
+        if (ctrl.WeaponType == WeaponType.Melee) { DropReject("khong vut dao"); return; }
+        if (otherRef == null) { DropReject("mon cuoi cung"); return; }
+        if (_componentManager.NHPHandler != null && _componentManager.NHPHandler.IsDead) { DropReject("dang chet"); return; }
+        var move = _componentManager.NCharMovementHandler;
+        if (move != null)
+        {
+            var st = move.StateFl;
+            if (st.IsSwitching || st.IsReloading || st.IsThrow) { DropReject("dang doi sung / nap dan / nem"); return; }
+        }
+
+        ThrowDropItem(ctrl, THROW_SPEED); // súng bay ra theo hướng nhìn rồi rơi; đọc số đạn TRƯỚC khi despawn súng
+
+        if (slot == 1)
+        {
+            UnregisterSlotOne();
+            Runner.Despawn(_weaponOneRef);
+            _weaponOneRef = null;
+        }
+        else
+        {
+            UnregisterSlotTwo();
+            Runner.Despawn(_weaponTwoRef);
+            _weaponTwoRef = null;
+        }
+
+        if (move != null) move.ResetADS();
+        _weapon_Active = (byte)(slot == 1 ? 2 : 1);
+        _dropSoundCount++;
+        Rpc_SwitchWeapon();
+    }
+
+    private void DropReject(string reason)
+    {
+#if UNITY_EDITOR
+        if (_debug) Debug.Log($"<color=green>[WeaponManager]</color> Vut sung bi tu choi ({name}): {reason}", this);
+#endif
+    }
+
+    private void PickupReject(string reason)
+    {
+        Debug.LogWarning($"<color=green>[WeaponManager]</color> Nhat sung bi tu choi ({name}, tick {Runner.Tick}): {reason}", this);
+    }
+
+    // Sung moi spawn can vai frame moi resolve duoc controller -> cho co gioi han (truoc day async void cho vo han).
+    private System.Collections.IEnumerator SetBulletWhenReady(int slot, int currentBullet, int maxBullet)
+    {
+        float deadline = Time.unscaledTime + PICKUP_READY_TIMEOUT;
+        while (Time.unscaledTime < deadline)
+        {
+            var ctrl = slot == 1 ? Weapon_One_CTRL : Weapon_Two_CTRL;
+            if (ctrl != null && ctrl.Object != null && ctrl.Object.IsValid)
+            {
+                ctrl.SetBullet(currentBullet, maxBullet);
+                yield break;
+            }
+            yield return null;
+        }
+        Debug.LogWarning($"[WeaponManager] Nhat sung: het {PICKUP_READY_TIMEOUT}s ma sung slot {slot} chua san sang -> giu so dan mac dinh.", this);
     }
     
     #endregion
@@ -475,59 +595,52 @@ public class WeaponManager : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Gọi từ animation event DeadVFX — event chạy trên MỌI máy. CHỈ host spawn súng rơi.
+    /// Trước đây client chính chủ còn gửi thêm Rpc_RequestDropWeapon → host spawn 2 item chồng nhau
+    /// cho mỗi lần client chết (nhặt 1 cái, cái dưới vẫn còn → "phải nhặt 2 lần").
+    /// </summary>
     public void HideWeaponActive()
     {
         if (_weapon_Active == 1)
         {
             _weaponOneRef?.gameObject.SetActive(false);
-
             if (Object.HasStateAuthority)
-            {
                 SpawnDropItem(Weapon_One_CTRL);
-            }
-            else if (Object.HasInputAuthority) // ✅ Chỉ client sở hữu mới gửi RPC
-            {
-                Vector3 pos = transform.position;
-                pos.y = 0.5f;
-                Rpc_RequestDropWeapon(pos, _weapon_Active);
-            }
-            // Client khác (proxy) không làm gì cả — host lo việc spawn
         }
         else if (_weapon_Active == 2)
         {
             _weaponTwoRef?.gameObject.SetActive(false);
-
             if (Object.HasStateAuthority)
-            {
                 SpawnDropItem(Weapon_Two_CTRL);
-            }
-            else if (Object.HasInputAuthority) // ✅
-            {
-                Vector3 pos = transform.position;
-                pos.y = 0.5f;
-                Rpc_RequestDropWeapon(pos, _weapon_Active);
-            }
         }
     }
 
-    private void SpawnDropItem(WeaponController ctrl, Vector3? overridePos = null)
+    /// <param name="launchVelocity">null = đặt thẳng xuống đất (vd khi chết). Có giá trị = súng bay ra từ
+    /// <paramref name="overridePos"/> với vận tốc này rồi rơi xuống (vứt chủ động, giống CS2).</param>
+    private void SpawnDropItem(WeaponController ctrl, Vector3? overridePos = null, Vector3? launchVelocity = null)
     {
         if (ctrl.Data.DropItemPrefab == null) return;
-        
+
         Vector3 pos = overridePos ?? transform.position;
-    
-        // ✅ Raycast xuống tìm mặt đất
-        if (Physics.Raycast(pos, Vector3.down, out RaycastHit hit, 10f, _groundLayer))
+        // Giữ hướng xoay quanh trục Y của người chơi; tư thế nằm của súng giữ như prefab (giống trước đây).
+        Quaternion restRot = Quaternion.Euler(0f, Object.transform.eulerAngles.y, 0f);
+
+        if (!launchVelocity.HasValue)
         {
-            pos = hit.point;
-            pos.y += 0.1f; // offset nhỏ để không bị clip xuống đất
-        }
-        else
-        {
-            pos.y = 0.5f; // fallback nếu không tìm thấy ground
+            // ✅ Raycast xuống tìm mặt đất
+            if (Physics.Raycast(pos, Vector3.down, out RaycastHit hit, 10f, _groundLayer))
+            {
+                pos = hit.point;
+                pos.y += 0.1f; // offset nhỏ để không bị clip xuống đất
+            }
+            else
+            {
+                pos.y = 0.5f; // fallback nếu không tìm thấy ground
+            }
         }
 
-        Runner.Spawn(ctrl.Data.DropItemPrefab, pos, onBeforeSpawned:
+        Runner.Spawn(ctrl.Data.DropItemPrefab, pos, restRot, onBeforeSpawned:
             (runner, obj) =>
             {
                 DropItemWeapon item = obj.GetComponent<DropItemWeapon>();
@@ -538,8 +651,32 @@ public class WeaponManager : NetworkBehaviour
                         ctrl.CurrentMaxBullet,
                         ctrl.Data.ID,
                         _componentManager.GameHudController());
+                    if (launchVelocity.HasValue)
+                        item.Launch(pos, launchVelocity.Value, _groundLayer, restRot);
+                    else
+                        item.PlaceAt(pos, restRot);
                 }
             });
+    }
+
+    // ── Ném súng ra trước mặt ────────────────────────────────────────────────
+    private const float THROW_EYE_HEIGHT = 1.5f;  // điểm ném ~ ngang mắt (m)
+    private const float THROW_SPEED      = 5.5f;  // vứt chủ động (G)
+    private const float SWAP_THROW_SPEED = 2.5f;  // nhặt-đổi súng: súng cũ chỉ tung nhẹ ra trước
+    private const float THROW_UPWARD     = 1.5f;  // nâng nhẹ lên cho thành đường cong
+
+    private void ThrowDropItem(WeaponController ctrl, float speed)
+    {
+        var move = _componentManager.NCharMovementHandler;
+        Vector3 aim = move != null && move.AimForward.sqrMagnitude > 0.01f ? move.AimForward.normalized : Object.transform.forward;
+        Vector3 eye = Object.transform.position + Vector3.up * THROW_EYE_HEIGHT;
+
+        // Đứng sát tường: lùi điểm ném lại để súng không sinh ra bên trong tường.
+        Vector3 start = eye + aim * 0.5f;
+        if (Physics.SphereCast(eye, 0.1f, aim, out RaycastHit hit, 0.5f, _groundLayer, QueryTriggerInteraction.Ignore))
+            start = eye + aim * Mathf.Max(0f, hit.distance - 0.1f);
+
+        SpawnDropItem(ctrl, start, aim * speed + Vector3.up * THROW_UPWARD);
     }
     
     #endregion
@@ -599,10 +736,16 @@ public class WeaponManager : NetworkBehaviour
 
         if (GameManager.Instance != null && Object.HasInputAuthority)
         {
+            // Slot trống (vừa vứt súng) → đánh dấu khác loadout để lúc hồi sinh GetCurrentBalo() thấy
+            // "đã đổi" và trả lại đủ balo (giống khi nhặt súng khác rồi chết).
             if (Weapon_One_CTRL != null)
                 GameManager.Instance.SetCurrentWeapon(1, Weapon_One_CTRL.Data.ID);
+            else if (_weaponOneRef == null)
+                GameManager.Instance.SetCurrentWeapon(1, EMPTY_SLOT_ID);
             if (Weapon_Two_CTRL != null)
                 GameManager.Instance.SetCurrentWeapon(2, Weapon_Two_CTRL.Data.ID);
+            else if (_weaponTwoRef == null)
+                GameManager.Instance.SetCurrentWeapon(2, EMPTY_SLOT_ID);
         }
     }
     

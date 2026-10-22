@@ -107,11 +107,14 @@ namespace GaMo.TrueInputSystem
                 if (entry.subTabButton != null) subTabLookup[entry.subTabButton] = entry;
         }
 
+        private bool _started;
+
         private void Start()
         {
             // Buttons đăng ký qua Start() của chúng; Context có DefaultExecutionOrder -60
             // nên Start của Context chạy trước — RestoreInitialSelection() gọi lại sau
             // 1 frame để đảm bảo tất cả button đã đăng ký xong.
+            _started = true;
             StartCoroutine(InitNextFrame());
         }
 
@@ -125,7 +128,10 @@ namespace GaMo.TrueInputSystem
         {
             // Khi GameObject được enable lại (không phải lần đầu Start),
             // restore về trạng thái ban đầu sau 1 frame.
-            if (activeButtons.Count > 0)
+            // Không dựa vào activeButtons.Count: lúc tắt, mọi button OnDisable → OnButtonDisabled
+            // đã xoá sạch state → lần bật lại Count == 0, trước đây bỏ qua restore → không Tab/SubTab
+            // nào active → LT/RT · LB/RB "chết" (vd mở Pause lần 2).
+            if (_started)
                 StartCoroutine(InitNextFrame());
         }
 
@@ -134,11 +140,14 @@ namespace GaMo.TrueInputSystem
             // Guard: chỉ check khi player đang có input navigation
             if (!HasAnyNavigationInput()) return;
 
-            // Detect mất Content selection → tự restore
-            if (EventSystem.current != null
-                && EventSystem.current.currentSelectedGameObject == null)
+            // Detect mất Content selection → tự restore.
+            // Focus còn trỏ vào object ĐÃ ẨN (vd nút của panel vừa đóng) cũng coi là mất:
+            // EventSystem không tự bỏ chọn khi object bị tắt → trước đây focus kẹt ở đó mãi.
+            if (EventSystem.current != null)
             {
-                RestoreContentSelection();
+                var cur = EventSystem.current.currentSelectedGameObject;
+                if (cur == null || !cur.activeInHierarchy)
+                    RestoreContentSelection();
             }
         }
         
@@ -405,6 +414,9 @@ namespace GaMo.TrueInputSystem
             if (gamepad != null)
             {
                 if (gamepad.dpad.ReadValue().sqrMagnitude > 0.25f)   return true;
+                // LT/RT (Tab) và LB/RB (SubTab) cũng là input điều hướng
+                if (gamepad.leftTrigger.isPressed  || gamepad.rightTrigger.isPressed)  return true;
+                if (gamepad.leftShoulder.isPressed || gamepad.rightShoulder.isPressed) return true;
                 // Virtual cursor đang bật → left stick dành cho cursor
                 if (!TISGamepadVirtualCursor.IsCursorActive
                     && gamepad.leftStick.ReadValue().sqrMagnitude > 0.25f) return true;

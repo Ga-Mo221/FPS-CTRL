@@ -91,7 +91,8 @@ namespace Game.UI
             rt.anchoredPosition = new Vector2(24f, -18f); rt.sizeDelta = new Vector2(420f, 32f);
             var t = go.AddComponent<TextMeshProUGUI>();
             t.text = "PHÒNG TÙY CHỈNH · MÃ <b>" + Code + "</b>";
-            t.fontSize = 18; t.color = new Color(0.31f, 0.84f, 0.79f, 0.9f); t.raycastTarget = false; t.enableWordWrapping = false;
+            t.fontSize = 18; t.color = new Color(0.31f, 0.84f, 0.79f, 0.9f); t.raycastTarget = false;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
             var theme = PopupTheme.Default; if (theme != null && theme.bodyFont != null) t.font = theme.bodyFont;
         }
     }

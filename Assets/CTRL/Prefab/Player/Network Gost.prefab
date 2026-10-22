@@ -256,6 +256,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets:
   - id: 
     target: {fileID: 1745876069787197064}
@@ -409,6 +410,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets:
   - id: camera
     target: {fileID: 6784275133776960716}
@@ -883,7 +885,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028, y: -0.72891, z: -0.12993}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -1038,6 +1040,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5160339233947089423}
   hasExternalPoseDriver: 1
@@ -1629,7 +1632,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets:
   - id: IK Leg Left
     target: {fileID: 1921257938352686125}
@@ -1788,7 +1793,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028, y: -0.72891, z: -0.12993}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -1939,7 +1944,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets: []
   poleTargets: []
   poleAngleOffsets:
@@ -2048,7 +2055,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028, y: -0.72891, z: -0.12993}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -2199,7 +2206,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets: []
   poleTargets: []
   poleAngleOffsets:
@@ -2376,7 +2385,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028, y: -0.72891, z: -0.12993}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -2511,6 +2520,8 @@ GameObject:
   - component: {fileID: 7264252785649397550}
   - component: {fileID: 5222644563061577268}
   - component: {fileID: 603999362380951179}
+  - component: {fileID: 5593546296927888013}
+  - component: {fileID: 556411894187044589}
   m_Layer: 0
   m_Name: Network Gost
   m_TagString: Untagged
@@ -2562,7 +2573,7 @@ MonoBehaviour:
   PlayerMotionController: {fileID: 5453166249019164711}
   TurnInPlace: {fileID: 6435653523726979826}
   Animator: {fileID: 571562902993405259}
-  Audio_Body: {fileID: 5711679594114786473}
+  Audio_Body: {fileID: 4531223228215475803}
   Audio_HitSound: {fileID: 2831375331782942881}
   Audio_Flashbang: {fileID: 1651301091184284541}
   Camera: {fileID: 6031967234010882723}
@@ -2641,7 +2652,13 @@ MonoBehaviour:
   _ShotSeed: 0
   _RightPuch: 0
   _ShootIndex: 0
-  _canNextAttackCombo: 1
+  _meleeSwingLengths:
+  - 0.43
+  - 0.63
+  - 0.63
+  _meleeAdvanceDelay: 0.1
+  _meleeComboResetGrace: 0.3
+  _grenadeThrowLock: 1.2
   _CanTakeDamage:
     _value: 1
   _CameraSpeed: 1
@@ -3012,6 +3029,46 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 692db1985fb123147b97e1b4f6d8ffda, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NOutOfBoundsHandler
+--- !u!114 &5593546296927888013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7253983300743050296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df91f8d58e5d19346840386dee423f20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DeathCameraController
+  _cameraRoot: {fileID: 1977470279874117976}
+  _lookTarget: {fileID: 4834022686516368281}
+  _cameraClipping: {fileID: 8645773189886275329}
+  _backDistance: 2.5
+  _height: 2
+  _flyDuration: 1.5
+  _localModelLayer: LocalPlayerModel
+  _deadLayerName: Dead
+  _deadLayerIdleState: NULL
+  _maxReviveWait: 0.5
+  _obstructionMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _cameraRadius: 0.2
+--- !u!114 &556411894187044589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7253983300743050296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b661b3a4d688c05438b22703c83f461a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraStabilizer
+  _boneName: RAW_Camera
+  _enabledByDefault: 0
 --- !u!1 &7435879642093864027
 GameObject:
   m_ObjectHideFlags: 0
@@ -3059,7 +3116,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets:
   - id: IK Leg Right
     target: {fileID: 1298858650670820568}
@@ -3384,6 +3443,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets:
   - id: 
     target: {fileID: 6077441227979993211}
@@ -3644,7 +3704,7 @@ VisualEffect:
       - m_Value: {x: -0, y: 0, z: 0}
         m_Name: Transform_angles
         m_Overridden: 1
-      - m_Value: {x: 0.13028002, y: -0.72891, z: -0.12993002}
+      - m_Value: {x: 0.13028, y: -0.72891, z: -0.12993}
         m_Name: Transform_position
         m_Overridden: 1
       - m_Value: {x: 1, y: 1, z: 1}
@@ -6558,6 +6618,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6002339544124793769}
   hasExternalPoseDriver: 1
@@ -6603,6 +6664,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7712457292490655780}
   hasExternalPoseDriver: 1
@@ -6648,6 +6710,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6128140773198928617}
   hasExternalPoseDriver: 1
@@ -6718,6 +6781,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4797019173398641851}
   hasExternalPoseDriver: 1
@@ -6821,6 +6885,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5139781988796544769}
   hasExternalPoseDriver: 1
@@ -6886,6 +6951,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6038056749314829458}
   hasExternalPoseDriver: 1
@@ -6979,6 +7045,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4802222630780853924}
   hasExternalPoseDriver: 1
@@ -7019,6 +7086,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1679305522876976787}
   hasExternalPoseDriver: 1
@@ -7069,6 +7137,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2343525889567185664}
   hasExternalPoseDriver: 1
@@ -7114,6 +7183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7826799229934391374}
   hasExternalPoseDriver: 1
@@ -7164,6 +7234,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6615922154522124666}
   hasExternalPoseDriver: 1
@@ -7242,6 +7313,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4900639952734407053}
   hasExternalPoseDriver: 1
@@ -7282,6 +7354,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4333428308410528616}
   hasExternalPoseDriver: 1
@@ -7322,6 +7395,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 402633325349493699}
   hasExternalPoseDriver: 1
@@ -7372,6 +7446,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6476239272939307944}
   hasExternalPoseDriver: 1
@@ -7427,6 +7502,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1024163277862933073}
   hasExternalPoseDriver: 1
@@ -7467,6 +7543,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6924229427041273391}
   hasExternalPoseDriver: 1
@@ -7512,6 +7589,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2725985715970262436}
   hasExternalPoseDriver: 1
@@ -7567,6 +7645,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1216885709437583475}
   hasExternalPoseDriver: 1
@@ -7607,6 +7686,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5991514924057727326}
   hasExternalPoseDriver: 1
@@ -7657,6 +7737,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3007554223624055882}
   hasExternalPoseDriver: 1
@@ -7697,6 +7778,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1777463315304410416}
   hasExternalPoseDriver: 1
@@ -7747,6 +7829,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2325574710343749384}
   hasExternalPoseDriver: 1
@@ -7787,6 +7870,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1588654460278492923}
   hasExternalPoseDriver: 1
@@ -7862,6 +7946,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8263555859713619465}
   hasExternalPoseDriver: 1
@@ -7922,6 +8007,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1354500422596359619}
   hasExternalPoseDriver: 1
@@ -7962,6 +8048,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3936759523859598352}
   hasExternalPoseDriver: 1
@@ -8045,6 +8132,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4903825890189299078}
   hasExternalPoseDriver: 1
@@ -8085,6 +8173,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7189083297502130619}
   hasExternalPoseDriver: 1
@@ -8178,6 +8267,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3923499329311894147}
   hasExternalPoseDriver: 1
@@ -8253,6 +8343,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6661371918476445164}
   hasExternalPoseDriver: 1
@@ -8293,6 +8384,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8417067443565412745}
   hasExternalPoseDriver: 1
@@ -8333,6 +8425,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 374267855378925722}
   hasExternalPoseDriver: 1
@@ -8792,6 +8885,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8311076655727910012}
   hasExternalPoseDriver: 1
@@ -9079,6 +9173,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7448399582841381480}
   hasExternalPoseDriver: 1
@@ -9124,6 +9219,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1442747481662176312}
   hasExternalPoseDriver: 1
@@ -9169,6 +9265,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 834462983384804334}
   hasExternalPoseDriver: 1
@@ -9214,6 +9311,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2630376193534154793}
   hasExternalPoseDriver: 1
@@ -9291,6 +9389,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3373379105460225407}
   hasExternalPoseDriver: 1
@@ -9346,6 +9445,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3381487591190599757}
   hasExternalPoseDriver: 1
@@ -9391,6 +9491,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4235046164270372914}
   hasExternalPoseDriver: 1
@@ -9431,6 +9532,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2082659970614450527}
   hasExternalPoseDriver: 1
@@ -9471,6 +9573,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7097618008059559924}
   hasExternalPoseDriver: 1
@@ -9543,6 +9646,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1174250574176569690}
   hasExternalPoseDriver: 1

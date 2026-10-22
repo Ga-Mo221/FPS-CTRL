@@ -475,7 +475,10 @@ namespace GaMo.TrueInputSystem
 
         [Header("Debug Preview")]
         [Tooltip("Hiện debug preview màn hình điện thoại với joystick BG/Knob và phân vùng.")]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] private bool _debugPreview = false;
+#pragma warning restore CS0414
 
         [Tooltip("Knob size ratio để dùng trong debug preview (khớp với _knobSizeRatio ở TISMobileInputSetup).")]
         [Range(0.2f, 0.85f)]

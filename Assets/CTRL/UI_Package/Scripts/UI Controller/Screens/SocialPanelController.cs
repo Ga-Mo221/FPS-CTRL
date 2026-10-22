@@ -234,7 +234,14 @@ namespace Game.UI
         // [Aemy] Moi vao party (top bar) - noi party session o pha sau.
         private void OnInvite(FriendInfo fr)
         {
-            if (_partyController != null && fr != null) { _partyController.InviteFriend(fr.PlayFabId); if (_statusLabel != null) _statusLabel.text = "Đã mời " + fr.DisplayName; }
+            if (_partyController != null && fr != null)
+            {
+                float wait = PartyController.InviteCooldownLeft(fr.PlayFabId);
+                bool sent = wait <= 0f && _partyController.InviteFriend(fr.PlayFabId);
+                if (_statusLabel != null && (sent || wait > 0f))
+                    _statusLabel.text = sent ? "Đã mời " + fr.DisplayName
+                                             : "Đợi " + Mathf.CeilToInt(wait) + "s để mời lại " + fr.DisplayName;
+            }
             else Debug.Log("[SocialPanel] Moi " + (fr != null ? fr.DisplayName : "?") + " (chua gan PartyController).");
         }
 

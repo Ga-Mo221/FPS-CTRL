@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 6651690377381284802}
   - component: {fileID: 1876344601169729109}
   - component: {fileID: 1474651087934383630}
-  - component: {fileID: 4455129158437615244}
   - component: {fileID: 2983917033844984590}
   m_Layer: 0
   m_Name: Flash Prefab
@@ -61,8 +60,8 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
+  m_UseGravity: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 1
@@ -125,32 +124,8 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 4455129158437615244}
   - {fileID: 2983917033844984590}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &4455129158437615244
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4345266789722532796}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a591d221a634417e9827eb58e17de84, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Fusion.Addons.Physics::Fusion.Addons.Physics.NetworkRigidbody3D
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _interpolationTarget: {fileID: 6798658791028874751}
-  UsePreciseRotation: 0
-  UseRenderSleepThresholds: 1
-  RenderThresholds:
-    UseEnergy: 1
-    Position: 0.01
-    Rotation: 0.01
-    Scale: 0.01
 --- !u!114 &2983917033844984590
 MonoBehaviour:
   m_ObjectHideFlags: 0

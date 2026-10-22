@@ -101,7 +101,7 @@ namespace Game.UI
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(700, -150), new Vector2(470, 70));
             _descLabel = NewText(panel.transform, "Desc", "", 26, FontStyles.Normal, new Color(0.72f, 0.77f, 0.84f, 1f), TextAlignmentOptions.TopLeft,
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(700, -235), new Vector2(470, 230));
-            _descLabel.enableWordWrapping = true;
+            _descLabel.textWrappingMode = TextWrappingModes.Normal;
 
             _selectBtn = NewButton(panel.transform, "Select", "CHỌN", 30, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(700, -500), new Vector2(300, 78), SelectCurrent);
             _selectLabel = _selectBtn.GetComponentInChildren<TMP_Text>();
