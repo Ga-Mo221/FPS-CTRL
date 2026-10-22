@@ -36,6 +36,7 @@ namespace Game.UI
         {
             ProfileCache.Invalidate();
             PartyHeartbeat.End(); // [Aemy 2026-10-22] khong Touch to doi cua tai khoan truoc
+            PartyController.LeaveStalePartyOnLogin(); // [Aemy 2026-10-22] lan truoc thoat dot ngot -> roi nhom cu ngay
             Game.Skins.WeaponSkinService.ResetCache();
             var gm = GameManager.Instance;
             if (gm != null)

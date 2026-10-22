@@ -75,6 +75,33 @@ namespace Game.UI
 
         private static string SelfId() { return BackendBootstrap.AuthService != null ? BackendBootstrap.AuthService.CurrentUserId : null; }
 
+        /// <summary>
+        /// [Aemy 2026-10-22] Goi ngay sau khi DANG NHAP (SessionCache.ResetForNewSession).
+        /// Con ma party luu tu lan choi truoc = lan truoc thoat game dot ngot (tat game, crash, mat dien) ma chua roi nhom.
+        /// -> KHONG khoi phuc nua: xoa cache tren may + roi nhom tren server NGAY (truong nhom thi giao cho nguoi con lai
+        ///    truoc), de nhom hien tai thay minh roi o lan poll ke tiep (~3s) thay vi cho 30s mat heartbeat.
+        /// Ve menu sau tran KHONG di qua day (khong dang nhap lai) nen van giu party nhu cu.
+        /// </summary>
+        public static void LeaveStalePartyOnLogin()
+        {
+            string key = PartyKey();
+            string code = PlayerPrefs.GetString(key, "");
+            if (PlayerPrefs.HasKey(key)) { PlayerPrefs.DeleteKey(key); PlayerPrefs.Save(); }
+            if (string.IsNullOrEmpty(code)) return;
+            var svc = BackendBootstrap.PartyService;
+            string me = SelfId();
+            if (svc == null || string.IsNullOrEmpty(me)) return;
+            Debug.Log("[Party] Dang nhap lai: roi party cu " + code + " (lan truoc thoat game ma chua roi nhom).");
+            svc.GetParty(code, st =>
+            {
+                if (st != null && st.LeaderId == me && st.Members != null)
+                    foreach (var m in st.Members)
+                        if (m != null && !string.IsNullOrEmpty(m.PlayFabId) && m.PlayFabId != me) { svc.SetLeader(code, m.PlayFabId, null, LogErr); break; }
+                svc.LeaveParty(code, () => Debug.Log("[Party] Da roi party cu " + code), LogErr);
+            },
+            e => svc.LeaveParty(code, null, null)); // nhom da giai tan / khong doc duoc -> van thu roi
+        }
+
         // [2026-10-21] Moi cung 1 nguoi: cho 5s moi duoc moi lai (static -> giu qua viec dung lai dong ban / mo lai panel).
         public const float InviteCooldown = 5f;
         private static readonly System.Collections.Generic.Dictionary<string, float> _lastInviteAt = new System.Collections.Generic.Dictionary<string, float>();

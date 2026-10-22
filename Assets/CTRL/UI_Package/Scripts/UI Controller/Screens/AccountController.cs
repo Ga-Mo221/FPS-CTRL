@@ -154,6 +154,7 @@ namespace Game.UI
                     var svc = BackendBootstrap.PlayerProfileService;
                     if (svc == null) { Info("Lỗi", "Backend chưa sẵn sàng."); return; }
                     Info("Đang xóa…", "Đang xóa tài khoản, vui lòng chờ.");
+                    SessionCache.BeforeLogout(); // [Aemy 2026-10-22] roi to doi ngay truoc khi xoa tai khoan (con phien dang nhap)
                     svc.DeleteMyAccount(
                         () =>
                         {
