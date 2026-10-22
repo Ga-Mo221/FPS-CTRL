@@ -82,6 +82,14 @@ namespace Game.UI
             SetValue(_value, false);
         }
 
+        /// <summary>[Aemy 2026-10-22] Doi dinh dang chu so (dong slider clone tu dong khac, vd "0" + "%").</summary>
+        public void SetFormat(string format, string suffix)
+        {
+            _format = string.IsNullOrEmpty(format) ? "0" : format;
+            _suffix = suffix ?? "";
+            ApplyVisual();
+        }
+
         public void SetValue(float value, bool notify)
         {
             float v = Clamp(value);

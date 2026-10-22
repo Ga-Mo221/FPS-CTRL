@@ -41,6 +41,7 @@ public class SettingData : ScriptableObject
     [SerializeField] private bool _vignetteOn = true;
     [SerializeField] private bool _motionBlurOn = false;
     [SerializeField] private bool _stableCamera = false; // Chong rung camera (CameraStabilizer giu RAW_Camera co dinh)
+    [SerializeField, Range(0f,1f)] private float _stableCameraStrength = 0.5f; // [Aemy 2026-10-22] muc chong rung: 0 = theo than (nhu tat), 1 = khoa hoan toan
 
     [Header("Graphics - Engine")]
     [SerializeField] private bool _vSync = false;
@@ -118,6 +119,7 @@ public class SettingData : ScriptableObject
     public bool  VignetteOn     { get { return _vignetteOn; }     set { _vignetteOn = value; } }
     public bool  MotionBlurOn   { get { return _motionBlurOn; }   set { _motionBlurOn = value; } }
     public bool  StableCamera   { get { return _stableCamera; }   set { _stableCamera = value; } }
+    public float StableCameraStrength { get { return _stableCameraStrength; } set { _stableCameraStrength = Mathf.Clamp01(value); } }
 
     // -- Graphics engine --
     public bool  VSync        { get { return _vSync; }        set { _vSync = value; } }

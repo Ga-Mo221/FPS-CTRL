@@ -116,6 +116,10 @@ public class SettingsBinder : MonoBehaviour
         // Chong rung camera (CameraStabilizer): dong moi tao luc chay tu dong Motion Blur -> khong can sua scene/prefab.
         EnsureSwitchRowBelow("Do hoa Scroll/Content/HINH ANH/Motion Blur", "Chống rung camera");
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Chong rung camera", () => Data.StableCamera, v => Data.StableCamera = v);
+        // [Aemy 2026-10-22] Muc chong rung (0-100%): clone dong slider "Cuong do Bloom" dat duoi dong Chong rung camera.
+        EnsureRowBelow("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom", "Do hoa Scroll/Content/HINH ANH/Chong rung camera", "Mức chống rung");
+        SetSliderPercentRange("Do hoa Scroll/Content/HINH ANH/Muc chong rung", 0f, 100f, true);
+        BindSliderPercent("Do hoa Scroll/Content/HINH ANH/Muc chong rung", () => Data.StableCameraStrength, v => Data.StableCameraStrength = v);
         BindQuality("Do hoa Scroll/Content/CHAT LUONG/Chat luong tong the", () => Data.QualityLevel, v => Data.QualityLevel = v);
         // Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
         BindCycler("Do hoa Scroll/Content/CHAT LUONG/Ket cau (Texture)", GraphicsQualityApplier.TextureOptions, () => Data.TextureQuality, v => Data.TextureQuality = v);
@@ -287,9 +291,14 @@ public class SettingsBinder : MonoBehaviour
     // Them 1 dong switch ngay duoi dong mau (clone ca nhan + switch + TIS), khong can sua scene/prefab.
     // Cac dong dat theo vi tri tuyet doi -> tu tinh buoc = khoang cach dong mau voi dong tren no,
     // day cac muc ben duoi xuong 1 buoc va keo dai vung cuon.
-    private void EnsureSwitchRowBelow(string templatePath, string label)
+    private void EnsureSwitchRowBelow(string templatePath, string label) { EnsureRowBelow(templatePath, templatePath, label); }
+
+    // [Aemy 2026-10-22] Tong quat: clone dong `templatePath` (switch / slider...) va dat ngay duoi dong `afterPath`
+    // (cung 1 muc). Vd slider "Muc chong rung" clone tu "Cuong do Bloom" nhung nam duoi "Chong rung camera".
+    private void EnsureRowBelow(string templatePath, string afterPath, string label)
     {
-        var tpl = Find(templatePath) as RectTransform; if (tpl == null) { Missing(templatePath); return; }
+        var src = Find(templatePath) as RectTransform; if (src == null) { Missing(templatePath); return; }
+        var tpl = Find(afterPath) as RectTransform; if (tpl == null) { Missing(afterPath); return; }
         var section = tpl.parent;
         foreach (Transform c in section) if (Normalize(c.name) == Normalize(label)) return; // da co (scene da them tay)
 
@@ -310,16 +319,16 @@ public class SettingsBinder : MonoBehaviour
             content.sizeDelta += new Vector2(0f, step);
         }
 
-        var row = (RectTransform)Instantiate(tpl.gameObject, section, false).transform;
+        var row = (RectTransform)Instantiate(src.gameObject, section, false).transform;
         row.name = label;
         row.SetSiblingIndex(idx + 1);
-        row.anchoredPosition = tpl.anchoredPosition - new Vector2(0f, step);
+        row.anchoredPosition = new Vector2(src.anchoredPosition.x, tpl.anchoredPosition.y - step); // x theo dong mau (con giu dung cho)
         var txt = row.GetComponent<TMPro.TMP_Text>(); if (txt != null) txt.text = label;
 
         // Nhan can giua + ContentSizeFitter, x moi dong duoc canh tay theo do rong chu -> giu MEP TRAI nhu dong mau
         // (chu dai hon se lan sang trai bi mask cat), roi day con (switch, vach ke) ve dung cho cu.
         UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(row);
-        float tplLeft = tpl.anchoredPosition.x - tpl.rect.width * tpl.pivot.x;
+        float tplLeft = src.anchoredPosition.x - src.rect.width * src.pivot.x;
         float dx = tplLeft + row.rect.width * row.pivot.x - row.anchoredPosition.x;
         row.anchoredPosition += new Vector2(dx, 0f);
         foreach (Transform c in row) if (c is RectTransform crt) crt.anchoredPosition -= new Vector2(dx, 0f);
@@ -327,6 +336,14 @@ public class SettingsBinder : MonoBehaviour
         // Tay cam: dang ky nut moi voi khung dieu huong TIS
         var ctx = row.GetComponentInParent<GaMo.TrueInputSystem.TISUINavigationContext>(true);
         if (ctx != null) ctx.ScanChildButtons();
+    }
+
+    private void SetSliderPercentRange(string containerPath, float min, float max, bool whole)
+    {
+        var t = Find(containerPath); if (t == null) return;
+        var s = t.GetComponentInChildren<UIValueSlider>(true); if (s == null) return;
+        s.SetRange(min, max, whole);
+        s.SetFormat("0", ""); // font khong co glyph "%" -> chi hien so 0-100 giong cac slider khac
     }
 
     private void BindReset(string buttonPath)

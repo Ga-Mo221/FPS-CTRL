@@ -237,6 +237,8 @@ namespace Game.UI
             { "Cường độ Bloom", "Bloom intensity" },
             { "Vignette (tối góc)", "Vignette" },
             { "Chống rung camera", "Camera stabilization" },
+            { "Mức chống rung", "Stabilization strength" }, // [Aemy 2026-10-22]
+            { "ĐANG TRONG TRẬN", "IN MATCH" }, // [Aemy 2026-10-22] o roster nguoi chua co ten (vao tran dang dien ra)
             { "Ngôn ngữ", "Language" },
             { "ÂM LƯỢNG", "VOLUME" },
             { "Âm lượng tổng", "Master volume" },

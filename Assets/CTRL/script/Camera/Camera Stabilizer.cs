@@ -52,6 +52,18 @@ public class CameraStabilizer : MonoBehaviour
         }
     }
 
+    /// <summary>[Aemy 2026-10-22] Muc chong rung 0..1 (SettingData.StableCameraStrength, slider "Mức chống rung").
+    /// 1 = gimbal khoa hoan toan nhu truoc; nho hon = tron lai mot phan lac / nghieng / nhap nho cua than
+    /// (bat chong rung ma van con cam giac co the); 0 = giong nhu tat.</summary>
+    public static float Strength
+    {
+        get
+        {
+            var sm = SettingManager.Instance;
+            return sm != null && sm.SettingData != null ? Mathf.Clamp01(sm.SettingData.StableCameraStrength) : 1f;
+        }
+    }
+
     private const float SNAP_DISTANCE = 1f; // điểm xoay nhảy xa hơn mức này (hồi sinh/dịch chuyển) → đặt thẳng, không trượt
 
     private NetworkObject _networkObject;
@@ -188,12 +200,27 @@ public class CameraStabilizer : MonoBehaviour
         else _pivotLocal = Vector3.SmoothDamp(_pivotLocal, target, ref _pivotVelocity, _positionSmoothTime);
 
         Vector3 pos = player.position + yaw * _pivotLocal + rot * _neckToCamera;
-        _rootGimbal.SetPositionAndRotation(pos, rot);
 
         // Camera = Root × giật súng (Camera Recoil); bỏ Camera Shake theo animation súng.
         Quaternion camRot = rot;
         Vector3 camPos = pos;
         if (_recoil != null) { camRot = rot * _recoil.localRotation; camPos = pos + rot * _recoil.localPosition; }
+
+        // [Aemy 2026-10-22] Tron voi pose "theo than" (y het luc tat) theo muc chong rung.
+        float k = Strength;
+        if (k < 0.999f)
+        {
+            // Root khi tat = RAW_Camera thân; Camera-Root khi tat = Anchor = Root(thân) × (Anchor so voi Root, gom Camera Shake).
+            Vector3 bodyPos = _bodyCamera.position; Quaternion bodyRot = _bodyCamera.rotation;
+            Quaternion invRoot = Quaternion.Inverse(_rootBone.rotation);
+            Quaternion anchorRelRot = invRoot * _anchor.rotation;
+            Vector3 anchorRelPos = invRoot * (_anchor.position - _rootBone.position);
+            Vector3 bodyCamPos = bodyPos + bodyRot * anchorRelPos; Quaternion bodyCamRot = bodyRot * anchorRelRot;
+
+            pos = Vector3.LerpUnclamped(bodyPos, pos, k);           rot = Quaternion.SlerpUnclamped(bodyRot, rot, k);
+            camPos = Vector3.LerpUnclamped(bodyCamPos, camPos, k);  camRot = Quaternion.SlerpUnclamped(bodyCamRot, camRot, k);
+        }
+        _rootGimbal.SetPositionAndRotation(pos, rot);
         _cameraGimbal.SetPositionAndRotation(camPos, camRot);
     }
 }
