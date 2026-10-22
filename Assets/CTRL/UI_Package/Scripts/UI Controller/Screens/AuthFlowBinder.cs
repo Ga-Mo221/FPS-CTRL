@@ -163,10 +163,11 @@ namespace Game.UI
 
         // [Aemy 2026-10-19] Cong xac minh email sau khi dang nhap bang ten/email + mat khau.
         //  - Confirmed -> vao game.
-        //  - NoContactEmail (tai khoan cu / khong co email) -> cho vao (khong co gi de xac minh).
         //  - Pending / Unverified -> gui lai mail (co cooldown), dang xuat, bao kiem tra hop thu.
-        //  - Khong doc duoc trang thai (Title chua bat "Contact email addresses" trong Client Profile Options, mat mang...)
-        //    -> cho vao + canh bao log, tranh khoa nham moi nguoi.
+        //  [Aemy 2026-10-22] Siet lai (truoc day 2 lo nay de tai khoan chua xac minh van vao duoc):
+        //  - NoContactEmail -> gan email dang nhap lam contact email (PlayFab gui mail xac minh) roi CHAN.
+        //    Chi cho vao khi tai khoan that su khong co email nao (ErrorCode "NoEmail").
+        //  - Khong doc duoc trang thai (mat mang, loi PlayFab) -> CHAN + bao thu lai (truoc: cho vao).
         private void RequireVerifiedEmail(string playerId, System.Action proceed)
         {
             if (!_requireVerifiedEmail || _useMock || _verifyStatus == null) { proceed(); return; }
@@ -174,24 +175,27 @@ namespace Game.UI
             _verifyStatus.GetEmailVerificationStatus(
                 st =>
                 {
-                    if (st == EmailVerifyStatus.Confirmed || st == EmailVerifyStatus.NoContactEmail) { proceed(); return; }
+                    if (st == EmailVerifyStatus.Confirmed) { proceed(); return; }
                     Debug.Log("[AuthFlowBinder] Email chưa xác minh (" + st + ") -> chặn đăng nhập.");
-                    BlockUnverified(playerId);
+                    BlockUnverified(playerId, st == EmailVerifyStatus.NoContactEmail, proceed);
                 },
                 e =>
                 {
-                    Debug.LogWarning("[AuthFlowBinder] Không đọc được trạng thái email (" + e.ErrorMessage + ") -> cho vào game.");
-                    proceed();
+                    Debug.LogWarning("[AuthFlowBinder] Không đọc được trạng thái email (" + e.ErrorMessage + ") -> chặn, cho thử lại.");
+                    try { _auth.Logout(); } catch (System.Exception ex) { Debug.LogWarning("[AuthFlowBinder] Logout lỗi: " + ex.Message); }
+                    if (_notice != null) _notice.Show("KHÔNG KIỂM TRA ĐƯỢC EMAIL\nKiểm tra kết nối mạng rồi đăng nhập lại.", _errorNoticeSeconds);
                 });
         }
 
-        private void BlockUnverified(string playerId)
+        // noContactEmail: tai khoan chua co contact email -> luon gan ngay (khong tinh cooldown). Neu tai khoan khong co
+        // email nao (NoEmail) thi khong co gi de xac minh -> allowIfNoEmail().
+        private void BlockUnverified(string playerId, bool noContactEmail, System.Action allowIfNoEmail)
         {
             var resend = _verifyStatus as IEmailVerificationResendService;
             string key = "VerifyMailSentAt_" + playerId;
             double last = 0; double.TryParse(PlayerPrefs.GetString(key, "0"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out last);
             double now = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            bool canResend = resend != null && now - last >= _resendCooldownSeconds;
+            bool canResend = resend != null && (noContactEmail || now - last >= _resendCooldownSeconds);
 
             System.Action<string> done = email =>
             {
@@ -210,7 +214,16 @@ namespace Game.UI
                     PlayerPrefs.SetString(key, now.ToString(System.Globalization.CultureInfo.InvariantCulture)); PlayerPrefs.Save();
                     done(email);
                 },
-                e => { Debug.LogWarning("[AuthFlowBinder] Gửi lại mail xác minh lỗi: " + e.ErrorMessage); done(null); });
+                e =>
+                {
+                    if (e != null && e.ErrorCode == "NoEmail" && allowIfNoEmail != null)
+                    {
+                        Debug.LogWarning("[AuthFlowBinder] Tài khoản không có email nào -> không có gì để xác minh, cho vào.");
+                        allowIfNoEmail();
+                        return;
+                    }
+                    Debug.LogWarning("[AuthFlowBinder] Gửi lại mail xác minh lỗi: " + (e != null ? e.ErrorMessage : "?")); done(null);
+                });
         }
 
         // "nyx.vank@gmail.com" -> "ny•••@gmail.com"

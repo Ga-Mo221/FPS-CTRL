@@ -47,19 +47,23 @@ namespace Backend.PlayfabImpl
                 {
                     SetLoggedIn(result.PlayFabId, result.SessionTicket);  // lưu phiên (trả VỀ)
 
-                    // Sau khi tạo xong -> ↑ GỬI LÊN contact email để PlayFab gửi mail xác thực.
-                    if (registerRequest.SendVerificationEmail &&
-                        !string.IsNullOrEmpty(registerRequest.Email))
-                    {
-                        SendEmailVerification(registerRequest.Email, null, null);
-                    }
-
-                    onSuccess?.Invoke(new AuthResult
+                    var authResult = new AuthResult
                     {
                         PlayerId = result.PlayFabId,
                         SessionId = result.SessionTicket,
                         IsNewlyCreated = true
-                    });
+                    };
+                    // Sau khi tạo xong -> ↑ GỬI LÊN contact email để PlayFab gửi mail xác thực.
+                    // [Aemy 2026-10-22] CHỜ xong rồi mới báo thành công: trước đây gọi "bắn rồi quên" + UI đăng xuất ngay
+                    // -> có lúc tài khoản KHÔNG có contact email -> cổng xác minh coi là "không có email" và cho vào.
+                    if (registerRequest.SendVerificationEmail &&
+                        !string.IsNullOrEmpty(registerRequest.Email))
+                    {
+                        SendEmailVerification(registerRequest.Email,
+                            () => onSuccess?.Invoke(authResult),
+                            _ => onSuccess?.Invoke(authResult)); // lỗi: lần đăng nhập đầu cổng xác minh sẽ tự gắn lại
+                    }
+                    else onSuccess?.Invoke(authResult);
                 },
                 error => onError?.Invoke(MapError(error))
             );
@@ -316,12 +320,22 @@ namespace Backend.PlayfabImpl
             {
                 var list = result.PlayerProfile != null ? result.PlayerProfile.ContactEmailAddresses : null;
                 string email = list != null && list.Count > 0 ? list[0].EmailAddress : null;
-                if (string.IsNullOrEmpty(email))
+                if (!string.IsNullOrEmpty(email)) { SendEmailVerification(email, () => onSent?.Invoke(email), onFailure); return; }
+
+                // [Aemy 2026-10-22] Chưa có contact email (đăng ký cũ bị lỗi bước gắn email) -> lấy EMAIL ĐĂNG NHẬP
+                // của chính tài khoản rồi gắn làm contact email => PlayFab gửi mail xác minh, trạng thái thành Pending.
+                PlayFabClientAPI.GetAccountInfo(new GetAccountInfoRequest(), info =>
                 {
-                    onFailure?.Invoke(new AuthError { ErrorCode = "NoContactEmail", ErrorMessage = "Tài khoản chưa có email liên hệ." });
-                    return;
-                }
-                SendEmailVerification(email, () => onSent?.Invoke(email), onFailure);
+                    var pi = info != null && info.AccountInfo != null ? info.AccountInfo.PrivateInfo : null;
+                    string loginEmail = pi != null ? pi.Email : null;
+                    if (string.IsNullOrEmpty(loginEmail))
+                    {
+                        onFailure?.Invoke(new AuthError { ErrorCode = "NoEmail", ErrorMessage = "Tài khoản không có email." });
+                        return;
+                    }
+                    SendEmailVerification(loginEmail, () => onSent?.Invoke(loginEmail), onFailure);
+                },
+                error => onFailure?.Invoke(MapError(error)));
             },
             error => onFailure?.Invoke(MapError(error)));
         }
