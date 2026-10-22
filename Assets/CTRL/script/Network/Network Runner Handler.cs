@@ -365,6 +365,7 @@ public class NetworkRunnerHandler : MonoBehaviour
             { PROP_MODE, (int)(gm != null ? gm.GetGamePlayMode() : GamePlayMode.Solo) },
             { PROP_MAP,  mapBuildIndex },
             { PROP_VER,  NET_PROTOCOL },
+            { SessionRoster.PROP, "" }, // [Aemy 2026-10-22] Fusion chi cho UPDATE key co san -> tao rong tu dau, host ghi roster sau
         };
     }
 

@@ -28,6 +28,7 @@ public class NetworkGameState : NetworkBehaviour
 
     /// <summary>[MM-BACKFILL] Con it hon so giay nay trong hiep thi khong nhan nguoi vao giua tran nua.</summary>
     public const float LATE_JOIN_MIN_SECONDS = 60f;
+    private string _rosterPublished; // [Aemy 2026-10-22] roster da ghi len SessionInfo (chi ghi lai khi doi)
 
     [Networked] public int StartTick { get; private set; } // tick bat dau tran (gan trong Spawned khi khong phai resume)
     [Networked] public int EndTick   { get; private set; } // tick khi IsMatchOver lan dau (0 = chua ket thuc)
@@ -152,6 +153,8 @@ public class NetworkGameState : NetworkBehaviour
         {
             bool joinable = !IsMatchOver() && (!GameStarted || RoundElapsed > LATE_JOIN_MIN_SECONDS);
             if (Runner.SessionInfo.IsOpen != joinable) Runner.SessionInfo.IsOpen = joinable;
+            // [Aemy 2026-10-22] Ghi ten + doi nguoi dang trong phong -> nguoi vao sau thay du roster o man ghep tran.
+            SessionRoster.Publish(Runner, ref _rosterPublished);
         }
 
         // ── Cập nhật Kill stats (chỉ host, đồng bộ xuống mọi client) ───────────

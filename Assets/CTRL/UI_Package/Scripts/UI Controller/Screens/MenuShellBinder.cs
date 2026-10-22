@@ -1131,7 +1131,7 @@ namespace Game.UI
                 var me = new LobbyMember { IsLocal = true, TeamId = "", Name = "Player", AvatarUrl = "" };
                 var prof = ProfileCache.Cached;
                 if (prof != null) { if (!string.IsNullOrEmpty(prof.DisplayName)) me.Name = prof.DisplayName; if (!string.IsNullOrEmpty(prof.AvatarUrl)) me.AvatarUrl = prof.AvatarUrl; }
-                FillLobbyRoster(new List<LobbyMember> { me }, team);
+                FillLobbyRoster(BuildExistingRoster(s, me, team), team); // [Aemy 2026-10-22] + nguoi dang trong tran
                 _matchmakingScreen.SetTimeText(s.PlayerCount + "/" + s.MaxPlayers);
             }
             ho.HandOffJoinExisting(s.Name, mode, (ok, why) =>
@@ -1146,6 +1146,27 @@ namespace Game.UI
                 StartSearchTimer();
                 StartPlayFabSearch(mode, anyMap);
             });
+        }
+
+        // [Aemy 2026-10-22] Roster cua phong dang dien ra: nguoi trong phong (host ghi vao SessionInfo, xem SessionRoster)
+        // + minh. TDM: doan doi cua minh = doi it nguoi hon (giong NSpawner.AssignTeam, hoa -> Xanh).
+        // Host ban cu chua ghi roster / nguoi vua vao chua co ten -> o "NGUOI CHOI" cho du so nguoi.
+        private static List<LobbyMember> BuildExistingRoster(Fusion.SessionInfo s, LobbyMember me, bool team)
+        {
+            var list = new List<LobbyMember> { me };
+            var entries = SessionRoster.Read(s);
+            int blue = 0, red = 0;
+            foreach (var e in entries)
+            {
+                string teamId = "";
+                if (team && e.Team == PlayerTeam.Blue) { teamId = "Blue"; blue++; }
+                else if (team && e.Team == PlayerTeam.Red) { teamId = "Red"; red++; }
+                list.Add(new LobbyMember { IsLocal = false, TeamId = teamId, Name = e.Name, AvatarUrl = "" });
+            }
+            int unknown = s != null ? s.PlayerCount - entries.Count : 0;
+            for (int i = 0; i < unknown; i++) list.Add(new LobbyMember { IsLocal = false, TeamId = "", Name = "ĐANG TRONG TRẬN", AvatarUrl = "" });
+            if (team && blue + red > 0) me.TeamId = blue <= red ? "Blue" : "Red";
+            return list;
         }
 
         // [UI-INTEGRATION 2026-09-13] LOBBY: hien roster nguoi choi THAT (lay tu PlayFab GetMatch) roi moi vao tran.
