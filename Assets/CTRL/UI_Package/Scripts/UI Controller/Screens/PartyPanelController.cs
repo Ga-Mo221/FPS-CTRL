@@ -78,8 +78,13 @@ namespace Game.UI
         /// <summary>So o avatar ban be co the trinh bay.</summary>
         public int FriendAvatarCount => _friendAvatars != null ? _friendAvatars.Length : 0;
 
+        private Sprite[] _defaultAvatars; // [Aemy 2026-10-22] avatar mac dinh cua tung o (tra lai khi nguoi trong o roi di)
+
         private void Awake()
         {
+            int n = SlotCount;
+            _defaultAvatars = new Sprite[n];
+            for (int i = 0; i < n; i++) if (_members[i] != null && _members[i].avatar != null) _defaultAvatars[i] = _members[i].avatar.sprite;
             if (_readyButton != null)
                 _readyButton.onClick.AddListener(RaiseReady);
         }
@@ -115,6 +120,15 @@ namespace Game.UI
             if (_members == null || index < 0 || index >= _members.Length) return;
             var slot = _members[index];
             if (slot != null && slot.avatar != null) slot.avatar.sprite = sprite;
+        }
+
+        /// <summary>[Aemy 2026-10-22] Tra o ve avatar mac dinh (nguoi cu roi o -> khong de lai anh cua ho).</summary>
+        public void ResetMemberAvatar(int index)
+        {
+            if (_members == null || index < 0 || index >= _members.Length) return;
+            var slot = _members[index];
+            if (slot == null || slot.avatar == null) return;
+            slot.avatar.sprite = _defaultAvatars != null && index < _defaultAvatars.Length ? _defaultAvatars[index] : null;
         }
 
         /// <summary>Dua o ve trang thai TRONG (hien nut +/MOI). O van hien tren layout.</summary>

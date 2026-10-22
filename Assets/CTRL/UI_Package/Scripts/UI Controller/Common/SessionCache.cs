@@ -35,6 +35,7 @@ namespace Game.UI
         public static void ResetForNewSession()
         {
             ProfileCache.Invalidate();
+            PartyHeartbeat.End(); // [Aemy 2026-10-22] khong Touch to doi cua tai khoan truoc
             Game.Skins.WeaponSkinService.ResetCache();
             var gm = GameManager.Instance;
             if (gm != null)

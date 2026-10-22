@@ -39,7 +39,6 @@ namespace Game.UI
         private Coroutine _pollCo, _inviteCo;
         private bool _handedOff;
         private string _lastHandledMatch; private bool _restoreArmed; // [PARTY-FIX #5]
-        private int _hbTick; // [PARTY-HB]
         private float _partyStartRealtime; // [PARTY-HB] moc khoi dong -> grace tranh da nham khi ve menu
         // [PARTY-HB-FIX 2026-10-01] Theo doi Seen thay doi theo DONG HO LOCAL cua leader (mien nhiem lech gio cross-device).
         private readonly System.Collections.Generic.Dictionary<string, long> _seenVal = new System.Collections.Generic.Dictionary<string, long>();
@@ -66,6 +65,9 @@ namespace Game.UI
             if (!string.IsNullOrEmpty(leftover) && !InParty)
             {
                 Code = leftover; _restoreArmed = true; _handedOff = false;
+                // [Aemy 2026-10-22] Ve tu tran trong CUNG phien choi: lay lai san sang / truong nhom da nho
+                // (truoc day SelfReady=false toi khi poll xong -> nut va o party lech nhau).
+                if (PartyHeartbeat.Code == leftover) { IsLeader = PartyHeartbeat.IsLeader; SelfReady = PartyHeartbeat.Ready; }
                 StartPolling();
                 Debug.Log("[Party-DIAG] Khoi phuc party khi vao menu: " + leftover);
             }
@@ -103,7 +105,7 @@ namespace Game.UI
             if (InParty) { svc.SendInvite(friendPlayFabId, Code, SendOk, SendErr); return; }
             svc.CreateParty(code =>
             {
-                Code = code; IsLeader = true; SelfReady = true; _handedOff = false; PlayerPrefs.SetString(PartyKey(), code); StartPolling();
+                Code = code; IsLeader = true; SelfReady = true; _handedOff = false; PlayerPrefs.SetString(PartyKey(), code); PartyHeartbeat.Begin(code, true, true); StartPolling();
                 if (_pendingSettings != null) PublishSettings(_pendingSettings);
                 Debug.Log("[Party-DIAG] SEND: da tao party code=" + code + ", dang gui invite...");
                 svc.SendInvite(friendPlayFabId, code, SendOk, SendErr);
@@ -117,7 +119,7 @@ namespace Game.UI
             Debug.Log("[Party-DIAG] ACCEPT: xoa invite + join code=" + code);
             svc.ClearInvite(null, null); // [PARTY-FIX] xoa NGAY -> khong spam popup du join loi
             svc.JoinParty(code,
-                () => { Code = code; IsLeader = false; SelfReady = false; _handedOff = false; LeaderSettings = null; PlayerPrefs.SetString(PartyKey(), code); StartPolling(); Debug.Log("[Party-DIAG] ACCEPT: JOIN ok (da vao party)"); },
+                () => { Code = code; IsLeader = false; SelfReady = false; _handedOff = false; LeaderSettings = null; PlayerPrefs.SetString(PartyKey(), code); PartyHeartbeat.Begin(code, false, false); StartPolling(); Debug.Log("[Party-DIAG] ACCEPT: JOIN ok (da vao party)"); },
                 e => { Debug.LogWarning("[Party-DIAG] ACCEPT: JOIN LOI: " + (e != null ? e.ErrorMessage : "?")); });
         }
 
@@ -128,6 +130,7 @@ namespace Game.UI
         public void SetReady(bool ready)
         {
             SelfReady = ready;
+            PartyHeartbeat.Set(SelfReady, IsLeader); // heartbeat ghi dung gia tri moi (khong ghi de lai gia tri cu)
             var svc = BackendBootstrap.PartyService;
             if (svc == null || !InParty) return;
             svc.SetReady(Code, ready, null, LogErr);
@@ -156,11 +159,12 @@ namespace Game.UI
         private void ClearLocalState()
         {
             Code = null; IsLeader = false; State = null; SelfReady = false; LeaderSettings = null;
-            _seenVal.Clear(); _seenAt.Clear(); _avatarShown.Clear();
+            _seenVal.Clear(); _seenAt.Clear(); _avatarShown.Clear(); _slotMember.Clear();
+            PartyHeartbeat.End(); // [Aemy 2026-10-22] ngung heartbeat xuyen scene
             _handedOff = false; _lastHandledMatch = null; _restoreArmed = false; _lastPublished = null;
             PlayerPrefs.DeleteKey(PartyKey()); PlayerPrefs.Save();
             if (_pollCo != null) { StopCoroutine(_pollCo); _pollCo = null; }
-            if (_party != null) for (int i = 1; i < _party.SlotCount; i++) _party.SetEmpty(i);
+            if (_party != null) for (int i = 1; i < _party.SlotCount; i++) { _party.SetEmpty(i); _party.ResetMemberAvatar(i); }
             if (OnPartyChanged != null) OnPartyChanged(null);
         }
 
@@ -179,6 +183,7 @@ namespace Game.UI
             if (svc == null || !InParty || !IsLeader || string.IsNullOrEmpty(playFabId) || playFabId == SelfId()) return;
             svc.SetLeader(Code, playFabId, null, LogErr);
             IsLeader = false; SelfReady = false; // nguoi moi lam truong nhom; minh thanh thanh vien (phai bam san sang lai)
+            PartyHeartbeat.Set(false, false);
             svc.SetReady(Code, false, null, LogErr);
         }
 
@@ -232,8 +237,8 @@ namespace Game.UI
                 var svc = BackendBootstrap.PartyService;
                 if (svc != null)
                 {
-                    if (_hbTick % 3 == 0) svc.Touch(Code, SelfReady, null, null); // [PARTY-HB] ~9s/lan
-                    _hbTick++;
+                    // [Aemy 2026-10-22] Heartbeat chuyen sang PartyHeartbeat (chay ca trong tran). Khi dang khoi phuc
+                    // CHUA Touch: truoc day tick 0 ghi ready=false (SelfReady mac dinh) de len gia tri that tren server.
                     svc.GetParty(Code, st =>
                     {
                         if (!InParty) return; // da roi party trong luc cho ket qua
@@ -260,9 +265,21 @@ namespace Game.UI
                         if (_restoreArmed && st != null)
                         {
                             string me = SelfId();
+                            if (st.Members != null && st.Members.Count > 0 && !st.HasMember(me))
+                            {
+                                // [Aemy 2026-10-22] Vang lau (thoat game) -> da bi don khoi nhom: xoa sach, khong khoi phuc.
+                                Debug.Log("[Party] Khoi phuc: minh khong con trong nhom -> xoa party cu.");
+                                ClearLocalState();
+                                if (OnKicked != null) OnKicked();
+                                return;
+                            }
                             IsLeader = (!string.IsNullOrEmpty(me) && me == st.LeaderId);
-                            if (st.Members != null) foreach (var mm in st.Members) if (mm.PlayFabId == me) SelfReady = IsLeader ? true : mm.Ready;
+                            bool carried = PartyHeartbeat.Code == Code; // ve tu tran cung phien: gia tri local la moi nhat
+                            if (IsLeader) SelfReady = true;
+                            else if (!carried && st.Members != null) foreach (var mm in st.Members) if (mm.PlayFabId == me) SelfReady = mm.Ready;
                             _lastHandledMatch = st.MatchId; _restoreArmed = false;
+                            PartyHeartbeat.Begin(Code, SelfReady, IsLeader);
+                            if (carried) SetReady(SelfReady); // ghi lai ngay -> o party cua moi nguoi khop voi nut
                             if (IsLeader && !string.IsNullOrEmpty(st.MatchId)) { var s2 = BackendBootstrap.PartyService; if (s2 != null) s2.SetMatchId(Code, "", null, LogErr); }
                         }
                         // Thanh vien: ap cai dat cua truong nhom.
@@ -272,37 +289,11 @@ namespace Game.UI
                             try { ps = JsonUtility.FromJson<PartySettings>(st.SettingsJson); } catch { ps = null; }
                             if (ps != null && !ps.SameAs(LeaderSettings)) { LeaderSettings = ps; if (OnLeaderSettings != null) OnLeaderSettings(ps); }
                         }
+                        // [PARTY-HB] Grace 12s dau sau khi vao menu (cho moi nguoi heartbeat lai) roi moi xet mat ket noi.
+                        if (st != null && st.Members != null && Time.unscaledTime - _partyStartRealtime > 12f) HandleStaleMembers(st);
+                        if (InParty && !_restoreArmed) PartyHeartbeat.Set(SelfReady, IsLeader);
                         if (OnPartyChanged != null) OnPartyChanged(st);
                         ApplyToPanel(st);
-                        // [PARTY-HB] Leader: da member khong heartbeat > 30s ra khoi party.
-                        // Grace: 12s dau sau khi vao menu KHONG da ai (cho member ve tu tran + heartbeat lai).
-                        if (IsLeader && st != null && st.Members != null && Time.unscaledTime - _partyStartRealtime > 12f)
-                        {
-                            string meId = SelfId(); var svc2 = BackendBootstrap.PartyService;
-                            float tnow = Time.unscaledTime;
-                            var present = new System.Collections.Generic.HashSet<string>();
-                            foreach (var mm in st.Members)
-                            {
-                                if (mm == null || string.IsNullOrEmpty(mm.PlayFabId)) continue;
-                                present.Add(mm.PlayFabId);
-                                if (mm.PlayFabId == meId || mm.Seen <= 0) continue;
-                                long prev; bool had = _seenVal.TryGetValue(mm.PlayFabId, out prev);
-                                if (!had || mm.Seen != prev) { _seenVal[mm.PlayFabId] = mm.Seen; _seenAt[mm.PlayFabId] = tnow; }
-                                else
-                                {
-                                    float since; _seenAt.TryGetValue(mm.PlayFabId, out since);
-                                    if (tnow - since > KICK_STALE_SECONDS && svc2 != null)
-                                    {
-                                        Debug.Log("[Party-HB] Kick stale: " + mm.Name + " (" + (tnow - since).ToString("0") + "s khong heartbeat - dong ho leader)");
-                                        svc2.KickMember(Code, mm.PlayFabId, null, LogErr);
-                                        _seenVal.Remove(mm.PlayFabId); _seenAt.Remove(mm.PlayFabId);
-                                    }
-                                }
-                            }
-                            var _gone = new System.Collections.Generic.List<string>();
-                            foreach (var k in _seenVal.Keys) if (!present.Contains(k)) _gone.Add(k);
-                            foreach (var k in _gone) { _seenVal.Remove(k); _seenAt.Remove(k); }
-                        }
                         string mid = st != null ? st.MatchId : null;
                         if (string.IsNullOrEmpty(mid))
                         {
@@ -320,6 +311,60 @@ namespace Game.UI
                 yield return wait;
             }
             _pollCo = null;
+        }
+
+        // [PARTY-HB] Theo doi Seen cua MOI nguoi bang DONG HO LOCAL (mien nhiem lech gio giua cac may).
+        // [Aemy 2026-10-22] Ca thanh vien cung theo doi: truong nhom thoat game (khong con heartbeat > 30s)
+        //   -> nguoi con song dau tien trong danh sach nhan truong nhom va da truong nhom ma ra. Truoc day khong ai don
+        //   -> thanh vien ket voi truong nhom ma, khong bat dau tran duoc.
+        private void HandleStaleMembers(PartyState st)
+        {
+            string me = SelfId(); float now = Time.unscaledTime;
+            var present = new System.Collections.Generic.HashSet<string>();
+            var stale = new System.Collections.Generic.HashSet<string>();
+            foreach (var mm in st.Members)
+            {
+                if (mm == null || string.IsNullOrEmpty(mm.PlayFabId)) continue;
+                present.Add(mm.PlayFabId);
+                if (mm.PlayFabId == me || mm.Seen <= 0) continue;
+                long prev; bool had = _seenVal.TryGetValue(mm.PlayFabId, out prev);
+                if (!had || mm.Seen != prev) { _seenVal[mm.PlayFabId] = mm.Seen; _seenAt[mm.PlayFabId] = now; continue; }
+                float since; _seenAt.TryGetValue(mm.PlayFabId, out since);
+                if (now - since > KICK_STALE_SECONDS) stale.Add(mm.PlayFabId);
+            }
+            var gone = new System.Collections.Generic.List<string>();
+            foreach (var k in _seenVal.Keys) if (!present.Contains(k)) gone.Add(k);
+            foreach (var k in gone) { _seenVal.Remove(k); _seenAt.Remove(k); }
+            if (stale.Count == 0) return;
+
+            var svc = BackendBootstrap.PartyService; if (svc == null) return;
+            if (IsLeader)
+            {
+                foreach (var id in stale)
+                {
+                    Debug.Log("[Party-HB] Kick stale: " + id + " (khong heartbeat > " + KICK_STALE_SECONDS + "s - dong ho local)");
+                    svc.KickMember(Code, id, null, LogErr);
+                    _seenVal.Remove(id); _seenAt.Remove(id);
+                }
+                return;
+            }
+
+            string leader = st.LeaderId;
+            if (string.IsNullOrEmpty(leader) || !stale.Contains(leader)) return;
+            string heir = null;
+            foreach (var mm in st.Members)
+            {
+                if (mm == null || string.IsNullOrEmpty(mm.PlayFabId) || mm.PlayFabId == leader || stale.Contains(mm.PlayFabId)) continue;
+                heir = mm.PlayFabId; break;
+            }
+            if (heir != me) return; // nguoi khac nhan (moi may tinh cung 1 ket qua)
+            Debug.Log("[Party-HB] Truong nhom " + leader + " mat ket noi -> minh nhan truong nhom + da truong nhom cu.");
+            svc.SetLeader(Code, me, null, LogErr);
+            svc.KickMember(Code, leader, null, LogErr);
+            _seenVal.Remove(leader); _seenAt.Remove(leader);
+            st.LeaderId = me; st.Members.RemoveAll(m => m != null && m.PlayFabId == leader);
+            IsLeader = true; SelfReady = true;
+            if (_pendingSettings != null) { _lastPublished = null; PublishSettings(_pendingSettings); }
         }
 
         private IEnumerator InvitePoll()
@@ -353,6 +398,7 @@ namespace Game.UI
         }
 
         private readonly System.Collections.Generic.Dictionary<int, string> _avatarShown = new System.Collections.Generic.Dictionary<int, string>();
+        private readonly System.Collections.Generic.Dictionary<int, string> _slotMember = new System.Collections.Generic.Dictionary<int, string>(); // o -> PlayFabId
 
         private void ApplyToPanel(PartyState st)
         {
@@ -363,14 +409,27 @@ namespace Game.UI
                 if (st.Members != null && i < st.Members.Count)
                 {
                     var m = st.Members[i];
-                    _party.SetMember(i, m.Name, m.PlayFabId == st.LeaderId, m.Ready ? "Sẵn sàng" : "Chưa sẵn sàng");
+                    // [Aemy 2026-10-22] O cua minh: theo trang thai local (giong nut) -> khong lech trong luc cho server.
+                    bool ready = m.PlayFabId == SelfId() ? SelfReady : m.Ready;
+                    _party.SetMember(i, m.Name, m.PlayFabId == st.LeaderId, ready ? "Sẵn sàng" : "Chưa sẵn sàng");
+                    // [Aemy 2026-10-22] Doi nguoi trong o (co nguoi roi di, danh sach don len) -> bo avatar cua nguoi cu.
+                    string prevId; _slotMember.TryGetValue(i, out prevId);
+                    if (prevId != m.PlayFabId)
+                    {
+                        if (prevId != null) { _avatarShown.Remove(i); _party.ResetMemberAvatar(i); }
+                        _slotMember[i] = m.PlayFabId;
+                    }
                     if (!string.IsNullOrEmpty(m.AvatarUrl))
                     {
                         string shown; _avatarShown.TryGetValue(i, out shown);
                         if (shown != m.AvatarUrl) { _avatarShown[i] = m.AvatarUrl; StartCoroutine(DownloadPartyAvatar(i, m.AvatarUrl)); }
                     }
                 }
-                else { _party.SetEmpty(i); _avatarShown.Remove(i); }
+                else
+                {
+                    _party.SetEmpty(i);
+                    if (_slotMember.Remove(i)) { _avatarShown.Remove(i); _party.ResetMemberAvatar(i); }
+                }
             }
         }
 
@@ -382,6 +441,7 @@ namespace Game.UI
                 if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success) yield break;
                 var tex = UnityEngine.Networking.DownloadHandlerTexture.GetContent(req); if (tex != null) tex = Game.UI.ImageScale.Fit(tex, 64); // [#5] thu nho 64px
                 if (tex == null || _party == null) yield break;
+                string still; if (!_avatarShown.TryGetValue(index, out still) || still != url) yield break; // o da doi nguoi trong luc tai
                 var sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
                 _party.SetMemberAvatar(index, sp);
             }
