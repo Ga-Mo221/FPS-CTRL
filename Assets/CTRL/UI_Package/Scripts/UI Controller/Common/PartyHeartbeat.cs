@@ -15,7 +15,7 @@ namespace Game.UI
     /// </summary>
     public static class PartyHeartbeat
     {
-        public const float IntervalSeconds = 9f;
+        public const float IntervalSeconds = 5f; // [Aemy 2026-10-22] 9s -> 5s: nguoi khac phat hien mat ket noi nhanh hon
 
         public static string Code { get; private set; }
         public static bool Ready { get; private set; }
@@ -23,10 +23,45 @@ namespace Game.UI
         public static bool Active { get { return !string.IsNullOrEmpty(Code); } }
 
         private static Runner _runner;
+        private static bool _quitting, _leftForQuit;
+
+        // [Aemy 2026-10-22] Tat game binh thuong (nut THOAT GAME, dau X, Alt+F4) khi con trong to doi:
+        // hoan tat game toi da ~2.5s de ROI NHOM tren server truoc -> ca nhom thay minh roi o lan poll ke tiep (~3s)
+        // thay vi cho het han heartbeat. Crash / tat tien trinh thi van dua vao het han heartbeat (~15s).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void HookQuit()
+        {
+            Application.wantsToQuit -= OnWantsToQuit;
+            Application.wantsToQuit += OnWantsToQuit;
+        }
+
+        private static bool OnWantsToQuit()
+        {
+            if (_leftForQuit || !Active) return true;
+            if (_quitting) return false;
+            _quitting = true;
+            EnsureRunner();
+            _runner.StartCoroutine(LeaveThenQuit());
+            return false;
+        }
+
+        private static System.Collections.IEnumerator LeaveThenQuit()
+        {
+            bool done = false;
+            string code = Code;
+            Debug.Log("[PartyHeartbeat] Tat game -> roi to doi " + code + " truoc.");
+            PartyController.LeaveOnServer(code, () => done = true);
+            float until = Time.unscaledTime + 2.5f;
+            while (!done && Time.unscaledTime < until) yield return null;
+            PartyController.ForgetSavedParty();
+            _leftForQuit = true;
+            End();
+            Application.Quit();
+        }
 
         // Editor tat domain reload -> static giu tu lan Play truoc: reset moi lan chay.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { Code = null; Ready = false; IsLeader = false; _runner = null; }
+        private static void ResetStatics() { Code = null; Ready = false; IsLeader = false; _runner = null; _quitting = false; _leftForQuit = false; }
 
         /// <summary>Vao / khoi phuc to doi: bat dau (hoac tiep tuc) Touch. Touch ngay 1 lan.</summary>
         public static void Begin(string code, bool ready, bool isLeader)

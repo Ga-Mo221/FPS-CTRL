@@ -43,7 +43,9 @@ namespace Game.UI
         // [PARTY-HB-FIX 2026-10-01] Theo doi Seen thay doi theo DONG HO LOCAL cua leader (mien nhiem lech gio cross-device).
         private readonly System.Collections.Generic.Dictionary<string, long> _seenVal = new System.Collections.Generic.Dictionary<string, long>();
         private readonly System.Collections.Generic.Dictionary<string, float> _seenAt = new System.Collections.Generic.Dictionary<string, float>();
-        private const float KICK_STALE_SECONDS = 30f; // kick neu Seen KHONG tien trong 30s (do bang dong ho leader)
+        // [Aemy 2026-10-22] 30s -> 15s (heartbeat 5s, chay ca trong tran): thoat game dot ngot (crash / tat tien trinh)
+        // duoc don sau ~15-18s. Thoat binh thuong thi PartyHeartbeat roi nhom truoc khi tat -> ~3s.
+        private const float KICK_STALE_SECONDS = 15f; // kick neu Seen KHONG tien trong 15s (do bang dong ho local)
 
         private void OnEnable()  { if (_inviteCo == null) _inviteCo = StartCoroutine(InvitePoll()); }
         private void OnDisable()
@@ -92,14 +94,36 @@ namespace Game.UI
             string me = SelfId();
             if (svc == null || string.IsNullOrEmpty(me)) return;
             Debug.Log("[Party] Dang nhap lai: roi party cu " + code + " (lan truoc thoat game ma chua roi nhom).");
+            LeaveOnServer(code, () => Debug.Log("[Party] Da roi party cu " + code));
+        }
+
+        /// <summary>
+        /// [Aemy 2026-10-22] Roi nhom tren server (khong can PartyController trong scene): truong nhom thi giao truong nhom
+        /// cho nguoi con lai TRUOC roi moi roi. onDone goi ca khi loi (nguoi goi co the dang cho de tat game).
+        /// </summary>
+        public static void LeaveOnServer(string code, Action onDone)
+        {
+            var svc = BackendBootstrap.PartyService;
+            string me = SelfId();
+            if (svc == null || string.IsNullOrEmpty(code) || string.IsNullOrEmpty(me)) { if (onDone != null) onDone(); return; }
+            Action leave = () => svc.LeaveParty(code, () => { if (onDone != null) onDone(); }, e => { LogErr(e); if (onDone != null) onDone(); });
             svc.GetParty(code, st =>
             {
+                string heir = null;
                 if (st != null && st.LeaderId == me && st.Members != null)
                     foreach (var m in st.Members)
-                        if (m != null && !string.IsNullOrEmpty(m.PlayFabId) && m.PlayFabId != me) { svc.SetLeader(code, m.PlayFabId, null, LogErr); break; }
-                svc.LeaveParty(code, () => Debug.Log("[Party] Da roi party cu " + code), LogErr);
+                        if (m != null && !string.IsNullOrEmpty(m.PlayFabId) && m.PlayFabId != me) { heir = m.PlayFabId; break; }
+                if (heir != null) svc.SetLeader(code, heir, () => leave(), e => { LogErr(e); leave(); });
+                else leave();
             },
-            e => svc.LeaveParty(code, null, null)); // nhom da giai tan / khong doc duoc -> van thu roi
+            e => leave()); // nhom da giai tan / khong doc duoc -> van thu roi
+        }
+
+        /// <summary>[Aemy 2026-10-22] Xoa ma party da luu cua tai khoan nay (vd vua roi nhom luc tat game).</summary>
+        public static void ForgetSavedParty()
+        {
+            string key = PartyKey();
+            if (PlayerPrefs.HasKey(key)) { PlayerPrefs.DeleteKey(key); PlayerPrefs.Save(); }
         }
 
         // [2026-10-21] Moi cung 1 nguoi: cho 5s moi duoc moi lai (static -> giu qua viec dung lai dong ban / mo lai panel).
