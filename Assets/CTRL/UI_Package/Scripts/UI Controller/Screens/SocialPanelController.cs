@@ -34,8 +34,11 @@ namespace Game.UI
         [SerializeField] private TMP_Text _friendReqText;
         [SerializeField] private UnityEngine.UI.Button _friendReqAccept;
         [SerializeField] private UnityEngine.UI.Button _friendReqDecline;
-        [SerializeField] private float _reqPollSeconds = 20f;
+        // [Aemy 2026-10-22] Kiem tra loi moi ket ban LUC NAO CUNG (o menu), khong chi khi dang mo panel ban be
+        // -> nguoi nhan thay popup trong vai giay. (Truoc: 20s va chi khi mo panel.)
+        [SerializeField] private float _requestPollSeconds = 8f;
         private readonly List<FriendRequestInfo> _incomingReqs = new List<FriendRequestInfo>();
+        private readonly HashSet<string> _handledReqIds = new HashSet<string>(); // da chap nhan / tu choi (cho server cap nhat)
         private FriendRequestInfo _shownReq;
         private Coroutine _reqPollCo;
 
@@ -58,6 +61,9 @@ namespace Game.UI
         }
 
         private void OnDestroy() { if (_partyController != null) _partyController.OnInviteReceived -= ShowInvite; }
+
+        private void OnEnable()  { if (_reqPollCo == null) _reqPollCo = StartCoroutine(RequestPollLoop()); }
+        private void OnDisable() { if (_reqPollCo != null) { StopCoroutine(_reqPollCo); _reqPollCo = null; } }
 
         private void ShowInvite(Backend.Models.PartyInvite inv)
         {
@@ -92,14 +98,13 @@ namespace Game.UI
             var svc = BackendBootstrap.FriendsService;
             if (svc != null) svc.IndexMyName();   // [Aemy] dang ky ten minh de nguoi khac tim duoc
             Refresh();
-            RefreshRequests();                    // [Aemy] keo loi moi ket ban den
-            if (_reqPollCo == null) _reqPollCo = StartCoroutine(RequestPollLoop());
+            RefreshRequests();                    // [Aemy] keo loi moi ket ban den ngay khi mo
         }
 
         public void Close()
         {
             if (_panelRoot != null) _panelRoot.SetActive(false);
-            if (_reqPollCo != null) { StopCoroutine(_reqPollCo); _reqPollCo = null; }
+            // [Aemy 2026-10-22] van tiep tuc kiem tra loi moi ket ban (RequestPollLoop chay theo OnEnable)
         }
 
         public void Refresh()
@@ -181,7 +186,13 @@ namespace Game.UI
             svc.GetIncomingRequests(reqs =>
             {
                 _incomingReqs.Clear();
-                if (reqs != null) _incomingReqs.AddRange(reqs);
+                // id da xu ly ma server khong con tra ve -> bo khoi danh sach (lan sau ho gui lai van hien)
+                var onServer = new HashSet<string>();
+                if (reqs != null) foreach (var r in reqs) if (r != null && !string.IsNullOrEmpty(r.FromId)) onServer.Add(r.FromId);
+                _handledReqIds.RemoveWhere(id => !onServer.Contains(id));
+                if (reqs != null)
+                    foreach (var r in reqs)
+                        if (r != null && !string.IsNullOrEmpty(r.FromId) && !_handledReqIds.Contains(r.FromId)) _incomingReqs.Add(r);
                 ShowNextRequest();
             },
             err => { /* im lang, khong pha UI list ban */ });
@@ -189,11 +200,12 @@ namespace Game.UI
 
         private IEnumerator RequestPollLoop()
         {
-            var wait = new WaitForSeconds(_reqPollSeconds > 1f ? _reqPollSeconds : 20f);
-            while (_panelRoot != null && _panelRoot.activeSelf)
+            var wait = new WaitForSecondsRealtime(_requestPollSeconds >= 3f ? _requestPollSeconds : 8f);
+            yield return new WaitForSecondsRealtime(1f); // de dang nhap / menu on dinh truoc
+            while (isActiveAndEnabled)
             {
-                yield return wait;
                 RefreshRequests();
+                yield return wait;
             }
             _reqPollCo = null;
         }
@@ -202,6 +214,7 @@ namespace Game.UI
         {
             if (_friendReqPopup == null) return;
             if (_incomingReqs.Count == 0) { _shownReq = null; _friendReqPopup.SetActive(false); return; }
+            if (_shownReq != null && _friendReqPopup.activeSelf && _shownReq.FromId == _incomingReqs[0].FromId) return; // dang hien dung loi moi nay
             _shownReq = _incomingReqs[0];
             if (_friendReqText != null)
                 _friendReqText.text = (string.IsNullOrEmpty(_shownReq.FromName) ? "Một người" : _shownReq.FromName) + " muốn kết bạn với bạn";
@@ -213,7 +226,9 @@ namespace Game.UI
             var svc = BackendBootstrap.FriendsService;
             if (svc == null || _shownReq == null) return;
             string fromId = _shownReq.FromId;
+            _handledReqIds.Add(fromId);
             if (_incomingReqs.Count > 0) _incomingReqs.RemoveAt(0);
+            _shownReq = null;
             svc.AcceptFriendRequest(fromId,
                 () => Refresh(),
                 err => { if (_statusLabel != null) _statusLabel.text = "Lỗi: " + err.ErrorMessage; });
@@ -225,7 +240,9 @@ namespace Game.UI
             var svc = BackendBootstrap.FriendsService;
             if (svc == null || _shownReq == null) return;
             string fromId = _shownReq.FromId;
+            _handledReqIds.Add(fromId);
             if (_incomingReqs.Count > 0) _incomingReqs.RemoveAt(0);
+            _shownReq = null;
             svc.DeclineFriendRequest(fromId, null,
                 err => { if (_statusLabel != null) _statusLabel.text = "Lỗi: " + err.ErrorMessage; });
             ShowNextRequest();
