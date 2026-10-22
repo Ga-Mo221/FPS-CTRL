@@ -35,6 +35,37 @@ namespace Backend.PlayfabImpl
             return CodenameToId.TryGetValue(name.Trim(), out var id) ? id : name;
         }
 
+        // [Aemy 2026-10-22] Sau khi doi ID sung sang codename (Umbra, Vesper...) map cu tra ve "M4" / "9mm-Demon"
+        // -> GetWeaponData khong tim thay -> dong Umbra / Vesper tren sheet KHONG BAO GIO duoc ap (M4 chay so cu
+        // trong asset, moi skin mot kieu). Gio: ten tren sheet khop ID that truoc, khong co moi tra map cu.
+        // Ap luon cho cac ban skin cung sung (ID "<goc>_..." vd Umbra_DR, Umbra_G) -> skin chi khac ve ngoai.
+        private static List<WeaponData> FindTargets(string sheetName)
+        {
+            var list = new List<WeaponData>();
+            var gm = GameManager.Instance;
+            if (gm == null || string.IsNullOrEmpty(sheetName)) return list;
+            string key = sheetName.Trim();
+            var infos = gm.GetWeaponDataList();
+            if (!HasId(infos, key)) key = ResolveKey(key);
+            if (infos != null)
+                foreach (var w in infos)
+                {
+                    var d = w.Data(); string id = w.ID();
+                    if (d == null || string.IsNullOrEmpty(id)) continue;
+                    if (string.Equals(id, key, StringComparison.OrdinalIgnoreCase) || id.StartsWith(key + "_", StringComparison.OrdinalIgnoreCase))
+                        if (!list.Contains(d)) list.Add(d);
+                }
+            if (list.Count == 0) { var d = gm.GetWeaponData(key); if (d != null) list.Add(d); } // giu cach khop cu (Contains)
+            return list;
+        }
+
+        private static bool HasId(WeaponInfo[] infos, string id)
+        {
+            if (infos == null) return false;
+            foreach (var w in infos) if (string.Equals(w.ID(), id, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
         /// <summary>Load tu Title Data roi overlay len WeaponData. onApplied(so sung da ap).</summary>
         public static void LoadAndApply(Action<int> onApplied = null, Action<string> onError = null)
         {
@@ -76,9 +107,18 @@ namespace Backend.PlayfabImpl
             foreach (var e in table.weapons)
             {
                 if (e == null || string.IsNullOrEmpty(e.name)) continue;
-                WeaponData data = GameManager.Instance.GetWeaponData(ResolveKey(e.name));
-                if (data != null)
+                WeaponEntrySkinStats skinStats = null;
+                foreach (var data in FindTargets(e.name))
                 {
+                    bool isSkin = data.ID != null && data.ID.Contains("_");
+                    if (isSkin)
+                    {
+                        // Skin: chi lay chi so, giu icon / anh rieng cua skin.
+                        if (skinStats == null) skinStats = new WeaponEntrySkinStats(e);
+                        data.ApplyRuntimeOverride(skinStats.Entry);
+                        applied++;
+                        continue;
+                    }
                     data.ApplyRuntimeOverride(e);
                     applied++;
                     if (!string.IsNullOrEmpty(e.iconUrl))
@@ -88,6 +128,21 @@ namespace Backend.PlayfabImpl
                 }
             }
             return applied;
+        }
+
+        // Ban sao entry khong co URL anh (cho skin). ApplyRuntimeOverride gan IconUrl/ImageUrl = entry -> de trong.
+        private sealed class WeaponEntrySkinStats
+        {
+            public readonly WeaponSpecEntry Entry;
+            public WeaponEntrySkinStats(WeaponSpecEntry e)
+            {
+                Entry = new WeaponSpecEntry
+                {
+                    name = e.name, damage = e.damage, rightDamage = e.rightDamage, fireDelay = e.fireDelay, range = e.range,
+                    defaultBullet = e.defaultBullet, maxBullet = e.maxBullet, pelletCount = e.pelletCount, spreadAngle = e.spreadAngle,
+                    iconUrl = null, imageUrl = null
+                };
+            }
         }
 
         /// <summary>Tai icon/anh cua sung 'name' vao Image (async). big=true -> imageUrl; khong co url thi giu nguyen sprite hien tai.</summary>
