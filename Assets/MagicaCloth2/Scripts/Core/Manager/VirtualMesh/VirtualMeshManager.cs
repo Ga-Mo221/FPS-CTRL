@@ -485,6 +485,10 @@ namespace MagicaCloth2
                 tdata.proxyBoneChunk = vertexToTransformRotations.AddRange(proxyMesh.vertexToTransformRotations);
             }
 
+            // Lineデータの有無を記録
+            tdata.flag.SetBits(TeamManager.Flag_ProxyMeshLine, proxyMesh.LineCount > 0);
+            //Develop.DebugLog($"Proxy[{proxyMesh.name}] Line:{proxyMesh.LineCount > 0}");
+
             // 頂点間の最大距離
             //tdata.maxVertexDistance = proxyMesh.maxVertexDistance.Value;
             //Debug.Log($"maxVertexDistance:{proxyMesh.maxVertexDistance.Value}");
@@ -794,28 +798,33 @@ namespace MagicaCloth2
             ref NativeArray<quaternion> rotations,
             ref NativeArray<float3> vertexLocalPositions,
             ref NativeArray<quaternion> vertexLocalRotations,
-            ref NativeArray<uint> childIndexArray,
-            ref NativeArray<ushort> childDataArray,
+            ref NativeArray<uint> vertexChildIndexArray,
+            ref NativeArray<ushort> vertexChildDataArray,
             ref NativeArray<ExBitFlag8> baseLineFlags,
             ref NativeArray<ushort> baseLineStartIndices,
             ref NativeArray<ushort> baseLineDataCounts,
-            ref NativeArray<ushort> baseLineData
+            ref NativeArray<ushort> baseLineData,
+            // temp
+            ref NativeArray<float3> tempVectorBufferA,
+            ref NativeArray<quaternion> tempRotationBufferA
             )
         {
             // ラインがある場合はベースラインごとに姿勢を整える
-            if (tdata.baseLineChunk.IsValid)
+            // ただしLineが存在しないメッシュはスキップする。トライアングルベースの回転制御にすべて上書きされるため。
+            if (tdata.baseLineChunk.IsValid && tdata.flag.IsSet(TeamManager.Flag_ProxyMeshLine))
             {
                 // parameter
                 float averageRate = param.rotationalInterpolation; // 回転平均化割合
                 float rootInterpolation = param.rootRotation;
+                float animeRatio = tdata.animationPoseRatio;
+                float blendWeight = tdata.blendWeight;
 
                 int s_vindex = tdata.proxyCommonChunk.startIndex;
+                int s_pindex = tdata.particleChunk.startIndex;
                 int s_dataIndex = tdata.baseLineDataChunk.startIndex;
                 int s_childDataIndex = tdata.proxyVertexChildDataChunk.startIndex;
 
-                //int bindex = tdata.baseLineChunk.startIndex;
                 int bindex = tdata.baseLineChunk.startIndex + chunk.startIndex;
-                //for (int k = 0; k < tdata.baseLineChunk.dataLength; k++, bindex++)
                 for (int k = 0; k < chunk.dataLength; k++, bindex++)
                 {
                     // ラインを含む場合のみ実行する
@@ -829,7 +838,9 @@ namespace MagicaCloth2
                     for (int i = 0; i < dataCnt; i++, dataIndex++)
                     {
                         // 自身を親とする
-                        int vindex = baseLineData[dataIndex] + s_vindex;
+                        int lindex = baseLineData[dataIndex];
+                        int vindex = lindex + s_vindex;
+                        int pindex = lindex + s_pindex;
                         var pos = positions[vindex];
                         var rot = rotations[vindex];
                         var attr = attributes[vindex];
@@ -837,12 +848,22 @@ namespace MagicaCloth2
                         //Debug.Log($"p:[{vindex}] rot:[{rot}] wn:{MathUtility.ToNormal(rot)}, wt:{MathUtility.ToTangent(rot)}");
 
                         // 子の情報
-                        var pack = childIndexArray[vindex];
+                        var pack = vertexChildIndexArray[vindex];
                         int cstart = DataUtility.Unpack12_20Low(pack);
                         int ccnt = DataUtility.Unpack12_20Hi(pack);
-#if true
-                        int movecnt = 0;
-                        if (ccnt > 0)
+
+                        // ★Ver2.17.0より変更。以下の問題を修正
+                        // BoneClothの制御Transformがアニメーションにより姿勢制御されている場合に最終回転が全体的におかしくなる
+                        // これは回転計算の元をアニメーション姿勢ではなく初期姿勢に固定しているため
+                        // そのためBlendWeight=0にしてもオリジナルの姿勢に戻らなくなる
+                        // またベクトルのゼロ距離判定を強化
+
+                        // 現在のベース姿勢
+                        var basePos = tempVectorBufferA[pindex];
+                        var baseRot = tempRotationBufferA[pindex];
+                        var baseInvRot = math.inverse(baseRot);
+
+                        if (ccnt > 0 && attr.IsInvalid() == false)
                         {
                             // 子への平均ベクトル
                             float3 ctv = 0;
@@ -851,64 +872,75 @@ namespace MagicaCloth2
                             // 自身を基準に子の回転を求める、また子への平均ベクトルを加算する
                             for (int j = 0; j < ccnt; j++)
                             {
-                                int cvindex = childDataArray[s_childDataIndex + cstart + j] + s_vindex;
+                                int clindex = vertexChildDataArray[s_childDataIndex + cstart + j];
+                                int cvindex = clindex + s_vindex;
+                                int cpindex = clindex + s_pindex;
 
                                 // 子の属性
                                 var cattr = attributes[cvindex];
 
+                                // このゼロ距離状態
+                                bool isC0 = cattr.IsSet(VertexAttribute.Flag_ZeroDistance);
+
                                 // 子の座標
                                 var cpos = positions[cvindex];
 
+                                // 子の現在のベース姿勢とローカル姿勢
+                                var cbasePos = tempVectorBufferA[cpindex];
+                                var cbaseRot = tempRotationBufferA[cpindex];
+                                float3 cbaseLocalPos = math.mul(baseInvRot, cbasePos - basePos);
+                                quaternion cbaseLocalRot = math.mul(baseInvRot, cbaseRot);
+
+                                // 計算基準のローカル位置とローカル回転
+                                // AnimationPoseRatioにより補間
+                                float3 lpos = math.lerp(vertexLocalPositions[cvindex] * tdata.negativeScaleDirection, cbaseLocalPos, animeRatio);
+                                quaternion lrot = math.slerp(vertexLocalRotations[cvindex].value * tdata.negativeScaleQuaternionValue, cbaseLocalRot, animeRatio);
+
                                 // 子の本来のベクトル
-                                // マイナススケール
-                                float3 tv = math.mul(rot, vertexLocalPositions[cvindex] * tdata.negativeScaleDirection);
-                                //float3 tv = math.mul(rot, vertexLocalPositions[cvindex]); // オリジナル
-                                //Debug.Log($"p:[{vindex}] c:[{cvindex}] tv:{tv}");
+                                float3 tv = isC0 ? 0.0f : math.mul(rot, lpos);
 
                                 ctv += tv;
 
+                                // 子の現在ベクトル
                                 if (cattr.IsMove())
                                 {
-                                    // 子の現在ベクトル
                                     float3 v = cpos - pos;
                                     cv += v;
 
-                                    //Debug.Log($"p:[{vindex}] c:[{cvindex}] v:{v}");
+                                    bool isV0 = MathUtility.IsZeroDistance(v);
 
-                                    // 回転
-                                    var q = MathUtility.FromToRotation(tv, v);
+                                    // 子の回転を決定
+                                    // この時点で子は親の方向(1.0)の回転となる
+                                    var crot = math.mul(rot, lrot);
 
-                                    // 子の姿勢を決定
-                                    // マイナススケール
-                                    var crot = math.mul(rot, vertexLocalRotations[cvindex].value * tdata.negativeScaleQuaternionValue);
-                                    //var crot = math.mul(rot, vertexLocalRotations[cvindex]); // オリジナル
-                                    //Debug.Log($"c:[{cvindex}] crot:[{crot}] cwn:{MathUtility.ToNormal(crot)}, cwt:{MathUtility.ToTangent(crot)}");
+                                    // 現在のベクトル変位による補正
+                                    if(isC0 == false)
+                                    {
+                                        var q = MathUtility.FromToRotation(tv, v);
+                                        crot = math.mul(q, crot);
+                                    }
 
-                                    crot = math.mul(q, crot);
                                     rotations[cvindex] = crot;
-
-                                    movecnt++;
                                 }
                                 else
                                 {
-                                    // 子が固定の場合
                                     cv += tv;
                                 }
                             }
 
-                            // 子がすべて固定の場合は回転調整を行わない
-                            if (movecnt == 0)
-                                continue;
-
-                            // 子の移動方向変化に伴う回転調整
+                            // 子の方向への回転調整
                             float t = attr.IsMove() ? averageRate : rootInterpolation;
-                            var cq = MathUtility.FromToRotation(ctv, cv, t);
-
-                            // 自身の姿勢を確定させる
+                            bool isCtv0 = MathUtility.IsZeroDistance(ctv);
+                            bool isCv0 = MathUtility.IsZeroDistance(cv);
+                            var cq = (isCtv0 || isCv0) ? quaternion.identity : MathUtility.FromToRotation(ctv, cv, t);
                             rot = math.mul(cq, rot);
-                            rotations[vindex] = rot;
                         }
-#endif
+
+                        // ブレンドウエイト適用
+                        rot = math.slerp(baseRot, rot, blendWeight);
+
+                        // 自身の姿勢を確定させる
+                        rotations[vindex] = rot;
                     }
                 }
             }

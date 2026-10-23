@@ -43,10 +43,14 @@ public class MotionCall : StateMachineBehaviour
         var dis = animator.GetComponent<DisplayObject>();
         var shoot = animator.GetComponentInParent<NShootHandler>();
         if (shoot != null)
+        {
+            if (dis != null)
+            {
+                int index = GetIDGrenade(shoot);
+                dis.DisableObj(index);
+            }
             shoot.ThrowGrenade();
-        if (dis == null) return;
-        int index = GetIDGrenade(shoot);
-        dis.DisableObj(index);
+        }
     }
 
     private int GetIDGrenade(NShootHandler handler)
@@ -103,9 +107,8 @@ public class MotionCall : StateMachineBehaviour
         animator.ResetTrigger("IsShooting");
         var controller = animator.GetComponentInParent<NShootHandler>();
         controller?.TriggerMeleeAttack();
-        
-        var movement = animator.GetComponentInParent<NCharMovementHandler>();
-        movement?.StartCoolDownCombat();
+        // Cooldown/combo dao không còn mở bằng animation event: NCharMovementHandler tự đặt
+        // TickTimer networked ngay lúc nhận click (host và client predict giống nhau).
     }
 
     public void MeleeAttackTrigger(Animator animator)
@@ -126,11 +129,20 @@ public class MotionCall : StateMachineBehaviour
         animator.ResetTrigger(triggerName);
     }
 
-    public void RessetCanAttackMelee(Animator animator)
+    // Giữ hàm vì các state trong Animator Controller vẫn tham chiếu theo tên (UnityEvent),
+    // nhưng combo dao giờ do TickTimer networked quản lý → không còn việc gì để làm ở đây.
+    public void RessetCanAttackMelee(Animator animator) { }
+
+    public void AudioPlay(Animator animator, int index)
     {
         var controller = animator.GetComponentInParent<NCharMovementHandler>();
-        if (controller != null)
-            controller.ResetMeleeCombo();
+        var audiosound = controller?.GetComponent<CharComponentManager>().Audio_Body;
+        var data = controller?.Data;
+        if (data == null) return;
+        if (index == 0)
+            AudioManager.Instance.PlayClip(audiosound, data.SlideClips, data.Volume_Slide, true, 0.5f, 1f);
+        else  if (index == 1)
+            AudioManager.Instance.PlayClip(audiosound, data.JumpClips, data.Volume_Jump, true, 0.5f, 1f);
     }
 
     // ===================================== WEAPON =========================================================
@@ -225,5 +237,13 @@ public class MotionCall : StateMachineBehaviour
     {
         var controller = animator.GetComponentInParent<WeaponController>();
         controller?.DropCaseBullet();
+    }
+
+    public void DisplayMg(Animator animator, bool state)
+    {
+        var display = animator.GetComponentInParent<DisplayObject>();
+        if (display == null) return;
+        if (state) display.EnableObj(0);
+        else display.DisableObj(0);
     }
 }

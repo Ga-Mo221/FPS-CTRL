@@ -4,6 +4,7 @@ using UnityEditor;
 
 namespace GaMo.BlenderEditorTools
 {
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(DynamicBoneManager))]
     [InitializeOnLoad]
     public class DynamicBoneManagerEditor : Editor
@@ -309,6 +310,12 @@ namespace GaMo.BlenderEditorTools
                     "RebuildNativeArrays() đầu tiên sau khi các DynamicBone đăng ký.",
                     MessageType.None);
             }
+            else if (targets.Length > 1)
+            {
+                // Multi-edit: thông số runtime là của riêng từng instance => không gộp được
+                EditorGUILayout.HelpBox("Đang chọn nhiều DynamicBoneManager: chọn 1 object để xem thông số Runtime.",
+                    MessageType.None);
+            }
             else
             {
                 EditorGUILayout.LabelField("Trạng thái Instance",
@@ -329,7 +336,12 @@ namespace GaMo.BlenderEditorTools
             EditorGUI.BeginDisabledGroup(!Application.isPlaying);
             if (GUILayout.Button("🔄  Force Rebuild Buffers", GUILayout.Height(24f)))
             {
-                script.MarkDirty();
+                // Multi-edit: áp cho tất cả object đang chọn
+                foreach (var tg in targets)
+                {
+                    var mgr = tg as DynamicBoneManager;
+                    if (mgr != null) mgr.MarkDirty();
+                }
             }
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.EndVertical();

@@ -514,7 +514,6 @@ GameObject:
   - component: {fileID: 4559295538218434677}
   - component: {fileID: 8552091004222424087}
   - component: {fileID: 635206376693044882}
-  - component: {fileID: 500227582224698336}
   m_Layer: 0
   m_Name: Remington Drop Item
   m_TagString: Untagged
@@ -556,10 +555,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DropItemWeapon
   _CurrentBullet: 0
   _MaxBullet: 0
-  _WeaponName:
-    _length: 0
-    _data:
-      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 --- !u!114 &635206376693044882
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -578,25 +573,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 8552091004222424087}
-  - {fileID: 500227582224698336}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &500227582224698336
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5871652799477862001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _autoAOIOverride: 1
-  DisableSharedModeInterpolation: 0
 --- !u!1 &6093296140227585250
 GameObject:
   m_ObjectHideFlags: 0

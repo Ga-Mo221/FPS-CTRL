@@ -471,7 +471,7 @@ AudioSource:
   m_GameObject: {fileID: 618977659575431426}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -662,7 +662,7 @@ AudioSource:
   m_GameObject: {fileID: 1284273147037898063}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -778,6 +778,9 @@ GameObject:
   - component: {fileID: 6005568130557093082}
   - component: {fileID: 6946360144861941617}
   - component: {fileID: 515027332277284715}
+  - component: {fileID: 7581924943387803148}
+  - component: {fileID: 7058023643370031251}
+  - component: {fileID: 1530094604412932412}
   m_Layer: 0
   m_Name: Network Oliva
   m_TagString: Untagged
@@ -806,6 +809,7 @@ Transform:
   - {fileID: 5329317627157209741}
   - {fileID: 2969841000820195327}
   - {fileID: 8190539634849006954}
+  - {fileID: 784306409411413335}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2586427688724743018
@@ -900,75 +904,23 @@ MonoBehaviour:
   _data: {fileID: 11400000, guid: bc37ffe50bf880d4e8b5feccfa06359b, type: 2}
   _MoveDirection: {x: 0, y: 0}
   _StateFl:
-    IsADS:
-      _value: 0
-    IsRun:
-      _value: 0
-    IsSprint:
-      _value: 0
-    IsCrouch:
-      _value: 0
-    IsSlide:
-      _value: 0
-    IsReloading:
-      _value: 0
-    IsSwitching:
-      _value: 0
-    IsThrow:
-      _value: 0
+    Bits: 0
   _GrenadeID: 0
-  _Frag:
-    _value: 0
-  _Flash:
-    _value: 0
   _IsTurnInPlaceActive:
     _value: 0
-  _IsJump:
-    _value: 0
   _NetworkedPitch: 0
-  _FireCount: 0
-  _AimForward: {x: 0, y: 0, z: 0}
-  _LastShotInfo:
-    HitPosition: {x: 0, y: 0, z: 0}
-    HitNormal: {x: 0, y: 0, z: 0}
-    ShowEffect:
-      _value: 0
-    PelletCount: 0
-    HitPosition1: {x: 0, y: 0, z: 0}
-    HitNormal1: {x: 0, y: 0, z: 0}
-    ShowEffect1:
-      _value: 0
-    HitPosition2: {x: 0, y: 0, z: 0}
-    HitNormal2: {x: 0, y: 0, z: 0}
-    ShowEffect2:
-      _value: 0
-    HitPosition3: {x: 0, y: 0, z: 0}
-    HitNormal3: {x: 0, y: 0, z: 0}
-    ShowEffect3:
-      _value: 0
-    HitPosition4: {x: 0, y: 0, z: 0}
-    HitNormal4: {x: 0, y: 0, z: 0}
-    ShowEffect4:
-      _value: 0
-    HitPosition5: {x: 0, y: 0, z: 0}
-    HitNormal5: {x: 0, y: 0, z: 0}
-    ShowEffect5:
-      _value: 0
-    HitPosition6: {x: 0, y: 0, z: 0}
-    HitNormal6: {x: 0, y: 0, z: 0}
-    ShowEffect6:
-      _value: 0
-    HitPosition7: {x: 0, y: 0, z: 0}
-    HitNormal7: {x: 0, y: 0, z: 0}
-    ShowEffect7:
-      _value: 0
+  _ShotSeed: 0
   _RightPuch: 0
   _ShootIndex: 0
-  _canNextAttackCombo: 1
-  _LastConfirmedAimForward: {x: 0, y: 0, z: 0}
+  _meleeSwingLengths:
+  - 0.43
+  - 0.63
+  - 0.63
+  _meleeAdvanceDelay: 0.1
+  _meleeComboResetGrace: 0.3
+  _grenadeThrowLock: 1.2
   _CanTakeDamage:
     _value: 1
-  _SwitchCount: 0
   _CameraSpeed: 1
   _ADSLookSpeedMultiplier: 0.5
 --- !u!114 &5184761538601984074
@@ -985,20 +937,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NPlayer
   Name: Olivia
   _NetworkedTeam: 0
-  _GamePlayMode: 0
   _Nickname:
     _length: 0
     _data:
       Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   _Token: 0
+  _AvatarUrl:
+    _length: 0
+    _data:
+      Data: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   _RawToken: 
   _hide_Mesh:
-  - {fileID: 4211144259642559206}
-  - {fileID: 4222097969268760598}
-  - {fileID: 3430807042866968861}
   - {fileID: 3765057784193642640}
   - {fileID: 824745837987026772}
   - {fileID: 8237301129527547820}
+  - {fileID: 4222097969268760598}
+  - {fileID: 4211144259642559206}
+  - {fileID: 3430807042866968861}
+  - {fileID: 8850566437855519753}
+  - {fileID: 4546099523397076033}
+  - {fileID: 104242934378412657}
   _movementHandler: {fileID: 0}
 --- !u!114 &8708175667395706240
 MonoBehaviour:
@@ -1083,16 +1041,8 @@ MonoBehaviour:
     m_Bits: 8
   _weapon_Parrent: {fileID: 6465412586750388696}
   __weaponOneRef: {fileID: 0}
-  __weaponOneID:
-    _length: 0
-    _data:
-      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   Weapon_One_CTRL: {fileID: 0}
   __weaponTwoRef: {fileID: 0}
-  __weaponTwoID:
-    _length: 0
-    _data:
-      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   Weapon_Two_CTRL: {fileID: 0}
   __weapon_Active: 0
   _debug: 0
@@ -1188,12 +1138,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NShootHandler
   _throwPointRight: {fileID: 4596035457323363088}
   _throwPointLeft: {fileID: 9175223243367780336}
+  __grende_ID: 0
   _fore: 14
   _hitMask:
     serializedVersion: 2
     m_Bits: 136
-  __kill: 0
-  _Assist: 0
   _TotalExp: 0
   _meleeHitWindowDuration: 0.15
   _aimForward: {x: 0, y: 0, z: 0}
@@ -1210,9 +1159,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de1cd88088df52d448268df432191d39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NHPHandler
-  _HP: 0
-  _IsDead: 0
-  _DeadCount: 0
   SkipSettingStartValues: 0
   _regenDelay: 6
   _regenInterval: 1
@@ -1244,6 +1190,7 @@ MonoBehaviour:
   - {fileID: 9078815854270111339}
   - {fileID: 6005568130557093082}
   - {fileID: 515027332277284715}
+  - {fileID: 1530094604412932412}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &6319709237024727321
 MonoBehaviour:
@@ -1334,6 +1281,209 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 692db1985fb123147b97e1b4f6d8ffda, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NOutOfBoundsHandler
+--- !u!114 &7581924943387803148
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1310834366053682620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df91f8d58e5d19346840386dee423f20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DeathCameraController
+  _cameraRoot: {fileID: 1058367351249344973}
+  _lookTarget: {fileID: 1777329155475145035}
+  _cameraClipping: {fileID: 4891418515049300700}
+  _backDistance: 2.5
+  _height: 2
+  _flyDuration: 1.5
+  _localModelLayer: LocalPlayerModel
+  _deadLayerName: Dead
+  _deadLayerIdleState: NULL
+  _maxReviveWait: 0.5
+  _obstructionMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _cameraRadius: 0.2
+--- !u!114 &7058023643370031251
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1310834366053682620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b661b3a4d688c05438b22703c83f461a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraStabilizer
+  _pitchScale: 0.845
+  _neckToCamera: {x: 0, y: 0.313, z: 0.051}
+  _positionSmoothTime: 0.3
+  _maxPositionLag: 0.05
+  _stabilize: 0
+--- !u!114 &1530094604412932412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1310834366053682620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6376dd7fc23b3764483a7349b58502e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PhotonVoice.Fusion::Photon.Voice.Fusion.VoiceNetworkObject
+--- !u!1 &1383521055031962339
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 784306409411413335}
+  - component: {fileID: 3005435387728852840}
+  - component: {fileID: 5897607380004870395}
+  m_Layer: 0
+  m_Name: Voice Speaker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &784306409411413335
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1383521055031962339}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.6, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7296449728720968671}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!82 &3005435387728852840
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1383521055031962339}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 24300002, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 0
+  MinDistance: 3
+  MaxDistance: 40
+  Pan2D: 0
+  rolloffMode: 1
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &5897607380004870395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1383521055031962339}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd7fea91fe63f4e1b884ef1e16a975c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PhotonVoice::Photon.Voice.Unity.Speaker
+  playDelayConfig:
+    Low: 200
+    High: 200
+    Max: 1000
+    SpeedUpPerc: 5
+  restartOnDeviceChange: 1
 --- !u!1 &1530019628160214208
 GameObject:
   m_ObjectHideFlags: 0
@@ -1468,6 +1618,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -9254,6 +9405,7 @@ GameObject:
   - component: {fileID: 5692290031676278202}
   - component: {fileID: 4263491316972498930}
   - component: {fileID: 4453557441709377267}
+  - component: {fileID: 4303337304537377947}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: Untagged
@@ -9450,6 +9602,18 @@ MonoBehaviour:
   detectedLineColor: {r: 0, g: 1, b: 1, a: 1}
   blockedLineColor: {r: 1, g: 0, b: 0, a: 1}
   detectedObjects: []
+--- !u!114 &4303337304537377947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807117453508369898}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d0a347dcece79748a6c628d0c8cd020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFovSync
 --- !u!1 &1838617393171740941
 GameObject:
   m_ObjectHideFlags: 0
@@ -9607,7 +9771,7 @@ AudioSource:
   m_GameObject: {fileID: 2078313293574234594}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -9739,7 +9903,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets: []
   poleTargets: []
   poleAngleOffsets:
@@ -9834,6 +10000,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets:
   - id: 
     target: {fileID: 1146405722095477417}
@@ -10041,6 +10208,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1098981352970563719}
   hasExternalPoseDriver: 1
@@ -10427,7 +10595,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets:
   - id: IK Leg Right
     target: {fileID: 4347663628694695636}
@@ -10508,6 +10678,7 @@ MonoBehaviour:
     rotationalInterpolation: 0.5
     rootRotation: 0.5
     updateMode: 10
+    disableMode: 0
     animationPoseRatio: 0
     reductionSetting:
       simpleDistance: 0
@@ -18708,7 +18879,7 @@ AudioSource:
   m_GameObject: {fileID: 5094473178858439125}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -19102,6 +19273,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets:
   - id: 
     target: {fileID: 0}
@@ -19219,7 +19391,7 @@ AudioSource:
   m_GameObject: {fileID: 5817464728613026608}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -19602,7 +19774,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose:
+  - transform: {fileID: 4455433535296954294}
+    localPosition: {x: -5.5879353e-11, y: 0.0015632837, z: -0.0000000014703255}
+    localRotation: {x: -0.34350646, y: -0.015997691, z: 0.029121226, w: 0.9385624}
+    localScale: {x: 1, y: 0.99999994, z: 0.9999999}
+  - transform: {fileID: 1679611989750865118}
+    localPosition: {x: 1.3969838e-11, y: 0.0015366717, z: 0.0000000013531462}
+    localRotation: {x: 0.0015466015, y: 0.0011730794, z: 0.04962687, w: 0.99876595}
+    localScale: {x: 0.99999994, y: 1.0000001, z: 1}
+  - transform: {fileID: 7541474378367201005}
+    localPosition: {x: 1.8626451e-11, y: 0.0015320135, z: 5.2386893e-12}
+    localRotation: {x: 0.047358043, y: -0.007535635, z: 0.020543557, w: 0.9986383}
+    localScale: {x: 1, y: 1, z: 1}
   targets: []
   poleTargets: []
   poleAngleOffsets:
@@ -19667,7 +19853,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f66e3b7c3632fe841afc9c78514d0c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.IKConstraint
+  executionOrder: 0
   preview: 0
+  savedPose: []
   targets:
   - id: IK Leg Left
     target: {fileID: 3702602603118061071}
@@ -19872,8 +20060,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 08b3cbbde92ce8a4eba3bf73f35e57ac, type: 2}
+  m_sharedMaterial: {fileID: -8121810353892953096, guid: 08b3cbbde92ce8a4eba3bf73f35e57ac, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -20053,6 +20241,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets:
   - id: camera
     target: {fileID: 8454818525021175370}
@@ -21807,6 +21996,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2947976878033620654}
   hasExternalPoseDriver: 1
@@ -22498,6 +22688,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7911875310019688529}
   hasExternalPoseDriver: 1
@@ -22606,6 +22797,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3418477618994778971}
   hasExternalPoseDriver: 1
@@ -22651,6 +22843,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6813413898138622536}
   hasExternalPoseDriver: 1
@@ -22691,6 +22884,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 562460677952460606}
   hasExternalPoseDriver: 1
@@ -22746,6 +22940,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4069970236092752745}
   hasExternalPoseDriver: 1
@@ -22791,6 +22986,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2283979068727533396}
   hasExternalPoseDriver: 1
@@ -22889,6 +23085,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2959354458630628571}
   hasExternalPoseDriver: 1
@@ -22964,6 +23161,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5292740580014466833}
   hasExternalPoseDriver: 1
@@ -23004,6 +23202,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7862612714282016450}
   hasExternalPoseDriver: 1
@@ -23101,6 +23300,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4161463013359512870}
   hasExternalPoseDriver: 1
@@ -23141,6 +23341,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5473131226286103432}
   hasExternalPoseDriver: 1
@@ -23206,6 +23407,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8462007627995994029}
   hasExternalPoseDriver: 1
@@ -23288,6 +23490,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 9169126810255428347}
   hasExternalPoseDriver: 1
@@ -23328,6 +23531,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5141045082833554317}
   hasExternalPoseDriver: 1
@@ -23378,6 +23582,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7024024951980100320}
   hasExternalPoseDriver: 1
@@ -23418,6 +23623,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8454035481304812191}
   hasExternalPoseDriver: 1
@@ -23574,6 +23780,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5776758085610338620}
   hasExternalPoseDriver: 1
@@ -23619,6 +23826,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5744933162646400746}
   hasExternalPoseDriver: 1
@@ -23664,6 +23872,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4386988189426643130}
   hasExternalPoseDriver: 1
@@ -23850,6 +24059,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2083931920908772819}
   hasExternalPoseDriver: 1
@@ -23943,6 +24153,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 609338252703907392}
   hasExternalPoseDriver: 1
@@ -24008,6 +24219,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1059532175569471547}
   hasExternalPoseDriver: 1
@@ -24101,6 +24313,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1814351360357805673}
   hasExternalPoseDriver: 1
@@ -24191,6 +24404,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3510439899661638390}
   hasExternalPoseDriver: 1
@@ -24251,6 +24465,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 644904757154083195}
   hasExternalPoseDriver: 1
@@ -24483,6 +24698,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4833875332714446818}
   hasExternalPoseDriver: 1
@@ -24518,11 +24734,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6940147158093413002}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets:
   - id: 
     target: {fileID: 7541474378367201005}
@@ -24574,6 +24791,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 619687377406772108}
   hasExternalPoseDriver: 1
@@ -24619,6 +24837,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8215493534143233688}
   hasExternalPoseDriver: 1
@@ -24669,6 +24888,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5430371846076797601}
   hasExternalPoseDriver: 1
@@ -24734,6 +24954,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8933356699748507098}
   hasExternalPoseDriver: 1
@@ -24779,6 +25000,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5599022885697690665}
   hasExternalPoseDriver: 1
@@ -24844,6 +25066,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 171005087497130362}
   hasExternalPoseDriver: 1
@@ -24899,6 +25122,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 9109397649894938486}
   hasExternalPoseDriver: 1
@@ -24944,6 +25168,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4298822787326039293}
   hasExternalPoseDriver: 1
@@ -24984,6 +25209,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6163526172739321987}
   hasExternalPoseDriver: 1
@@ -25034,6 +25260,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 2287023099421662047}
   hasExternalPoseDriver: 1
@@ -25127,6 +25354,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 31467281118393256}
   hasExternalPoseDriver: 1
@@ -25172,6 +25400,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 3972686250489152156}
   hasExternalPoseDriver: 1
@@ -25222,6 +25451,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 6785167165827221777}
   hasExternalPoseDriver: 1
@@ -25262,6 +25492,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 7466087888075628986}
   hasExternalPoseDriver: 1
@@ -25312,6 +25543,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 1809142465983057014}
   hasExternalPoseDriver: 1
@@ -25377,6 +25609,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 8879498776711203282}
   hasExternalPoseDriver: 1
@@ -25427,6 +25660,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 5544395199634562113}
   hasExternalPoseDriver: 1

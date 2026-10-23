@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using UnityEngine;
 using UnityEngine.Events;
 #if UNITY_EDITOR
@@ -33,6 +35,176 @@ namespace GaMo.BlenderEditorTools
     [Serializable]
     public class AnimatorBoolEvent : UnityEvent<Animator, bool>
     {
+    }
+
+    [Serializable]
+    public class AnimatorVector2Event : UnityEvent<Animator, Vector2>
+    {
+    }
+
+    [Serializable]
+    public class AnimatorVector3Event : UnityEvent<Animator, Vector3>
+    {
+    }
+
+    [Serializable]
+    public class AnimatorVector4Event : UnityEvent<Animator, Vector4>
+    {
+    }
+
+    [Serializable]
+    public class AnimatorColorEvent : UnityEvent<Animator, Color>
+    {
+    }
+
+    /// <summary>
+    /// Lời gọi "void M(Animator, T)" cho những kiểu T mà UnityEvent KHÔNG liệt kê được trong
+    /// dropdown: enum (giá trị chọn theo đúng enum của hàm đích) và Object con
+    /// (AudioClip, GameObject, ScriptableObject...). UnityEvent&lt;Animator,int&gt; không bind được hàm
+    /// nhận enum, UnityEvent&lt;Animator,Object&gt; không bind được hàm nhận AudioClip.
+    ///
+    /// CÁCH GỌI: reflection ĐÃ CACHE. Lần đầu (OnStateEnter) tìm MethodInfo theo methodName +
+    /// parameterType, box sẵn giá trị tham số 1 lần vào mảng _args. Mỗi lần event bắn chỉ gán
+    /// _args[0] = animator rồi MethodInfo.Invoke — không GetMethod, không parse enum, không cấp phát.
+    ///
+    /// LƯU Ý IL2CPP: hàm chỉ được gọi qua tên (string) → Managed Stripping Level cao có thể xoá
+    /// hàm. Đánh dấu hàm đích bằng [UnityEngine.Scripting.Preserve] nếu bật stripping.
+    /// </summary>
+    [Serializable]
+    public class AnimatorTypedCall
+    {
+        public UnityEngine.Object target;
+        public string methodName;
+
+        [Tooltip("Kiểu tham số thứ 2 của hàm đích, dạng \"Namespace.Type, Assembly\" — " +
+                 "dùng để phân biệt overload và tìm lại kiểu enum/Object.")]
+        public string parameterType;
+
+        [NonSerialized] private MethodInfo _method;
+        [NonSerialized] private object[] _args;
+        [NonSerialized] private bool _prepared;
+
+        public bool IsBound => target != null && !string.IsNullOrEmpty(methodName);
+
+        /// <summary>"Namespace.Type, Assembly" — cùng định dạng m_TargetAssemblyTypeName của UnityEvent.</summary>
+        public static string FormatTypeName(Type t) =>
+            t == null ? null : t.FullName + ", " + t.Assembly.GetName().Name;
+
+        /// <summary>
+        /// Tìm hàm public instance "void name(Animator, T)" với T khớp parameterType.
+        /// Chỉ gọi lúc Prepare / trong Editor — KHÔNG gọi trong hot path.
+        /// </summary>
+        public static MethodInfo FindMethod(Type targetType, string name, string paramTypeName)
+        {
+            if (targetType == null || string.IsNullOrEmpty(name)) return null;
+
+            var methods = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public);
+            for (int i = 0; i < methods.Length; i++)
+            {
+                var m = methods[i];
+                if (m.Name != name || m.ReturnType != typeof(void) || m.IsGenericMethodDefinition) continue;
+
+                var ps = m.GetParameters();
+                if (ps.Length != 2 || ps[0].ParameterType != typeof(Animator)) continue;
+                if (FormatTypeName(ps[1].ParameterType) == paramTypeName) return m;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Enum lưu bền: ưu tiên TÊN (đổi thứ tự/giá trị số trong enum không làm hỏng dữ liệu),
+        /// tên không còn tồn tại (bị đổi tên/xoá) → fallback về giá trị số đã lưu.
+        /// </summary>
+        public static object ResolveEnum(Type enumType, string name, long value)
+        {
+            if (enumType == null || !enumType.IsEnum) return null;
+            if (!string.IsNullOrEmpty(name))
+            {
+                // Enum.Parse (không dùng TryParse(Type,...) vì không có trên profile .NET Framework).
+                // Hỗ trợ cả [Flags] dạng "A, B". Chỉ chạy lúc Prepare/Editor nên exception không đáng kể.
+                try { return Enum.Parse(enumType, name, false); }
+                catch (ArgumentException) { }
+                catch (OverflowException) { }
+            }
+            return Enum.ToObject(enumType, value);
+        }
+
+        /// <summary>Buộc resolve lại ở lần Prepare tiếp theo (dữ liệu bị sửa trong Inspector).</summary>
+        public void Invalidate()
+        {
+            _prepared = false;
+            _method = null;
+            _args = null;
+        }
+
+        /// <summary>
+        /// Resolve MethodInfo + box giá trị tham số 1 LẦN. Gọi từ OnStateEnter (rẻ sau lần đầu).
+        /// isEnum = true → tham số là enumName/enumValue; false → objectValue.
+        /// </summary>
+        public void Prepare(bool isEnum, string enumName, long enumValue, UnityEngine.Object objectValue)
+        {
+            if (_prepared) return;
+            _prepared = true;
+            _method = null;
+            _args = null;
+
+            if (!IsBound) return;
+
+            var mi = FindMethod(target.GetType(), methodName, parameterType);
+            if (mi == null)
+            {
+                Debug.LogWarning(
+                    $"[MotionTimeEvent] Không tìm thấy hàm '{target.GetType().Name}.{methodName}" +
+                    $"(Animator, {parameterType})' — event bị bỏ qua. (Đổi tên hàm? bị strip?)", target);
+                return;
+            }
+
+            Type pt = mi.GetParameters()[1].ParameterType;
+            object payload;
+            if (isEnum)
+            {
+                payload = ResolveEnum(pt, enumName, enumValue);
+                if (payload == null) return;
+            }
+            else
+            {
+                // Object sai kiểu (đổi kiểu tham số hàm đích) → truyền null thay vì ném lỗi Invoke.
+                payload = objectValue != null && pt.IsInstanceOfType(objectValue) ? objectValue : null;
+            }
+
+            _method = mi;
+            _args = new object[] { null, payload };
+        }
+
+        public void Invoke(Animator animator)
+        {
+            if (_method == null) return;
+
+            _args[0] = animator;
+            try
+            {
+                _method.Invoke(target, _args);
+            }
+            catch (TargetInvocationException e) when (e.InnerException != null)
+            {
+                // Ném lại lỗi GỐC của hàm đích (giống UnityEvent) thay vì TargetInvocationException.
+                ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+            }
+            finally
+            {
+                _args[0] = null; // không giữ reference Animator
+            }
+        }
+
+#if UNITY_EDITOR
+        public string ToDebugString()
+        {
+            if (!IsBound) return "<no function>";
+            string targetName = !string.IsNullOrEmpty(target.name) ? target.name : $"<unnamed {target.GetType().Name}>";
+            return $"{targetName}.{methodName}";
+        }
+#endif
     }
 
     /// <summary>
@@ -237,7 +409,15 @@ namespace GaMo.BlenderEditorTools
             [InspectorName("Animator + int")] Int,
             [InspectorName("Animator + float")] Float,
             [InspectorName("Animator + string")] String,
-            [InspectorName("Animator + bool")] Bool
+            [InspectorName("Animator + bool")] Bool,
+
+            // Chỉ THÊM vào cuối — payloadType serialize theo số, chèn giữa sẽ làm sai dữ liệu cũ.
+            [InspectorName("Animator + Vector2")] Vector2,
+            [InspectorName("Animator + Vector3")] Vector3,
+            [InspectorName("Animator + Vector4")] Vector4,
+            [InspectorName("Animator + Color")] Color,
+            [InspectorName("Animator + enum")] Enum,
+            [InspectorName("Animator + Object")] Object
         }
 
         // ─── Per-Instance Runtime ─────────────────────────────────────────────────
@@ -316,6 +496,10 @@ namespace GaMo.BlenderEditorTools
         {
             // Danh sách có thể bị sửa trong Inspector — buộc rebuild cache ở lần dùng tiếp theo.
             _eventsArray = null;
+
+            // Hàm/giá trị Enum/Object có thể đã đổi → resolve lại reflection ở lần bắn tiếp theo.
+            for (int i = 0; i < motionEvents.Count; i++)
+                motionEvents[i]?.onTriggeredTyped?.Invalidate();
         }
 #endif
 
@@ -474,7 +658,23 @@ namespace GaMo.BlenderEditorTools
             public string stringValue;
 
             public bool boolValue;
-            
+
+            public Vector2 vector2Value;
+
+            public Vector3 vector3Value;
+
+            public Vector4 vector4Value;
+
+            public Color colorValue = Color.white;
+
+            [Tooltip("Tên giá trị enum (nguồn chính) — đổi thứ tự enum không làm hỏng dữ liệu.")]
+            public string enumName;
+
+            [Tooltip("Giá trị số của enum — chỉ dùng khi enumName không còn tồn tại trong enum.")]
+            public long enumValue;
+
+            public UnityEngine.Object objectValue;
+
             public AnimatorEvent onTriggered;
 
             public AnimatorIntEvent onTriggeredInt;
@@ -484,6 +684,20 @@ namespace GaMo.BlenderEditorTools
             public AnimatorStringEvent onTriggeredString;
 
             public AnimatorBoolEvent onTriggeredBool;
+
+            public AnimatorVector2Event onTriggeredVector2;
+
+            public AnimatorVector3Event onTriggeredVector3;
+
+            public AnimatorVector4Event onTriggeredVector4;
+
+            public AnimatorColorEvent onTriggeredColor;
+
+            /// <summary>Dùng cho payloadType Enum / Object (xem AnimatorTypedCall).</summary>
+            public AnimatorTypedCall onTriggeredTyped;
+
+            public bool IsTypedPayload =>
+                payloadType == EventPayloadType.Enum || payloadType == EventPayloadType.Object;
 
             // Epsilon tuyệt đối cho phân loại biên.
             public const float BoundaryEpsilon = 1e-4f;
@@ -543,6 +757,16 @@ namespace GaMo.BlenderEditorTools
                     : -1;
             }
 
+            /// <summary>
+            /// Resolve trước lời gọi Enum/Object (reflection + box 1 lần). Gọi tại OnStateEnter;
+            /// các payload khác dùng UnityEvent nên không cần chuẩn bị gì.
+            /// </summary>
+            public void PrepareRuntime()
+            {
+                if (IsTypedPayload)
+                    onTriggeredTyped?.Prepare(payloadType == EventPayloadType.Enum, enumName, enumValue, objectValue);
+            }
+
             public void Invoke(Animator animator)
             {
                 switch (payloadType)
@@ -552,6 +776,19 @@ namespace GaMo.BlenderEditorTools
                     case EventPayloadType.Float: onTriggeredFloat?.Invoke(animator, floatValue); break;
                     case EventPayloadType.String: onTriggeredString?.Invoke(animator, stringValue); break;
                     case EventPayloadType.Bool: onTriggeredBool?.Invoke(animator, boolValue); break;
+                    case EventPayloadType.Vector2: onTriggeredVector2?.Invoke(animator, vector2Value); break;
+                    case EventPayloadType.Vector3: onTriggeredVector3?.Invoke(animator, vector3Value); break;
+                    case EventPayloadType.Vector4: onTriggeredVector4?.Invoke(animator, vector4Value); break;
+                    case EventPayloadType.Color: onTriggeredColor?.Invoke(animator, colorValue); break;
+                    case EventPayloadType.Enum:
+                    case EventPayloadType.Object:
+                        if (onTriggeredTyped != null)
+                        {
+                            // An toàn nếu bị Invalidate giữa chừng (sửa Inspector khi đang Play).
+                            PrepareRuntime();
+                            onTriggeredTyped.Invoke(animator);
+                        }
+                        break;
                 }
             }
 
@@ -568,6 +805,13 @@ namespace GaMo.BlenderEditorTools
                     case EventPayloadType.Float: return onTriggeredFloat;
                     case EventPayloadType.String: return onTriggeredString;
                     case EventPayloadType.Bool: return onTriggeredBool;
+                    case EventPayloadType.Vector2: return onTriggeredVector2;
+                    case EventPayloadType.Vector3: return onTriggeredVector3;
+                    case EventPayloadType.Vector4: return onTriggeredVector4;
+                    case EventPayloadType.Color: return onTriggeredColor;
+                    // Enum/Object không dùng UnityEvent (xem AnimatorTypedCall.ToDebugString).
+                    case EventPayloadType.Enum:
+                    case EventPayloadType.Object: return null;
                     default: return onTriggered;
                 }
             }
@@ -578,7 +822,10 @@ namespace GaMo.BlenderEditorTools
         [SerializeField]
         private List<MotionTimeEvent> motionEvents = new List<MotionTimeEvent>();
 
+        // Chỉ đọc trong #if UNITY_EDITOR → bản build báo CS0414. Giữ field để layout serialize giống Editor.
+#pragma warning disable CS0414
         [SerializeField] private bool showDebugLog = false;
+#pragma warning restore CS0414
 
         // ─── Public API ───────────────────────────────────────────────────────────
 
@@ -637,6 +884,8 @@ namespace GaMo.BlenderEditorTools
                 var rt = new EventRuntime();
                 // FIX [MEDIUM v8-D]: Truyền isReverse để BakeCache có thể cảnh báo Seconds+reverse.
                 evts[i].BakeCache(rt, data.cachedClipLength, isReverseOnEnter);
+                // Enum/Object: resolve reflection + box payload tại đây (chỉ lần đầu), không ở hot path.
+                evts[i].PrepareRuntime();
                 data.events[i] = rt;
             }
 
@@ -714,6 +963,17 @@ namespace GaMo.BlenderEditorTools
             // để không tạo khoảng quét suy biến khi reverse chưa "leo" lên trên 0.
             float currNormTime = stateInfo.normalizedTime;
             float prevNormTime = data.prevNormalizedTime;
+
+            // FIX [v12]: Clip KHÔNG loop vẫn để normalizedTime chạy quá 1 trong lúc exit transition
+            // (vd SLIDE IN exit time=1 + blend 0.25s → norm 1.0..1.8). Code cũ coi việc vượt 1.0 là
+            // "loop mới" → fire lại event Start (0) lần 2. Kẹp dưới 1 để không bao giờ có didLoop;
+            // event End (1) vẫn do OnStateExit lo.
+            if (!stateInfo.loop)
+            {
+                const float NonLoopMaxNorm = 1f - MotionTimeEvent.BoundaryEpsilon;
+                currNormTime = Mathf.Min(currNormTime, NonLoopMaxNorm);
+                prevNormTime = Mathf.Min(prevNormTime, NonLoopMaxNorm);
+            }
 
             // FIX [v11 — CRITICAL, phát hiện qua log thực tế 'Gost_FBX']:
             // stateInfo.speed < 0 KHÔNG đảm bảo normalizedTime thực sự giảm dần — quan sát
@@ -1015,7 +1275,9 @@ namespace GaMo.BlenderEditorTools
                 string ctx = rt.cachedBoundary == 0 ? "[Enter/LoopStart]"
                     : rt.cachedBoundary == 1 ? "[Exit/LoopEnd]"
                     : $"[mid norm={rt.cachedTriggerNorm:F3}]";
-                string listeners = GetListenerNamesForDebug(evt.GetActiveEventForDebug());
+                string listeners = evt.IsTypedPayload
+                    ? (evt.onTriggeredTyped != null ? evt.onTriggeredTyped.ToDebugString() : "<none>")
+                    : GetListenerNamesForDebug(evt.GetActiveEventForDebug());
                 // FIX [DEBUG v15]: Hiển thị payload type + giá trị trong log để dễ debug.
                 string payloadStr = evt.payloadType switch
                 {
@@ -1023,6 +1285,12 @@ namespace GaMo.BlenderEditorTools
                     EventPayloadType.Float  => $" | float={evt.floatValue:F3}",
                     EventPayloadType.String => $" | string=\"{evt.stringValue}\"",
                     EventPayloadType.Bool   => $" | bool={evt.boolValue}",
+                    EventPayloadType.Vector2 => $" | Vector2={evt.vector2Value}",
+                    EventPayloadType.Vector3 => $" | Vector3={evt.vector3Value}",
+                    EventPayloadType.Vector4 => $" | Vector4={evt.vector4Value}",
+                    EventPayloadType.Color  => $" | Color={evt.colorValue}",
+                    EventPayloadType.Enum   => $" | enum={evt.enumName} ({evt.enumValue})",
+                    EventPayloadType.Object => $" | Object={(evt.objectValue != null ? evt.objectValue.name : "null")}",
                     _                       => " | Animator only"
                 };
                 // FIX [PERF v8-F]: Dùng cachedSpeed từ caller, không gọi GetCurrentAnimatorStateInfo.

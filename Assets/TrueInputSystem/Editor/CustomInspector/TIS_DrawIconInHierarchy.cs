@@ -55,7 +55,9 @@ namespace GaMo.TrueInputSystem
 
         private static void DrawIcon(int instanceId, Rect selectionRect)
         {
+#pragma warning disable CS0618 // Unity 6.3: InstanceIDToObject obsolete — hierarchyWindowItemOnGUI vẫn trả int
             GameObject obj = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+#pragma warning restore CS0618
             if (obj == null)
                 return;
 

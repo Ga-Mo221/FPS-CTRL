@@ -41,6 +41,7 @@ namespace MagicaCloth2
         public const int Flag_RestoreTransformOnlyOnec = 20; // Transform復元を一度のみ実行する(BoneClothのDisable時)
         public const int Flag_Tangent = 21; // 接線を計算する
         public const int Flag_ScaleSuspent = 22; // 極小スケールによる機能停止
+        public const int Flag_ProxyMeshLine = 23; // プロキシメッシュにLineデータが存在する
 
         // 以下セルフコリジョン
         // !これ以降の順番を変えないこと
@@ -205,7 +206,8 @@ namespace MagicaCloth2
             /// <summary>
             /// MagicaClothコンポーネントのインスタンスID
             /// </summary>
-            public int componentId;
+            //public int componentId;
+            public MagicaObjectId componentId;
 
             /// <summary>
             /// 同期チームID(0=なし)
@@ -225,7 +227,8 @@ namespace MagicaCloth2
             /// <summary>
             /// 連動するAnimatorのインスタンスID(0=なし)
             /// </summary>
-            public int interlockingAnimatorId;
+            //public int interlockingAnimatorId;
+            public MagicaObjectId interlockingAnimatorId;
 
             /// <summary>
             /// 初期姿勢とアニメーション姿勢のブレンド率（制約で利用）
@@ -646,10 +649,10 @@ namespace MagicaCloth2
         internal int edgeColliderCollisionCount;
 
         internal NativeReference<int> edgeColliderCollisionCountBuff;
-        internal NativeParallelHashMap<int, int> comp2SuspendCounterMap;
-        internal NativeParallelHashMap<int, int> comp2TeamIdMap;
-        internal NativeParallelHashMap<int, int> comp2SyncPartnerCompMap;
-        internal NativeParallelHashMap<int, int> comp2SyncTopCompMap;
+        internal NativeParallelHashMap<MagicaObjectId, int> comp2SuspendCounterMap;
+        internal NativeParallelHashMap<MagicaObjectId, int> comp2TeamIdMap;
+        internal NativeParallelHashMap<MagicaObjectId, MagicaObjectId> comp2SyncPartnerCompMap;
+        internal NativeParallelHashMap<MagicaObjectId, MagicaObjectId> comp2SyncTopCompMap;
 
         internal NativeList<int> batchNormalClothTeamList;
         internal NativeList<int> batchSplitClothTeamList;
@@ -658,12 +661,12 @@ namespace MagicaCloth2
         internal List<ClothProcess> skipWritingDirtyList;
         internal NativeList<int> cullingDirtyList;
         internal NativeParallelHashSet<int> selfCollisionUpdateSet;
-        internal NativeParallelHashMap<int, int> animatorUpdateModeMap;
+        internal NativeParallelHashMap<MagicaObjectId, int> animatorUpdateModeMap;
 
-        internal ExSimpleNativeArray<int> teamAnchorTransformIndexArray;
-        internal ExSimpleNativeArray<int> teamDistanceTransformIndexArray;
-        internal NativeParallelHashMap<int, float3> transformPositionMap;
-        internal NativeParallelHashMap<int, quaternion> transformRotationMap;
+        internal ExSimpleNativeArray<MagicaObjectId> teamAnchorTransformIndexArray;
+        internal ExSimpleNativeArray<MagicaObjectId> teamDistanceTransformIndexArray;
+        internal NativeParallelHashMap<MagicaObjectId, float3> transformPositionMap;
+        internal NativeParallelHashMap<MagicaObjectId, quaternion> transformRotationMap;
 
         internal HashSet<MagicaCloth> cameraCullingClothSet = new HashSet<MagicaCloth>(256);
 
@@ -761,10 +764,10 @@ namespace MagicaCloth2
 
             // 作業用
             edgeColliderCollisionCountBuff = new NativeReference<int>(Allocator.Persistent);
-            comp2SuspendCounterMap = new NativeParallelHashMap<int, int>(256, Allocator.Persistent);
-            comp2TeamIdMap = new NativeParallelHashMap<int, int>(256, Allocator.Persistent);
-            comp2SyncPartnerCompMap = new NativeParallelHashMap<int, int>(256, Allocator.Persistent);
-            comp2SyncTopCompMap = new NativeParallelHashMap<int, int>(256, Allocator.Persistent);
+            comp2SuspendCounterMap = new NativeParallelHashMap<MagicaObjectId, int>(256, Allocator.Persistent);
+            comp2TeamIdMap = new NativeParallelHashMap<MagicaObjectId, int>(256, Allocator.Persistent);
+            comp2SyncPartnerCompMap = new NativeParallelHashMap<MagicaObjectId, MagicaObjectId>(256, Allocator.Persistent);
+            comp2SyncTopCompMap = new NativeParallelHashMap<MagicaObjectId, MagicaObjectId>(256, Allocator.Persistent);
 
             batchNormalClothTeamList = new NativeList<int>(Allocator.Persistent);
             batchSplitClothTeamList = new NativeList<int>(Allocator.Persistent);
@@ -773,12 +776,12 @@ namespace MagicaCloth2
             skipWritingDirtyList = new List<ClothProcess>(128);
             cullingDirtyList = new NativeList<int>(128, Allocator.Persistent);
             selfCollisionUpdateSet = new NativeParallelHashSet<int>(256, Allocator.Persistent);
-            animatorUpdateModeMap = new NativeParallelHashMap<int, int>(128, Allocator.Persistent);
+            animatorUpdateModeMap = new NativeParallelHashMap<MagicaObjectId, int>(128, Allocator.Persistent);
 
-            teamAnchorTransformIndexArray = new ExSimpleNativeArray<int>(256, true);
-            teamDistanceTransformIndexArray = new ExSimpleNativeArray<int>(256, true);
-            transformPositionMap = new NativeParallelHashMap<int, float3>(32, Allocator.Persistent);
-            transformRotationMap = new NativeParallelHashMap<int, quaternion>(32, Allocator.Persistent);
+            teamAnchorTransformIndexArray = new ExSimpleNativeArray<MagicaObjectId>(256, true);
+            teamDistanceTransformIndexArray = new ExSimpleNativeArray<MagicaObjectId>(256, true);
+            transformPositionMap = new NativeParallelHashMap<MagicaObjectId, float3>(32, Allocator.Persistent);
+            transformRotationMap = new NativeParallelHashMap<MagicaObjectId, quaternion>(32, Allocator.Persistent);
 
             // 破棄監視更新処理
             MagicaManager.afterUpdateDelegate += MonitoringProcessUpdate;
@@ -806,7 +809,7 @@ namespace MagicaCloth2
             // この段階でProxyMeshは完成している
 
             var team = new TeamData();
-            team.componentId = cprocess.cloth.GetInstanceID();
+            team.componentId = cprocess.cloth.GetMagicaId();
             // ★Enableフラグは立てない
             team.flag.SetBits(Flag_Valid, true);
             team.flag.SetBits(Flag_Reset, true);
@@ -888,8 +891,8 @@ namespace MagicaCloth2
             centerDataArray.Remove(c);
 
             // チーム作業バッファをクリア
-            teamAnchorTransformIndexArray[teamId] = 0;
-            teamDistanceTransformIndexArray[teamId] = 0;
+            teamAnchorTransformIndexArray[teamId] = MagicaObjectId.Invalid;
+            teamDistanceTransformIndexArray[teamId] = MagicaObjectId.Invalid;
 
             clothProcessDict.Remove(teamId);
         }
@@ -899,22 +902,39 @@ namespace MagicaCloth2
         /// </summary>
         /// <param name="teamId"></param>
         /// <param name="sw"></param>
-        public void SetEnable(int teamId, bool sw)
+        public void SetEnable(ClothProcess cprocess, int teamId, bool sw)
         {
+            //Debug.Log($"Set Enable:{sw} F:{Time.frameCount}");
             if (isValid == false || teamId == 0)
                 return;
             ref var team = ref teamDataArray.GetRef(teamId);
+
+            // シミュレーションリセットの有無
+            // （同期先を参照）
+            ClothProcess syncProcess = cprocess.SyncTopCloth ? cprocess.SyncTopCloth.Process : cprocess;
+            bool isReset = syncProcess.cloth.SerializeData.disableMode == ClothDisableMode.Reset;
+
             team.flag.SetBits(Flag_Enable, sw);
-            team.flag.SetBits(Flag_Reset, sw);
+            if (isReset)
+                team.flag.SetBits(Flag_Reset, sw);
+
+            //Debug.Log($"Set Enable:{sw}, isReset:{isReset} F:{Time.frameCount}");
 
             if (sw)
                 enableTeamSet.Add(teamId);
             else
                 enableTeamSet.Remove(teamId);
 
-            // 無効時には一度のみTransform復元フラグを立てる
-            if (sw == false)
+            // 非表示（リセット）の挙動
+            if (sw == false && isReset)
+            {
+                // 無効時には一度のみTransform復元フラグを立てる
                 team.flag.SetBits(Flag_RestoreTransformOnlyOnec, true);
+                // Disable時は非表示設定にする
+                team.flag.SetBits(Flag_CameraCullingInvisible, true);
+                cprocess.SetState(ClothProcess.State_CameraCullingInvisible, true);
+                cprocess.cameraCullingOldInvisible = true;
+            }
 
             // コライダーの有効状態（内部でコライダートランスフォームの有効状態も設定）
             MagicaManager.Collider.EnableTeamCollider(teamId);
@@ -1095,12 +1115,12 @@ namespace MagicaCloth2
                 // 状態変更
                 if (oldInvisible != invisible)
                 {
+                    //Debug.Log($"Camera culling change. oldInvisible:{oldInvisible} -> invisible:{invisible} F:{Time.frameCount}");
                     int teamId = cprocess.TeamId;
                     ref var tdata = ref GetTeamDataRef(teamId);
 
                     tdata.flag.SetBits(Flag_CameraCullingInvisible, invisible);
                     tdata.flag.SetBits(Flag_CameraCullingKeep, false);
-                    //Debug.Log($"Change camera culling invisible:({oldInvisible}) -> ({invisible})");
 
                     // cprocessクラスにもコピーする
                     cprocess.SetState(ClothProcess.State_CameraCullingInvisible, invisible);
@@ -1192,7 +1212,7 @@ namespace MagicaCloth2
                 var cloth = cprocess.cloth;
 
                 // 連動アニメーターのインスタンスID
-                tdata.interlockingAnimatorId = cprocess.interlockingAnimator != null ? cprocess.interlockingAnimator.GetInstanceID() : 0;
+                tdata.interlockingAnimatorId = cprocess.interlockingAnimator != null ? cprocess.interlockingAnimator.GetMagicaId() : MagicaObjectId.Invalid;
 
                 // パラメータ変更
                 cprocess.SyncParameters();
@@ -1280,7 +1300,7 @@ namespace MagicaCloth2
                 // 連動アニメーターの更新モード取得
                 if (cprocess.interlockingAnimator)
                 {
-                    int animatorId = cprocess.interlockingAnimator.GetInstanceID();
+                    MagicaObjectId animatorId = cprocess.interlockingAnimator.GetMagicaId();
                     if (animatorUpdateModeMap.ContainsKey(animatorId) == false)
                     {
                         animatorUpdateModeMap.Add(animatorId, (int)cprocess.interlockingAnimator.updateMode);
@@ -1294,8 +1314,8 @@ namespace MagicaCloth2
 #if true
                 // アンカー参照オブジェクト
                 var anchorTransform = sdata.inertiaConstraint.anchor;
-                int anchorTransformId = anchorTransform != null ? anchorTransform.GetInstanceID() : 0;
-                if (anchorTransformId != 0 && transformPositionMap.ContainsKey(anchorTransformId) == false)
+                MagicaObjectId anchorTransformId = anchorTransform != null ? anchorTransform.GetMagicaId() : MagicaObjectId.Invalid;
+                if (anchorTransformId.IsValid() && transformPositionMap.ContainsKey(anchorTransformId) == false)
                 {
                     // 参照オブジェクトの座標取得
                     transformPositionMap.Add(anchorTransformId, anchorTransform.position);
@@ -1309,8 +1329,8 @@ namespace MagicaCloth2
                 }
 
                 // 距離カリング参照オブジェクト
-                int distanceObjectId = sdata.cullingSettings.distanceCullingReferenceObject != null ? sdata.cullingSettings.distanceCullingReferenceObject.GetInstanceID() : 0;
-                if (distanceObjectId != 0 && transformPositionMap.ContainsKey(distanceObjectId) == false)
+                MagicaObjectId distanceObjectId = sdata.cullingSettings.distanceCullingReferenceObject != null ? sdata.cullingSettings.distanceCullingReferenceObject.GetMagicaId() : MagicaObjectId.Invalid;
+                if (distanceObjectId.IsValid() && transformPositionMap.ContainsKey(distanceObjectId) == false)
                 {
                     // 参照オブジェクトの座標取得
                     transformPositionMap.Add(distanceObjectId, sdata.cullingSettings.distanceCullingReferenceObject.transform.position);
@@ -1327,7 +1347,8 @@ namespace MagicaCloth2
             // メインカメラ座標
             bool hasMainCamera = Camera.main != null;
             float3 mainCameraPosition = Camera.main ? Camera.main.transform.position : 0;
-            transformPositionMap.Add(0, mainCameraPosition);
+            //transformPositionMap.Add(0, mainCameraPosition);
+            transformPositionMap.Add(MagicaObjectId.Invalid, mainCameraPosition);
             startClothUpdateComponentProfiler.End();
 
             // チーム前処理ジョブ待ち
@@ -1425,10 +1446,10 @@ namespace MagicaCloth2
             public NativeArray<ClothParameters> parameterArray;
 
             // work
-            public NativeParallelHashMap<int, int> comp2SuspendCounterMap;
-            public NativeParallelHashMap<int, int> comp2TeamIdMap;
-            public NativeParallelHashMap<int, int> comp2SyncPartnerCompMap;
-            public NativeParallelHashMap<int, int> comp2SyncTopCompMap;
+            public NativeParallelHashMap<MagicaObjectId, int> comp2SuspendCounterMap;
+            public NativeParallelHashMap<MagicaObjectId, int> comp2TeamIdMap;
+            public NativeParallelHashMap<MagicaObjectId, MagicaObjectId> comp2SyncPartnerCompMap;
+            public NativeParallelHashMap<MagicaObjectId, MagicaObjectId> comp2SyncTopCompMap;
             public NativeParallelHashSet<int> selfCollisionUpdateSet;
             public NativeReference<int> edgeColliderCollisionCountBuff;
 
@@ -1443,7 +1464,7 @@ namespace MagicaCloth2
                     if (teamId == 0)
                         continue;
 
-                    int compId = kv.Key;
+                    MagicaObjectId compId = kv.Key;
                     ref var tdata = ref *(tt + teamId);
 
                     // 作業フラグをクリア -------------------------------------
@@ -1461,7 +1482,7 @@ namespace MagicaCloth2
                     // 同期相手の有効状態
                     if (comp2SyncPartnerCompMap.ContainsKey(compId))
                     {
-                        int syncCompId = comp2SyncPartnerCompMap[compId];
+                        MagicaObjectId syncCompId = comp2SyncPartnerCompMap[compId];
                         if (comp2TeamIdMap.ContainsKey(syncCompId))
                         {
                             int syncTeamId = comp2TeamIdMap[syncCompId];
@@ -1485,7 +1506,7 @@ namespace MagicaCloth2
                     tdata.syncTeamId = 0;
                     if (comp2SyncPartnerCompMap.ContainsKey(compId))
                     {
-                        int syncCompId = comp2SyncPartnerCompMap[compId];
+                        MagicaObjectId syncCompId = comp2SyncPartnerCompMap[compId];
                         if (comp2TeamIdMap.ContainsKey(syncCompId))
                         {
                             int syncTeamId = comp2TeamIdMap[syncCompId];
@@ -1542,7 +1563,7 @@ namespace MagicaCloth2
                     int syncTopTeamId = 0;
                     if (comp2SyncTopCompMap.ContainsKey(compId))
                     {
-                        int syncTopCompId = comp2SyncTopCompMap[compId];
+                        MagicaObjectId syncTopCompId = comp2SyncTopCompMap[compId];
                         if (comp2TeamIdMap.ContainsKey(syncTopCompId))
                         {
                             syncTopTeamId = comp2TeamIdMap[syncTopCompId];
@@ -1617,13 +1638,13 @@ namespace MagicaCloth2
             public bool hasMainCamera;
 
             // work
-            public NativeParallelHashMap<int, int> comp2TeamIdMap;
-            public NativeParallelHashMap<int, int> comp2SyncTopCompMap;
-            public NativeParallelHashMap<int, int> animatorUpdateModeMap;
-            public NativeArray<int> teamAnchorTransformIndexArray;
-            public NativeArray<int> teamDistanceTransformIndexArray;
-            public NativeParallelHashMap<int, float3> transformPositionMap;
-            public NativeParallelHashMap<int, quaternion> transformRotationMap;
+            public NativeParallelHashMap<MagicaObjectId, int> comp2TeamIdMap;
+            public NativeParallelHashMap<MagicaObjectId, MagicaObjectId> comp2SyncTopCompMap;
+            public NativeParallelHashMap<MagicaObjectId, int> animatorUpdateModeMap;
+            public NativeArray<MagicaObjectId> teamAnchorTransformIndexArray;
+            public NativeArray<MagicaObjectId> teamDistanceTransformIndexArray;
+            public NativeParallelHashMap<MagicaObjectId, float3> transformPositionMap;
+            public NativeParallelHashMap<MagicaObjectId, quaternion> transformRotationMap;
             public NativeList<int> cullingDirtyList;
 
             public NativeList<int> batchNormalClothTeamList;
@@ -1639,7 +1660,7 @@ namespace MagicaCloth2
                 for (int teamId = 1; teamId < teamCount; teamId++)
                 {
                     var tdata = teamDataArray[teamId];
-                    int compId = tdata.componentId;
+                    MagicaObjectId compId = tdata.componentId;
                     if (tdata.IsEnable == false)
                         continue;
                     if (tdata.flag.IsSet(Flag_SyncSuspend))
@@ -1657,14 +1678,14 @@ namespace MagicaCloth2
                     }
 
                     // アンカー
-                    int anchorTransformIndex = teamAnchorTransformIndexArray[teamId];
+                    MagicaObjectId anchorTransformIndex = teamAnchorTransformIndexArray[teamId];
                     bool oldAnchor = tdata.flag.IsSet(Flag_Anchor);
-                    bool newAnchor = anchorTransformIndex != 0;
+                    bool newAnchor = anchorTransformIndex.IsValid();
                     tdata.flag.SetBits(Flag_Anchor, newAnchor);
                     tdata.flag.SetBits(Flag_AnchorReset, oldAnchor != newAnchor);
                     var cdata = centerDataArray[teamId];
-                    cdata.anchorPosition = anchorTransformIndex != 0 ? transformPositionMap[anchorTransformIndex] : float3.zero;
-                    cdata.anchorRotation = anchorTransformIndex != 0 ? transformRotationMap[anchorTransformIndex] : quaternion.identity;
+                    cdata.anchorPosition = anchorTransformIndex.IsValid() ? transformPositionMap[anchorTransformIndex] : float3.zero;
+                    cdata.anchorRotation = anchorTransformIndex.IsValid() ? transformRotationMap[anchorTransformIndex] : quaternion.identity;
                     centerDataArray[teamId] = cdata;
 
                     // 距離カリング判定
@@ -1680,7 +1701,7 @@ namespace MagicaCloth2
                     int syncTopTeamId = 0;
                     if (comp2SyncTopCompMap.ContainsKey(compId))
                     {
-                        int syncTopCompId = comp2SyncTopCompMap[compId];
+                        MagicaObjectId syncTopCompId = comp2SyncTopCompMap[compId];
                         if (comp2TeamIdMap.ContainsKey(syncTopCompId))
                         {
                             syncTopTeamId = comp2TeamIdMap[syncTopCompId];
@@ -1689,7 +1710,7 @@ namespace MagicaCloth2
                     if (tdata.originalUpdateMode == ClothUpdateMode.AnimatorLinkage || syncTopTeamId > 0)
                     {
                         var originalUpdateMode = tdata.originalUpdateMode;
-                        int animatorId = tdata.interlockingAnimatorId;
+                        MagicaObjectId animatorId = tdata.interlockingAnimatorId;
                         if (syncTopTeamId > 0)
                         {
                             var syncTeamData = teamDataArray[syncTopTeamId];
@@ -1875,7 +1896,7 @@ namespace MagicaCloth2
                 {
                     // 距離カリング有効
                     // 距離判定
-                    int transformId = teamDistanceTransformIndexArray[teamId];
+                    MagicaObjectId transformId = teamDistanceTransformIndexArray[teamId];
                     if (transformPositionMap.ContainsKey(transformId))
                     {
                         // 現在コンポーネント位置(pos)は同期を取っていない

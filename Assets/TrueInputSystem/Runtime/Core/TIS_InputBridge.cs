@@ -96,6 +96,7 @@ namespace GaMo.TrueInputSystem
 
         private readonly TISActionReader    _reader   = new TISActionReader();
         private readonly TISOverrideChannel _override = new TISOverrideChannel();
+        private readonly TISMotionSystem    _motion   = new TISMotionSystem();
 
         // ══════════════════════════════════════════════════════
         //  RUNTIME STATE
@@ -118,7 +119,7 @@ namespace GaMo.TrueInputSystem
         //  AIM ASSIST && DEADZONE
         // ══════════════════════════════════════════════════════
 
-        private TISAimAssist              _aimAssist = new TISAimAssist();
+        private readonly TISAimAssist     _aimAssist = new TISAimAssist();
         public Transform AimAssistTarget { get; set; }
         private TISInputDeadzone      _inputDeadzone = new TISInputDeadzone();
 
@@ -143,11 +144,19 @@ namespace GaMo.TrueInputSystem
         {
             if (Instance != null && Instance != this)
             {
-                Debug.LogWarning("[TISInputBridge] Duplicate — destroying.");
+                // Bản trùng (thường do scene mới có bridge trong khi bridge cũ DontDestroyOnLoad).
+                // Vẫn huỷ cả GameObject (tránh 2 bộ mobile UI / setup cùng chạy), nhưng đánh dấu
+                // để Update / OnDestroy của bản trùng KHÔNG đụng vào bridge thật (rumble, sự kiện...).
+                _isDuplicate = true;
+                enabled      = false;
+                Debug.LogWarning(
+                    $"[TISInputBridge] Duplicate trên \"{name}\" — huỷ GameObject này (kể cả component khác trên nó). " +
+                    $"Bridge đang dùng: \"{Instance.name}\".", this);
                 Destroy(gameObject);
                 return;
             }
             Instance = this;
+            _aimAssist.ActiveDeviceProvider = () => _activeDevice;
             if (_dontDestroyOnLoad)
                 DontDestroyOnLoad(gameObject);
             
@@ -168,13 +177,32 @@ namespace GaMo.TrueInputSystem
 
             InitialiseWithProfile(_profile);
             InitialiseObjectTracker();
+
+            //  Mo game khi dang cam tay cam -> bat dau o che do tay cam
+            // (menu/TopBar tu chon san, khong mat lan bam dau de "danh thuc" tay cam).
+            if (!_isMobileMode && Gamepad.current != null) _activeDevice = TISActiveDevice.Gamepad;
+            InputSystem.onDeviceChange += OnDeviceChangeAemy;
+        }
+
+        // Cam tay cam vao luc dang chay -> chuyen sang che do tay cam ngay.
+        private void OnDeviceChangeAemy(InputDevice device, InputDeviceChange change)
+        {
+            if (_isMobileMode) return;
+            if (change == InputDeviceChange.Added && device is Gamepad) _activeDevice = TISActiveDevice.Gamepad;
         }
 
         private void OnEnable()  => _asset?.Enable();
         private void OnDisable() => _asset?.Disable();
 
+        private bool _isDuplicate;
+
         private void OnDestroy()
         {
+            // Bản trùng chưa khởi tạo gì → không tắt rung / gỡ sự kiện của bridge thật
+            if (_isDuplicate) return;
+
+            StopBuiltInMotionSources();
+            _objectTracker?.Dispose();
             StopRumble();
             if (_asset != null)
             {
@@ -183,6 +211,8 @@ namespace GaMo.TrueInputSystem
                 _asset = null;
             }
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            InputSystem.onDeviceChange -= OnDeviceChangeAemy;
+            if (_activeProfile != null) Destroy(_activeProfile);   // runtime copy do bridge tạo
             if (Instance == this) Instance = null;
         }
 
@@ -194,8 +224,12 @@ namespace GaMo.TrueInputSystem
 
         private void Update()
         {
+            _reader.SampleTriggers();                // trạng thái LT/RT lấy mẫu 1 lần, đầu frame
             UpdateActiveDevice();
-            
+            SyncBuiltInMotionSources();
+            _motion.Tick(Time.unscaledDeltaTime);
+            PushMotionDevice();                      // gyro / touchpad → <TISMotion> (đọc được ngay frame này)
+
             if (_enableObjectTracker)
                 _objectTracker?.Tick();
         }
@@ -203,7 +237,6 @@ namespace GaMo.TrueInputSystem
         private void LateUpdate()
         {
             TISMobileButtonRegistry.FlushFrame();
-            _reader.SnapshotTriggerState();          // P1 FIX #3 — snapshot trigger buffer
             _override.ResetFrameFlags();           // P2 FIX #10 — reset zoom consumed flag
         }
 
@@ -267,6 +300,38 @@ namespace GaMo.TrueInputSystem
         /// <summary>Đọc giá trị float 1D của action (ví dụ: scroll, trigger).</summary>
         /// <param name="actionName">Tên action kiểu Axis.</param>
         public float   GetAxisAction(string actionName)    => _reader.GetAxisAction(actionName);
+
+        // ── Handle API: lấy 1 lần, đọc mỗi frame không tra string ──
+        //   TISActionHandle _jump;
+        //   void Start()  => _jump = TISInputBridge.Instance.GetActionHandle("Jump");
+        //   void Update() { if (TISInputBridge.Instance.IsSkillDown(_jump)) ... }
+
+        /// <summary>
+        /// Lấy handle cho action <paramref name="actionName"/> để đọc nhanh mỗi frame qua các overload nhận
+        /// <see cref="TISActionHandle"/>. Kết quả giống hệt overload string; handle vẫn đúng sau khi swap profile.
+        /// </summary>
+        public TISActionHandle GetActionHandle(string actionName) => _reader.GetHandle(actionName);
+
+        /// <inheritdoc cref="GetSkillAction(string)"/>
+        public bool GetSkillAction(in TISActionHandle action) => _reader.GetSkillAction(in action);
+
+        /// <inheritdoc cref="GetSkillAction(string, TISButtonReadMode)"/>
+        public bool GetSkillAction(in TISActionHandle action, TISButtonReadMode mode) => _reader.GetSkillAction(in action, mode);
+
+        /// <inheritdoc cref="IsSkillDown(string)"/>
+        public bool IsSkillDown(in TISActionHandle action)     => _reader.GetSkillAction(in action, TISButtonReadMode.PressDown);
+
+        /// <inheritdoc cref="IsSkillHeld(string)"/>
+        public bool IsSkillHeld(in TISActionHandle action)     => _reader.GetSkillAction(in action, TISButtonReadMode.Hold);
+
+        /// <inheritdoc cref="IsSkillReleased(string)"/>
+        public bool IsSkillReleased(in TISActionHandle action) => _reader.GetSkillAction(in action, TISButtonReadMode.PressUp);
+
+        /// <inheritdoc cref="GetVector2Action(string)"/>
+        public Vector2 GetVector2Action(in TISActionHandle action) => _reader.GetVector2Action(in action);
+
+        /// <inheritdoc cref="GetAxisAction(string)"/>
+        public float   GetAxisAction(in TISActionHandle action)    => _reader.GetAxisAction(in action);
 
         // ══════════════════════════════════════════════════════
         //  ITISInputBridge — MOBILE OVERRIDE
@@ -397,6 +462,188 @@ namespace GaMo.TrueInputSystem
         }
 
         // ══════════════════════════════════════════════════════
+        //  MOTION (GYRO + TOUCHPAD)
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>Gyro + touchpad của tay cầm. Gyro đã được cộng sẵn vào <see cref="LookDelta"/>.</summary>
+        public TISMotionSystem Motion => _motion;
+
+        /// <summary>
+        /// Đăng ký provider gyro/touchpad (simulated, SDL3, console...).
+        /// Provider CONNECTED có <see cref="ITISMotionSource.Priority"/> cao nhất được dùng.
+        /// </summary>
+        public void RegisterMotionSource(ITISMotionSource source)   => _motion.AddSource(source);
+
+        /// <summary>Gỡ provider đã đăng ký.</summary>
+        public void UnregisterMotionSource(ITISMotionSource source) => _motion.RemoveSource(source);
+
+        /// <summary>
+        /// Công tắc gyro lúc chạy (vd. menu Settings của game). Gyro hoạt động khi CẢ công tắc này
+        /// lẫn Profile › Motion Settings › Enable Gyro bật. Áp dụng ngay frame sau.
+        /// </summary>
+        public bool GyroEnabled { get; set; } = true;
+
+        /// <summary>Công tắc touchpad lúc chạy (AND với Profile › Motion Settings › Enable Touchpad).</summary>
+        public bool TouchpadEnabled { get; set; } = true;
+
+        /// <summary>Bật bảng debug gyro / touchpad lúc chạy (OR với Profile › Motion Settings › Show Debug GUI).</summary>
+        public bool ShowMotionDebugGUI { get; set; }
+
+        /// <summary>Thiết bị ảo &lt;TISMotion&gt; đang dùng (null khi profile không bind gyro / touchpad).</summary>
+        public TISMotionDevice MotionDevice => _motionDevice;
+
+        // ── Built-in providers (SDL3 + Simulated) + thiết bị ảo ─────────────
+
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX
+        private TISSdl3MotionSource _sdl3Source;
+#endif
+        private TISSimulatedMotionSource _simulatedRegistered;
+        private TISMotionDevice          _motionDevice;
+        private bool                     _profileUsesMotion;   // tính lại mỗi lần build profile
+
+        /// <summary>
+        /// Tạo / huỷ provider + thiết bị ảo theo Profile › Motion Settings. Gọi mỗi frame →
+        /// đổi cấu hình / swap profile lúc đang Play có hiệu lực ngay.
+        /// Provider (SDL3...) CHỈ chạy khi cần: profile có binding gyro / touchpad,
+        /// hoặc virtual cursor dùng touchpad / gyro.
+        /// </summary>
+        private void SyncBuiltInMotionSources()
+        {
+            var ms = _activeProfile != null ? _activeProfile.motionSettings : null;
+
+            bool gyroOn  = ms != null && ms.enableGyro     && GyroEnabled;
+            bool touchOn = ms != null && ms.enableTouchpad && TouchpadEnabled;
+            _motion.GyroEnabled     = gyroOn;
+            _motion.TouchpadEnabled = touchOn;
+
+            bool cursorWants = _gamepadVirtualCursor != null && ms != null
+                               && (ms.touchpadMovesCursor || ms.gyroMovesCursor);
+            bool needed      = (gyroOn || touchOn) && (_profileUsesMotion || cursorWants);
+
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX
+            // DualShock 4 / DualSense qua Bluetooth chỉ rung được qua SDL3 → mở SDL3 cả khi profile không dùng gyro
+            bool rumbleWantsSdl = ms != null && _activeProfile.gamepadSettings.enableRumble
+                                  && Gamepad.current is UnityEngine.InputSystem.DualShock.DualShockGamepad;
+            bool wantSdl = (needed || rumbleWantsSdl) && ms.useSdl3OnPC;
+            if (wantSdl && _sdl3Source == null)
+            {
+                _sdl3Source = new TISSdl3MotionSource(ms.sdl3);
+                _sdl3Source.Start();
+                _motion.AddSource(_sdl3Source);
+            }
+            else if (!wantSdl && _sdl3Source != null)
+            {
+                _motion.RemoveSource(_sdl3Source);
+                _sdl3Source.Stop();
+                _sdl3Source = null;
+            }
+#endif
+
+            // Instance giả lập nằm trong profile (runtime copy) → swap profile thì đổi instance
+            var wantSim = needed && ms.simulateInEditor && Application.isEditor ? ms.simulated : null;
+            if (!ReferenceEquals(_simulatedRegistered, wantSim))
+            {
+                if (_simulatedRegistered != null) _motion.RemoveSource(_simulatedRegistered);
+                if (wantSim != null) { wantSim.ResetState(); _motion.AddSource(wantSim); }
+                _simulatedRegistered = wantSim;
+            }
+
+            // Thiết bị ảo chỉ cần khi có binding <TISMotion> / "+ Gyro" / "+ Touchpad"
+            bool wantDevice = _profileUsesMotion && (gyroOn || touchOn);
+            if (wantDevice && _motionDevice == null)
+            {
+                TISMotionDevice.EnsureRegistered();
+                _motionDevice = InputSystem.AddDevice<TISMotionDevice>();
+            }
+            else if (!wantDevice && _motionDevice != null)
+            {
+                RemoveMotionDevice();
+            }
+        }
+
+        /// <summary>Ghi gyro / touchpad đã xử lý vào thiết bị ảo — action đọc được ngay trong frame.</summary>
+        private void PushMotionDevice()
+        {
+            if (_motionDevice == null || !_motionDevice.added) return;
+
+            // Virtual cursor đang bật: touchpad / gyro điều khiển con trỏ, không xoay camera
+            bool cursorActive = GetGamepadCursorEnable();
+
+            // Người chơi đang dùng bàn phím-chuột / cảm ứng → bỏ gyro / touchpad của tay cầm nằm trên bàn.
+            // Nguồn giả lập (phím I J K L, T + chuột) vốn điều khiển bằng bàn phím → không chặn.
+            var ms = _activeProfile?.motionSettings;
+            bool padIdle = ms != null && ms.onlyWhenGamepadActive
+                           && _activeDevice != TISActiveDevice.Gamepad
+                           && !(_motion.Source is TISSimulatedMotionSource);
+
+            bool touching     = _motion.HasTouchpad && _motion.IsTouching && !cursorActive && !padIdle;
+            bool pressed      = _motion.HasTouchpad && _motion.TouchpadPressed && !cursorActive && !padIdle;
+
+            var state = new TISMotionState
+            {
+                gyro             = padIdle ? Vector2.zero : _motion.GyroAim,   // đã gate cursor + activation trong TISMotionSystem
+                touchpad         = touching ? _motion.TouchpadVelocity : Vector2.zero,
+                touchpadPosition = touching ? _motion.TouchpadPosition : Vector2.zero,
+                buttons          = (touching ? 1u : 0u) | (pressed ? 2u : 0u),
+            };
+            _motionDevice.Push(state);
+        }
+
+        private void RemoveMotionDevice()
+        {
+            if (_motionDevice != null && _motionDevice.added)
+                InputSystem.RemoveDevice(_motionDevice);
+            _motionDevice = null;
+        }
+
+        private void StopBuiltInMotionSources()
+        {
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX
+            if (_sdl3Source != null)
+            {
+                _motion.RemoveSource(_sdl3Source);
+                _sdl3Source.Stop();
+                _sdl3Source = null;
+            }
+#endif
+            if (_simulatedRegistered != null)
+            {
+                _motion.RemoveSource(_simulatedRegistered);
+                _simulatedRegistered = null;
+            }
+            RemoveMotionDevice();
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Chỉ khai báo OnGUI trong Editor / Development Build — Unity gọi OnGUI mỗi frame
+        // nếu method tồn tại (kể cả khi không vẽ gì), nên bỏ hẳn khỏi bản release.
+        private void OnGUI()
+        {
+            if (ShowMotionDebugGUI || (_activeProfile != null && _activeProfile.motionSettings != null
+                                       && _activeProfile.motionSettings.showDebugGUI))
+                TISMotionDebugGUI.Draw(this);
+        }
+#endif
+
+        private readonly HashSet<string> _missingMotionActions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // GetSkillAction log warning mỗi lần gọi với tên không tồn tại → kiểm tra trước, chỉ warn 1 lần.
+        private bool IsMotionActivationHeld(string actionName)
+        {
+            bool exists = _asset?.FindAction(actionName, throwIfNotFound: false) != null
+                          || _activeProfile?.FindAction(actionName) != null;
+            if (!exists)
+            {
+                if (_missingMotionActions.Add(actionName))
+                    Debug.LogWarning(
+                        $"[TISInputBridge] Gyro activation action \"{actionName}\" không tồn tại trong profile.\n" +
+                        "→ Sửa Motion Settings > Gyro Activation Action, hoặc đặt Gyro Activation = Always.");
+                return false;
+            }
+            return _reader.GetSkillAction(actionName, TISButtonReadMode.Hold);
+        }
+
+        // ══════════════════════════════════════════════════════
         //  ITISInputBridge — GESTURE PROXY
         // ══════════════════════════════════════════════════════
 
@@ -482,32 +729,95 @@ namespace GaMo.TrueInputSystem
         public bool IsGamepad       => _activeDevice == TISActiveDevice.Gamepad;
         public bool IsMobile        => _isMobileMode;
 
-        private void UpdateActiveDevice()
+private void UpdateActiveDevice()
         {
-          // Mobile không thay đổi — luôn ưu tiên cao nhất
-          if (_isMobileMode)
-          {
-              _activeDevice = TISActiveDevice.Mobile;
-              return;
-          }
+            // Mobile luon uu tien cao nhat
+            if (_isMobileMode)
+            {
+                // Mobile + tay cầm Bluetooth: bấm tay cầm → Gamepad (UI button điều hướng được),
+                // chạm màn hình → quay về Mobile. Không có input → giữ nguyên (hysteresis).
+                var mgp = Gamepad.current;
+                if (mgp != null && GamepadHasInputCached(mgp)) { _activeDevice = TISActiveDevice.Gamepad; return; }
 
-          // Gamepad có input frame này → chuyển sang Gamepad
-          if (Gamepad.current != null && Gamepad.current.wasUpdatedThisFrame)
-          {
-              _activeDevice = TISActiveDevice.Gamepad;
-              return;
-          }
+                var ts = Touchscreen.current;
+                bool touched = (ts != null && ts.primaryTouch.press.isPressed)
+                               // Editor giả lập mobile: chuột thật đóng vai ngón tay
+                               || (Application.isEditor && TISPhysicalMouse.Current != null
+                                   && TISPhysicalMouse.Current.leftButton.isPressed);
+                if (_activeDevice != TISActiveDevice.Gamepad || touched)
+                    _activeDevice = TISActiveDevice.Mobile;
+                return;
+            }
 
-          // Keyboard hoặc Mouse có input frame này → chuyển về KeyboardMouse
-          bool keyboardInput = Keyboard.current != null && Keyboard.current.wasUpdatedThisFrame;
-          bool mouseInput    = Mouse.current    != null && Mouse.current.wasUpdatedThisFrame;
-          if (keyboardInput || mouseInput)
-          {
-              _activeDevice = TISActiveDevice.KeyboardMouse;
-              return;
-          }
+            // FIX: goi IsActuated() tren CA device khong dang tin
+            // (magnitude cap-device co the tra -1 => luon false), khien menu khong bao gio
+            // nhan ra tay cam => chan sach di chuyen (dpad/L1R1/L2R2) nhung nut A van chay.
+            // => Poll tung control cu the voi nguong (bo stick drift).
+            var gp = Gamepad.current;
+            if (gp != null && GamepadHasInputCached(gp)) { _activeDevice = TISActiveDevice.Gamepad; return; }
 
-          // Không có input từ bất kỳ thiết bị nào → giữ nguyên thiết bị cũ
+            var kb = Keyboard.current;
+            bool kbActive = kb != null
+                            && (NeedsPoll(ref _kbPoll, kb) ? StorePoll(ref _kbPoll, kb, kb.anyKey.isPressed) : false);
+            bool mouseActive = false;
+            // Chuột ảo của virtual cursor (click bằng nút A) không được tính là KeyboardMouse
+            var m = TISPhysicalMouse.Current;
+            if (m != null)
+                mouseActive = NeedsPoll(ref _mousePoll, m) ? StorePoll(ref _mousePoll, m, MouseHasInput(m)) : false;
+            if (kbActive || mouseActive) { _activeDevice = TISActiveDevice.KeyboardMouse; return; }
+
+            // Khong co input chu y -> giu nguyen thiet bi cu (hysteresis)
+        }
+
+        private static bool MouseHasInput(Mouse m)
+        {
+            if (m.leftButton.isPressed || m.rightButton.isPressed || m.middleButton.isPressed) return true;
+            if (m.delta.ReadValue().sqrMagnitude > 4f) return true;        // di chuyen > ~2px
+            if (Mathf.Abs(m.scroll.ReadValue().y) > 0.01f) return true;
+            return false;
+        }
+
+        // ── Bỏ poll khi device đứng yên ─────────────────────────
+        // Kết quả poll là hàm thuần của state device, mà state chỉ đổi khi device nhận event
+        // (lastUpdateTime đổi theo). → Device không có event mới VÀ lần poll trước "không có input"
+        // thì kết quả chắc chắn vẫn là false: bỏ qua ~20 lần đọc control. Lần trước "có input"
+        // thì luôn poll lại, vì control delta (mouse.delta / scroll) tự về 0 đầu frame mà
+        // không cần event. Kết quả từng frame giống hệt poll mỗi frame.
+        private struct DevicePoll
+        {
+            public InputDevice device;
+            public double      lastUpdateTime;
+            public bool        active;
+        }
+
+        private DevicePoll _gamepadPoll, _kbPoll, _mousePoll;
+
+        private static bool NeedsPoll(ref DevicePoll p, InputDevice d)
+            => p.active || !ReferenceEquals(p.device, d) || p.lastUpdateTime != d.lastUpdateTime;
+
+        private static bool StorePoll(ref DevicePoll p, InputDevice d, bool active)
+        {
+            p.device         = d;
+            p.lastUpdateTime = d.lastUpdateTime;
+            p.active         = active;
+            return active;
+        }
+
+        private bool GamepadHasInputCached(Gamepad gp)
+            => NeedsPoll(ref _gamepadPoll, gp) ? StorePoll(ref _gamepadPoll, gp, GamepadHasInput(gp)) : false;
+
+        // Poll input tay cam theo tung control (dang tin hon IsActuated cap-device).
+        private static bool GamepadHasInput(Gamepad gp)
+        {
+            if (gp.dpad.ReadValue().sqrMagnitude > 0.1f) return true;
+            if (gp.leftStick.ReadValue().sqrMagnitude > 0.25f) return true;
+            if (gp.rightStick.ReadValue().sqrMagnitude > 0.25f) return true;
+            if (gp.leftTrigger.ReadValue() > 0.3f || gp.rightTrigger.ReadValue() > 0.3f) return true;
+            if (gp.leftShoulder.isPressed || gp.rightShoulder.isPressed) return true;
+            if (gp.buttonSouth.isPressed || gp.buttonEast.isPressed || gp.buttonWest.isPressed || gp.buttonNorth.isPressed) return true;
+            if (gp.startButton.isPressed || gp.selectButton.isPressed) return true;
+            if (gp.leftStickButton.isPressed || gp.rightStickButton.isPressed) return true;
+            return false;
         }
 
         // ══════════════════════════════════════════════════════
@@ -677,22 +987,34 @@ namespace GaMo.TrueInputSystem
             highFreq = Mathf.Clamp01(highFreq);
 
             if (_rumbleCoroutine != null) { StopCoroutine(_rumbleCoroutine); _rumbleCoroutine = null; }
-            Gamepad.current.SetMotorSpeeds(lowFreq, highFreq);
+            SetMotors(lowFreq, highFreq, 0f);
         }
 
         /// <summary>Dừng rung gamepad ngay lập tức và hủy coroutine rung nếu đang chạy.</summary>
         public void StopRumble()
         {
             if (_rumbleCoroutine != null) { StopCoroutine(_rumbleCoroutine); _rumbleCoroutine = null; }
-            Gamepad.current?.SetMotorSpeeds(0f, 0f);
+            SetMotors(0f, 0f, 0f);
         }
 
         private IEnumerator RumbleCoroutine(float lowFreq, float highFreq, float duration)
         {
-            Gamepad.current.SetMotorSpeeds(lowFreq, highFreq);
+            SetMotors(lowFreq, highFreq, duration);
             yield return new WaitForSecondsRealtime(duration);
-            Gamepad.current?.SetMotorSpeeds(0f, 0f);
+            SetMotors(0f, 0f, 0f);
             _rumbleCoroutine = null;
+        }
+
+        /// <summary>
+        /// Gửi lệnh rung tới Gamepad.current (Unity) và tay cầm SDL3 đang mở (nếu có).
+        /// DualShock 4 / DualSense qua Bluetooth chỉ rung được qua SDL3; tay XInput rung qua Unity.
+        /// </summary>
+        private void SetMotors(float low, float high, float seconds)
+        {
+            Gamepad.current?.SetMotorSpeeds(low, high);
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX
+            _sdl3Source?.Rumble(low, high, seconds);
+#endif
         }
         
         // ============================================================
@@ -709,6 +1031,19 @@ namespace GaMo.TrueInputSystem
         /// <returns>Tổng góc xoay Delta (Độ) cuối cùng để áp dụng vào Camera</returns>
         public Vector2 AimAssistProcess(AimAssistSettings settings, Transform cameraTransform, Vector3 target, Vector2 playerLookDelta, float intensity = 0.3f)
             => _aimAssist.AimAssistProcess(settings, cameraTransform, target, playerLookDelta, intensity);
+
+        /// <summary>
+        /// Overload nhận Transform: <c>null</c> = không có mục tiêu. Dùng khi mục tiêu có thể
+        /// nằm đúng gốc toạ độ (overload Vector3 coi Vector3.zero là "không có mục tiêu").
+        /// </summary>
+        public Vector2 AimAssistProcess(AimAssistSettings settings, Transform cameraTransform, Transform target, Vector2 playerLookDelta, float intensity = 0.3f)
+        {
+            if (target == null) return playerLookDelta;
+            // Lệch cực nhỏ để không trùng sentinel Vector3.zero của overload cũ
+            Vector3 p = target.position;
+            if (p == Vector3.zero) p = new Vector3(0f, 0f, 1e-5f);
+            return _aimAssist.AimAssistProcess(settings, cameraTransform, p, playerLookDelta, intensity);
+        }
         
         public void UpdateActivePlatform() => _aimAssist.UpdateActivePlatform();
 
@@ -731,18 +1066,34 @@ namespace GaMo.TrueInputSystem
 
         private void InitialiseWithProfile(TISInputProfileConfig profile)
         {
+            // _activeProfile luôn là runtime copy do bridge tạo → huỷ bản cũ khi thay
+            // (trước đây mỗi lần SwapProfile / rebind rò 1 ScriptableObject).
+            var oldProfile = _activeProfile;
             _activeProfile = profile.CreateRuntimeCopy();
+            if (oldProfile != null && oldProfile != _profile && oldProfile != profile)
+                Destroy(oldProfile);
             
             TISRebindingSystem.ApplyOverridesToProfile(_activeProfile);
 
             // TISProfileBuilder xây dựng asset + map cache
             var buildResult = TISProfileBuilder.Build(_activeProfile, _verboseLog);
+            _profileUsesMotion = TISProfileBuilder.UsesMotion(_activeProfile);
             _asset    = buildResult.Asset;
             _mapCache = buildResult.MapCache;
             _asset.Enable();
 
             // TISActionReader load caches từ asset mới
             _reader.Load(_asset, _activeProfile, _isMobileMode, _debugSkillAction);
+
+            // Motion: gyro bị tắt khi virtual cursor đang bật (gyro lúc đó điều khiển cursor)
+            _missingMotionActions.Clear();
+            _motion.Load(
+                _activeProfile.motionSettings,
+                IsMotionActivationHeld,
+                GetGamepadCursorEnable);
+
+            // Lựa chọn bật / tắt gyro / touchpad theo profile + action (API / đã lưu) → áp lên asset mới
+            RestoreMotionPrefs();
 
             // TISOverrideChannel nhận action references từ reader
             _override.Load(
@@ -751,7 +1102,8 @@ namespace GaMo.TrueInputSystem
                 _reader.LookActionIsMouseDelta,
                 _isMobileMode,
                 _activeProfile.cameraSettings,
-                () => _activeDevice);
+                () => _activeDevice,
+                _motion);
 
             EnableDefaultMaps();
 
@@ -798,6 +1150,273 @@ namespace GaMo.TrueInputSystem
                 $" R={_activeProfile.gamepadSettings.rightStickDeadzone}");
 
             Debug.Log(sb.ToString());
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  MOTION API — bật / tắt gyro + touchpad theo profile / action
+        // ══════════════════════════════════════════════════════
+        //
+        //  TrueInputSystem — TIS_InputBridge.Motion.cs  [partial]
+        //
+        //  API bật / tắt gyro + touchpad lúc chạy:
+        //
+        //    · TOÀN GAME   : GyroEnabled / TouchpadEnabled            (TIS_InputBridge.cs)
+        //    · THEO PROFILE: SetProfileMotion(gyro, touchpad, save)
+        //    · THEO ACTION : SetActionMotion(action, gyro, touchpad, save)
+        //                    SetActionGyroEnabled / SetActionTouchpadEnabled
+        //
+        //  Gyro / touchpad của một action chạy khi CẢ 3 mức đều bật.
+        //  Tắt theo action = tắt đúng binding gyro / touchpad của action đó (binding override
+        //  path rỗng) — áp dụng cho cả "+ Gyro / + Touchpad" lẫn binding <TISMotion>/... riêng.
+        //  Không cần rebuild profile. save: true → lưu lựa chọn người chơi (TISMotionPrefs),
+        //  tự áp lại khi load / swap profile.
+
+        // ══════════════════════════════════════════════════════
+        //  STATE
+        // ══════════════════════════════════════════════════════
+
+        private struct ActionMotionState
+        {
+            public bool gyro;
+            public bool touchpad;
+        }
+
+        // Lựa chọn theo action cho profile hiện tại (khoá = TISMotionPrefs.ProfileKey)
+        private readonly Dictionary<string, ActionMotionState> _actionMotion =
+            new Dictionary<string, ActionMotionState>(StringComparer.OrdinalIgnoreCase);
+
+        private string _motionPrefsKey;
+        private bool?  _profileGyroOverride;
+        private bool?  _profileTouchpadOverride;
+        private bool   _profileGyroDefault     = true;   // giá trị trong profile asset
+        private bool   _profileTouchpadDefault = true;
+
+        /// <summary>Phát ra khi bất kỳ lựa chọn bật / tắt gyro / touchpad nào thay đổi (cập nhật UI Settings).</summary>
+        public event Action OnMotionSettingsChanged;
+
+        // ══════════════════════════════════════════════════════
+        //  THEO PROFILE
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>Gyro của profile đang chạy (Profile › Motion Settings › Enable Gyro, sau override).</summary>
+        public bool ProfileGyroEnabled
+            => _activeProfile != null && _activeProfile.motionSettings != null && _activeProfile.motionSettings.enableGyro;
+
+        /// <summary>Touchpad của profile đang chạy (Profile › Motion Settings › Enable Touchpad, sau override).</summary>
+        public bool ProfileTouchpadEnabled
+            => _activeProfile != null && _activeProfile.motionSettings != null && _activeProfile.motionSettings.enableTouchpad;
+
+        /// <summary>
+        /// Bật / tắt gyro và touchpad cho TOÀN BỘ action của profile đang chạy. Hiệu lực ngay.
+        /// </summary>
+        /// <param name="save">true = lưu lựa chọn cho lần mở game sau (theo tên profile).</param>
+        public void SetProfileMotion(bool gyro, bool touchpad, bool save = false)
+        {
+            _profileGyroOverride     = gyro;
+            _profileTouchpadOverride = touchpad;
+            ApplyProfileMotionOverride();
+            if (save) SaveMotionPrefs();
+            OnMotionSettingsChanged?.Invoke();
+        }
+
+        /// <summary>Bật / tắt riêng gyro của profile đang chạy.</summary>
+        public void SetProfileGyroEnabled(bool enabled, bool save = false)
+            => SetProfileMotion(enabled, ProfileTouchpadEnabled, save);
+
+        /// <summary>Bật / tắt riêng touchpad của profile đang chạy.</summary>
+        public void SetProfileTouchpadEnabled(bool enabled, bool save = false)
+            => SetProfileMotion(ProfileGyroEnabled, enabled, save);
+
+        // ══════════════════════════════════════════════════════
+        //  THEO ACTION
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Bật / tắt gyro và touchpad của MỘT action (vd. chỉ tắt gyro của "Look"). Hiệu lực ngay,
+        /// không rebuild profile. Không ảnh hưởng action khác.
+        /// </summary>
+        /// <param name="actionName">Tên action (không phân biệt hoa / thường).</param>
+        /// <param name="save">true = lưu lựa chọn cho lần mở game sau (theo tên profile).</param>
+        public void SetActionMotion(string actionName, bool gyro, bool touchpad, bool save = false)
+        {
+            if (string.IsNullOrEmpty(actionName)) return;
+
+            if (_asset != null && _asset.FindAction(actionName, throwIfNotFound: false) == null)
+                Debug.LogWarning($"[TISInputBridge] SetActionMotion: không tìm thấy action \"{actionName}\".");
+
+            _actionMotion[actionName] = new ActionMotionState { gyro = gyro, touchpad = touchpad };
+            ApplyActionMotionOverride(actionName);
+            if (save) SaveMotionPrefs();
+            OnMotionSettingsChanged?.Invoke();
+        }
+
+        /// <summary>Bật / tắt riêng gyro của một action.</summary>
+        public void SetActionGyroEnabled(string actionName, bool enabled, bool save = false)
+            => SetActionMotion(actionName, enabled, GetActionState(actionName).touchpad, save);
+
+        /// <summary>Bật / tắt riêng touchpad của một action.</summary>
+        public void SetActionTouchpadEnabled(string actionName, bool enabled, bool save = false)
+            => SetActionMotion(actionName, GetActionState(actionName).gyro, enabled, save);
+
+        /// <summary>
+        /// Gyro của action có đang THỰC SỰ chạy không: action có binding gyro, và cả 3 mức
+        /// (toàn game, profile, action) đều bật.
+        /// </summary>
+        public bool IsActionGyroEnabled(string actionName)
+            => GyroEnabled && ProfileGyroEnabled && ActionHasGyro(actionName) && GetActionState(actionName).gyro;
+
+        /// <summary>Touchpad của action có đang thực sự chạy không (giống <see cref="IsActionGyroEnabled"/>).</summary>
+        public bool IsActionTouchpadEnabled(string actionName)
+            => TouchpadEnabled && ProfileTouchpadEnabled && ActionHasTouchpad(actionName) && GetActionState(actionName).touchpad;
+
+        /// <summary>Action có binding gyro không (<c>&lt;TISMotion&gt;/gyro</c> hoặc "+ Gyro").</summary>
+        public bool ActionHasGyro(string actionName)     => ActionHasMotionBinding(actionName, gyro: true);
+
+        /// <summary>Action có binding touchpad không (<c>&lt;TISMotion&gt;/touchpad*</c> hoặc "+ Touchpad").</summary>
+        public bool ActionHasTouchpad(string actionName) => ActionHasMotionBinding(actionName, gyro: false);
+
+        // ══════════════════════════════════════════════════════
+        //  RESET
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Trả mọi lựa chọn theo profile / action về cấu hình gốc của profile asset.
+        /// </summary>
+        /// <param name="deleteSaved">true = xoá luôn file lựa chọn đã lưu của profile này.</param>
+        public void ResetMotionSettings(bool deleteSaved = true)
+        {
+            var names = new List<string>(_actionMotion.Keys);
+            _actionMotion.Clear();
+            foreach (var n in names) ApplyActionMotionOverride(n);
+
+            _profileGyroOverride = _profileTouchpadOverride = null;
+            ApplyProfileMotionOverride();
+
+            if (deleteSaved && !string.IsNullOrEmpty(_motionPrefsKey))
+                TISMotionPrefs.Delete(_motionPrefsKey);
+            OnMotionSettingsChanged?.Invoke();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  INTERNAL — gọi từ InitialiseWithProfile()
+        // ══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Sau mỗi lần build / swap profile: nạp lựa chọn đã lưu (nếu đổi sang profile khác)
+        /// và áp lại lên asset mới.
+        /// </summary>
+        private void RestoreMotionPrefs()
+        {
+            if (_activeProfile == null) return;
+
+            var ms = _activeProfile.motionSettings;
+            _profileGyroDefault     = ms == null || ms.enableGyro;
+            _profileTouchpadDefault = ms == null || ms.enableTouchpad;
+
+            string key = TISMotionPrefs.ProfileKey(_activeProfile.profileName);
+            if (key != _motionPrefsKey)
+            {
+                // Đổi profile → bỏ lựa chọn của profile cũ, nạp lựa chọn đã lưu của profile mới
+                _motionPrefsKey = key;
+                _actionMotion.Clear();
+                _profileGyroOverride = _profileTouchpadOverride = null;
+
+                var file = TISMotionPrefs.Load(key);
+                if (file != null)
+                {
+                    if (file.hasProfileGyro)     _profileGyroOverride     = file.profileGyro;
+                    if (file.hasProfileTouchpad) _profileTouchpadOverride = file.profileTouchpad;
+                    foreach (var a in file.actions)
+                        if (!string.IsNullOrEmpty(a.actionName))
+                            _actionMotion[a.actionName] = new ActionMotionState { gyro = a.gyro, touchpad = a.touchpad };
+                }
+            }
+
+            // Cùng profile (rebind / swap lại) → giữ lựa chọn trong phiên, áp lên asset mới
+            ApplyProfileMotionOverride();
+            foreach (var name in _actionMotion.Keys)
+                ApplyActionMotionOverride(name);
+        }
+
+        private void ApplyProfileMotionOverride()
+        {
+            var ms = _activeProfile != null ? _activeProfile.motionSettings : null;
+            if (ms == null) return;
+            ms.enableGyro     = _profileGyroOverride     ?? _profileGyroDefault;
+            ms.enableTouchpad = _profileTouchpadOverride ?? _profileTouchpadDefault;
+        }
+
+        private ActionMotionState GetActionState(string actionName)
+            => !string.IsNullOrEmpty(actionName) && _actionMotion.TryGetValue(actionName, out var s)
+                ? s
+                : new ActionMotionState { gyro = true, touchpad = true };
+
+        /// <summary>Tắt / bật đúng các binding gyro / touchpad của action bằng binding override.</summary>
+        private void ApplyActionMotionOverride(string actionName)
+        {
+            var action = _asset != null ? _asset.FindAction(actionName, throwIfNotFound: false) : null;
+            if (action == null) return;
+
+            var state    = GetActionState(actionName);
+            var bindings = action.bindings;
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                var b = bindings[i];
+                bool isGyro  = IsGyroBinding(b);
+                bool isTouch = !isGyro && IsTouchpadBinding(b);
+                if (!isGyro && !isTouch) continue;
+
+                bool on = isGyro ? state.gyro : state.touchpad;
+                if (on)
+                {
+                    if (b.overridePath != null) action.RemoveBindingOverride(i);
+                }
+                else if (b.overridePath != "")
+                {
+                    // Override path rỗng = binding bị vô hiệu (part composite đọc ra 0)
+                    action.ApplyBindingOverride(i, "");
+                }
+            }
+        }
+
+        private bool ActionHasMotionBinding(string actionName, bool gyro)
+        {
+            var action = _asset != null ? _asset.FindAction(actionName, throwIfNotFound: false) : null;
+            if (action == null) return false;
+            foreach (var b in action.bindings)
+                if (gyro ? IsGyroBinding(b) : IsTouchpadBinding(b)) return true;
+            return false;
+        }
+
+        private static bool IsGyroBinding(InputBinding b)
+            => b.isPartOfComposite
+                ? string.Equals(b.name, "Gyro", StringComparison.OrdinalIgnoreCase)
+                : TISMotionPaths.IsGyroPath(b.path);
+
+        private static bool IsTouchpadBinding(InputBinding b)
+            => b.isPartOfComposite
+                ? string.Equals(b.name, "Touchpad", StringComparison.OrdinalIgnoreCase)
+                : TISMotionPaths.IsMotionPath(b.path) && !TISMotionPaths.IsGyroPath(b.path);
+
+        private void SaveMotionPrefs()
+        {
+            if (string.IsNullOrEmpty(_motionPrefsKey)) return;
+
+            var data = new TISMotionPrefsFile
+            {
+                hasProfileGyro      = _profileGyroOverride.HasValue,
+                profileGyro         = _profileGyroOverride ?? true,
+                hasProfileTouchpad  = _profileTouchpadOverride.HasValue,
+                profileTouchpad     = _profileTouchpadOverride ?? true,
+            };
+            foreach (var kv in _actionMotion)
+                data.actions.Add(new TISActionMotionPref
+                {
+                    actionName = kv.Key,
+                    gyro       = kv.Value.gyro,
+                    touchpad   = kv.Value.touchpad,
+                });
+            TISMotionPrefs.Save(_motionPrefsKey, data);
         }
     }
 }

@@ -4,9 +4,8 @@ using UnityEngine;
 
 namespace GaMo.BlenderEditorTools
 {
-    [AddComponentMenu("IK Constraint")]
     [ExecuteAlways]
-    public class IKConstraint : MonoBehaviour
+    public class IKConstraint : ConstraintBehaviour
     {
         [System.Serializable]
         public class IKTargetData
@@ -42,6 +41,25 @@ namespace GaMo.BlenderEditorTools
         }
 
         [HideInInspector] public bool preview;
+
+        /// <summary>Pose local của 1 Transform (bone / target / pole target) tại thời điểm lưu.</summary>
+        [System.Serializable]
+        public struct PoseSnapshot
+        {
+            public Transform transform;
+            public Vector3 localPosition;
+            public Quaternion localRotation;
+            public Vector3 localScale;
+        }
+
+        // Pose của TẤT CẢ Transform liên quan: bones trong chain + Target + Pole Target (đã loại trùng),
+        // chụp lúc bấm Preview In Editor từ INACTIVE → ACTIVE. Được serialize cùng component
+        // (scene/prefab) nên vẫn còn sau khi đóng/mở lại Unity (miễn là đã Save scene) — không phụ thuộc Undo stack.
+        [HideInInspector, SerializeField, UnityEngine.Serialization.FormerlySerializedAs("savedBonePose")]
+        private PoseSnapshot[] savedPose = new PoseSnapshot[0];
+
+        /// <summary>true nếu đã có pose được lưu (bởi <see cref="SavePose"/>).</summary>
+        public bool HasSavedPose => savedPose != null && savedPose.Length > 0;
 
         [Tooltip(
             "Danh sách các điểm đích cần hướng tới. Bạn có thể thêm nhiều điểm và thay đổi Weight để blend (hòa trộn) mượt mà giữa các vị trí/góc xoay.")]
@@ -122,8 +140,9 @@ namespace GaMo.BlenderEditorTools
         private float[] _cachedStartWeights = new float[0];
         private float[] _cachedPoleStartWeights = new float[0];
 
-        void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable(); // đăng ký với ConstraintScheduler (kể cả Edit Mode nhờ [ExecuteAlways])
             InitIKChain();
         }
 
@@ -153,6 +172,7 @@ namespace GaMo.BlenderEditorTools
                 target = targetTransform,
                 weight = Mathf.Clamp01(initialWeight)
             });
+            ConstraintScheduler.MarkDirty();
             return true;
         }
 
@@ -171,6 +191,7 @@ namespace GaMo.BlenderEditorTools
                     }
 
                     targets.RemoveAt(i);
+                    ConstraintScheduler.MarkDirty();
                     return true;
                 }
             }
@@ -345,6 +366,7 @@ namespace GaMo.BlenderEditorTools
                 poleTarget = poleTransform,
                 weight = Mathf.Clamp01(initialWeight)
             });
+            ConstraintScheduler.MarkDirty();
             return true;
         }
 
@@ -363,6 +385,7 @@ namespace GaMo.BlenderEditorTools
                     }
 
                     poleTargets.RemoveAt(i);
+                    ConstraintScheduler.MarkDirty();
                     return true;
                 }
             }
@@ -527,6 +550,7 @@ namespace GaMo.BlenderEditorTools
             }
 
             isInitialized = true;
+            ConstraintScheduler.MarkDirty(); // bones có thể vừa đổi → sắp xếp lại phụ thuộc (chỉ khi init thành công, không lặp mỗi frame)
 
             // Tự đồng bộ kích thước mảng poleAngleOffsets với số khớp giữa hiện có trong chuỗi
             // (positions.Length - 2, vì khớp Gốc và khớp Ngọn không có bẻ cong bằng Pole Target).
@@ -539,12 +563,31 @@ namespace GaMo.BlenderEditorTools
                 System.Array.Resize(ref poleAngleOffsets, jointCount);
         }
 
-        void LateUpdate()
+        // ══════════════════════════════ SCHEDULER ══════════════════════════════
+        // Không còn LateUpdate() riêng: ConstraintScheduler gọi Solve() — mặc định IK chạy SAU
+        // DampedTrack/TransformConstraint (TypeOrderIK) và sau mọi constraint ghi lên target/pole/cha chuỗi xương.
+
+        public override int DefaultTypeOrder => TypeOrderIK;
+
+        public override void Solve()
         {
             // Kiểm tra điều kiện Preview ở Edit Mode (Khi chưa bấm Play)
             if (!Application.isPlaying && !preview) return;
 
             ApplyIK();
+        }
+
+        public override void CollectDependencies(List<Transform> inputs, List<Transform> outputs)
+        {
+            if (bones != null && bones.Length > 0)
+            {
+                for (int i = 0; i < bones.Length; i++) outputs.Add(bones[i]);
+                if (bones[0] != null) inputs.Add(bones[0].parent); // world pose gốc chuỗi phụ thuộc cha
+            }
+            for (int i = 0; i < targets.Count; i++)
+                if (targets[i] != null) inputs.Add(targets[i].target);
+            for (int i = 0; i < poleTargets.Count; i++)
+                if (poleTargets[i] != null) inputs.Add(poleTargets[i].poleTarget);
         }
 
         /// <summary>
@@ -694,9 +737,109 @@ namespace GaMo.BlenderEditorTools
             }
         }
 
-        void OnValidate()
+        protected override void OnValidate()
         {
+            base.OnValidate(); // báo scheduler sắp xếp lại
             InitIKChain();
+        }
+
+        // ══════════════════════════════ POSE SNAPSHOT / RESET ══════════════════════════════
+
+        /// <summary>
+        /// Gom các Transform cần lưu/reset: bones + Target + Pole Target (bỏ null, loại trùng, giữ thứ tự).
+        /// </summary>
+        private List<Transform> CollectPoseTransforms()
+        {
+            var result = new List<Transform>();
+            var seen = new HashSet<Transform>();
+
+            if (bones != null)
+                for (int i = 0; i < bones.Length; i++)
+                    if (bones[i] != null && seen.Add(bones[i])) result.Add(bones[i]);
+
+            if (targets != null)
+                for (int i = 0; i < targets.Count; i++)
+                    if (targets[i] != null && targets[i].target != null && seen.Add(targets[i].target))
+                        result.Add(targets[i].target);
+
+            if (poleTargets != null)
+                for (int i = 0; i < poleTargets.Count; i++)
+                    if (poleTargets[i] != null && poleTargets[i].poleTarget != null && seen.Add(poleTargets[i].poleTarget))
+                        result.Add(poleTargets[i].poleTarget);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Lưu local position/rotation/scale của bones trong chain + tất cả Target + Pole Target.
+        /// Ghi đè pose đã lưu trước đó. Editor tự gọi khi bấm Preview In Editor từ INACTIVE sang ACTIVE.
+        /// </summary>
+        public void SavePose()
+        {
+            List<Transform> list = CollectPoseTransforms();
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                UnityEditor.Undo.RecordObject(this, "Save IK Pose");
+#endif
+
+            var snapshot = new PoseSnapshot[list.Count];
+            for (int i = 0; i < snapshot.Length; i++)
+            {
+                Transform t = list[i];
+                snapshot[i].transform = t;
+                snapshot[i].localPosition = t.localPosition;
+                snapshot[i].localRotation = t.localRotation;
+                snapshot[i].localScale = t.localScale;
+            }
+
+            savedPose = snapshot;
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                UnityEditor.EditorUtility.SetDirty(this);
+                UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(this);
+            }
+#endif
+        }
+
+        /// <summary>
+        /// Trả bones, Target và Pole Target về pose đã lưu bởi <see cref="SavePose"/>.
+        /// Ở Edit Mode có hỗ trợ Undo.
+        /// </summary>
+        /// <returns>false nếu chưa có pose nào được lưu.</returns>
+        public bool ResetToSavedPose()
+        {
+            if (!HasSavedPose) return false;
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                var objs = new List<Object>(savedPose.Length);
+                for (int i = 0; i < savedPose.Length; i++)
+                    if (savedPose[i].transform != null) objs.Add(savedPose[i].transform);
+                UnityEditor.Undo.RecordObjects(objs.ToArray(), "Reset IK Pose");
+            }
+#endif
+
+            // Chỉ ghi local transform nên thứ tự không quan trọng (kể cả khi Target là cha của bone).
+            for (int i = 0; i < savedPose.Length; i++)
+            {
+                PoseSnapshot snap = savedPose[i];
+                if (snap.transform == null) continue;
+
+                snap.transform.localPosition = snap.localPosition;
+                snap.transform.localRotation = snap.localRotation;
+                snap.transform.localScale = snap.localScale;
+
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(snap.transform);
+#endif
+            }
+
+            return true;
         }
 
         // ══════════════════════════════ GIZMOS ══════════════════════════════

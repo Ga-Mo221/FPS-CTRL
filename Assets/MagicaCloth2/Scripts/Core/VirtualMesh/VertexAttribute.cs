@@ -20,6 +20,7 @@ namespace MagicaCloth2
         //public const byte Flag_Ignore = 0x04; // 無視（シミュレーションの対象としない）:一旦オミット!
         public const byte Flag_InvalidMotion = 0x08; // モーション制約無効
         public const byte Flag_DisableCollision = 0x10; // コリジョン無効
+        public const byte Flag_ZeroDistance = 0x20; // この頂点は親との距離がゼロ
         public const byte Flag_Triangle = 0x80; // この頂点はトライアングルに属している
 
         public static readonly VertexAttribute Invalid = new VertexAttribute();
@@ -80,7 +81,7 @@ namespace MagicaCloth2
         }
 
         /// <summary>
-        /// 無効属性判定(Move/Fixed/Ignoreのどれでもない場合)
+        /// 無効属性判定(Move/Fixedのどれでもない場合)
         /// </summary>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

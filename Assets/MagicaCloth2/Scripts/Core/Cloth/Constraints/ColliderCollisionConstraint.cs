@@ -103,7 +103,7 @@ namespace MagicaCloth2
                 foreach (var t in collisionBones)
                 {
                     if (t)
-                        hash += t.GetInstanceID();
+                        hash += t.GetMagicaId().GetHashCode();
                 }
 
                 return hash;
@@ -123,7 +123,7 @@ namespace MagicaCloth2
                 }
             }
 
-            public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+            public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
             {
                 colliderList.ForEach(x =>
                 {
@@ -133,9 +133,9 @@ namespace MagicaCloth2
                 for (int i = 0; i < collisionBones.Count; i++)
                 {
                     var t = collisionBones[i];
-                    if (t && replaceDict.ContainsKey(t.GetInstanceID()))
+                    if (t && replaceDict.ContainsKey(t.GetMagicaId()))
                     {
-                        collisionBones[i] = replaceDict[t.GetInstanceID()];
+                        collisionBones[i] = replaceDict[t.GetMagicaId()];
                     }
                 }
             }

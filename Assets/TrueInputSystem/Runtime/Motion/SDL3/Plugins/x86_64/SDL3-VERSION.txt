@@ -1,0 +1,20 @@
+SDL3 native library dùng bởi TrueInputSystem (gyro / touchpad tay cầm trên PC)
+==========================================================================
+
+Phiên bản : SDL 3.4.18 (release-3.4.18, phát hành 2026-10-02)
+Nguồn     : https://github.com/libsdl-org/SDL/releases/tag/release-3.4.18
+File gốc  : SDL3-3.4.18-win32-x64.zip
+License   : zlib (xem SDL3-LICENSE.txt)
+
+SHA-256
+-------
+SDL3.dll                     2B4B128D8D510CC2D442693CF848C050D700D43DC667AFE9E5FD82B0570D667E
+SDL3-3.4.18-win32-x64.zip    75C2C0FC74E7D1206AAEDC22893A35887332F4F85F5C8B74FDDC10D177985F2C
+
+SDL3.dll KHÔNG có chữ ký số (bản release chính thức của SDL vốn không ký).
+Kiểm tra file chưa bị thay (PowerShell):
+
+    Get-FileHash SDL3.dll -Algorithm SHA256
+
+Kết quả phải trùng mã SHA-256 ở trên. Khi nâng cấp SDL: tải lại từ trang release chính thức,
+cập nhật phiên bản + mã SHA-256 trong file này.

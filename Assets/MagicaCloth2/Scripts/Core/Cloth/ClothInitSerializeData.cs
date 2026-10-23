@@ -167,7 +167,7 @@ namespace MagicaCloth2
             clothSetupDataList?.ForEach(x => x.GetUsedTransform(transformSet));
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             clothTransformRecord?.ReplaceTransform(replaceDict);
             normalAdjustmentTransformRecord?.ReplaceTransform(replaceDict);

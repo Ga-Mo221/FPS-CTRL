@@ -50,6 +50,11 @@ namespace GaMo.BlenderEditorTools
 
         public static void ApplyToAll<T>(string searchTerm) where T : Object
         {
+            // Đang Play: hierarchyChanged bắn liên tục (spawn/destroy runtime), mỗi lần lại quét
+            // FindObjectsByType toàn scene cho từng editor (~3ms x 17 = ~50ms/lần) -> giật định kỳ.
+            // Icon chỉ phục vụ Edit mode nên bỏ qua khi đang/sắp Play.
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+
             Texture2D icon = FindIcon(searchTerm);
             if (icon == null) return;
 

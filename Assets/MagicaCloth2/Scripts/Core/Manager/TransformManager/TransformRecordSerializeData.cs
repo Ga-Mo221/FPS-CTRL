@@ -72,10 +72,10 @@ namespace MagicaCloth2
                 transformSet.Add(transform);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
-            int id = transform != null ? transform.GetInstanceID() : 0;
-            if (id != 0 && replaceDict.ContainsKey(id))
+            MagicaObjectId id = transform != null ? transform.GetMagicaId() : MagicaObjectId.Invalid;
+            if (id.IsValid() && replaceDict.ContainsKey(id))
                 transform = replaceDict[id];
         }
     }

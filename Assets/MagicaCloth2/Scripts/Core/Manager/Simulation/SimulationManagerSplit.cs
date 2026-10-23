@@ -607,6 +607,20 @@ namespace MagicaCloth2
             [NativeDisableContainerSafetyRestriction]
             public NativeArray<quaternion> stepBasicRotationBuffer;
 
+            // temp
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public NativeArray<float3> tempVectorBufferA;
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public NativeArray<float3> tempVectorBufferB;
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public NativeArray<int> tempCountBuffer;
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public NativeArray<float> tempFloatBufferA;
+
             // バッチ内のローカルチームインデックスごと
             public void Execute(int index)
             {
@@ -670,7 +684,12 @@ namespace MagicaCloth2
                     ref frictionArray,
                     // buffer
                     ref stepBasicPositionBuffer,
-                    ref stepBasicRotationBuffer
+                    ref stepBasicRotationBuffer,
+                    // temp
+                    ref tempVectorBufferA,
+                    ref tempVectorBufferB,
+                    ref tempCountBuffer,
+                    ref tempFloatBufferA
                     );
             }
         }
@@ -1929,6 +1948,14 @@ namespace MagicaCloth2
             [Unity.Collections.ReadOnly]
             public NativeArray<float3> realVelocityArray;
 
+            // temp
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public NativeArray<float3> tempVectorBufferA;
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public NativeArray<quaternion> tempRotationBufferA;
+
             // バッチ内のローカルチームインデックスごと
             // ワーカー分割
             public void Execute(int index)
@@ -1969,8 +1996,10 @@ namespace MagicaCloth2
                         ref attributes,
                         ref positions,
                         ref rotations,
-                        ref vertexRootIndices
-
+                        ref vertexRootIndices,
+                        // temp
+                        ref tempVectorBufferA,
+                        ref tempRotationBufferA
                     );
                 }
             }
@@ -2018,6 +2047,12 @@ namespace MagicaCloth2
             [Unity.Collections.ReadOnly]
             public NativeArray<ExBitFlag8> baseLineFlags;
 
+            // temp
+            [Unity.Collections.ReadOnly]
+            public NativeArray<float3> tempVectorBufferA;
+            [Unity.Collections.ReadOnly]
+            public NativeArray<quaternion> tempRotationBufferB;
+
             // バッチ内のローカルチームインデックスごと
             // ワーカー分割
             public void Execute(int index)
@@ -2061,7 +2096,10 @@ namespace MagicaCloth2
                         ref baseLineFlags,
                         ref baseLineStartDataIndices,
                         ref baseLineDataCounts,
-                        ref baseLineData
+                        ref baseLineData,
+                        // temp
+                        ref tempVectorBufferA,
+                        ref tempRotationBufferB
                         );
                 }
             }

@@ -1937,7 +1937,7 @@ namespace MagicaCloth2
 
             // トランスフォーム情報から親子関係を構築する
             // parent
-            var idToIndexDict = new Dictionary<int, int>(vcnt);
+            var idToIndexDict = new Dictionary<MagicaObjectId, int>(vcnt);
             var idArray = transformData.idArray.GetNativeArray();
             var parentIdArray = transformData.parentIdArray.GetNativeArray();
             for (int i = 0; i < vcnt; i++)
@@ -1946,7 +1946,7 @@ namespace MagicaCloth2
             }
             for (int index = 0; index < vcnt; index++)
             {
-                int pid = parentIdArray[index];
+                MagicaObjectId pid = parentIdArray[index];
                 if (idToIndexDict.ContainsKey(pid))
                     vertexParentIndices[index] = idToIndexDict[pid];
                 else
@@ -1971,7 +1971,7 @@ namespace MagicaCloth2
             var startIndices = new List<ushort>(rootCount);
             var dataCounts = new List<ushort>(rootCount);
             var indices = new List<ushort>(vcnt);
-            foreach (int id in transformData.rootIdList)
+            foreach (MagicaObjectId id in transformData.rootIdList)
             {
                 // ルートからTransformを走査して最初の移動ポイントを持つ固定を起点とする
                 rootStack.Clear();
@@ -2089,6 +2089,7 @@ namespace MagicaCloth2
             vertexLocalRotations = new NativeArray<quaternion>(VertexCount, Allocator.Persistent);
             var calcLinePoseJob = new BaseLine_CalcLocalPositionRotationJob()
             {
+                attributes = attributes.GetNativeArray(),
                 parentIndices = vertexParentIndices,
                 localPositions = localPositions.GetNativeArray(),
                 localNormals = localNormals.GetNativeArray(),
@@ -2106,6 +2107,9 @@ namespace MagicaCloth2
         [BurstCompile]
         struct BaseLine_CalcLocalPositionRotationJob : IJobParallelFor
         {
+            [NativeDisableParallelForRestriction]
+            public NativeArray<VertexAttribute> attributes;
+
             [Unity.Collections.ReadOnly]
             public NativeArray<int> parentIndices;
             [Unity.Collections.ReadOnly]
@@ -2129,12 +2133,12 @@ namespace MagicaCloth2
             {
                 int vindex = baseLineIndices[index];
 
-                int pindex = parentIndices[vindex];
-                if (pindex >= 0)
+                int pvindex = parentIndices[vindex];
+                if (pvindex >= 0)
                 {
-                    float3 ppos = localPositions[pindex];
-                    float3 pnor = localNormals[pindex];
-                    float3 ptan = localTangents[pindex];
+                    float3 ppos = localPositions[pvindex];
+                    float3 pnor = localNormals[pvindex];
+                    float3 ptan = localTangents[pvindex];
                     quaternion prot = MathUtility.ToRotation(pnor, ptan);
                     quaternion iprot = math.inverse(prot);
 
@@ -2147,6 +2151,14 @@ namespace MagicaCloth2
                     quaternion lrot = math.mul(iprot, rot);
                     vertexLocalPositions[vindex] = lpos;
                     vertexLocalRotations[vindex] = lrot;
+
+                    // 親とのゼロ距離判定。フラグを立てる
+                    if (MathUtility.IsZeroDistance(lpos))
+                    {
+                        var flag = attributes[vindex];
+                        flag.SetFlag(VertexAttribute.Flag_ZeroDistance, true);
+                        attributes[vindex] = flag;
+                    }
 
                     //Debug.Log($"vertexLocalPositions [{vindex}] : {lpos}");
                     //Debug.Log($"vertexLocalRotations [{vindex}] : {lrot}");

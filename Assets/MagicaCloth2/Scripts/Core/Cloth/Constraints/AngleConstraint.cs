@@ -548,8 +548,8 @@ namespace MagicaCloth2
                             float3 cadd = cfpos - cpos;
 
                             // 摩擦考慮
-                            padd *= cInvMass;
-                            cadd *= pInvMass;
+                            cadd *= cInvMass;
+                            padd *= pInvMass;
 
                             // 子の書き込み
                             if (cattr.IsMove())

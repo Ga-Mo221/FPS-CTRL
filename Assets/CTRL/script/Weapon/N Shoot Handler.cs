@@ -5,8 +5,27 @@ using UnityEngine;
 [DefaultExecutionOrder(25)] // sau NCharMovementHandler (20)
 public class NShootHandler : NetworkBehaviour
 {
-    [Networked] public NetworkString<_16> GrenadeQ {private set; get; } = WeaponID._FRAG_M67;
-    [Networked] public NetworkString<_16> GrenadeE {private set; get;} = WeaponID._FLASH_M84;
+    // 2 NetworkString<_16> (~34 word, UTF-32) -> 1 ushort:
+    // byte thap = chi so luu dan Q, byte cao = E trong GameManager.GetGrenadeList(); 255 = mac dinh (Frag/Flash).
+    // GrenadeQ/GrenadeE giu nguyen ten + kieu tra ve chuoi nen code cu (.ToString()) khong doi.
+    [Networked] private ushort _grenadeSlots { get; set; } = 0xFFFF;
+    public string GrenadeQ { get { return GrenadeIdOf((byte)(_grenadeSlots & 0xFF), WeaponID._FRAG_M67); } }
+    public string GrenadeE { get { return GrenadeIdOf((byte)(_grenadeSlots >> 8), WeaponID._FLASH_M84); } }
+
+    private static string GrenadeIdOf(byte idx, string fallback)
+    {
+        if (idx == 255) return fallback;
+        var gm = GameManager.Instance;
+        string id = gm != null ? gm.GetGrenadeIdByIndex(idx) : null;
+        return string.IsNullOrEmpty(id) ? fallback : id;
+    }
+
+    private static byte GrenadeIndexOf(string id)
+    {
+        var gm = GameManager.Instance;
+        int i = gm != null ? gm.GetGrenadeIndex(id) : -1;
+        return i >= 0 && i < 255 ? (byte)i : (byte)255;
+    }
     
     [SerializeField] private Transform _throwPointRight;
     [SerializeField] private Transform _throwPointLeft;
@@ -24,12 +43,27 @@ public class NShootHandler : NetworkBehaviour
     [SerializeField] private LayerMask _hitMask;
 
     // ── Networked stats ────────────────────────────────────────────────────
-    [Networked, OnChangedRender(nameof(OnKillChange))]
-    public int _kill { get; private set; } = 0;
+    // _kill + Assist gop 2 ushort trong 1 word, 1 callback chung.
+    [Networked, OnChangedRender(nameof(OnScoreChanged))]
+    private uint _score { get; set; }
+    public int _kill
+    {
+        get { return (int)(_score & 0xFFFF); }
+        private set { _score = (_score & 0xFFFF0000u) | (uint)Mathf.Clamp(value, 0, 65535); }
+    }
 
     /// <summary>Số lần hỗ trợ kill (deal damage nhưng người khác kết liễu)</summary>
-    [Networked, OnChangedRender(nameof(OnAssistChange))]
-    public int Assist { get; private set; } = 0;
+    public int Assist
+    {
+        get { return (int)(_score >> 16); }
+        private set { _score = (_score & 0xFFFFu) | ((uint)Mathf.Clamp(value, 0, 65535) << 16); }
+    }
+    private int _lastRenderedKill, _lastRenderedAssist;
+    void OnScoreChanged()
+    {
+        if (_kill != _lastRenderedKill) { _lastRenderedKill = _kill; OnKillChange(); }
+        if (Assist != _lastRenderedAssist) { _lastRenderedAssist = Assist; OnAssistChange(); }
+    }
 
     [Networked] public int TotalExp { get; private set; } = 0;
 
@@ -38,7 +72,7 @@ public class NShootHandler : NetworkBehaviour
     /// Timer delay từ lúc nhấn attack đến lúc hitbox check — đồng bộ với animation swing.
     /// Networked để Host quản lý timing chính xác theo tick.
     /// </summary>
-    [Networked] private TickTimer _meleeHitTimer { get; set; }
+    // _meleeHitTimer khai bao nhung khong dung -> xoa.
 
     [Header("Melee Active Hit Window")]
     [Tooltip("Sau khi hết delay swing, hitbox check sẽ tiếp tục chạy MỖI TICK trong khoảng thời gian này (giây) thay vì chỉ 1 tick duy nhất — giúp dễ trúng đòn hơn với đối tượng đang di chuyển / độ trễ mạng.")]
@@ -48,7 +82,8 @@ public class NShootHandler : NetworkBehaviour
     /// Cửa sổ thời gian (nhiều tick) mà HandleMeleeHit() được phép chạy sau khi _meleeHitTimer hết hạn.
     /// Networked để mọi tick simulate/resimulate trên Host đều nhất quán.
     /// </summary>
-    [Networked] private TickTimer _meleeHitWindowEndTimer { get; set; }
+    // cua so ~150ms chi host doc -> field thuong.
+    private TickTimer _meleeHitWindowEndTimer;
 
     /// <summary>
     /// Các target (theo NetworkId) đã bị đánh trúng trong pha vung vũ khí hiện tại.
@@ -73,6 +108,36 @@ public class NShootHandler : NetworkBehaviour
     /// cos(50°) ≈ 0.64 → target phải nằm trong góc 50° tính từ aimForward.
     /// </summary>
     private const float MeleeDotThreshold = 0.64f;
+
+    // Ket qua raycast cua host (local, khong sync) ──
+    private struct LocalShot { public Vector3 Pos; public Vector3 Normal; public bool Effect; }
+    private readonly LocalShot[] _hostShot = new LocalShot[8];
+    private int _hostShotCount;
+    private LocalShot _hostMeleeWallHit;
+    private readonly List<LagCompensatedHit> _meleeHits = new List<LagCompensatedHit>();
+
+    /// <summary>Seed shotgun theo tick (tat dinh): host va client predict cung tick -> cung seed.</summary>
+    private ushort ShotSeedFor(int tick)
+    {
+        unchecked
+        {
+            uint h = (uint)tick * 2654435761u ^ (uint)Object.Id.Raw * 2246822519u;
+            h ^= h >> 15; h *= 2246822519u; h ^= h >> 13;
+            return (ushort)(h & 0xFFFF);
+        }
+    }
+
+    /// <summary>So gia ngau nhien tat dinh [0,1) tu (seed, k).</summary>
+    private static float Hash01(ushort seed, int k)
+    {
+        unchecked
+        {
+            uint h = (uint)seed * 374761393u + (uint)k * 668265263u;
+            h = (h ^ (h >> 13)) * 1274126177u;
+            h ^= h >> 16;
+            return (h & 0xFFFFFF) / 16777216f;
+        }
+    }
 
     // ── Change detector ────────────────────────────────────────────────────
     private int _lastFireCount;
@@ -120,14 +185,18 @@ public class NShootHandler : NetworkBehaviour
         _hitSound               = _componentManager.Audio_HitSound;
         _playerData             = _movementHandler.Data;
         _nHPHandler             = _componentManager.NHPHandler;
+        // nguoi vao sau / sau migration: khong phat lai su kien cu
+        _lastFireCount          = _movementHandler.FireCount;
+        _lastMeleeHitCount      = _meleeHitCount;
+        _lastRenderedKill       = _kill;
+        _lastRenderedAssist     = Assist;
     }
 
     public int GetDeathCount() => _nHPHandler.DeadCount;
 
     public void SetGrenade(string grenade1, string grenade2)
     {
-        GrenadeQ = grenade1;
-        GrenadeE = grenade2;
+        _grenadeSlots = (ushort)(GrenadeIndexOf(grenade1) | (GrenadeIndexOf(grenade2) << 8));
     }
 
     /// <summary>
@@ -158,17 +227,21 @@ public class NShootHandler : NetworkBehaviour
                         ? _movementHandler.LastConfirmedAimForward
                         : _aimForward;
 
+                    // Ket qua raycast KHONG ghi vao state nua; host giu cache local
+                    // de tu dung visual cho chinh minh trong Render (proxy tu raycast, xem OnFireDetected).
                     if (_weaponManager.Weapon_Active().WeaponType == WeaponType.Rifle ||
                         _weaponManager.Weapon_Active().WeaponType == WeaponType.Sniper)
                     {
                         var (hitPos, hitNormal, showEffect) = GetRaycastHitInfo(rayDir);
-                        _movementHandler.SetLastShotInfo(hitPos, hitNormal, showEffect);
+                        _hostShotCount = 1;
+                        _hostShot[0] = new LocalShot { Pos = hitPos, Normal = hitNormal, Effect = showEffect };
                     }
 
                     if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
                     {
-                        var shotInfo = GetShotgunHitInfo(rayDir);
-                        _movementHandler.SetLastShotInfo(shotInfo);
+                        ushort seed = ShotSeedFor(Runner.Tick.Raw);
+                        _movementHandler.SetShotSeed(seed);
+                        GetShotgunHitInfo(rayDir, seed);
                     }
                 }
             }
@@ -195,8 +268,22 @@ public class NShootHandler : NetworkBehaviour
             {
                 var weaponType = _weaponManager.Weapon_Active()?.WeaponType;
 
-                // Visual ngay: animation recoil, camera recoil, muzzle flash, âm thanh
-                _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
+                // Visual ngay: animation recoil, camera recoil, muzzle flash, âm thanh.
+                // Súng: FireOnce() → WeaponController.OnFire() đã tự phát toàn bộ visual (OnShotFired),
+                // gọi thêm OnFireVisualOnly() sẽ nhân đôi recoil/âm thanh/anim mỗi phát.
+                // Dao: MeleeSwing() không phát visual trên client → cần OnFireVisualOnly().
+                if (weaponType == WeaponType.Melee)
+                    _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
+
+                // Melee: predict luôn animation NHÂN VẬT cùng tick với animation VŨ KHÍ ở trên.
+                // Trước đây nhân vật chờ FireCount từ host (Render) còn vũ khí predict ngay →
+                // 2 nguồn khác nhau, đôi khi chỉ 1 bên chạy. NCharacterAnimationHandler bỏ qua
+                // trigger theo FireCount cho trường hợp này để không chém 2 lần.
+                if (weaponType == WeaponType.Melee && !_movementHandler.RightPuch)
+                {
+                    _playerMotionController.SetShootIndex(_movementHandler.ShootIndex);
+                    _playerMotionController.IsShooting();
+                }
 
                 // Spawn projectile visual dựa trên raycast cục bộ (chỉ để visual, không deal damage)
                 if (weaponType == WeaponType.Rifle || weaponType == WeaponType.Sniper)
@@ -207,7 +294,8 @@ public class NShootHandler : NetworkBehaviour
                 }
                 else if (weaponType == WeaponType.Shotgun)
                 {
-                    SpawnLocalShotgunVisual(_aimForward);
+                    // cung cong thuc seed voi host (theo tick) -> pellet visual trung huong pellet that
+                    SpawnLocalShotgunVisual(_aimForward, ShotSeedFor(Runner.Tick.Raw));
                 }
             }
         }
@@ -246,11 +334,13 @@ public class NShootHandler : NetworkBehaviour
     // ── Render (chạy trên tất cả máy, mỗi frame) ───────────────────────────
     public override void Render()
     {
-        // Rifle / Shotgun — FireCount tăng cùng tick với SetLastShotInfo nên data luôn sẵn.
+        // Rifle / Shotgun — FireCount (va ShotSeed voi shotgun) tang cung tick nen data luon san.
         // FIX Bug #4: ping cao / snapshot thưa có thể khiến FireCount nhảy nhiều đơn vị
         // giữa 2 lần Render() liên tiếp. Trước đây chỉ so sánh != nên chỉ chạy OnFireDetected()
         // một lần dù FireCount tăng 3-4 → mất visual những phát ở giữa.
-        int fireDelta = _movementHandler.FireCount - _lastFireCount;
+        // FireCount la byte quay vong -> delta theo modulo 256, chan spam visual toi da 4.
+        int fireDelta = (byte)(_movementHandler.FireCount - _lastFireCount);
+        if (fireDelta > 4) fireDelta = 4;
         if (fireDelta > 0)
         {
             _lastFireCount = _movementHandler.FireCount;
@@ -273,8 +363,7 @@ public class NShootHandler : NetworkBehaviour
         }
 
         // Melee wall-hit visual — dùng counter riêng vì có delay giữa FireCount và hitbox check.
-        // Host ghi SetLastShotInfo trước rồi mới tăng _meleeHitCount trong cùng một tick,
-        // nên khi client detect thay đổi thì LastShotInfo đã có data đúng.
+        // Host tang _meleeHitCount khi trung tuong; may khac tu raycast de dung visual.
         if (_meleeHitCount != _lastMeleeHitCount)
         {
             _lastMeleeHitCount = _meleeHitCount;
@@ -308,27 +397,28 @@ public class NShootHandler : NetworkBehaviour
         if (!Object.HasStateAuthority)
             _playerMotionController.ActiveWeponCTRL()?.OnFireVisualOnly();
 
-        // SpawnProjectileVisual (điểm/effect trúng đạn) thì Host VẪN CẦN — FixedUpdateNetwork của
-        // Host chỉ raycast + ghi LastShotInfo (networked), không tự spawn visual cho chính mình.
-        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Rifle ||
-            _weaponManager.Weapon_Active()?.WeaponType == WeaponType.Sniper)
+        // SpawnProjectileVisual (điểm/effect trúng đạn):
+        //  - Host: dung cache ket qua raycast that (LagCompensation) cua tick ban.
+        //  - Proxy: tu raycast cuc bo theo huong suy tu TargetYaw + NetworkedPitch
+        //    (truoc day doc LastShotInfo ~228B/nguoi trong state). Sai lech chi o visual, damage do host tinh.
+        var activeType = _weaponManager.Weapon_Active()?.WeaponType;
+        if (activeType == WeaponType.Rifle || activeType == WeaponType.Sniper || activeType == WeaponType.Shotgun)
         {
-            var shotInfo = _movementHandler.LastShotInfo;
-            _playerMotionController
-                .ActiveWeponCTRL()
-                ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
-        }
-
-        if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Shotgun)
-        {
-            var shotInfo   = _movementHandler.LastShotInfo;
             var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
-            int count      = Mathf.Max(1, shotInfo.PelletCount);
-            for (int i = 0; i < count; i++)
-                weaponCtrl?.SpawnProjectileVisual(
-                    shotInfo.GetHitPosition(i),
-                    shotInfo.GetHitNormal(i),
-                    shotInfo.GetShowEffect(i));
+            if (Object.HasStateAuthority)
+            {
+                for (int i = 0; i < _hostShotCount; i++)
+                    weaponCtrl?.SpawnProjectileVisual(_hostShot[i].Pos, _hostShot[i].Normal, _hostShot[i].Effect);
+            }
+            else if (activeType == WeaponType.Shotgun)
+            {
+                SpawnLocalShotgunVisual(_movementHandler.DerivedAimForward, _movementHandler.ShotSeed);
+            }
+            else
+            {
+                var (hitPos, hitNormal, showEffect) = GetLocalRaycastVisual(_movementHandler.DerivedAimForward);
+                weaponCtrl?.SpawnProjectileVisual(hitPos, hitNormal, showEffect);
+            }
         }
 
         if (_weaponManager.Weapon_Active()?.WeaponType == WeaponType.Melee)
@@ -343,14 +433,24 @@ public class NShootHandler : NetworkBehaviour
 
     /// <summary>
     /// Gọi khi _meleeHitCount thay đổi — tức là Host vừa xác nhận có wall-hit visual cần spawn.
-    /// Chạy trên mọi client, data LastShotInfo đã được Host ghi trước đó trong cùng tick.
+    /// Chạy trên mọi client: host dung cache diem trung, may khac tu raycast.
     /// </summary>
     private void OnMeleeHitDetected()
     {
-        var shotInfo = _movementHandler.LastShotInfo;
-        _playerMotionController
-            .ActiveWeponCTRL()
-            ?.SpawnProjectileVisual(shotInfo.HitPosition, shotInfo.HitNormal, shotInfo.ShowEffect);
+        var weaponCtrl = _playerMotionController.ActiveWeponCTRL();
+        if (Object.HasStateAuthority)
+        {
+            weaponCtrl?.SpawnProjectileVisual(_hostMeleeWallHit.Pos, _hostMeleeWallHit.Normal, true);
+            return;
+        }
+        // May khac tu raycast tu camera theo huong ngam, tam Range + MeleeRadius.
+        Vector3 aim = Object.HasInputAuthority && _aimForward.sqrMagnitude > 0.0001f ? _aimForward : _movementHandler.DerivedAimForward;
+        float range  = weaponCtrl != null ? weaponCtrl.Data.Range : 1.5f;
+        float radius = weaponCtrl != null ? weaponCtrl.Data.MeleeRadius : 0.6f;
+        Vector3 origin = _componentManager.Camera.transform.position;
+        if (Physics.Raycast(origin, aim, out RaycastHit hit, range + radius, _hitMask) &&
+            hit.collider.GetComponentInParent<NHPHandler>() == null)
+            weaponCtrl?.SpawnProjectileVisual(hit.point, hit.normal, true);
     }
 
     // ── Client-side local raycast (visual only, không deal damage) ─────────
@@ -383,7 +483,7 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>
     /// Spawn visual cho tất cả pellet shotgun phía client ngay lập tức.
     /// </summary>
-    private void SpawnLocalShotgunVisual(Vector3 aimForward)
+    private void SpawnLocalShotgunVisual(Vector3 aimForward, ushort seed)
     {
         var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
         var weaponData  = weaponCtrl?.Data;
@@ -402,7 +502,7 @@ public class NShootHandler : NetworkBehaviour
 
         for (int i = 0; i < pellets; i++)
         {
-            Vector3 pelletDir = GetSpreadDirection(aimForward, spread);
+            Vector3 pelletDir = GetSpreadDirection(aimForward, spread, seed, i);
 
             if (Physics.Raycast(origin, pelletDir, out RaycastHit hit, maxDist, _hitMask))
             {
@@ -453,7 +553,7 @@ public class NShootHandler : NetworkBehaviour
     }
 
     // ── Shotgun: bắn N pellets trong hình nón spread ──────────────────────
-    private ShotInfo GetShotgunHitInfo(Vector3 aimForward)
+    private void GetShotgunHitInfo(Vector3 aimForward, ushort seed)
     {
         var weaponCtrl  = _playerMotionController.ActiveWeponCTRL();
         var weaponData  = weaponCtrl?.Data;
@@ -465,7 +565,7 @@ public class NShootHandler : NetworkBehaviour
         if (_movementHandler.StateFl.IsADS)
             spread *= 0.4f;
 
-        pellets = Mathf.Clamp(pellets, 1, 8); // tối đa 8 slot trong ShotInfo
+        pellets = Mathf.Clamp(pellets, 1, 8); // toi da 8 pellet (giu nhu cu)
 
         Vector3 origin = _componentManager.Camera.transform.position;
         if (_movementHandler.StateFl.IsADS && weaponCtrl != null)
@@ -473,12 +573,12 @@ public class NShootHandler : NetworkBehaviour
 
         var hitOptions = HitOptions.IncludePhysX | HitOptions.IgnoreInputAuthority;
 
-        ShotInfo result = new ShotInfo { PelletCount = pellets };
+        _hostShotCount = pellets;
 
         for (int i = 0; i < pellets; i++)
         {
-            // Tạo hướng lệch ngẫu nhiên trong hình nón
-            Vector3 pelletDir = GetSpreadDirection(aimForward, spread);
+            // Huong lech trong hinh non — TAT DINH theo seed (host, client predict, proxy ra cung huong)
+            Vector3 pelletDir = GetSpreadDirection(aimForward, spread, seed, i);
 
             if (Runner.LagCompensation != null &&
                 Runner.LagCompensation.Raycast(
@@ -488,7 +588,7 @@ public class NShootHandler : NetworkBehaviour
             {
                 bool showEffect = hit.Hitbox == null;
                 HandleHit(hit.Point, hit.Normal, hit.Hitbox?.transform);
-                result = result.SetPellet(i, hit.Point, hit.Normal, showEffect);
+                _hostShot[i] = new LocalShot { Pos = hit.Point, Normal = hit.Normal, Effect = showEffect };
 
                 if (hit.Hitbox != null)
                     Debug.DrawLine(origin, hit.Point, Color.red, 1f);
@@ -500,21 +600,20 @@ public class NShootHandler : NetworkBehaviour
                 // Miss — pellet bay hết tầm
                 Vector3 missPoint = origin + pelletDir * maxDist;
                 Debug.DrawLine(origin, missPoint, Color.cyan, 1f);
-                result = result.SetPellet(i, missPoint, -pelletDir, false);
+                _hostShot[i] = new LocalShot { Pos = missPoint, Normal = -pelletDir, Effect = false };
             }
         }
-
-        return result;
     }
 
     /// <summary>
     /// Trả về hướng ngẫu nhiên lệch khỏi forward trong hình nón spreadAngle độ.
     /// </summary>
-    private static Vector3 GetSpreadDirection(Vector3 forward, float spreadAngle)
+    private static Vector3 GetSpreadDirection(Vector3 forward, float spreadAngle, ushort seed, int pelletIndex)
     {
-        // Random điểm trên đĩa tròn (uniform distribution)
-        float angle  = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        float radius = UnityEngine.Random.Range(0f, 1f);   // sqrt để uniform trên đĩa
+        // Truoc day UnityEngine.Random -> moi may 1 huong pellet khac nhau.
+        // Nay dung hash tat dinh tu (seed, pellet) -> host, client predict va proxy cung ra 1 huong.
+        float angle  = Hash01(seed, pelletIndex * 2)     * 360f * Mathf.Deg2Rad;
+        float radius = Hash01(seed, pelletIndex * 2 + 1);   // sqrt để uniform trên đĩa
         radius = Mathf.Sqrt(radius);
 
         // Chuyển sang local space của forward
@@ -535,7 +634,7 @@ public class NShootHandler : NetworkBehaviour
     /// <summary>
     /// OverlapSphere → Dot product (lọc phía trước) → Raycast confirm (lọc xuyên tường).
     /// Chỉ chạy trên StateAuthority sau khi _meleeHitTimer expired.
-    /// Nếu trúng tường (showEffect = true): ghi SetLastShotInfo trước, tăng _meleeHitCount sau
+    /// Nếu trúng tường (showEffect = true): luu cache local cho host roi tăng _meleeHitCount
     /// để Render() trên mọi client nhận đúng data trong cùng snapshot.
     /// </summary>
     /// <summary>
@@ -563,14 +662,9 @@ public class NShootHandler : NetworkBehaviour
 
         bool anyPlayerHitThisTick = false;
 
-        // ShotInfo mặc định — showEffect = false, ghi đè ở cuối nếu cần
-        var shotInfo = new ShotInfo
-        {
-            HitPosition = origin + aimForward * (range + radius),
-            HitNormal   = -aimForward,
-            ShowEffect  = false,
-            PelletCount = 0
-        };
+        // Diem trung tuong (chi host giu de tu dung visual; may khac tu raycast)
+        Vector3 wallPos    = origin + aimForward * (range + radius);
+        Vector3 wallNormal = -aimForward;
 
         // ── Tầng 0: Raycast trung tâm ─────────────────────────────────────
         float centerRayDist = range + radius;
@@ -599,7 +693,6 @@ public class NShootHandler : NetworkBehaviour
                         _meleeAlreadyHitThisSwing.Add(centerHPHandler.Object.Id);
 
                     HandleHit(centerHit.Point, centerHit.Normal, centerHitbox);
-                    _movementHandler.SetLastShotInfo(shotInfo); // showEffect = false
                     RPC_ApplyAudio();
                     return true;
                 }
@@ -607,9 +700,9 @@ public class NShootHandler : NetworkBehaviour
             // Trúng tường — ghi nhận, chờ xem OverlapSphere có trúng player không
             else if (centerHit.Collider != null)
             {
-                centerHitWall        = true;
-                shotInfo.HitPosition = centerHit.Point;
-                shotInfo.HitNormal   = centerHit.Normal;
+                centerHitWall = true;
+                wallPos       = centerHit.Point;
+                wallNormal    = centerHit.Normal;
     #if UNITY_EDITOR
                 Debug.DrawLine(origin, centerHit.Point, Color.yellow, 1f);
     #endif
@@ -617,7 +710,9 @@ public class NShootHandler : NetworkBehaviour
         }
 
         // ── Tầng 1: OverlapSphere fallback ────────────────────────────────
-        var hits  = new List<LagCompensatedHit>();
+        // tai su dung list (truoc day new List moi tick trong window)
+        var hits  = _meleeHits;
+        hits.Clear();
         int count = Runner.LagCompensation.OverlapSphere(
             sphereCenter, radius,
             Object.InputAuthority,
@@ -672,10 +767,8 @@ public class NShootHandler : NetworkBehaviour
         if (centerHitWall && !anyPlayerHitThisTick &&
             _meleeAlreadyHitThisSwing.Count == 0 && !_meleeWallHitRegisteredThisSwing)
         {
-            shotInfo.ShowEffect = true;
             _meleeWallHitRegisteredThisSwing = true;
-            // Ghi data trước, trigger Render() sau — đảm bảo client đọc đúng LastShotInfo
-            _movementHandler.SetLastShotInfo(shotInfo);
+            _hostMeleeWallHit = new LocalShot { Pos = wallPos, Normal = wallNormal, Effect = true };
             _meleeHitCount++;
         }
 
@@ -759,7 +852,8 @@ public class NShootHandler : NetworkBehaviour
         var weaponIcon = ctrl?.Data.WeaponName;
 
         // OnTakeDamage sẽ invoke OnDamageDealt bên trong → _damageAccumulated update
-        bool isKill = HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), weaponIcon, Object.Id);
+        bool isKill = HPHandler.OnTakeDamage(damage, nPlayer.Nickname.ToString(), weaponIcon, Object.Id,
+            headshot: bodyParts.GetBodyParts() == BodyParts.Head);
 
         if (isKill)
         {
@@ -900,7 +994,8 @@ public class NShootHandler : NetworkBehaviour
     }
 
     // ── RPC ───────────────────────────────────────────────────────────────
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    // hit marker tan suat cao, mat 1 cai khong sao -> Unreliable (khong gui lai).
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority, Channel = RpcChannel.Unreliable)]
     private void RPC_ApplyAudio()
     {
         AudioManager.Instance.PlayClip(_hitSound, _playerData.TakeDamageClips, _playerData.Volume_TakeDamage, true, 0.5f, 1f);
@@ -945,7 +1040,9 @@ public class NShootHandler : NetworkBehaviour
     // ── Grenade ───────────────────────────────────────────────────────────
     public void ThrowGrenade()
     {
-        if (!Object.HasStateAuthority) return;
+        // Client người ném: không spawn được NetworkObject → hiện lựu đạn ảo ngay (bản mạng tới sau ~1 RTT sẽ nối tiếp).
+        bool localVisualOnly = !Object.HasStateAuthority && Object.HasInputAuthority;
+        if (!Object.HasStateAuthority && !localVisualOnly) return;
         var gm = GameManager.Instance;
         if (gm == null) return;
 
@@ -955,6 +1052,15 @@ public class NShootHandler : NetworkBehaviour
         {
             case 1: grenade = gm.GetGrenade(GrenadeQ.ToString()); break;
             case 2: grenade = gm.GetGrenade(GrenadeE.ToString()); break;
+        }
+
+        // null-check TRUOC khi doc GrenadeType (truoc day NRE),
+        // va van reset _grende_ID de khong ket trang thai nem.
+        if (grenade == null)
+        {
+            if (localVisualOnly) Debug.LogWarning($"[Grenade] Client ném nhưng không tìm thấy lựu đạn (slot={_grende_ID}, Q={GrenadeQ}, E={GrenadeE}).");
+            _grende_ID = 0;
+            return;
         }
 
         switch (grenade.GrenadeType)
@@ -967,15 +1073,20 @@ public class NShootHandler : NetworkBehaviour
                 throwPoint = _throwPointLeft.position;
                 break;
         }
-            
-        if (grenade == null) return;
 
-        Runner.Spawn(grenade, throwPoint + _aimForward, Quaternion.LookRotation(_aimForward),
+        Vector3 dir = _aimForward.sqrMagnitude > 0.0001f ? _aimForward : transform.forward;
+        if (localVisualOnly)
+        {
+            GrenadeLocalVisual.Spawn(Runner, grenade, throwPoint + dir, dir * _fore);
+            _grende_ID = 0;
+            return;
+        }
+        Runner.Spawn(grenade, throwPoint + dir, Quaternion.LookRotation(dir),
             Object.InputAuthority,
             (runner, spawnedGrenade) =>
             {
                 spawnedGrenade.GetComponent<GrenadeHandler>().Throw(
-                    _aimForward * _fore,
+                    dir * _fore,
                     Object.InputAuthority,
                     nPlayer.Nickname.ToString(),
                     _hitMask,
@@ -983,6 +1094,9 @@ public class NShootHandler : NetworkBehaviour
                     this);
             });
 
+        // Chỉ đánh dấu lựu đạn đã dùng khi thực sự ném (trước đây đánh dấu lúc thả phím,
+        // nên nếu animation ném không chạy thì lựu đạn bị mất).
+        _movementHandler.OnGrenadeThrown(_grende_ID);
         _grende_ID = 0;
     }
 
@@ -990,7 +1104,11 @@ public class NShootHandler : NetworkBehaviour
     void OnKillChange()
     {
         if (GameManager.Instance != null && Object.HasInputAuthority)
+        {
             GameManager.Instance.SetBestStreak();
+            // chuoi kill (am thanh + UI dominating/rampage...) chi tren may cua nguoi giet
+            LocalKillEvents.RaiseKill(GameManager.Instance.GetCurrentStreak());
+        }
     }
 
     void OnAssistChange()

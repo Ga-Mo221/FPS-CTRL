@@ -21,6 +21,8 @@ public class UIChatBox : MonoBehaviour
         
         _inputField.text = "";
         _messageText.text = "";
+        //gioi han o nhap de tin khong vuot payload RPC
+        _inputField.characterLimit = NInGameMessagesHandler.MAX_CHAT_CHARS;
     }
     
     public string GetMessage() => _inputField.text;
@@ -39,7 +41,9 @@ public class UIChatBox : MonoBehaviour
 
     public bool SendMessageVisible(bool visible)
     {
-        bool lastvisible = _messageParrent.activeSelf;
+        // Trả về trạng thái Ô NHẬP (đang gõ hay không). Trước đây trả về khung lịch sử chat,
+        // mà khung đó tự ẩn sau 5s → gõ lâu hơn 5s rồi Enter thì tin bị bỏ âm thầm.
+        bool lastvisible = _inputParrent.activeSelf;
         
         if (visible)
         {
@@ -61,6 +65,9 @@ public class UIChatBox : MonoBehaviour
     private IEnumerator HideMessageBox()
     {
         yield return new WaitForSeconds(5f);
+        // Đang gõ thì giữ khung lịch sử, chỉ ẩn sau khi đóng ô nhập.
+        while (_inputParrent.activeSelf)
+            yield return null;
         _messageParrent.SetActive(false);
         _hideMessageBox = null;
     }

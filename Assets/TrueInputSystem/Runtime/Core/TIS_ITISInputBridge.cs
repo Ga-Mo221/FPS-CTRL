@@ -129,7 +129,12 @@ namespace GaMo.TrueInputSystem
         TISCameraSettings  TISCameraSettings  { get; }
         TISMobileSettings  TISMobileSettings  { get; }
         TISGamepadSettings TISGamepadSettings { get; }
-        
+
+        // ── Motion (Gyro + Touchpad) ──────────────────────────
+
+        /// <summary>Gyro + touchpad của tay cầm. Gyro đã được cộng sẵn vào <see cref="LookDelta"/>.</summary>
+        TISMotionSystem Motion { get; }
+
         // ── Active Device ─────────────────────────────────────
 
         /// <summary>

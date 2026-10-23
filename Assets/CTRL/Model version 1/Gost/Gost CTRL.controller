@@ -722,6 +722,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -749,6 +756,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-8162588258254583439
 AnimatorStateTransition:
@@ -1376,6 +1399,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -1403,6 +1433,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-7309033196598467007
 AnimatorStateTransition:
@@ -1469,6 +1515,79 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-7083501493041781360
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 1
+    triggerSeconds: 0
+    normalizedValue: 0
+    fireOnce: 0
+    payloadType: 1
+    intValue: 0
+    floatValue: 0
+    stringValue: 
+    boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -3320536544164392462}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioPlay
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
+  showDebugLog: 1
 --- !u!1101 &-7079020008986571798
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -1517,6 +1636,34 @@ AnimatorStateTransition:
   m_TransitionDuration: 0.25
   m_TransitionOffset: 0
   m_ExitTime: 0.75
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
+--- !u!1101 &-6918972312805107687
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsJumping
+    m_EventTreshold: 0
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsCrouching
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 3633635209256788389}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.1
+  m_TransitionOffset: 0
+  m_ExitTime: 0.7312287
   m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
@@ -2315,7 +2462,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0
   m_TransitionOffset: 0
   m_ExitTime: 1
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
@@ -2766,6 +2913,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -2793,6 +2947,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1107 &-5321790692834704703
 AnimatorStateMachine:
@@ -2963,6 +3133,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -2990,6 +3167,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-5046816391741084784
 AnimatorStateTransition:
@@ -3188,6 +3381,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -3215,6 +3415,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-4416732755089952412
 AnimatorStateTransition:
@@ -3647,6 +3863,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -3674,6 +3897,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!114 &-3721157474470415454
 MonoBehaviour:
@@ -3920,106 +4159,6 @@ AnimatorStateMachine:
   m_ExitPosition: {x: 50, y: 70, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -695547627990340704}
---- !u!114 &-3445947026383655148
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
-  motionEvents:
-  - mode: 1
-    triggerSeconds: 0
-    normalizedValue: 0
-    fireOnce: 0
-    payloadType: 0
-    intValue: 0
-    floatValue: 0
-    stringValue: 
-    boolValue: 0
-    onTriggered:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: -3721157474470415454}
-          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
-          m_MethodName: RessetCanAttackMelee
-          m_Mode: 0
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
-    onTriggeredInt:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredFloat:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredString:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredBool:
-      m_PersistentCalls:
-        m_Calls: []
-  showDebugLog: 0
---- !u!114 &-3441223166629101727
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
-  motionEvents:
-  - mode: 1
-    triggerSeconds: 0
-    normalizedValue: 1
-    fireOnce: 0
-    payloadType: 0
-    intValue: 0
-    floatValue: 0
-    stringValue: 
-    boolValue: 0
-    onTriggered:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 4644926762914862677}
-          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
-          m_MethodName: RessetCanAttackMelee
-          m_Mode: 0
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
-    onTriggeredInt:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredFloat:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredString:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredBool:
-      m_PersistentCalls:
-        m_Calls: []
-  showDebugLog: 0
 --- !u!1101 &-3427660414420827713
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -4121,6 +4260,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &-3320536544164392462
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!114 &-3314596676655467428
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4143,6 +4294,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -4170,6 +4328,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-3303131507355171124
 AnimatorStateTransition:
@@ -4339,6 +4513,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -4366,6 +4547,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 0.8
@@ -4375,6 +4572,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -4402,42 +4606,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
-  - mode: 1
-    triggerSeconds: 0
-    normalizedValue: 1
-    fireOnce: 1
-    payloadType: 0
-    intValue: 0
-    floatValue: 0
-    stringValue: 
-    boolValue: 0
-    onTriggered:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 2357048685204379477}
-          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
-          m_MethodName: RessetCanAttackMelee
-          m_Mode: 0
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
-    onTriggeredInt:
+    onTriggeredVector2:
       m_PersistentCalls:
         m_Calls: []
-    onTriggeredFloat:
+    onTriggeredVector3:
       m_PersistentCalls:
         m_Calls: []
-    onTriggeredString:
+    onTriggeredVector4:
       m_PersistentCalls:
         m_Calls: []
-    onTriggeredBool:
+    onTriggeredColor:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1102 &-3211953936652039048
 AnimatorState:
@@ -4457,7 +4641,6 @@ AnimatorState:
   - {fileID: -8309419364610326681}
   m_StateMachineBehaviours:
   - {fileID: 4644926762914862677}
-  - {fileID: -3441223166629101727}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -4958,6 +5141,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -4985,6 +5175,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-2583685085183449198
 AnimatorStateTransition:
@@ -5244,6 +5450,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -5271,6 +5484,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 0.78
@@ -5280,6 +5509,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -5307,6 +5543,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-1979786959665058897
 AnimatorStateTransition:
@@ -5500,6 +5752,46 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MotionCall
+--- !u!114 &-1734698915585787093
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
+--- !u!1101 &-1734241653229760353
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsJumping
+    m_EventTreshold: 0
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsCrouching
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 3633635209256788389}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.1
+  m_TransitionOffset: 0
+  m_ExitTime: 0.9
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
 --- !u!1101 &-1731676223038944102
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -5805,8 +6097,12 @@ AnimatorState:
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
+  - {fileID: -1734241653229760353}
+  - {fileID: 7212735239744602558}
   - {fileID: 7055175642542704242}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -3320536544164392462}
+  - {fileID: -7083501493041781360}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -5896,6 +6192,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: IsShooting
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls: []
@@ -5923,6 +6226,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-1089256937610927465
 AnimatorStateTransition:
@@ -6050,6 +6369,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -6077,6 +6403,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 0.78
@@ -6086,6 +6428,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -6113,6 +6462,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-916935273903139108
 AnimatorStateTransition:
@@ -6582,7 +6947,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MotionTimeEventBehaviour
   motionEvents:
-  - mode: 0
+  - mode: 1
     triggerSeconds: 0
     normalizedValue: 0
     fireOnce: 1
@@ -6591,6 +6956,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -6618,6 +6990,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &-221555562030770780
 AnimatorStateTransition:
@@ -6688,6 +7076,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -6715,6 +7110,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1102 &-95856610415758701
 AnimatorState:
@@ -6798,56 +7209,6 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
---- !u!114 &-58439662898894482
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
-  motionEvents:
-  - mode: 1
-    triggerSeconds: 0
-    normalizedValue: 0
-    fireOnce: 1
-    payloadType: 3
-    intValue: 0
-    floatValue: 0
-    stringValue: IsShooting
-    boolValue: 0
-    onTriggered:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredInt:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredFloat:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredString:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 3761522772108117363}
-          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
-          m_MethodName: RessetTrigger
-          m_Mode: 0
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
-    onTriggeredBool:
-      m_PersistentCalls:
-        m_Calls: []
-  showDebugLog: 0
 --- !u!1102 &-55291963151147206
 AnimatorState:
   serializedVersion: 6
@@ -7061,7 +7422,6 @@ AnimatorState:
   - {fileID: 502766093369337547}
   m_StateMachineBehaviours:
   - {fileID: 7767853268762238496}
-  - {fileID: 6598104840774307031}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -7364,13 +7724,20 @@ MonoBehaviour:
   motionEvents:
   - mode: 1
     triggerSeconds: 0.1667
-    normalizedValue: 0.3077
+    normalizedValue: 0.151
     fireOnce: 1
     payloadType: 0
     intValue: 0
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -7398,6 +7765,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &575264532392797383
 AnimatorStateTransition:
@@ -7544,6 +7927,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -7571,6 +7961,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &687850562176131144
 AnimatorStateTransition:
@@ -7958,6 +8364,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -7985,6 +8398,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &1110440613857151600
 AnimatorStateTransition:
@@ -8106,6 +8535,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -8133,6 +8569,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &1568973931350298410
 AnimatorStateTransition:
@@ -8174,6 +8626,34 @@ AnimatorStateTransition:
   m_TransitionOffset: 0
   m_ExitTime: 0.9
   m_HasExitTime: 1
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
+--- !u!1101 &1594901442186580271
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsJumping
+    m_EventTreshold: 0
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsCrouching
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 3633635209256788389}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.1
+  m_TransitionOffset: 0
+  m_ExitTime: 0.75
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
@@ -8375,6 +8855,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -8402,6 +8889,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &2135018083466022359
 AnimatorStateTransition:
@@ -8475,6 +8978,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -8502,6 +9012,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1102 &2185619668152065158
 AnimatorState:
@@ -9189,6 +9715,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -9216,6 +9749,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &3166905670331544357
 AnimatorStateTransition:
@@ -9292,6 +9841,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -9319,6 +9875,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1102 &3357086402446452695
 AnimatorState:
@@ -9510,6 +10082,7 @@ AnimatorState:
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
+  - {fileID: -6918972312805107687}
   - {fileID: -1619793494941217600}
   - {fileID: -7729089178460263345}
   - {fileID: 3193321842776361304}
@@ -9575,6 +10148,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -9602,6 +10182,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1102 &3476991432736089619
 AnimatorState:
@@ -9796,7 +10392,9 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: 2887073094378252939}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -1734698915585787093}
+  - {fileID: 5870293309348793179}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 0
@@ -9827,7 +10425,6 @@ AnimatorState:
   - {fileID: 551046748710177772}
   m_StateMachineBehaviours:
   - {fileID: -3721157474470415454}
-  - {fileID: -3445947026383655148}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -9901,6 +10498,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -9928,19 +10532,23 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
---- !u!114 &3761522772108117363
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a75c7b7af9b226c4a8343b1f6d8f413d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MotionCall
 --- !u!1102 &3782479451185550227
 AnimatorState:
   serializedVersion: 6
@@ -9995,6 +10603,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -10022,6 +10637,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &3902081587274435543
 AnimatorStateTransition:
@@ -10114,6 +10745,34 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!1101 &4215598632183184296
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsJumping
+    m_EventTreshold: 0
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsCrouching
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: 3633635209256788389}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.1
+  m_TransitionOffset: 0
+  m_ExitTime: 0.75
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
 --- !u!1101 &4370216917174559310
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -10516,9 +11175,7 @@ AnimatorState:
   - {fileID: -6508264729865576636}
   - {fileID: 2892392898823472949}
   - {fileID: 6887305208411167911}
-  m_StateMachineBehaviours:
-  - {fileID: 3761522772108117363}
-  - {fileID: -58439662898894482}
+  m_StateMachineBehaviours: []
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -10580,6 +11237,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -10607,6 +11271,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &5017447954556976739
 AnimatorStateTransition:
@@ -10898,6 +11578,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -10925,6 +11612,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 0.51
@@ -10934,6 +11637,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -10961,6 +11671,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 1
@@ -10970,6 +11696,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -10997,6 +11730,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &5532849861975978913
 AnimatorStateTransition:
@@ -11271,11 +12020,84 @@ AnimatorStateTransition:
   m_TransitionDuration: 0
   m_TransitionOffset: 0
   m_ExitTime: 1
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &5870293309348793179
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
+  motionEvents:
+  - mode: 0
+    triggerSeconds: 0
+    normalizedValue: 0
+    fireOnce: 0
+    payloadType: 1
+    intValue: 1
+    floatValue: 0
+    stringValue: 
+    boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
+    onTriggered:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredInt:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -1734698915585787093}
+          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
+          m_MethodName: AudioPlay
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    onTriggeredFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredString:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredBool:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
+  showDebugLog: 0
 --- !u!1101 &5890395443103712426
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -11477,6 +12299,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -11504,6 +12333,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 0.59
@@ -11513,6 +12358,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -11540,6 +12392,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   - mode: 1
     triggerSeconds: 0
     normalizedValue: 1
@@ -11549,6 +12417,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -11576,6 +12451,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &6301083631214091848
 AnimatorStateTransition:
@@ -11817,56 +12708,6 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
---- !u!114 &6598104840774307031
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88b352bb6367b2e498cf6cb2dcd6e073, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.MotionTimeEventBehaviour
-  motionEvents:
-  - mode: 1
-    triggerSeconds: 0
-    normalizedValue: 1
-    fireOnce: 0
-    payloadType: 0
-    intValue: 0
-    floatValue: 0
-    stringValue: 
-    boolValue: 0
-    onTriggered:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 7767853268762238496}
-          m_TargetAssemblyTypeName: MotionCall, Assembly-CSharp
-          m_MethodName: RessetCanAttackMelee
-          m_Mode: 0
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
-    onTriggeredInt:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredFloat:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredString:
-      m_PersistentCalls:
-        m_Calls: []
-    onTriggeredBool:
-      m_PersistentCalls:
-        m_Calls: []
-  showDebugLog: 0
 --- !u!1102 &6675351391601474196
 AnimatorState:
   serializedVersion: 6
@@ -12080,7 +12921,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0
   m_TransitionOffset: 0
   m_ExitTime: 1
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
@@ -12185,7 +13026,7 @@ AnimatorStateTransition:
   m_ExitTime: 1
   m_HasExitTime: 1
   m_HasFixedDuration: 1
-  m_InterruptionSource: 0
+  m_InterruptionSource: 3
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
 --- !u!1101 &7103462199494953369
@@ -12316,6 +13157,13 @@ MonoBehaviour:
     floatValue: 0
     stringValue: 
     boolValue: 0
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 1, g: 1, b: 1, a: 1}
+    enumName: 
+    enumValue: 0
+    objectValue: {fileID: 0}
     onTriggered:
       m_PersistentCalls:
         m_Calls:
@@ -12343,6 +13191,22 @@ MonoBehaviour:
     onTriggeredBool:
       m_PersistentCalls:
         m_Calls: []
+    onTriggeredVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredVector4:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredColor:
+      m_PersistentCalls:
+        m_Calls: []
+    onTriggeredTyped:
+      target: {fileID: 0}
+      methodName: 
+      parameterType: 
   showDebugLog: 0
 --- !u!1101 &7163330642240407178
 AnimatorStateTransition:
@@ -12367,6 +13231,31 @@ AnimatorStateTransition:
   m_TransitionDuration: 0.25
   m_TransitionOffset: 0
   m_ExitTime: 0.75
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
+--- !u!1101 &7212735239744602558
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsGrouded
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: -1959958523323941489}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.25
+  m_TransitionOffset: 0
+  m_ExitTime: 0.9
   m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
@@ -12538,6 +13427,31 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!1101 &7447543459869938314
+AnimatorStateTransition:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_Conditions:
+  - m_ConditionMode: 2
+    m_ConditionEvent: IsGrouded
+    m_EventTreshold: 0
+  m_DstStateMachine: {fileID: 0}
+  m_DstState: {fileID: -1959958523323941489}
+  m_Solo: 0
+  m_Mute: 0
+  m_IsExit: 0
+  serializedVersion: 3
+  m_TransitionDuration: 0.25
+  m_TransitionOffset: 0
+  m_ExitTime: 0.75
+  m_HasExitTime: 0
+  m_HasFixedDuration: 1
+  m_InterruptionSource: 0
+  m_OrderedInterruption: 1
+  m_CanTransitionToSelf: 1
 --- !u!1101 &7518323193136191434
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -12583,7 +13497,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0
   m_TransitionOffset: 0
   m_ExitTime: 1
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1

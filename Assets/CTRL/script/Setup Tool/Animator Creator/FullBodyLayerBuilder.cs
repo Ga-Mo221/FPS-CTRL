@@ -188,6 +188,14 @@ public class FullBodyLayerBuilder : LayerBuilder
         }
         AddBoolTrans(nullState, jumpAir, "IsGrouded", false, 0f);
 
+        // Nhảy chủ động → JUMP UP. Đặt TRƯỚC Stand → JUMP AIR để khi trigger và
+        // IsGrouded=false cùng frame thì ưu tiên JUMP UP; JUMP AIR chỉ còn cho rơi khỏi mép.
+        {
+            var t = standState.AddTransition(jumpUp);
+            SetTrans(t, 0.1f, false);
+            t.AddCondition(AnimatorConditionMode.If,    0, "IsJumping");
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsCrouching");
+        }
         {
             var t = standState.AddTransition(crouchState);
             SetTrans(t, 0.25f, false);
@@ -237,7 +245,22 @@ public class FullBodyLayerBuilder : LayerBuilder
         }
 
         AddExitTrans(jumpPlan,  standState,  0.75f, 0.25f);
-        AddExitTrans(slideIn,   sliding,     1f,    0.25f);
+        // Nhảy ngay trong lúc SLIDE IN (trước đây chỉ có exit time → trigger bị mất,
+        // nhân vật bay lên mà vẫn chạy anim trượt).
+        {
+            var t = slideIn.AddTransition(jumpUp);
+            SetTrans(t, 0.1f, false);
+            t.AddCondition(AnimatorConditionMode.If,    0, "IsJumping");
+            t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsCrouching");
+        }
+        AddBoolTrans(slideIn, jumpAir, "IsGrouded", false, 0.25f);
+        {
+            var t = slideIn.AddTransition(sliding);
+            SetTrans(t, 0.25f, true, 1f);
+            // Cho phép transition của SLIDE IN rồi SLIDING ngắt blend 0.25s này
+            // (nếu không, nhảy đúng lúc đang blend sẽ bị bỏ qua).
+            t.interruptionSource = TransitionInterruptionSource.SourceThenDestination;
+        }
         //AddBoolTrans(sliding,   slideOut,    "IsSliding",  false, 0.25f);
         //AddTriggerTrans(sliding, jumpUp,     "IsJumping",  0.25f);
         AddBoolTrans(sliding,   jumpAir,     "IsGrouded",  false, 0.25f);
