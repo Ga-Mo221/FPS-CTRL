@@ -117,10 +117,12 @@ namespace Game.UI
             // [Aemy 2026-10-17] Doi trang bi / skin la cap nhat 3 balo vao GameManager NGAY (khong doi bam LUU / Vao tran).
             Game.UI.LoadoutDraftStore.Changed += OnLoadoutDraftChanged;
             Game.Skins.WeaponSkinService.Changed += OnSkinsChanged;
+            NetworkRunnerHandler.StartGameFailed += OnStartGameFailed; // CreateGame (ghep PlayFab / solo / to doi) that bai
         }
 
         private void OnDestroy()
         {
+            NetworkRunnerHandler.StartGameFailed -= OnStartGameFailed;
             if (_play != null)
             {
                 _play.ModeSelected -= OnModeSelected;
@@ -167,9 +169,8 @@ namespace Game.UI
 
         private void Start()
         {
-            // [CURSOR 2026-09-28 Aemy] Ve menu -> luon hien chuot (tranh mat con tro sau tran).
-            UnityEngine.Cursor.lockState = UnityEngine.CursorLockMode.None;
-            UnityEngine.Cursor.visible = true;
+            // [CURSOR 2026-09-28 Aemy] Ve menu -> luon hien chuot (tranh mat con tro sau tran), giu trong cua so game.
+            GameManager.ApplyCursor(true);
             RefreshProfile();
             RefreshCoins();
             RefreshWeapons();
@@ -592,7 +593,9 @@ namespace Game.UI
                 if (ok) return;
                 Game.UI.CustomRoomSession.Clear();
                 if (_play != null) _play.SetStartInteractable(true);
-                if (_customRoom != null) _customRoom.SetStatus("Không tạo được phòng (" + why + "). Thử lại?");
+                if (_customRoom != null)
+                    _customRoom.SetStatus(NetworkRunnerHandler.IsServerFull(why) ? NetworkRunnerHandler.DescribeFailure(why)
+                                                                               : "Không tạo được phòng (" + why + "). Thử lại?");
             });
         }
 
@@ -616,9 +619,14 @@ namespace Game.UI
             ho.HandOffCustom(code, Game.UI.CustomRoomSession.RuleOf(code), false, (ok, why) =>
             {
                 if (ok) return;
-                if (retriesLeft > 0 && this != null) { StartCoroutine(RetryJoinCustom(code, retriesLeft - 1)); return; }
+                bool serverFull = NetworkRunnerHandler.IsServerFull(why);
+                bool roomFull = why == nameof(Fusion.ShutdownReason.GameIsFull);
+                if (!serverFull && !roomFull && retriesLeft > 0 && this != null) { StartCoroutine(RetryJoinCustom(code, retriesLeft - 1)); return; }
                 Game.UI.CustomRoomSession.Clear();
-                if (_customRoom != null) _customRoom.SetStatus("Không tìm thấy phòng " + code + ". Kiểm tra mã hoặc chờ chủ phòng tạo phòng.");
+                if (serverFull) { AbortMatchEntry(why); if (_customRoom != null) _customRoom.SetStatus(NetworkRunnerHandler.DescribeFailure(why)); return; }
+                if (_customRoom != null)
+                    _customRoom.SetStatus(roomFull ? "Phòng " + code + " đã đầy."
+                                                   : "Không tìm thấy phòng " + code + ". Kiểm tra mã hoặc chờ chủ phòng tạo phòng.");
             });
         }
         private IEnumerator RetryJoinCustom(string code, int retriesLeft)
@@ -809,7 +817,7 @@ namespace Game.UI
                     var ho = BackendBootstrap.MatchHandoff as Backend.Handoff.FusionMatchHandoff;
                     if (ho == null) return;
                     Game.UI.CustomRoomSession.Begin(code, kill, minutes, isLeader);
-                    if (isLeader) ho.HandOffCustom(code, mode, true, (ok, why) => { if (!ok) Debug.LogWarning("[Party] Tao phong tuy chinh loi: " + why); });
+                    if (isLeader) ho.HandOffCustom(code, mode, true, (ok, why) => { if (!ok) { Debug.LogWarning("[Party] Tao phong tuy chinh loi: " + why); AbortMatchEntry(why); } });
                     else _partyHandoffCo = StartCoroutine(RetryJoinCustom(code, 6));
                 });
                 return;
@@ -1060,7 +1068,45 @@ namespace Game.UI
         {
             var nrh = GameManager.Instance != null ? GameManager.Instance.NetworkRunnerHandler : null;
             if (nrh == null) { onDone(null); return; }
-            nrh.QuerySessions(Backend.Handoff.FusionMatchHandoff.LobbyNameFor(mode), 3f, list => onDone(PickJoinable(list, mode, anyMap)));
+            nrh.QuerySessions(Backend.Handoff.FusionMatchHandoff.LobbyNameFor(mode), 3f, list =>
+            {
+                // Het CCU Photon: tao ve PlayFab cung vo ich (vao tran se bi tu choi) -> dung luon, bao nguoi choi.
+                var fail = nrh.LastLobbyFailReason;
+                if (fail.HasValue && NetworkRunnerHandler.IsServerFull(fail.Value.ToString()))
+                {
+                    if (_searching) AbortMatchEntry(fail.Value.ToString());
+                    return;
+                }
+                onDone(PickJoinable(list, mode, anyMap));
+            });
+        }
+
+        // ===================== LOI VAO TRAN (het CCU Photon, phong day, mat ket noi...) =====================
+        private void OnStartGameFailed(Fusion.ShutdownReason reason) => AbortMatchEntry(reason.ToString());
+
+        /// <summary>
+        /// Vao tran that bai o bat ky buoc nao -> dung toan bo tim tran (ve PlayFab, theo doi lobby, dem nguoc),
+        /// dong man ghep tran, bo man den va bao ly do cho nguoi choi.
+        /// </summary>
+        private void AbortMatchEntry(string why)
+        {
+            Debug.LogWarning("[MenuShellBinder] Khong vao duoc tran: " + why);
+            _searching = false;
+            _joiningExisting = false;
+            StopBackfillWatch();
+            StopSearchTimer();
+            var mm = BackendBootstrap.MatchmakingService;
+            if (mm != null && mm.IsSearching) mm.CancelMatchmaking(null);
+            if (_lobbyCo != null) { StopCoroutine(_lobbyCo); _lobbyCo = null; }
+            if (_partyHandoffCo != null) { StopCoroutine(_partyHandoffCo); _partyHandoffCo = null; }
+            _partyLobbyPending = false;
+            if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);
+            if (SceneFader.Instance != null) SceneFader.Instance.FadeIn();
+
+            string msg = NetworkRunnerHandler.DescribeFailure(why);
+            if (_play != null) _play.SetQueueStatus(msg);
+            RefreshStartButton();
+            if (ModalDialog.Instance != null) ModalDialog.Instance.Info("Không vào được trận", msg);
         }
 
         private static Fusion.SessionInfo PickJoinable(List<Fusion.SessionInfo> list, MatchMode mode, bool anyMap)
@@ -1140,6 +1186,7 @@ namespace Game.UI
             {
                 _joiningExisting = false;
                 if (ok) { _searching = false; return; }
+                if (NetworkRunnerHandler.IsServerFull(why)) { AbortMatchEntry(why); return; } // het CCU: tim PlayFab cung khong vao duoc
                 // Phong vua day/dong -> quay lai tim tran binh thuong
                 Debug.LogWarning("[MenuShellBinder] Vao tran dang dien ra that bai (" + why + ") -> tim tran PlayFab.");
                 if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);

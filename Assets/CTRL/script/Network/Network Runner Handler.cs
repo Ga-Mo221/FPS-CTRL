@@ -84,7 +84,7 @@ public class NetworkRunnerHandler : MonoBehaviour
         return sceneManager;
     }
 
-    protected virtual Task InitializeNetworkRunner
+    protected virtual Task<StartGameResult> InitializeNetworkRunner
     (
         NetworkRunner runner,
         GameMode gameMode,
@@ -333,17 +333,69 @@ public class NetworkRunnerHandler : MonoBehaviour
         int buildIndex = SceneUtility.GetBuildIndexByScenePath(SceneName.GetPath(sceneName));
         SceneRef sceneRef = SceneRef.FromIndex(buildIndex);
         
-        var clientTask = InitializeNetworkRunner
-        (
-            GetNetworkRunner(),
-            GameMode.AutoHostOrClient,
-            sessionName,
-            lobbyName,
-            GameManager.Instance.BuildConnectionToken(),
-            NetAddress.Any(),
-            sceneRef,
-            BuildSessionProps(buildIndex) // de nguoi khac tim + vao tran dang dien ra
-        );
+        var clientTask = CreateGameAsync(sessionName, lobbyName, sceneRef, buildIndex);
+    }
+
+    private async Task CreateGameAsync(string sessionName, string lobbyName, SceneRef sceneRef, int buildIndex)
+    {
+        StartGameResult res;
+        try
+        {
+            res = await InitializeNetworkRunner
+            (
+                GetNetworkRunner(),
+                GameMode.AutoHostOrClient,
+                sessionName,
+                lobbyName,
+                GameManager.Instance.BuildConnectionToken(),
+                NetAddress.Any(),
+                sceneRef,
+                BuildSessionProps(buildIndex) // de nguoi khac tim + vao tran dang dien ra
+            );
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[NetworkRunnerHandler] CreateGame loi: " + ex.Message);
+            SpawnNetworkRunner = null;
+            StartGameFailed?.Invoke(ShutdownReason.Error);
+            return;
+        }
+        if (res.Ok) return;
+        Debug.LogWarning($"[NetworkRunnerHandler] CreateGame that bai: {res.ShutdownReason}");
+        SpawnNetworkRunner = null;
+        StartGameFailed?.Invoke(res.ShutdownReason);
+    }
+
+    // ===================== LOI KET NOI =====================
+    /// <summary>CreateGame (ghep tran PlayFab / solo) that bai -> menu dua nguoi choi ve va bao ly do.</summary>
+    public static event Action<ShutdownReason> StartGameFailed;
+
+    /// <summary>Ly do lan vao lobby Fusion gan nhat that bai (null = thanh cong / chua thu).</summary>
+    public ShutdownReason? LastLobbyFailReason { get; private set; }
+
+    /// <summary>Het CCU cua goi Photon: moi buoc ket noi tiep deu se bi tu choi -> dung tim tran, khong thu lai.</summary>
+    public static bool IsServerFull(string reason) => reason == nameof(ShutdownReason.MaxCcuReached);
+
+    /// <summary>Cau bao loi cho nguoi choi theo ShutdownReason (tieng Viet, LocTable dich khi chon English).</summary>
+    public static string DescribeFailure(string reason)
+    {
+        switch (reason)
+        {
+            case nameof(ShutdownReason.MaxCcuReached):
+                return "Máy chủ đang quá tải (đã đủ số người chơi trực tuyến). Vui lòng thử lại sau ít phút.";
+            case nameof(ShutdownReason.GameIsFull):
+                return "Phòng đã đầy.";
+            case nameof(ShutdownReason.GameNotFound):
+            case nameof(ShutdownReason.GameClosed):
+                return "Phòng không còn tồn tại.";
+            case nameof(ShutdownReason.PhotonCloudTimeout):
+            case nameof(ShutdownReason.ConnectionTimeout):
+            case nameof(ShutdownReason.ConnectionRefused):
+            case nameof(ShutdownReason.OperationTimeout):
+                return "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
+            default:
+                return "Không vào được trận. Vui lòng thử lại.";
+        }
     }
 
     // ===================== VAO TRAN DANG DIEN RA =====================
@@ -400,12 +452,20 @@ public class NetworkRunnerHandler : MonoBehaviour
         if (inLobby) { if (onList != null) onList(new List<SessionInfo>(LastSessionList)); yield break; }
         if (runner.IsRunning) { if (onList != null) onList(new List<SessionInfo>()); yield break; } // dang trong phong -> khong hoi
         LastSessionList = null;
+        LastLobbyFailReason = null;
         _lobbyJoined = lobbyName;
         var join = runner.JoinSessionLobby(SessionLobby.Custom, lobbyName);
         float t = 0f;
         while (LastSessionList == null && t < timeoutSeconds)
         {
-            if (join.IsCompleted && (join.IsFaulted || join.IsCanceled || !join.Result.Ok)) break;
+            if (join.IsCompleted && (join.IsFaulted || join.IsCanceled || !join.Result.Ok))
+            {
+                LastLobbyFailReason = join.IsFaulted || join.IsCanceled ? ShutdownReason.Error : join.Result.ShutdownReason;
+                Debug.LogWarning($"[NetworkRunnerHandler] Vao lobby [{lobbyName}] that bai: {LastLobbyFailReason}");
+                _lobbyJoined = null;
+                SpawnNetworkRunner = null; // runner loi da shutdown -> lan sau tao moi
+                break;
+            }
             t += Time.unscaledDeltaTime;
             yield return null;
         }

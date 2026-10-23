@@ -331,13 +331,29 @@ public class GameManager : MonoBehaviour
             bool visible = false;
             if (_onUIOption || _onUILoadout) visible = true;
 
-            Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = visible;
+            ApplyCursor(visible);
         }else
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            ApplyCursor(true);
         }
+    }
+
+    // ── Con trỏ chuột ────────────────────────────────────────────────────────
+    // Đang chơi: khóa giữa màn hình + ẩn. Menu / Pause / chọn trang bị: hiện nhưng GIỮ TRONG cửa sổ game (Confined)
+    // → không trượt sang màn hình khác / bấm nhầm ra ngoài làm mất focus.
+    private static bool _cursorVisible = true;
+
+    public static void ApplyCursor(bool visible)
+    {
+        _cursorVisible = visible;
+        Cursor.lockState = visible ? CursorLockMode.Confined : CursorLockMode.Locked;
+        Cursor.visible = visible;
+    }
+
+    // Alt-Tab / bấm ra ngoài rồi quay lại: Windows có thể bỏ khóa/giới hạn con trỏ → áp lại trạng thái cuối.
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (hasFocus) ApplyCursor(_cursorVisible);
     }
 
     public void NewGame()

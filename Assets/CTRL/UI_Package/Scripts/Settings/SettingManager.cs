@@ -34,6 +34,7 @@ public class SettingManager : MonoBehaviour
 
     [Header("Audio (tuy chon)")]
     [SerializeField] private UnityEngine.Audio.AudioMixer _mixer;
+    public UnityEngine.Audio.AudioMixer Mixer => _mixer;
     [SerializeField] private string _musicParam = "MusicVolume";
     [SerializeField] private string _sfxParam = "SfxVolume";
     [SerializeField] private string _masterParam = "MasterVolume"; //  Master qua mixer cho dong bo
@@ -72,11 +73,19 @@ public class SettingManager : MonoBehaviour
         SceneManager.sceneLoaded += OnSceneLoaded;   // tu hook Global Volume moi khi vao scene
     }
 
+    // AudioMixer.SetFloat goi trong Awake bi Unity bo qua (mixer chua khoi tao xong) -> am luong luu trong Cai dat
+    // khong co hieu luc khi mo game. Ap lai o Start (va moi lan vao scene moi cho chac).
+    private void Start()
+    {
+        if (_settingData != null) ApplyAudio();
+    }
+
     //  Khi load scene moi, tu tim Global Volume trong scene do va hook post-processing.
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         var v = FindFirstObjectByType<Volume>();
         if (v != null && v != _postVolume) SetPostVolume(v);
+        if (_settingData != null) ApplyAudio();
     }
 
     private void OnDestroy()   //  go event + clear Instance khi bi destroy (vd duplicate)
@@ -273,7 +282,7 @@ public class SettingManager : MonoBehaviour
         switch (cat)
         {
             case "audio":
-                _settingData.MasterVolume = d.MasterVolume; _settingData.SfxVolume = d.SfxVolume; _settingData.MusicVolume = d.MusicVolume; _settingData.Surround3D = d.Surround3D; break;
+                _settingData.MasterVolume = d.MasterVolume; _settingData.SfxVolume = d.SfxVolume; _settingData.MusicVolume = d.MusicVolume; _settingData.Surround3D = d.Surround3D; _settingData.VoiceMic = d.VoiceMic; _settingData.VoiceHear = d.VoiceHear; _settingData.VoicePushToTalk = d.VoicePushToTalk; _settingData.VoiceVolume = d.VoiceVolume; _settingData.VoiceMicDevice = d.VoiceMicDevice; break;
             case "mouse":
                 _settingData.MouseSensitivity = d.MouseSensitivity; _settingData.RifleADSSensitivity = d.RifleADSSensitivity; _settingData.SniperADSSensitivity = d.SniperADSSensitivity; _settingData.InvertY = d.InvertY; _settingData.MouseAccel = d.MouseAccel;
                 _settingData.GyroMode = d.GyroMode; _settingData.GyroSensX = d.GyroSensX; _settingData.GyroSensY = d.GyroSensY; _settingData.GyroInvertX = d.GyroInvertX; _settingData.GyroInvertY = d.GyroInvertY; break;

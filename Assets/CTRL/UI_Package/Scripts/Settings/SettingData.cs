@@ -30,6 +30,11 @@ public class SettingData : ScriptableObject
     [SerializeField, Range(0f,1f)] private float _sfxVolume = 1f;
     [SerializeField, Range(0f,1f)] private float _uiVolume = 1f; //UI+Announcer gop
     [SerializeField] private bool _surround3D = true;   // Am thanh vom (3D / HRTF)
+    [SerializeField] private bool _voiceMic = true;     // Mic cua toi: tat = khong phat giong minh (van nghe nguoi khac)
+    [SerializeField] private bool _voiceHear = true;    // Mic moi nguoi: tat = khong nghe ai (van noi duoc). Tat ca 2 = roi voice, khong ton CCU voice
+    [SerializeField] private bool _voicePushToTalk = true; // true = giu phim noi (T), false = mo mic lien tuc (tu nhan giong)
+    [SerializeField, Range(0f,1f)] private float _voiceVolume = 1f;
+    [SerializeField] private string _voiceMicDevice = ""; // ten thiet bi thu am (Microphone.devices); "" = mac dinh he thong
 
     // ================= DO HOA (Volume / hau ky) =================
     [Header("Graphics - Post Processing (Volume)")]
@@ -109,6 +114,11 @@ public class SettingData : ScriptableObject
     public float SfxVolume    { get { return _sfxVolume; }    set { _sfxVolume    = Mathf.Clamp01(value); } }
     public float UIVolume    { get { return _uiVolume; }    set { _uiVolume    = Mathf.Clamp01(value); } }
     public bool  Surround3D   { get { return _surround3D; }   set { _surround3D   = value; } }
+    public bool  VoiceMic     { get { return _voiceMic; }     set { _voiceMic     = value; } }
+    public bool  VoiceHear    { get { return _voiceHear; }    set { _voiceHear    = value; } }
+    public bool  VoicePushToTalk { get { return _voicePushToTalk; } set { _voicePushToTalk = value; } }
+    public float VoiceVolume  { get { return _voiceVolume; }  set { _voiceVolume  = Mathf.Clamp01(value); } }
+    public string VoiceMicDevice { get { return _voiceMicDevice; } set { _voiceMicDevice = value ?? ""; } }
 
     // -- Graphics post --
     public float Brightness     { get { return _brightness; }     set { _brightness = value; } }

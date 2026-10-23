@@ -19,6 +19,7 @@ public class SettingsBinder : MonoBehaviour
     [SerializeField] private float _saveDebounce = 0.8f;
 
     private readonly List<Action> _refreshers = new List<Action>();
+    private string[] _micDevices = new string[0]; // danh sach thiet bi thu am luc mo Cai dat
     private bool _dirty;
     private float _saveAt;
     private bool _built;
@@ -88,6 +89,21 @@ public class SettingsBinder : MonoBehaviour
         BindSliderPercent("Am thanh/AM LUONG/UI & Announcer",  () => Data.UIVolume,    v => Data.UIVolume = v);
         BindSliderPercent("Am thanh/AM LUONG/Nhac nen",         () => Data.MusicVolume,  v => Data.MusicVolume = v);
         BindSwitch("Am thanh/THIET BI & TUY CHON/Am thanh vom (3D)", () => Data.Surround3D, v => Data.Surround3D = v);
+        // Voice chat (GameVoiceClient): cac dong da co san trong prefab Pause_ panel / scene MenuShell
+        // (tao bang EnsureVoiceRows trong Editor). Neu thieu (UI cu) thi tao tam luc chay.
+        EnsureVoiceRows();
+        BindSwitch("Am thanh/THIET BI & TUY CHON/Mic cua toi", () => Data.VoiceMic, v => Data.VoiceMic = v);
+        BindSwitch("Am thanh/THIET BI & TUY CHON/Mic moi nguoi", () => Data.VoiceHear, v => Data.VoiceHear = v);
+        BindSwitch("Am thanh/THIET BI & TUY CHON/Giu phim T de noi", () => Data.VoicePushToTalk, v => Data.VoicePushToTalk = v);
+        // Thiet bi thu am: o chon ◄ ►. 0 = mac dinh he thong, con lai = Microphone.devices (hien ten rut gon).
+        _micDevices = Microphone.devices;
+        var micOptions = new string[_micDevices.Length + 1];
+        micOptions[0] = "Mặc định hệ thống";
+        for (int i = 0; i < _micDevices.Length; i++) micOptions[i + 1] = ShortDeviceName(_micDevices[i]);
+        BindCycler("Am thanh/THIET BI & TUY CHON/Thiet bi thu am", micOptions,
+            () => System.Array.IndexOf(_micDevices, Data.VoiceMicDevice) + 1, // khong thay (rut ra / may khac) -> 0 = mac dinh
+            v => Data.VoiceMicDevice = v <= 0 || v > _micDevices.Length ? "" : _micDevices[v - 1]);
+        BindSliderPercent("Am thanh/AM LUONG/Am luong voice", () => Data.VoiceVolume, v => Data.VoiceVolume = v);
 
         // ---- Chuot ----
         BindSlider("Chuot/DO NHAY/Do nhay chuot",         () => Data.MouseSensitivity,  v => Data.MouseSensitivity = v);
@@ -113,12 +129,10 @@ public class SettingsBinder : MonoBehaviour
         BindSlider("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom", () => Data.BloomIntensity, v => Data.BloomIntensity = v);
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Vignette",    () => Data.VignetteOn, v => Data.VignetteOn = v);
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Motion Blur", () => Data.MotionBlurOn, v => Data.MotionBlurOn = v);
-        // Chong rung camera (CameraStabilizer): dong moi tao luc chay tu dong Motion Blur -> khong can sua scene/prefab.
-        EnsureSwitchRowBelow("Do hoa Scroll/Content/HINH ANH/Motion Blur", "Chống rung camera");
+        // Chong rung camera (CameraStabilizer) + Muc chong rung: da co san trong prefab Pause_ panel / scene MenuShell
+        // (tao bang EnsureStabilizerRows trong Editor). Neu thieu (UI cu) thi tao tam luc chay.
+        EnsureStabilizerRows();
         BindSwitch("Do hoa Scroll/Content/HINH ANH/Chong rung camera", () => Data.StableCamera, v => Data.StableCamera = v);
-        // [Aemy 2026-10-22] Muc chong rung (0-100%): clone dong slider "Cuong do Bloom" dat duoi dong Chong rung camera.
-        EnsureRowBelow("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom", "Do hoa Scroll/Content/HINH ANH/Chong rung camera", "Mức chống rung");
-        SetSliderPercentRange("Do hoa Scroll/Content/HINH ANH/Muc chong rung", 0f, 100f, true);
         BindSliderPercent("Do hoa Scroll/Content/HINH ANH/Muc chong rung", () => Data.StableCameraStrength, v => Data.StableCameraStrength = v);
         BindQuality("Do hoa Scroll/Content/CHAT LUONG/Chat luong tong the", () => Data.QualityLevel, v => Data.QualityLevel = v);
         // Ket cau + Khu rang cua: truoc chi la chu tinh, gio chon duoc va co hieu luc.
@@ -293,6 +307,90 @@ public class SettingsBinder : MonoBehaviour
     // day cac muc ben duoi xuong 1 buoc va keo dai vung cuon.
     private void EnsureSwitchRowBelow(string templatePath, string label) { EnsureRowBelow(templatePath, templatePath, label); }
 
+    /// <summary>
+    /// Cac dong Voice trong tab Am thanh. Goi trong Editor de tao THAT vao prefab/scene (dong da co thi bo qua),
+    /// va luc chay de bu cho UI cu chua co.
+    /// </summary>
+    public void EnsureVoiceRows()
+    {
+        if (_panelRoot == null) _panelRoot = transform;
+        EnsureSwitchRowBelow("Am thanh/THIET BI & TUY CHON/Am thanh vom (3D)", "Mic của tôi");
+        EnsureRowBelow("Am thanh/THIET BI & TUY CHON/Am thanh vom (3D)", "Am thanh/THIET BI & TUY CHON/Mic cua toi", "Mic mọi người");
+        EnsureRowBelow("Am thanh/THIET BI & TUY CHON/Am thanh vom (3D)", "Am thanh/THIET BI & TUY CHON/Mic moi nguoi", "Giữ phím T để nói");
+        EnsureRowBelow("Do hoa Scroll/Content/HIEN THI/Gioi han FPS", "Am thanh/THIET BI & TUY CHON/Giu phim T de noi", "Thiết bị thu âm");
+        FitLongValueCycler(Find("Am thanh/THIET BI & TUY CHON/Thiet bi thu am"), 330f);
+        EnsureRowBelow("Am thanh/AM LUONG/Nhac nen", "Am thanh/AM LUONG/Nhac nen", "Âm lượng voice");
+    }
+
+    /// <summary>
+    /// Dong "Chong rung camera" (switch, clone tu Motion Blur) + "Muc chong rung" (slider 0-100%, clone tu Cuong do Bloom).
+    /// Goi trong Editor de tao THAT vao prefab/scene (dong da co thi bo qua), va luc chay de bu cho UI cu chua co.
+    /// </summary>
+    public void EnsureStabilizerRows()
+    {
+        if (_panelRoot == null) _panelRoot = transform;
+        EnsureSwitchRowBelow("Do hoa Scroll/Content/HINH ANH/Motion Blur", "Chống rung camera");
+        EnsureRowBelow("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom", "Do hoa Scroll/Content/HINH ANH/Chong rung camera", "Mức chống rung");
+        SetSliderPercentRange("Do hoa Scroll/Content/HINH ANH/Muc chong rung", 0f, 100f, true);
+    }
+
+    /// <summary>O chon co gia tri dai (ten thiet bi): noi rong ve ben trai (giu mep phai) + cat "…" khi van qua dai.</summary>
+    private static void FitLongValueCycler(Transform row, float width)
+    {
+        var cycler = row != null ? row.GetComponentInChildren<UIOptionCycler>(true) : null;
+        if (cycler == null) return;
+        var box = (RectTransform)cycler.transform;
+        float grow = width - box.sizeDelta.x;
+        if (grow > 0.5f)
+        {
+            box.sizeDelta += new Vector2(grow, 0f);
+            box.anchoredPosition -= new Vector2(grow * (1f - box.pivot.x), 0f);
+        }
+        foreach (var label in cycler.GetComponentsInChildren<TMP_Text>(true))
+        {
+            if (label.transform == box) continue;
+            var rt = label.rectTransform;
+            if (rt.anchorMin.x > 0.01f || rt.anchorMax.x < 0.99f) continue; // nut ◄ ►, chi sua nhan gia tri (keo gian ca o)
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.text = "Mặc định hệ thống";
+        }
+    }
+
+    /// <summary>"Headset Microphone (Logitech G535 Gaming Headset)" -> "Logitech G535 Gaming Headset" (ten trong ngoac la ten that).</summary>
+    private static string ShortDeviceName(string device)
+    {
+        if (string.IsNullOrEmpty(device)) return device;
+        int open = device.IndexOf('('); int close = device.LastIndexOf(')');
+        if (open >= 0 && close > open + 1) return device.Substring(open + 1, close - open - 1).Trim();
+        return device;
+    }
+
+
+    // Dong clone tu tab khac: day nut dieu khien (o chon, thanh truot...) sao cho MEP PHAI trung voi nut cua dong `reference`
+    // (vd cong tac ben Am thanh) -> cot nut thang hang trong muc.
+    private static void AlignControlRight(RectTransform row, RectTransform reference)
+    {
+        var mine = ControlOf(row); var theirs = ControlOf(reference);
+        if (mine == null || theirs == null) return;
+        var a = new Vector3[4]; var b = new Vector3[4];
+        mine.GetWorldCorners(a); theirs.GetWorldCorners(b);
+        var parent = (RectTransform)mine.parent;
+        float dxLocal = parent.InverseTransformPoint(b[2]).x - parent.InverseTransformPoint(a[2]).x;
+        mine.anchoredPosition += new Vector2(dxLocal, 0f);
+    }
+
+    /// <summary>Con truc tiep ben phai nhat co chua Selectable (cong tac / o chon / thanh truot) cua 1 dong cai dat.</summary>
+    private static RectTransform ControlOf(RectTransform row)
+    {
+        RectTransform best = null;
+        foreach (Transform c in row)
+            if (c is RectTransform rt && rt.GetComponentInChildren<UnityEngine.UI.Selectable>(true) != null
+                && (best == null || rt.anchoredPosition.x > best.anchoredPosition.x))
+                best = rt;
+        return best;
+    }
+
     // [Aemy 2026-10-22] Tong quat: clone dong `templatePath` (switch / slider...) va dat ngay duoi dong `afterPath`
     // (cung 1 muc). Vd slider "Muc chong rung" clone tu "Cuong do Bloom" nhung nam duoi "Chong rung camera".
     private void EnsureRowBelow(string templatePath, string afterPath, string label)
@@ -323,16 +421,21 @@ public class SettingsBinder : MonoBehaviour
         row.name = label;
         row.SetSiblingIndex(idx + 1);
         InsertNavBelow(tpl, row); // [2026-10-23] noi tay cam: dong moi nam giua `afterPath` va dong ben duoi trong chuoi len/xuong
-        row.anchoredPosition = new Vector2(src.anchoredPosition.x, tpl.anchoredPosition.y - step); // x theo dong mau (con giu dung cho)
+        // Mau o muc/tab khac (vd o chon ◄ ► chi co ben Do hoa) -> mep trai theo dong `afterPath` cung muc.
+        bool foreign = src.parent != section;
+        var leftRef = foreign ? tpl : src;
+        row.anchoredPosition = new Vector2(leftRef.anchoredPosition.x, tpl.anchoredPosition.y - step); // x theo dong mau (con giu dung cho)
         var txt = row.GetComponent<TMPro.TMP_Text>(); if (txt != null) txt.text = label;
 
         // Nhan can giua + ContentSizeFitter, x moi dong duoc canh tay theo do rong chu -> giu MEP TRAI nhu dong mau
         // (chu dai hon se lan sang trai bi mask cat), roi day con (switch, vach ke) ve dung cho cu.
         UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(row);
-        float tplLeft = src.anchoredPosition.x - src.rect.width * src.pivot.x;
+        UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(leftRef); // trong Editor dong mau chua tinh layout -> rong 0
+        float tplLeft = leftRef.anchoredPosition.x - leftRef.rect.width * leftRef.pivot.x;
         float dx = tplLeft + row.rect.width * row.pivot.x - row.anchoredPosition.x;
         row.anchoredPosition += new Vector2(dx, 0f);
         foreach (Transform c in row) if (c is RectTransform crt) crt.anchoredPosition -= new Vector2(dx, 0f);
+        if (foreign) AlignControlRight(row, tpl);
 
         // [Aemy 2026-10-22] Vung cuon phai chua HET dong moi: dong slider co thanh truot + vach ke nam DUOI chu,
         // ma buoc dong lay theo dong switch -> o Pause (Content sat day) thanh truot bi mask cat mat.

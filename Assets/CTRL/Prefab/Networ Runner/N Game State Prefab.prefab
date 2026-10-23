@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 248519005544209240}
   - component: {fileID: 3260813411780172463}
   - component: {fileID: 912832679940409612}
+  - component: {fileID: 8465586165198851992}
   m_Layer: 0
   m_Name: N Game State Prefab
   m_TagString: Untagged
@@ -86,6 +87,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 248519005544209240}
+  - {fileID: 8465586165198851992}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &912832679940409612
 MonoBehaviour:
@@ -101,6 +103,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameplayAudio
   _data: {fileID: 11400000, guid: 6d44a06b210733444a9a5ba7e36e93f3, type: 2}
   _audioSource: {fileID: 6230715672526632076}
+--- !u!114 &8465586165198851992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2871734209935888430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae87ca8ad4a7a3e4c85e4738e362f0cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetLossMonitor
+  _probeRate: 32
+  _windowSeconds: 2
+  _logInterval: 10
+  _warmupSeconds: 2
 --- !u!1 &3702925108151504966
 GameObject:
   m_ObjectHideFlags: 0
@@ -142,7 +160,7 @@ AudioSource:
   m_GameObject: {fileID: 3702925108151504966}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -4857660083029558138, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
