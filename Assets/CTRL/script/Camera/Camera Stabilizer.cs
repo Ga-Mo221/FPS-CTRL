@@ -31,6 +31,11 @@ public class CameraStabilizer : MonoBehaviour
     [Tooltip("Thời gian làm mượt vị trí điểm xoay cổ (giây). Lớn = ít nhấp nhô hơn nhưng ngồi xuống/đứng lên chậm hơn.")]
     [SerializeField] private float _positionSmoothTime = 0.3f;
 
+    [Tooltip("Độ lệch tối đa (m) cho phép giữa camera đã làm mượt và điểm xoay cổ thật.\n" +
+             "Đi/chạy nhấp nhô ~3–4.5cm nên vẫn được làm mượt; nhảy/đáp/ngồi nhanh (thân tụt tới ~50cm) " +
+             "thì camera không bị bỏ lại phía trên-sau đầu → không thấy thân mình. 0 = không giới hạn.")]
+    [SerializeField] private float _maxPositionLag = 0.05f;
+
     [Tooltip("Hiện trạng thái tuỳ chọn \"Chống rung camera\" trong Cài đặt.\n" +
              "Trong Play mode tick/bỏ tick ở đây = đổi cài đặt đó (và lưu lại).")]
     [SerializeField] private bool _stabilize = false;
@@ -177,6 +182,28 @@ public class CameraStabilizer : MonoBehaviour
             if (targets[i] != null && targets[i].target == from) targets[i].target = to;
     }
 
+    /// <summary>[2026-10-23] Giới hạn MỀM độ trễ của điểm xoay đã làm mượt so với điểm xoay thật.
+    /// Lỗi cũ: clip JUMP UP hạ thân ~50cm trong ~0.1s, SmoothDamp 0.3s để camera tụt lại phía trên-sau đầu
+    /// tới ~46cm (× Mức chống rung) → thấy đầu/vai của chính mình vài frame khi nhảy.
+    /// Dưới "knee" (60% giới hạn) giữ nguyên; trên đó nén dần, tiệm cận _maxPositionLag (không cắt cứng → không giật).</summary>
+    private void LimitPivotLag(Vector3 target)
+    {
+        if (_maxPositionLag <= 0f) return;
+        Vector3 lag = _pivotLocal - target;
+        float d = lag.magnitude;
+        float knee = _maxPositionLag * 0.6f;
+        if (d <= knee) return;
+
+        float range = _maxPositionLag - knee;
+        float limited = knee + range * (1f - Mathf.Exp(-(d - knee) / range));
+        Vector3 dir = lag / d;
+        _pivotLocal = target + dir * limited;
+
+        // Bỏ phần vận tốc đang kéo ra xa điểm thật, tránh tích vận tốc rồi vọt quá khi thân dừng lại.
+        float outward = Vector3.Dot(_pivotVelocity, dir);
+        if (outward > 0f) _pivotVelocity -= dir * outward;
+    }
+
     /// <summary>Gọi bởi <see cref="CameraGimbalSolver"/> trong ConstraintScheduler (pose của frame hiện tại).</summary>
     public void SolveGimbal()
     {
@@ -197,7 +224,11 @@ public class CameraStabilizer : MonoBehaviour
             _pivotVelocity = Vector3.zero;
             _pivotReady = true;
         }
-        else _pivotLocal = Vector3.SmoothDamp(_pivotLocal, target, ref _pivotVelocity, _positionSmoothTime);
+        else
+        {
+            _pivotLocal = Vector3.SmoothDamp(_pivotLocal, target, ref _pivotVelocity, _positionSmoothTime);
+            LimitPivotLag(target);
+        }
 
         Vector3 pos = player.position + yaw * _pivotLocal + rot * _neckToCamera;
 

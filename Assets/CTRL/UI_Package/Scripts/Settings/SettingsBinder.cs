@@ -322,6 +322,7 @@ public class SettingsBinder : MonoBehaviour
         var row = (RectTransform)Instantiate(src.gameObject, section, false).transform;
         row.name = label;
         row.SetSiblingIndex(idx + 1);
+        InsertNavBelow(tpl, row); // [2026-10-23] noi tay cam: dong moi nam giua `afterPath` va dong ben duoi trong chuoi len/xuong
         row.anchoredPosition = new Vector2(src.anchoredPosition.x, tpl.anchoredPosition.y - step); // x theo dong mau (con giu dung cho)
         var txt = row.GetComponent<TMPro.TMP_Text>(); if (txt != null) txt.text = label;
 
@@ -353,6 +354,31 @@ public class SettingsBinder : MonoBehaviour
         // Tay cam: dang ky nut moi voi khung dieu huong TIS
         var ctx = row.GetComponentInParent<GaMo.TrueInputSystem.TISUINavigationContext>(true);
         if (ctx != null) ctx.ScanChildButtons();
+    }
+
+    // [2026-10-23] Dong clone giu nguyen navUp/navDown cua dong MAU, va khong dong nao tro TOI no
+    // -> tay cam / phim mui ten khong bao gio vao duoc dong moi (chi chuot bam duoc).
+    // Chen nut TIS cua dong moi vao chuoi len/xuong: after -> moi -> (dong truoc day nam duoi after).
+    // Nhieu dong chen lien tiep (Chong rung -> Muc chong rung) tu noi dung thu tu vi moi lan chen doc lai navDown hien tai.
+    private static void InsertNavBelow(Transform afterRow, Transform newRow)
+    {
+        var mine = newRow.GetComponentsInChildren<GaMo.TrueInputSystem.TISGamepadUIButton>(true);
+        var prevs = afterRow.GetComponentsInChildren<GaMo.TrueInputSystem.TISGamepadUIButton>(true);
+        if (mine.Length == 0 || prevs.Length == 0) return;
+        var me = mine[0];
+        var prev = prevs[0];
+        var next = prev.navDown;
+
+        me.navUp = prev;
+        me.navDown = next;
+        me.navLeft = null;   // truc ngang nhuong cho TISValueNav (slider/switch) nhu cac dong khac
+        me.navRight = null;
+        me.isFirstSelected = false;
+
+        // Moi nut cua dong `after` (vd nhom nhieu nut) dang tro xuong `next` -> tro xuong dong moi.
+        foreach (var p in prevs) if (p.navDown == next) p.navDown = me;
+        // Dong ben duoi (neu dang tro len `after`) -> tro len dong moi.
+        if (next != null && next.navUp == prev) next.navUp = me;
     }
 
     private void SetSliderPercentRange(string containerPath, float min, float max, bool whole)

@@ -97,8 +97,17 @@ public class LocalInputController : MonoBehaviour
         }
     }
 
+    // [2026-10-23] Dang mo Pause / chat thi KHONG xu ly. Tay cam: Drag = D-pad len = phim dieu huong menu
+    // -> truoc day bam len trong Pause la nhat sung phia sau.
+    private static bool MenuOpen()
+    {
+        var gm = GameManager.Instance;
+        return gm != null && (gm.OnUIOption() || gm.OnUIChatBox());
+    }
+
     private void OnDragItem()
     {
+        if (MenuOpen()) return;
         if (_input.GetSkillAction("Drag", TISButtonReadMode.PressDown))
         {
             var gm = GameManager.Instance;
@@ -116,6 +125,11 @@ public class LocalInputController : MonoBehaviour
 
     private void OpenLoadOut()
     {
+        // [2026-10-23] Tay cam: "B" (Balo) = D-pad LEN = cung la phim dieu huong trong Pause.
+        // Truoc day moi lan bam len trong Pause: SetOnuiLoadout(true) xoa co Pause (_onUIOption = false)
+        // trong khi panel Pause van hien; neu khong mo duoc balo -> SetOnuiLoadout(false) -> OnUI() = false
+        // -> nhan vat nhan input (di chuyen / ban / nhay) du Pause dang mo.
+        if (MenuOpen()) return;
         if (_input.GetSkillAction("B", TISButtonReadMode.PressUp))
         {
             var gm = GameManager.Instance;
