@@ -46,6 +46,11 @@ namespace Game.UI
         [SerializeField] private MatchmakingController _matchmakingScreen;
         [Tooltip("[UI-INTEGRATION] Giay o lobby (hien roster) truoc khi vao tran.")]
         [SerializeField] private float _lobbyHoldSeconds = 5f;
+        // [Aemy 2026-10-24] Ghep duoc tran (PlayFab / solo): chi hien "DA TIM THAY TRAN" thoang qua roi vao map ngay,
+        // phong cho 15s nam TRONG tran (NetworkGameState.InLobby + MatchLobbyOverlay) de nguoi khac vao them duoc.
+        [SerializeField] private float _matchFoundHoldSeconds = 2f;
+        // [Aemy 2026-10-24] Vao tran DANG DIEN RA: hien man ghep tran (ai dang trong tran) chung nay giay roi moi vao.
+        [SerializeField] private float _lateJoinPreviewSeconds = 6f;
         // [Aemy] Bat/tat solo-fallback: het gio tim tran khong du nguoi -> co vao game solo/warm-up hay khong.
         // TAT (mac dinh) de ep test ghep tran 2 client that. BAT de choi/test mot minh duoc.
         [Tooltip("Bật: hết giờ tìm trận mà không đủ người -> vào game solo/warm-up. Tắt: chỉ báo 'không tìm được trận'.")]
@@ -172,6 +177,7 @@ namespace Game.UI
             // [CURSOR 2026-09-28 Aemy] Ve menu -> luon hien chuot (tranh mat con tro sau tran), giu trong cua so game.
             GameManager.ApplyCursor(true);
             RefreshProfile();
+            if (_matchmakingScreen != null) MatchLobbyOverlay.SetSource(_matchmakingScreen); // [Aemy 2026-10-24] mau cho phong cho trong tran
             RefreshCoins();
             RefreshWeapons();
             RefreshStats(); // [Aemy 2026-09-29 #2]
@@ -302,6 +308,7 @@ namespace Game.UI
 
             svc.GetFriendsWithPresence(list =>
             {
+                if (this == null || _party == null) return; // [Aemy 2026-10-24] ket qua ve sau khi da roi menu (vao tran nhanh)
                 _lastFriends = list; // [Aemy]
                 int count = list != null ? list.Count : 0;
                 int online = 0; if (list != null) foreach (var fr in list) if (fr.Presence == FriendPresence.Online) online++;
@@ -1102,6 +1109,7 @@ namespace Game.UI
             _partyLobbyPending = false;
             if (_matchmakingScreen != null) _matchmakingScreen.gameObject.SetActive(false);
             if (SceneFader.Instance != null) SceneFader.Instance.FadeIn();
+            MatchLobbyOverlay.Release(); // [Aemy 2026-10-24] bo phong cho da chup
 
             string msg = NetworkRunnerHandler.DescribeFailure(why);
             if (_play != null) _play.SetQueueStatus(msg);
@@ -1180,8 +1188,47 @@ namespace Game.UI
                 var prof = ProfileCache.Cached;
                 if (prof != null) { if (!string.IsNullOrEmpty(prof.DisplayName)) me.Name = prof.DisplayName; if (!string.IsNullOrEmpty(prof.AvatarUrl)) me.AvatarUrl = prof.AvatarUrl; }
                 FillLobbyRoster(BuildExistingRoster(s, me, team), team); // [Aemy 2026-10-22] + nguoi dang trong tran
-                _matchmakingScreen.SetTimeText(s.PlayerCount + "/" + s.MaxPlayers);
+                if (SessionRoster.IsPreGame(s))
+                {
+                    // [Aemy 2026-10-24] Phong chua bat dau (phong cho / dem nguoc): vao ngay nhu ghep tran thuong -
+                    // man nay duoc mang luon vao map (MatchLobbyOverlay) va cap nhat ai dang trong phong, khong hien 2 lan.
+                    _matchmakingScreen.SetTitle("ĐÃ TÌM THẤY TRẬN");
+                    StartLobbyHold(() => DoJoinExisting(ho, s, mode, anyMap), _matchFoundHoldSeconds);
+                    return;
+                }
+                // [Aemy 2026-10-24] Tran dang danh: cho nguoi vao sau xem trong tran co ai trong _lateJoinPreviewSeconds roi moi vao.
+                if (_lobbyCo != null) StopCoroutine(_lobbyCo);
+                _lobbyCo = StartCoroutine(LateJoinPreviewCo(s, me, team, () => DoJoinExisting(ho, s, mode, anyMap)));
+                return;
             }
+            DoJoinExisting(ho, s, mode, anyMap);
+        }
+
+        // Cho _lateJoinPreviewSeconds; moi giay lay lai roster tu danh sach phong cua lobby Fusion (co nguoi vao / ra).
+        // [2026-10-24] Man ghep tran khong con o dong ho / tieu de (da xoa trong scene) -> khong ghi thoi gian.
+        private IEnumerator LateJoinPreviewCo(Fusion.SessionInfo s, LobbyMember me, bool team, Action onDone)
+        {
+            float t = _lateJoinPreviewSeconds;
+            float nextRoster = 1f;
+            while (t > 0f)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                t -= 0.25f; nextRoster -= 0.25f;
+                if (nextRoster <= 0f)
+                {
+                    nextRoster = 1f;
+                    var nrh = GameManager.Instance != null ? GameManager.Instance.NetworkRunnerHandler : null;
+                    if (nrh != null && nrh.LastSessionList != null)
+                        foreach (var x in nrh.LastSessionList)
+                            if (x != null && x.IsValid && x.Name == s.Name) { s = x; FillLobbyRoster(BuildExistingRoster(s, me, team), team); break; }
+                }
+            }
+            _lobbyCo = null;
+            if (onDone != null) onDone();
+        }
+
+        private void DoJoinExisting(Backend.Handoff.FusionMatchHandoff ho, Fusion.SessionInfo s, MatchMode mode, bool anyMap)
+        {
             ho.HandOffJoinExisting(s.Name, mode, (ok, why) =>
             {
                 _joiningExisting = false;
@@ -1210,7 +1257,7 @@ namespace Game.UI
                 string teamId = "";
                 if (team && e.Team == PlayerTeam.Blue) { teamId = "Blue"; blue++; }
                 else if (team && e.Team == PlayerTeam.Red) { teamId = "Red"; red++; }
-                list.Add(new LobbyMember { IsLocal = false, TeamId = teamId, Name = e.Name, AvatarUrl = "" });
+                list.Add(new LobbyMember { IsLocal = false, TeamId = teamId, Name = e.Name, AvatarUrl = e.AvatarUrl ?? "" });
             }
             int unknown = s != null ? s.PlayerCount - entries.Count : 0;
             for (int i = 0; i < unknown; i++) list.Add(new LobbyMember { IsLocal = false, TeamId = "", Name = "ĐANG TRONG TRẬN", AvatarUrl = "" });
@@ -1229,7 +1276,7 @@ namespace Game.UI
                 mm.GetMatchMembers(match.MatchId, match.QueueName,
                     members => FillLobbyRoster(members, team),
                     e => Debug.LogWarning("[MenuShellBinder] GetMatch loi: " + e.ErrorMessage));
-            StartLobbyHold(() => { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOff(match); });
+            StartLobbyHold(() => { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOff(match); }, _matchFoundHoldSeconds);
         }
 
         private void EnterLobbySolo(MatchMode mode)
@@ -1241,7 +1288,7 @@ namespace Game.UI
             var prof = ProfileCache.Cached;
             if (prof != null) { if (!string.IsNullOrEmpty(prof.DisplayName)) me.Name = prof.DisplayName; if (!string.IsNullOrEmpty(prof.AvatarUrl)) me.AvatarUrl = prof.AvatarUrl; }
             FillLobbyRoster(new List<LobbyMember> { me }, team);
-            StartLobbyHold(() => { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOffSolo(mode); });
+            StartLobbyHold(() => { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOffSolo(mode); }, _matchFoundHoldSeconds);
         }
 
         private void HandOffNow(MatchFoundResult match, MatchMode mode)
@@ -1258,91 +1305,25 @@ namespace Game.UI
             _matchmakingScreen.SetMode(team ? "TEAM DEATHMATCH" : "FREE FOR ALL");
         }
 
-        private void StartLobbyHold(Action onDone)
+        private void StartLobbyHold(Action onDone) { StartLobbyHold(onDone, _lobbyHoldSeconds); }
+
+        private void StartLobbyHold(Action onDone, float seconds)
         {
             if (_lobbyCo != null) StopCoroutine(_lobbyCo);
-            _lobbyCo = StartCoroutine(LobbyHoldCo(onDone));
+            _lobbyCo = StartCoroutine(LobbyHoldCo(onDone, seconds));
         }
 
-        private IEnumerator LobbyHoldCo(Action onDone)
+        private IEnumerator LobbyHoldCo(Action onDone, float seconds)
         {
-            float t = _lobbyHoldSeconds;
-            while (t > 0f)
-            {
-                int total = Mathf.CeilToInt(t);
-                if (_matchmakingScreen != null) _matchmakingScreen.SetTimeText(string.Format("{0:00}:{1:00}", total / 60, total % 60));
-                yield return new WaitForSeconds(0.25f);
-                t -= 0.25f;
-            }
-            if (_matchmakingScreen != null) _matchmakingScreen.SetTimeText("00:00");
+            yield return new WaitForSeconds(seconds); // [2026-10-24] khong con dong ho tren man ghep tran
             _lobbyCo = null;
             if (onDone != null) onDone();
         }
 
-        // [Aemy 2026-10-17] Roster man ghep tran:
-        //  - FFA: xep XEN KE trai / phai (nguoi 1 trai, nguoi 2 phai, nguoi 3 trai...), minh luon o dau.
-        //  - TDM: theo DOI - doi cua minh ben trai, doi dich ben phai (TeamId tu PlayFab). Chua biet doi (to doi / solo)
-        //    thi van xen ke 2 cot va ghi "chia doi khi vao tran".
+        // Roster man ghep tran -> LobbyRosterView (dung chung voi phong cho trong tran, MatchLobbyOverlay).
         private void FillLobbyRoster(List<LobbyMember> members, bool team)
         {
-            if (_matchmakingScreen == null || members == null) return;
-            const int SZ = 5;
-
-            var ordered = new List<LobbyMember>();
-            LobbyMember me = null;
-            foreach (var m in members) if (m != null && m.IsLocal) { ordered.Add(m); me = m; break; }
-            foreach (var m in members) if (m != null && m != me) ordered.Add(m);
-
-            var left = new List<LobbyMember>();
-            var right = new List<LobbyMember>();
-            bool hasTeams = false;
-            if (team) foreach (var m in ordered) if (!string.IsNullOrEmpty(m.TeamId)) { hasTeams = true; break; }
-
-            if (hasTeams)
-            {
-                string myTeam = me != null && !string.IsNullOrEmpty(me.TeamId) ? me.TeamId : null;
-                if (myTeam == null) foreach (var m in ordered) if (!string.IsNullOrEmpty(m.TeamId)) { myTeam = m.TeamId; break; }
-                foreach (var m in ordered) (m.TeamId == myTeam ? left : right).Add(m);
-            }
-            else
-            {
-                for (int i = 0; i < ordered.Count; i++) (i % 2 == 0 ? left : right).Add(ordered[i]);
-            }
-
-            for (int i = 0; i < SZ; i++)
-            {
-                if (i < left.Count) { var m = left[i]; _matchmakingScreen.SetTeam1Member(i, m.Name, null, m.IsLocal ? "BẠN" : ""); LoadAvatarInto(m, 1, i); }
-                else _matchmakingScreen.SetTeam1Member(i, "", null, "");
-                if (i < right.Count) { var m = right[i]; _matchmakingScreen.SetTeam2Member(i, m.Name, null, m.IsLocal ? "BẠN" : ""); LoadAvatarInto(m, 2, i); }
-                else _matchmakingScreen.SetTeam2Member(i, "", null, "");
-            }
-
-            int total = Mathf.Min(ordered.Count, SZ * 2);
-            if (hasTeams) _matchmakingScreen.SetTeamHeaders("ĐỘI CỦA BẠN (" + left.Count + ")", "ĐỘI ĐỊCH (" + right.Count + ")",
-                new Color(0.31f, 0.84f, 0.79f, 1f), new Color(0.92f, 0.30f, 0.27f, 1f));
-            else if (team) _matchmakingScreen.SetTeamHeaders("NGƯỜI CHƠI (" + total + ")", "CHIA ĐỘI KHI VÀO TRẬN");
-            else _matchmakingScreen.SetTeamHeaders("NGƯỜI CHƠI (" + total + ")", "");
-        }
-
-        private void LoadAvatarInto(LobbyMember mem, int teamCol, int index)
-        {
-            if (mem == null || string.IsNullOrEmpty(mem.AvatarUrl)) return;
-            StartCoroutine(DownloadAvatarInto(mem, teamCol, index));
-        }
-
-        private IEnumerator DownloadAvatarInto(LobbyMember mem, int teamCol, int index)
-        {
-            using (var req = UnityWebRequestTexture.GetTexture(mem.AvatarUrl))
-            {
-                yield return req.SendWebRequest();
-                if (req.result != UnityWebRequest.Result.Success) yield break;
-                var tex = DownloadHandlerTexture.GetContent(req); if (tex != null) tex = Game.UI.ImageScale.Fit(tex, 64); // [#5] thu nho 64px
-                if (tex == null || _matchmakingScreen == null) yield break;
-                var sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                string status = mem.IsLocal ? "BẠN" : "";
-                if (teamCol == 1) _matchmakingScreen.SetTeam1Member(index, mem.Name, sp, status);
-                else _matchmakingScreen.SetTeam2Member(index, mem.Name, sp, status);
-            }
+            LobbyRosterView.Fill(_matchmakingScreen, members, team, this);
         }
 
         private IEnumerator DownloadAvatar(string url)

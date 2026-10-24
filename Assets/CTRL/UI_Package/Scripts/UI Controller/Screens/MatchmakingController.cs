@@ -45,9 +45,23 @@ namespace Game.UI
         private float _elapsed;
         private bool _counting;
 
+        // [Aemy 2026-10-24] Avatar mac dinh cua tung o: o doi nguoi ma nguoi moi chua co anh -> tra ve mac dinh
+        // (truoc day giu anh cua nguoi cu; phong cho trong tran lam moi roster lien tuc nen de lo).
+        private Sprite[] _defaultAvatars1, _defaultAvatars2;
+
         private void Awake()
         {
             if (_cancelButton != null) _cancelButton.onClick.AddListener(OnCancel);
+            _defaultAvatars1 = CaptureAvatars(_team1Slots);
+            _defaultAvatars2 = CaptureAvatars(_team2Slots);
+        }
+
+        private static Sprite[] CaptureAvatars(RosterSlot[] slots)
+        {
+            if (slots == null) return null;
+            var arr = new Sprite[slots.Length];
+            for (int i = 0; i < slots.Length; i++) if (slots[i].avatar != null) arr[i] = slots[i].avatar.sprite;
+            return arr;
         }
 
         private void OnEnable()
@@ -163,7 +177,13 @@ namespace Game.UI
             if (root != null) root.SetActive(!empty);
             if (empty) return;
             if (slot.nameLabel != null) slot.nameLabel.text = name;
-            if (slot.avatar != null && avatar != null) slot.avatar.sprite = avatar;
+            if (slot.avatar != null)
+            {
+                var defaults = slots == _team1Slots ? _defaultAvatars1 : _defaultAvatars2;
+                var fallback = defaults != null && index < defaults.Length ? defaults[index] : null;
+                if (avatar != null) slot.avatar.sprite = avatar;
+                else if (fallback != null) slot.avatar.sprite = fallback;
+            }
             if (slot.statusLabel != null) slot.statusLabel.text = status;
             if (slot.highlight != null) slot.highlight.SetActive(!string.IsNullOrEmpty(status));
         }

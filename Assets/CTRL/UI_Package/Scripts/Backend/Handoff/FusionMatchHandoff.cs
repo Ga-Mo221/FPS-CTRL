@@ -32,6 +32,7 @@ namespace Backend.Handoff
             gm.SetGamePlayMode(mode);
             EnsureNickname(gm);
             gm.NewGame();
+            Game.UI.MatchLobbyOverlay.Capture(); // [Aemy 2026-10-24] mang man ghep tran sang map lam phong cho
 
             string lobby = LobbyName(mode);
             Debug.Log($"<color=#22d3ee>[FusionHandoff]</color> Vào phòng Fusion: session='{match.MatchId}', lobby='{lobby}', mode={match.Mode}.");
@@ -53,6 +54,7 @@ namespace Backend.Handoff
             gm.SetGamePlayMode(mode);
             EnsureNickname(gm);
             gm.NewGame();
+            Game.UI.MatchLobbyOverlay.Capture(); // [Aemy 2026-10-24] mang man ghep tran sang map lam phong cho
 
             string lobby = LobbyName(mode);
             string sessionName = "solo_" + modeIn + "_" + System.Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -74,10 +76,12 @@ namespace Backend.Handoff
             gm.SetGamePlayMode(mode);
             EnsureNickname(gm);
             gm.NewGame();
+            Game.UI.MatchLobbyOverlay.Capture(); // [Aemy 2026-10-24] mang man ghep tran sang map lam phong cho
             string session = Game.UI.CustomRoomSession.SessionOf(code);
             System.Action<bool, string> done = (ok, why) =>
             {
                 if (!ok && Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeIn();
+                if (!ok) Game.UI.MatchLobbyOverlay.Release(); // [Aemy 2026-10-24]
                 if (onResult != null) onResult(ok, why);
             };
             System.Action go = () => runner.StartCustomGame(session, "Custom", gm.GetSelectedMapScene(), asHost, done);
@@ -95,9 +99,11 @@ namespace Backend.Handoff
             gm.SetGamePlayMode(mode);
             EnsureNickname(gm);
             gm.NewGame();
+            Game.UI.MatchLobbyOverlay.Capture(); // [Aemy 2026-10-24] mang man ghep tran sang map lam phong cho
             System.Action<bool, string> done = (ok, why) =>
             {
                 if (!ok && Game.UI.SceneFader.Instance != null) Game.UI.SceneFader.Instance.FadeIn();
+                if (!ok) Game.UI.MatchLobbyOverlay.Release(); // [Aemy 2026-10-24]
                 if (onResult != null) onResult(ok, why);
             };
             System.Action go = () => runner.JoinExistingSession(sessionName, LobbyName(mode), done);

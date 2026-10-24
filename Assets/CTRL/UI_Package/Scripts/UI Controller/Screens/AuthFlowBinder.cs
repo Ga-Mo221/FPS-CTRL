@@ -124,7 +124,21 @@ namespace Game.UI
         }
 
         // Dang nhap bang Google (PC: mo trinh duyet lay server auth code roi LoginWithGoogle).
-        private async void OnGoogleLogin()
+        // [Aemy 2026-10-24] Dang nhap Google:
+        //  - Google DA lien ket -> vao dung tai khoan da lien ket (PlayFab nhan dien theo ID tai khoan Google).
+        //  - Google CHUA lien ket tai khoan nao -> KHONG tu tao tai khoan trong nua: hoi nguoi choi truoc
+        //    (nhieu nguoi co tai khoan ten/mat khau nhung chua lien ket -> tuong bi vao nham tai khoan moi).
+        //    Dong y -> mo lai Google (ma xac thuc chi dung 1 lan) va tao tai khoan moi.
+        private float _googleCreateArmedUntil = -1f; // khong co ModalDialog: bam GOOGLE lan nua trong 30s = tao moi
+
+        private void OnGoogleLogin()
+        {
+            bool create = Time.unscaledTime < _googleCreateArmedUntil;
+            _googleCreateArmedUntil = -1f;
+            GoogleLoginFlow(create);
+        }
+
+        private async void GoogleLoginFlow(bool createAccount)
         {
             if (_useMock)
             {
@@ -141,7 +155,7 @@ namespace Game.UI
                     if (_notice != null) _notice.Show("ĐÃ HỦY ĐĂNG NHẬP GOOGLE", _errorNoticeSeconds);
                     return;
                 }
-                var g = new GoogleLoginRequest { ServerAuthCode = code, CreateAccount = true };
+                var g = new GoogleLoginRequest { ServerAuthCode = code, CreateAccount = createAccount };
                 _external.LoginWithGoogle(g,
                     r =>
                     {
@@ -151,6 +165,7 @@ namespace Game.UI
                     },
                     e =>
                     {
+                        if (!createAccount && e != null && e.ErrorCode == "AccountNotFound") { AskCreateGoogleAccount(); return; }
                         if (_notice != null) _notice.Show("GOOGLE LỖI: " + e.ErrorMessage, _errorNoticeSeconds);
                     });
             }
@@ -159,6 +174,21 @@ namespace Game.UI
                 Debug.LogWarning("[AuthFlowBinder] Google login lỗi: " + ex.Message);
                 if (_notice != null) _notice.Show("GOOGLE LỖI", _errorNoticeSeconds);
             }
+        }
+
+        private void AskCreateGoogleAccount()
+        {
+            const string msg = "Tài khoản Google này chưa liên kết với tài khoản Eclipse Strike nào.\n" +
+                               "Nếu bạn đã có tài khoản: đăng nhập bằng tên/mật khẩu rồi vào Tài khoản → Liên kết Google.";
+            if (_notice != null) _notice.Hide();
+            if (ModalDialog.Instance != null)
+            {
+                ModalDialog.Instance.Confirm("CHƯA LIÊN KẾT GOOGLE", msg + "\nTạo tài khoản MỚI bằng Google này?",
+                    () => GoogleLoginFlow(true), "TẠO TÀI KHOẢN MỚI", "HỦY");
+                return;
+            }
+            _googleCreateArmedUntil = Time.unscaledTime + 30f;
+            if (_notice != null) _notice.Show("GOOGLE CHƯA LIÊN KẾT TÀI KHOẢN NÀO\nĐã có tài khoản: đăng nhập rồi vào Tài khoản → Liên kết Google.\nMuốn tạo tài khoản mới: bấm GOOGLE thêm lần nữa.", 10f);
         }
 
         // [Aemy 2026-10-19] Cong xac minh email sau khi dang nhap bang ten/email + mat khau.

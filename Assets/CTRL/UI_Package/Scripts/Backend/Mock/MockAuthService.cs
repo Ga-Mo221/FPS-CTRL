@@ -66,6 +66,11 @@ namespace Backend.Mock
         }
 
 
+        public void LinkGoogleAccount(string serverAuthCode, bool forceLink, Action onSuccess, Action<AuthError> onFailure)
+        {
+            LinkGoogleAccount(serverAuthCode, onSuccess, onFailure);
+        }
+
         public void LinkGoogleAccount(string serverAuthCode, Action onSuccess, Action<AuthError> onFailure)
         {
             Debug.Log("[MockAuth] Link Google OK");

@@ -320,6 +320,14 @@ public class SettingsBinder : MonoBehaviour
         EnsureRowBelow("Do hoa Scroll/Content/HIEN THI/Gioi han FPS", "Am thanh/THIET BI & TUY CHON/Giu phim T de noi", "Thiết bị thu âm");
         FitLongValueCycler(Find("Am thanh/THIET BI & TUY CHON/Thiet bi thu am"), 330f);
         EnsureRowBelow("Am thanh/AM LUONG/Nhac nen", "Am thanh/AM LUONG/Nhac nen", "Âm lượng voice");
+
+        // [Aemy 2026-10-24] Mep trai chu thang hang voi dong goc cua muc (xem LockLeftEdge).
+        const string dev = "Am thanh/THIET BI & TUY CHON/";
+        foreach (var n in new[] { "Mic cua toi", "Mic moi nguoi", "Giu phim T de noi", "Thiet bi thu am" })
+            LockLeftEdge(Find(dev + n), Find(dev + "Am thanh vom (3D)"));
+        LockLeftEdge(Find("Am thanh/AM LUONG/Am luong voice"), Find("Am thanh/AM LUONG/Nhac nen"));
+        // Pause: thanh truot "Am luong voice" sat / de len tieu de "THIET BI & TUY CHON" -> chua khoang trong.
+        EnsureGapBelow(Find("Am thanh/AM LUONG/Am luong voice"), 40f);
     }
 
     /// <summary>
@@ -332,6 +340,87 @@ public class SettingsBinder : MonoBehaviour
         EnsureSwitchRowBelow("Do hoa Scroll/Content/HINH ANH/Motion Blur", "Chống rung camera");
         EnsureRowBelow("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom", "Do hoa Scroll/Content/HINH ANH/Chong rung camera", "Mức chống rung");
         SetSliderPercentRange("Do hoa Scroll/Content/HINH ANH/Muc chong rung", 0f, 100f, true);
+        LockLeftEdge(Find("Do hoa Scroll/Content/HINH ANH/Chong rung camera"), Find("Do hoa Scroll/Content/HINH ANH/Motion Blur"));
+        LockLeftEdge(Find("Do hoa Scroll/Content/HINH ANH/Muc chong rung"), Find("Do hoa Scroll/Content/HINH ANH/Cuong do Bloom"));
+    }
+
+    /// <summary>
+    /// [Aemy 2026-10-24] Muc ben duoi (tieu de + cac dong) phai cach diem thap nhat cua `rowT` (vd thanh truot) it nhat
+    /// `minGap`; thieu thi day moi muc nam duoi xuong. Du roi (menu) thi khong doi gi. Goi lai van cho cung ket qua.
+    /// </summary>
+    private static void EnsureGapBelow(Transform rowT, float minGap)
+    {
+        var row = rowT as RectTransform;
+        var section = row != null ? row.parent as RectTransform : null;
+        var content = section != null ? section.parent as RectTransform : null;
+        if (content == null) return;
+
+        var corners = new Vector3[4];
+        float lowest = float.MaxValue;
+        foreach (var r in row.GetComponentsInChildren<RectTransform>(true))
+        {
+            if (!r.gameObject.activeSelf) continue; // tab dang an luc Awake -> van tinh, chi bo object tat san
+            r.GetWorldCorners(corners);
+            lowest = Mathf.Min(lowest, content.InverseTransformPoint(corners[0]).y);
+        }
+        if (lowest == float.MaxValue) return;
+
+        // Tieu de cua muc ngay ben duoi (cao nhat trong cac muc nam duoi muc nay).
+        float nextTop = float.MinValue;
+        var below = new List<RectTransform>();
+        foreach (Transform c in content)
+        {
+            var other = c as RectTransform;
+            if (other == null || other == section || !other.gameObject.activeSelf || other.anchoredPosition.y >= section.anchoredPosition.y) continue;
+            below.Add(other);
+            other.GetWorldCorners(corners);
+            nextTop = Mathf.Max(nextTop, content.InverseTransformPoint(corners[1]).y);
+        }
+        if (below.Count == 0) return;
+        float push = nextTop - (lowest - minGap);
+        if (push <= 0.5f) return;
+        foreach (var other in below) other.anchoredPosition -= new Vector2(0f, push);
+        var scroll = content.GetComponentInParent<UnityEngine.UI.ScrollRect>();
+        if (scroll != null && scroll.content == content) content.sizeDelta += new Vector2(0f, push);
+    }
+
+    /// <summary>
+    /// [Aemy 2026-10-24] Dong cai dat = nhan TMP (ContentSizeFitter ngang, pivot giua) va la CHA cua switch / slider / o chon.
+    /// Dong goc trong scene duoc dat tay theo do rong chu Viet cua chinh no; dong clone giu x + rong cua dong mau
+    /// -> CSF tinh lai rong theo chu moi, tam dung yen -> mep trai chu lech (chu ngan lech phai, chu dai lech trai).
+    /// Sua: mep trai = mep trai dong `reference`, pivot + neo con ve ben trai -> rong chu doi (CSF, doi ngon ngu)
+    /// khong con keo chu hay keo con di. Vi tri that cua con (switch / thanh truot / o chon) giu nguyen.
+    /// Goi lai nhieu lan van cho cung ket qua.
+    /// </summary>
+    private static void LockLeftEdge(Transform rowT, Transform referenceT)
+    {
+        var row = rowT as RectTransform; var reference = referenceT as RectTransform;
+        if (row == null || reference == null || row == reference || row.parent != reference.parent) return;
+        if (Mathf.Abs(row.anchorMin.x - row.anchorMax.x) > 0.001f) return; // dong keo gian -> khong phai kieu nhan + CSF
+
+        float refLeft = reference.anchoredPosition.x - reference.rect.width * reference.pivot.x;
+        float rowLeft = row.anchoredPosition.x - row.rect.width * row.pivot.x;
+        float rowW = row.rect.width;
+
+        // Vi tri con theo he toa do cha cua dong (cung he voi anchoredPosition cua dong).
+        var kids = new List<RectTransform>(); var absX = new List<float>();
+        foreach (Transform c in row)
+        {
+            var k = c as RectTransform;
+            if (k == null || Mathf.Abs(k.anchorMin.x - k.anchorMax.x) > 0.001f) continue; // con keo gian theo dong: de nguyen
+            kids.Add(k);
+            absX.Add(rowLeft + k.anchorMin.x * rowW + k.anchoredPosition.x);
+        }
+
+        row.pivot = new Vector2(0f, row.pivot.y);
+        row.anchoredPosition = new Vector2(refLeft, row.anchoredPosition.y);
+        for (int i = 0; i < kids.Count; i++)
+        {
+            var k = kids[i];
+            k.anchorMin = new Vector2(0f, k.anchorMin.y);
+            k.anchorMax = new Vector2(0f, k.anchorMax.y);
+            k.anchoredPosition = new Vector2(absX[i] - refLeft, k.anchoredPosition.y);
+        }
     }
 
     /// <summary>O chon co gia tri dai (ten thiet bi): noi rong ve ben trai (giu mep phai) + cat "…" khi van qua dai.</summary>

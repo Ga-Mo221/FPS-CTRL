@@ -30,6 +30,23 @@ public class NetworkGameState : NetworkBehaviour
     public const float LATE_JOIN_MIN_SECONDS = 60f;
     private string _rosterPublished; // [Aemy 2026-10-22] roster da ghi len SessionInfo (chi ghi lai khi doi)
 
+    // ── [Aemy 2026-10-24] PHONG CHO truoc dem nguoc ──────────────────────────
+    // Vao map ngay khi ghep duoc tran; trong luc InLobby phong van mo (nguoi dang tim tran vao them duoc),
+    // MatchLobbyOverlay phu man ghep tran + dem nguoc. Het gio (hoac phong day) -> StartCountdown() nhu cu
+    // => dem nguoc 5..1 + voice three/two/one/fight + nhac nen giu nguyen (chung chi bat dau khi _countdownTimer chay).
+    [Header("Phong cho (Aemy 2026-10-24)")]
+    [Tooltip("Giay cho nguoi khac vao truoc khi dem nguoc bat dau tran. 0 = tat phong cho.")]
+    [SerializeField] private float _lobbySeconds = 15f;
+    [Networked] private TickTimer _lobbyTimer { get; set; }
+    [Networked] public NetworkBool InLobby { get; private set; }
+
+    /// <summary>Giay con lai cua phong cho (null = khong o phong cho).</summary>
+    public float? GetLobbyRemaining()
+    {
+        if (Object == null || !Object.IsValid || !InLobby) return null;
+        return _lobbyTimer.RemainingTime(Runner);
+    }
+
     [Networked] public int StartTick { get; private set; } // tick bat dau tran (gan trong Spawned khi khong phai resume)
     [Networked] public int EndTick   { get; private set; } // tick khi IsMatchOver lan dau (0 = chua ket thuc)
 
@@ -137,7 +154,13 @@ public class NetworkGameState : NetworkBehaviour
         ForfeitWinnerTeam = -1;
         _hadTwoPlayers = false;
         _hadBothTeams = false;
-        StartCountdown();
+        // [Aemy 2026-10-24] Phong cho truoc, het phong cho moi dem nguoc (xem FixedUpdateNetwork).
+        if (_lobbySeconds > 0f)
+        {
+            InLobby = true;
+            _lobbyTimer = TickTimer.CreateFromSeconds(Runner, _lobbySeconds);
+        }
+        else StartCountdown();
     }
 
     public override void FixedUpdateNetwork()
@@ -154,7 +177,7 @@ public class NetworkGameState : NetworkBehaviour
             bool joinable = !IsMatchOver() && (!GameStarted || RoundElapsed > LATE_JOIN_MIN_SECONDS);
             if (Runner.SessionInfo.IsOpen != joinable) Runner.SessionInfo.IsOpen = joinable;
             // [Aemy 2026-10-22] Ghi ten + doi nguoi dang trong phong -> nguoi vao sau thay du roster o man ghep tran.
-            SessionRoster.Publish(Runner, ref _rosterPublished);
+            SessionRoster.Publish(Runner, ref _rosterPublished, !GameStarted); // [2026-10-24] + co "chua bat dau tran"
         }
 
         // ── Cập nhật Kill stats (chỉ host, đồng bộ xuống mọi client) ───────────
@@ -215,6 +238,19 @@ public class NetworkGameState : NetworkBehaviour
 
         if (!GameStarted)
         {
+            if (InLobby)
+            {
+                // [Aemy 2026-10-24] Het gio cho / phong da day -> bat dau dem nguoc nhu truoc.
+                var si = Runner.SessionInfo;
+                bool full = si != null && si.IsValid && si.MaxPlayers > 0 && si.PlayerCount >= si.MaxPlayers;
+                if (_lobbyTimer.Expired(Runner) || full)
+                {
+                    InLobby = false;
+                    StartTick = Runner.Tick.Raw; // tinh thoi gian tran tu luc het phong cho
+                    StartCountdown();
+                }
+                return;
+            }
             if (_countdownTimer.Expired(Runner))
             {
                 GameStarted  = true;

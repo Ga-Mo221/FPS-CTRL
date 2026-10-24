@@ -119,7 +119,12 @@ namespace Game.UI
             }, "Nhập email liên hệ mới (sẽ gửi mail xác thực)", "email@example.com");
         }
 
-        private async void OnLinkGoogle()
+        private void OnLinkGoogle() { LinkGoogleFlow(false); }
+
+        // [Aemy 2026-10-24] Lien ket xong -> dang nhap Google se vao DUNG tai khoan nay.
+        // Google dang gan voi tai khoan KHAC: hoi truoc khi chuyen (truoc day ForceLink tu chuyen, tai khoan kia
+        // mat dang nhap Google ma nguoi choi khong biet). Dong y -> mo lai Google (ma chi dung 1 lan) va chuyen.
+        private async void LinkGoogleFlow(bool force)
         {
             var google = BackendBootstrap.PCGoogleAuthService;
             var ext = BackendBootstrap.ExternalAuthService;
@@ -127,9 +132,20 @@ namespace Game.UI
             if (ModalDialog.Instance != null) ModalDialog.Instance.Info("Liên kết Google", "Đang mở trình duyệt để đăng nhập Google...");
             string code = await google.GetServerAuthCodeAsync(BackendBootstrap.GoogleWebClientId, BackendBootstrap.GoogleLocalPort);
             if (string.IsNullOrEmpty(code)) { Info("Đã hủy", "Không lấy được mã Google (hủy hoặc lỗi)."); return; }
-            ext.LinkGoogleAccount(code,
-                () => { SetGoogleLinkedVisual(true); LoadLinkedAccountInfo(); Info("Thành công", "Đã liên kết tài khoản Google!"); },
-                e => Info("Liên kết thất bại", e != null ? e.ErrorMessage : "Lỗi không rõ."));
+            ext.LinkGoogleAccount(code, force,
+                () => { SetGoogleLinkedVisual(true); LoadLinkedAccountInfo(); Info("Thành công", "Đã liên kết tài khoản Google! Lần sau bấm GOOGLE ở màn đăng nhập sẽ vào thẳng tài khoản này."); },
+                e =>
+                {
+                    if (!force && e != null && e.ErrorCode == "LinkedAccountAlreadyClaimed" && ModalDialog.Instance != null)
+                    {
+                        ModalDialog.Instance.Confirm("GOOGLE ĐÃ LIÊN KẾT TÀI KHOẢN KHÁC",
+                            "Tài khoản Google này đang liên kết với một tài khoản Eclipse Strike khác.\n" +
+                            "Chuyển liên kết sang tài khoản này? Tài khoản kia sẽ KHÔNG đăng nhập bằng Google được nữa.",
+                            () => LinkGoogleFlow(true), "CHUYỂN SANG ĐÂY", "HỦY");
+                        return;
+                    }
+                    Info("Liên kết thất bại", e != null ? e.ErrorMessage : "Lỗi không rõ.");
+                });
         }
 
         private void OnLogout()

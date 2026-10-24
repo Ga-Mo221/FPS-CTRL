@@ -406,7 +406,7 @@ public class NetworkRunnerHandler : MonoBehaviour
     // Host tu dong DONG phong khi tran sap het / da ket thuc (NetworkGameState).
 
     /// <summary>Doi so nay khi layout state mang thay doi -> ban build cu khong vao nham phong ban moi.</summary>
-    public const int NET_PROTOCOL = 20261018;
+    public const int NET_PROTOCOL = 20261025; // [Aemy 2026-10-24] NetworkGameState them phong cho (InLobby / _lobbyTimer); roster "r" + co L/G + avatar
     public const string PROP_MODE = "m", PROP_MAP = "map", PROP_VER = "v";
 
     public static Dictionary<string, SessionProperty> BuildSessionProps(int mapBuildIndex)

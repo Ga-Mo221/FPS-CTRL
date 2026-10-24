@@ -260,6 +260,21 @@ namespace Game.UI
             { "Vignette (tối góc)", "Vignette" },
             { "Chống rung camera", "Camera stabilization" },
             { "Mức chống rung", "Stabilization strength" }, // [Aemy 2026-10-22]
+            // [Aemy 2026-10-24] Phong cho trong tran + Google
+            { "ĐANG CHỜ NGƯỜI CHƠI", "WAITING FOR PLAYERS" },
+            { "ĐANG VÀO TRẬN…", "JOINING MATCH…" }, // [Aemy 2026-10-24] phong cho trong tran, luc dang tai map
+            { "CHƯA LIÊN KẾT GOOGLE", "GOOGLE NOT LINKED" },
+            { "TẠO TÀI KHOẢN MỚI", "CREATE NEW ACCOUNT" },
+            { "GOOGLE ĐÃ LIÊN KẾT TÀI KHOẢN KHÁC", "GOOGLE LINKED TO ANOTHER ACCOUNT" },
+            { "CHUYỂN SANG ĐÂY", "MOVE HERE" },
+            { "Tài khoản Google này chưa liên kết với tài khoản Eclipse Strike nào.\nNếu bạn đã có tài khoản: đăng nhập bằng tên/mật khẩu rồi vào Tài khoản → Liên kết Google.\nTạo tài khoản MỚI bằng Google này?",
+              "This Google account is not linked to any Eclipse Strike account.\nIf you already have an account: log in with your username/password, then go to Account → Link Google.\nCreate a NEW account with this Google account?" },
+            { "GOOGLE CHƯA LIÊN KẾT TÀI KHOẢN NÀO\nĐã có tài khoản: đăng nhập rồi vào Tài khoản → Liên kết Google.\nMuốn tạo tài khoản mới: bấm GOOGLE thêm lần nữa.",
+              "GOOGLE IS NOT LINKED TO ANY ACCOUNT\nHave an account: log in, then Account → Link Google.\nTo create a new account: press GOOGLE again." },
+            { "Tài khoản Google này đang liên kết với một tài khoản Eclipse Strike khác.\nChuyển liên kết sang tài khoản này? Tài khoản kia sẽ KHÔNG đăng nhập bằng Google được nữa.",
+              "This Google account is linked to another Eclipse Strike account.\nMove the link to this account? The other account will NO LONGER be able to log in with Google." },
+            { "Đã liên kết tài khoản Google! Lần sau bấm GOOGLE ở màn đăng nhập sẽ vào thẳng tài khoản này.",
+              "Google account linked! Next time, press GOOGLE on the login screen to go straight into this account." },
             { "ĐANG TRONG TRẬN", "IN MATCH" }, // [Aemy 2026-10-22] o roster nguoi chua co ten (vao tran dang dien ra)
             { "Ngôn ngữ", "Language" },
             { "ÂM LƯỢNG", "VOLUME" },

@@ -170,13 +170,19 @@ namespace Backend.PlayfabImpl
         // GUI LEN: LIEN KET Google vao tai khoan HIEN TAI.
         public void LinkGoogleAccount(string serverAuthCode, Action onSuccess, Action<AuthError> onError)
         {
+            LinkGoogleAccount(serverAuthCode, true, onSuccess, onError);
+        }
+
+        // [Aemy 2026-10-24] forceLink=false -> Google da gan tai khoan khac thi PlayFab tra "LinkedAccountAlreadyClaimed".
+        public void LinkGoogleAccount(string serverAuthCode, bool forceLink, Action onSuccess, Action<AuthError> onError)
+        {
             if (string.IsNullOrEmpty(serverAuthCode))
             {
                 onError?.Invoke(new AuthError { ErrorCode = "MissingServerAuthCode", ErrorMessage = "ServerAuthCode rong." });
                 return;
             }
             PlayFabClientAPI.LinkGoogleAccount(
-                new LinkGoogleAccountRequest { ServerAuthCode = serverAuthCode, ForceLink = true },
+                new LinkGoogleAccountRequest { ServerAuthCode = serverAuthCode, ForceLink = forceLink },
                 _ => onSuccess?.Invoke(),
                 error => onError?.Invoke(MapError(error)));
         }

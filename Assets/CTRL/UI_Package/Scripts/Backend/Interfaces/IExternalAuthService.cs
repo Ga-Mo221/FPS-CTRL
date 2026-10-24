@@ -20,5 +20,11 @@ namespace Backend.Interfaces
         void LinkGoogleAccount(string serverAuthCode,
             Action onSuccess,
             Action<AuthError> onFailure);
+
+        /// <summary>[Aemy 2026-10-24] forceLink=false: Google dang gan tai khoan KHAC -> loi "LinkedAccountAlreadyClaimed"
+        /// (de UI hoi nguoi choi truoc). forceLink=true: chuyen lien ket sang tai khoan hien tai.</summary>
+        void LinkGoogleAccount(string serverAuthCode, bool forceLink,
+            Action onSuccess,
+            Action<AuthError> onFailure);
     }
 }
