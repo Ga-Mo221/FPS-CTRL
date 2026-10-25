@@ -76,7 +76,7 @@
       name: "ANH TÈO",
       role: "XẠ THỦ KIÊN CƯỜNG",
       img: "assets/op-anhteo.png",
-      desc: "Mũ tai bèo, khăn rằn và đôi dép quen thuộc. Anh Tèo kiên nhẫn giữ góc, chờ đúng khoảnh khắc để hạ gục chỉ bằng một phát Dusk.",
+      desc: "Mũ tai bèo, khăn rằn và đôi dép quen thuộc. Ngoài trận thì vui tính, vào trận thì kiên nhẫn giữ góc — chờ đúng khoảnh khắc để hạ gục chỉ bằng một phát Dusk.",
       traits: [["Phong cách", "Giữ góc, bắn tỉa"], ["Hợp với", "Dusk · Vesper"], ["Mẹo", "Dùng AN-M8 Smoke để đổi vị trí an toàn"]]
     }
   };
