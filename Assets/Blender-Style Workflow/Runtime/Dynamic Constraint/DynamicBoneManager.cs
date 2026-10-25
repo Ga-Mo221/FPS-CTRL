@@ -14,7 +14,7 @@ namespace GaMo.BlenderEditorTools
     /// cho tất cả — cách duy nhất để Job System có đủ khối lượng công việc lớn (hàng trăm chain
     /// song song) mà chia đều cho các worker thread hiệu quả.
     ///
-    /// Vòng đời 1 frame (xem LateUpdate):
+    /// Vòng đời 1 frame (xem LateTick — do ConstraintScheduler gọi SAU mọi constraint):
     ///   1. Nếu có thay đổi cấu trúc (thêm/xoá nhân vật, đổi rootBones, đổi số collider) →
     ///      RebuildNativeArrays() — chỉ tốn khi structure đổi, KHÔNG chạy mỗi frame.
     ///   2. Refresh nhẹ mỗi frame: BoneParams (damping/gravity/...) + ColliderConfigData
@@ -25,7 +25,7 @@ namespace GaMo.BlenderEditorTools
     ///      với các hệ thống khác, có thể tách Schedule ở Update() và Complete() ở LateUpdate()
     ///      — xem ScheduleOnly()/CompletePending() bên dưới.
     /// </summary>
-    [DefaultExecutionOrder(500)] // chạy sau Animator (mặc định ~0) để đọc đúng pose vừa animate
+    [DefaultExecutionOrder(500)] // Update() schedule job sau các Update mặc định; phần Complete (LateTick) do ConstraintScheduler gọi
     public sealed class DynamicBoneManager : MonoBehaviour
     {
         private static DynamicBoneManager _instance;
@@ -128,6 +128,7 @@ namespace GaMo.BlenderEditorTools
 
             _instance = this;
             if (transform.parent == null) DontDestroyOnLoad(gameObject);
+            ConstraintSchedulerRunner.EnsureExists(); // LateTick do scheduler gọi — cần runner kể cả khi scene không có constraint nào
         }
 
         private readonly List<DynamicBone> _registered = new List<DynamicBone>();
@@ -227,7 +228,16 @@ namespace GaMo.BlenderEditorTools
             if (!completeImmediately) ScheduleFrame();
         }
 
-        private void LateUpdate()
+        /// <summary>
+        /// Stage cuối của <see cref="ConstraintScheduler"/> — gọi SAU khi mọi constraint (DampedTrack /
+        /// Transform / IK) đã Solve xong trong cùng LateUpdate, thay cho LateUpdate() riêng trước đây.
+        /// </summary>
+        internal static void SchedulerLateTick()
+        {
+            if (_instance != null && _instance.isActiveAndEnabled) _instance.LateTick();
+        }
+
+        private void LateTick()
         {
             if (completeImmediately)
             {

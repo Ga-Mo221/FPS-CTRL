@@ -7,6 +7,7 @@ namespace GaMo.TrueInputSystem
     using System.Linq;
     using UnityEngine.InputSystem;
 
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISInputBridge))]
     [InitializeOnLoad]
     public class TISInputBridgeEditor : UnityEditor.Editor
@@ -112,6 +113,8 @@ namespace GaMo.TrueInputSystem
             EditorGUILayout.Space(4);
 
             if (_tab == 0) DrawSettingsTab();
+            else if (targets.Length > 1)
+                EditorGUILayout.HelpBox("Đang chọn nhiều TISInputBridge: chọn 1 object để xem tab Debug (dữ liệu runtime riêng từng instance).", MessageType.Info);
             else           DrawDebugTab(bridge);
         }
 
@@ -159,7 +162,37 @@ namespace GaMo.TrueInputSystem
                 EditorGUI.indentLevel--;
             }
 
+            DrawMotionSection();
+
             serializedObject.ApplyModifiedProperties();
+        }
+
+        // ── Motion (Gyro + Touchpad) ──────────────────────────
+        // Cấu hình gyro / touchpad nằm ở Profile › Motion Settings và binding Gamepad trong
+        // Setup Tool — bridge chỉ hiển thị ghi chú.
+
+        private void DrawMotionSection()
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Motion (Gyro + Touchpad)", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Gyro / touchpad tay cầm được cấu hình trong Profile:\n" +
+                "• Binding: Setup Tool › Binding Gamepad — chọn <TISMotion>/gyro, /touchpad...\n" +
+                "  hoặc bật \"+ Gyro\" / \"+ Touchpad\" cho binding Left / Right Stick.\n" +
+                "• Độ nhạy, lọc, SDL3, giả lập: Setup Tool › Cài Đặt Nền Tảng › Gamepad › Motion.",
+                MessageType.None);
+        }
+
+        private string GetDbMotionInfo(TISInputBridge bridge)
+        {
+            var m   = bridge.Motion;
+            var src = m.Source;
+            return $"Gyro: {(m.GyroEnabled ? "ON" : "OFF")}   Touchpad: {(m.TouchpadEnabled ? "ON" : "OFF")}   " +
+                   $"| Source: {(src != null ? src.Name : "(none)")}   ({m.Sources.Count} registered)\n" +
+                   $"Rate: {m.GyroRate:F1} °/s   GyroAim: {m.GyroAim:F1} °/s   aim={m.IsGyroAimActive}   " +
+                   $"device={(bridge.MotionDevice != null ? "ON" : "off")}   " +
+                   $"calibrated={m.GyroProcessor.IsCalibrated}\n" +
+                   $"Touch: {(m.IsTouching ? m.TouchpadPosition.ToString("F2") : "-")}   pressed={m.TouchpadPressed}";
         }
 
         private void DrawDebugTab(TISInputBridge bridge)
@@ -210,6 +243,21 @@ namespace GaMo.TrueInputSystem
             EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("Object Tracker", EditorStyles.boldLabel);
             EditorGUILayout.LabelField(GetDbObjectTrackerInfo(bridge), EditorStyles.wordWrappedMiniLabel);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Motion (Gyro + Touchpad)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(GetDbMotionInfo(bridge), EditorStyles.wordWrappedMiniLabel);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var p = bridge.Motion.GyroProcessor;
+                if (GUILayout.Button(p.IsManualCalibrating ? "End Gyro Calibration" : "Begin Gyro Calibration", GUILayout.Height(22)))
+                {
+                    if (p.IsManualCalibrating) bridge.Motion.EndGyroCalibration();
+                    else                       bridge.Motion.BeginGyroCalibration();
+                }
+                bridge.ShowMotionDebugGUI = GUILayout.Toggle(bridge.ShowMotionDebugGUI, "On-screen GUI",
+                    EditorStyles.miniButton, GUILayout.Height(22), GUILayout.Width(110));
+            }
 
             EditorGUILayout.Space(6);
             EditorGUILayout.BeginHorizontal();

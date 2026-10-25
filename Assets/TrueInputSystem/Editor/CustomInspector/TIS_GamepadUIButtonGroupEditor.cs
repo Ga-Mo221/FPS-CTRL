@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 namespace GaMo.TrueInputSystem
 {
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISGamepadUIButtonGroup))]
     [InitializeOnLoad]
     public class TISGamepadUIButtonGroupEditor : UnityEditor.Editor
@@ -38,7 +39,6 @@ namespace GaMo.TrueInputSystem
         {
             serializedObject.Update();
 
-            TISGamepadUIButtonGroup group = (TISGamepadUIButtonGroup)target;
             TISGamepadUIButtonGroup.GroupLayoutType layout =
                 (TISGamepadUIButtonGroup.GroupLayoutType)layoutTypeProp.enumValueIndex;
 
@@ -59,38 +59,50 @@ namespace GaMo.TrueInputSystem
 
             if (GUILayout.Button("Rebuild Navigation", GUILayout.Height(20)))
             {
-                Undo.RecordObject(group, "Rebuild Group Navigation");
-
-                List<TISGamepadUIButton> childButtons = new List<TISGamepadUIButton>();
-                foreach (Transform child in group.transform)
+                // Multi-edit: rebuild cho tất cả group đang chọn
+                int totalLinked = 0;
+                foreach (var tg in targets)
                 {
-                    TISGamepadUIButton btn = child.GetComponent<TISGamepadUIButton>();
-                    if (btn != null)
-                    {
-                        Undo.RecordObject(btn, "Rebuild Target Link");
-                        childButtons.Add(btn);
-                    }
+                    var g = tg as TISGamepadUIButtonGroup;
+                    if (g != null) totalLinked += RebuildOneGroup(g);
                 }
-
-                group.RebuildNavigation();
-
-                foreach (var btn in childButtons)
-                {
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(btn);
-                    EditorUtility.SetDirty(btn);
-                }
-
-                EditorUtility.SetDirty(group);
 
                 string wrapInfo = (layout == TISGamepadUIButtonGroup.GroupLayoutType.Grid)
                     ? $" | Wrap: <b>{(TISGamepadUIButtonGroup.GridVerticalWrapMode)gridVerticalWrapProp.enumValueIndex}</b>"
                     : "";
                 Debug.Log($"<color=cyan><b>[GamepadUIButtonGroup]</b></color> " +
                           $"Layout: <b>{layout}</b>{wrapInfo} — " +
-                          $"Đã liên kết <b>{childButtons.Count}</b> nút thành công!");
+                          $"Đã liên kết <b>{totalLinked}</b> nút ({targets.Length} group) thành công!");
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private static int RebuildOneGroup(TISGamepadUIButtonGroup group)
+        {
+            Undo.RecordObject(group, "Rebuild Group Navigation");
+
+            List<TISGamepadUIButton> childButtons = new List<TISGamepadUIButton>();
+            foreach (Transform child in group.transform)
+            {
+                TISGamepadUIButton btn = child.GetComponent<TISGamepadUIButton>();
+                if (btn != null)
+                {
+                    Undo.RecordObject(btn, "Rebuild Target Link");
+                    childButtons.Add(btn);
+                }
+            }
+
+            group.RebuildNavigation();
+
+            foreach (var btn in childButtons)
+            {
+                PrefabUtility.RecordPrefabInstancePropertyModifications(btn);
+                EditorUtility.SetDirty(btn);
+            }
+
+            EditorUtility.SetDirty(group);
+            return childButtons.Count;
         }
 
         private static void DrawWrapModeHint(TISGamepadUIButtonGroup.GridVerticalWrapMode mode)

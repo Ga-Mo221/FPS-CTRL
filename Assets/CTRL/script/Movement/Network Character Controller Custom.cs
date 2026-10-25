@@ -194,7 +194,9 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         Data.TRSPData.Position = transform.position;
         // Ghi rotation từ TargetYaw (không dùng transform.rotation) để NetworkTRSP.Render
         // và GetNetworkRotation() luôn có giá trị yaw đúng.
-        Data.TRSPData.Rotation = Quaternion.Euler(0f, Data.TargetYaw, 0f);
+        // Rotation trung voi TargetYaw va bi Render() override,
+        // nen ghi hang identity de 4 word nay KHONG BAO GIO dirty. GetNetworkRotation()/CopyToEngine dung TargetYaw.
+        Data.TRSPData.Rotation = Quaternion.identity;
     }
 
     /// <summary>
@@ -251,6 +253,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
                 return;
         }
 
+        // goi moi tick qua CCSetHeight(): neu chieu cao/tam da dung
+        // thi bo qua (truoc day van tat/bat CharacterController 2 lan moi tick).
+        if (Mathf.Approximately(_controller.height, newHeight) && Mathf.Approximately(_controller.center.y, newCenterY))
+            return;
+
         // Vị trí đáy chân (world space) TRƯỚC khi thay đổi
         float oldBottomY = transform.position.y + _controller.center.y - (_controller.height * 0.5f);
 
@@ -296,9 +303,11 @@ public sealed class NetworkCharacterControllerCustom : NetworkTRSP, INetworkTRSP
         var yawModel = _data.YawModel;
         if (_movementHandler != null)
         {
-            if (_movementHandler.StateFl.IsADS || _movementHandler.StateFl.IsThrow)
+            // Chỉ giảm tốc khi NGẮM (giống pitch). Trước đây cả lúc ném lựu đạn → nhân với hệ số còn sót từ
+            // lần ngắm trước (vd sniper 0.1) → xoay trái/phải gần như đứng, còn lên/xuống vẫn bình thường.
+            if (_movementHandler.StateFl.IsADS)
             {
-                yawModel *= _movementHandler.ADSLookSpeedMultiplier; 
+                yawModel *= _movementHandler.ADSLookSpeedMultiplier;
             }
         }
 

@@ -16,7 +16,10 @@ public class ZoneBoundsManager : MonoBehaviour
     [Tooltip("ScriptableObject chứa bounds của map này.")]
     [SerializeField] private MapBoundsData _boundsData;
     
+    // Chỉ OnDrawGizmos (#if UNITY_EDITOR) đọc → bản build báo CS0414. Giữ field để layout serialize giống Editor.
+#pragma warning disable CS0414
     [SerializeField] private bool Draw = false;
+#pragma warning restore CS0414
 
     /// <summary>
     /// Trả về bounds data của map hiện tại.

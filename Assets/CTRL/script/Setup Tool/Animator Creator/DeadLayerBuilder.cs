@@ -103,11 +103,13 @@ public class DeadLayerBuilder : LayerBuilder
             t.AddCondition(AnimatorConditionMode.If, 0, "IsSliding");
         }
 
-        // ── Dead states → NULL : phát hết clip VÀ IsDead==false mới về ──
+        // ── Dead states → NULL : về NGAY khi IsDead==false ──
+        // KHÔNG dùng exit time: với exit time = 1, Unity chỉ xét điều kiện tại mốc exit time của clip,
+        // nên lúc hồi sinh layer Dead bị trễ về NULL → xương đầu (camera anchor) còn ở pose nằm, camera giật.
         foreach (var deadState in new[] { deadStand, deadCrouch, deadAir, deadSlide })
         {
             var t = deadState.AddTransition(nullS);
-            SetTrans(t, 0f, true, 1f);
+            SetTrans(t, 0f, false);
             t.AddCondition(AnimatorConditionMode.IfNot, 0, "IsDead");
         }
     }

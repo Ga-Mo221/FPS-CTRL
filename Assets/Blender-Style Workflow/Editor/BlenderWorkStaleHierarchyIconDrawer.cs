@@ -38,6 +38,8 @@ namespace GaMo.BlenderEditorTools
             (typeof(IKConstraint), "IKConstraint"),
             (typeof(SimpleBoneRenderer), "BoneRenderer"),
             (typeof(DynamicBoneManager), "dynamicmanager"),
+            (typeof(DampedTrackConstraint), "DampeTrack"),
+            (typeof(DampedTrackChainConstraint), "DampeTrackChain"),
             // KHÔNG thêm MotionTimeEventBehaviour ở đây: nó kế thừa StateMachineBehaviour
             // (gắn vào state của Animator Controller), KHÔNG phải Component/MonoBehaviour
             // gắn trên GameObject. GameObject.GetComponent(Type) chỉ chấp nhận Component

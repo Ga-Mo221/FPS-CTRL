@@ -17,6 +17,7 @@ namespace GaMo.TrueInputSystem
     using UnityEditor;
     using UnityEngine;
 
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISDirectionalSkillButton))]
     [InitializeOnLoad]
     public class TISDirectionalSkillButtonEditor : UnityEditor.Editor
@@ -307,7 +308,11 @@ namespace GaMo.TrueInputSystem
                 EditorGUILayout.LabelField("TIS Directional Skill Button", EditorStyles.boldLabel,
                     GUILayout.ExpandWidth(true));
 
-                if (Application.isPlaying)
+                if (targets.Length > 1)
+                {
+                    DrawColorBadge(targets.Length + " OBJECTS", _accentColor * 0.7f);
+                }
+                else if (Application.isPlaying)
                 {
                     if (btn.IsInCancelZone)
                         DrawColorBadge("CANCELLING", _cancelColor);
@@ -367,6 +372,7 @@ namespace GaMo.TrueInputSystem
                     syncedIndex = 0;
                 }
 
+                EditorGUI.showMixedValue = _skillName.hasMultipleDifferentValues;
                 EditorGUI.BeginChangeCheck();
                 int newIndex = EditorGUILayout.Popup(
                     new GUIContent("Skill Name",
@@ -374,6 +380,7 @@ namespace GaMo.TrueInputSystem
                         "GetSkillAction(skillName) trả về true đúng 1 frame khi cast."),
                     Mathf.Max(syncedIndex, 0),
                     _actionNames);
+                EditorGUI.showMixedValue = false;
 
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -431,6 +438,7 @@ namespace GaMo.TrueInputSystem
                     }
                 }
 
+                EditorGUI.showMixedValue = _directionActionName.hasMultipleDifferentValues;
                 EditorGUI.BeginChangeCheck();
                 int newDirIndex = EditorGUILayout.Popup(
                     new GUIContent("Direction Key",
@@ -438,6 +446,7 @@ namespace GaMo.TrueInputSystem
                         "Auto → tự dùng skillName + \"_Dir\" (khuyên dùng nếu không cần override)."),
                     syncedDirIndex,
                     _dirKeyDisplayNames);
+                EditorGUI.showMixedValue = false;
 
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -625,21 +634,13 @@ namespace GaMo.TrueInputSystem
 
                 if (showColor)
                 {
-                    colorProp.colorValue = EditorGUI.ColorField(
-                        GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
-                            GUILayout.Width(fieldW)),
-                        GUIContent.none,
-                        colorProp.colorValue,
-                        showEyedropper: true, showAlpha: true, hdr: false);
+                    DrawColorProp(GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
+                            GUILayout.Width(fieldW)), GUIContent.none, colorProp);
                 }
                 else if (showSprite)
                 {
-                    spriteProp.objectReferenceValue = EditorGUI.ObjectField(
-                        GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
-                            GUILayout.Width(fieldW)),
-                        GUIContent.none,
-                        spriteProp.objectReferenceValue,
-                        typeof(Sprite), false);
+                    DrawSpriteProp(GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
+                            GUILayout.Width(fieldW)), GUIContent.none, spriteProp);
                 }
             }
             EditorGUILayout.Space(1);
@@ -714,21 +715,13 @@ namespace GaMo.TrueInputSystem
 
                 if (showColor)
                 {
-                    colorProp.colorValue = EditorGUI.ColorField(
-                        GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
-                            GUILayout.Width(fieldW)),
-                        GUIContent.none,
-                        colorProp.colorValue,
-                        showEyedropper: true, showAlpha: true, hdr: false);
+                    DrawColorProp(GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
+                            GUILayout.Width(fieldW)), GUIContent.none, colorProp);
                 }
                 else if (showSprite)
                 {
-                    spriteProp.objectReferenceValue = EditorGUI.ObjectField(
-                        GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
-                            GUILayout.Width(fieldW)),
-                        GUIContent.none,
-                        spriteProp.objectReferenceValue,
-                        typeof(Sprite), false);
+                    DrawSpriteProp(GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
+                            GUILayout.Width(fieldW)), GUIContent.none, spriteProp);
                 }
             }
             EditorGUILayout.Space(1);
@@ -812,21 +805,13 @@ namespace GaMo.TrueInputSystem
 
                 if (showColor)
                 {
-                    colorProp.colorValue = EditorGUI.ColorField(
-                        GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
-                            GUILayout.Width(fieldW)),
-                        GUIContent.none,
-                        colorProp.colorValue,
-                        showEyedropper: true, showAlpha: true, hdr: false);
+                    DrawColorProp(GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
+                            GUILayout.Width(fieldW)), GUIContent.none, colorProp);
                 }
                 else if (showSprite)
                 {
-                    spriteProp.objectReferenceValue = EditorGUI.ObjectField(
-                        GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
-                            GUILayout.Width(fieldW)),
-                        GUIContent.none,
-                        spriteProp.objectReferenceValue,
-                        typeof(Sprite), false);
+                    DrawSpriteProp(GUILayoutUtility.GetRect(fieldW, EditorGUIUtility.singleLineHeight,
+                            GUILayout.Width(fieldW)), GUIContent.none, spriteProp);
                 }
             }
             EditorGUILayout.Space(1);
@@ -871,6 +856,13 @@ namespace GaMo.TrueInputSystem
             if (!Application.isPlaying)
             {
                 DrawHelpBox("Dữ liệu runtime chỉ hiển thị khi đang Play Mode.", MessageType.Info);
+                return;
+            }
+
+            // Multi-edit: dữ liệu runtime là của riêng từng object
+            if (targets.Length > 1)
+            {
+                DrawHelpBox("Đang chọn nhiều object: chọn 1 object để xem dữ liệu Runtime.", MessageType.Info);
                 return;
             }
 
@@ -1077,23 +1069,36 @@ namespace GaMo.TrueInputSystem
 
                 EditorGUILayout.LabelField(new GUIContent(label), GUILayout.Width(labelW));
 
-                colorProp.colorValue = EditorGUI.ColorField(
-                    GUILayoutUtility.GetRect(colorW, EditorGUIUtility.singleLineHeight,
-                        GUILayout.Width(colorW)),
-                    new GUIContent("", colorTooltip),
-                    colorProp.colorValue,
-                    showEyedropper: true, showAlpha: true, hdr: false);
+                DrawColorProp(GUILayoutUtility.GetRect(colorW, EditorGUIUtility.singleLineHeight,
+                        GUILayout.Width(colorW)), new GUIContent("", colorTooltip), colorProp);
 
                 GUILayout.Space(4f);
 
-                spriteProp.objectReferenceValue = EditorGUI.ObjectField(
-                    GUILayoutUtility.GetRect(spriteW, EditorGUIUtility.singleLineHeight,
-                        GUILayout.Width(spriteW)),
-                    new GUIContent("", spriteTooltip),
-                    spriteProp.objectReferenceValue,
-                    typeof(Sprite), false);
+                DrawSpriteProp(GUILayoutUtility.GetRect(spriteW, EditorGUIUtility.singleLineHeight,
+                        GUILayout.Width(spriteW)), new GUIContent("", spriteTooltip), spriteProp);
             }
             EditorGUILayout.Space(1);
+        }
+
+        // Chỉ ghi vào property khi người dùng thật sự đổi giá trị. Ghi vô điều kiện
+        // (prop.colorValue = EditorGUI.ColorField(...)) sẽ đè giá trị của object đầu tiên
+        // lên TẤT CẢ object khi chúng đang khác nhau (multi-edit). BeginProperty tự hiện Mixed.
+        private static void DrawColorProp(Rect r, GUIContent label, SerializedProperty prop)
+        {
+            EditorGUI.BeginProperty(r, label, prop);
+            EditorGUI.BeginChangeCheck();
+            Color c = EditorGUI.ColorField(r, label, prop.colorValue, showEyedropper: true, showAlpha: true, hdr: false);
+            if (EditorGUI.EndChangeCheck()) prop.colorValue = c;
+            EditorGUI.EndProperty();
+        }
+
+        private static void DrawSpriteProp(Rect r, GUIContent label, SerializedProperty prop)
+        {
+            EditorGUI.BeginProperty(r, label, prop);
+            EditorGUI.BeginChangeCheck();
+            Object o = EditorGUI.ObjectField(r, label, prop.objectReferenceValue, typeof(Sprite), false);
+            if (EditorGUI.EndChangeCheck()) prop.objectReferenceValue = o;
+            EditorGUI.EndProperty();
         }
 
         private static void DrawHelpBox(string msg, MessageType type)

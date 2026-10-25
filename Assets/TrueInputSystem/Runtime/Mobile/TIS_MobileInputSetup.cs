@@ -13,6 +13,7 @@
 
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace GaMo.TrueInputSystem
@@ -339,6 +340,9 @@ namespace GaMo.TrueInputSystem
             ApDungJoystickNangCao();
             _cameraZone?.InjectDependencies(_inputBridge, _joystick);
 
+            // Mỗi ngón một chủ: receiver giao ngón chạm vùng nền cho joystick (trái) / camera (phải)
+            _touchReceiver.InjectCameraZone(_cameraZone);
+
             _gestureDetector = TaoGestureDetectorMacDinh();
             _gestureDetector.InjectDependencies(_inputBridge, _cameraZone, _joystick);
             _gestureDetector.SetZoneRatio(_tyLeJoystickHienThi, this);
@@ -355,12 +359,22 @@ namespace GaMo.TrueInputSystem
 
         private void DamBaoEventSystem()
         {
-            if (FindAnyObjectByType<EventSystem>() == null)
+            var es = FindAnyObjectByType<EventSystem>();
+            if (es == null)
             {
+                // InputSystemUIInputModule: chạy với Input System mới (StandaloneInputModule thì không)
+                // và cho biết chính xác thiết bị / touchId của từng ngón → camera đọc vị trí trực tiếp.
                 var go = new GameObject("EventSystem");
                 go.AddComponent<EventSystem>();
-                go.AddComponent<StandaloneInputModule>();
-                Debug.Log("[TISMobileInputSetup] ✓ Đã tạo EventSystem tự động.");
+                go.AddComponent<InputSystemUIInputModule>();
+                Debug.Log("[TISMobileInputSetup] ✓ Đã tạo EventSystem (InputSystemUIInputModule) tự động.");
+            }
+            else if (es.GetComponent<InputSystemUIInputModule>() == null)
+            {
+                Debug.LogWarning(
+                    "[TISMobileInputSetup] EventSystem không dùng InputSystemUIInputModule — " +
+                    "camera zone sẽ đọc vị trí ngón qua OnDrag (trễ 1 frame). " +
+                    "Khuyến nghị đổi sang InputSystemUIInputModule.", es);
             }
         }
 

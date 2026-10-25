@@ -24,8 +24,8 @@ namespace MagicaCloth2
         internal HashSet<ClothProcess> meshClothSet = new HashSet<ClothProcess>();
 
         //=========================================================================================
-        Dictionary<int, bool> animatorVisibleDict = new Dictionary<int, bool>(30);
-        Dictionary<int, bool> rendererVisibleDict = new Dictionary<int, bool>(100);
+        Dictionary<MagicaObjectId, bool> animatorVisibleDict = new Dictionary<MagicaObjectId, bool>(30);
+        Dictionary<MagicaObjectId, bool> rendererVisibleDict = new Dictionary<MagicaObjectId, bool>(100);
 
         //=========================================================================================
         /// <summary>
@@ -121,7 +121,7 @@ namespace MagicaCloth2
             }
 
             // チームマネージャの作業バッファへ登録
-            MagicaManager.Team.comp2TeamIdMap.Add(cprocess.cloth.GetInstanceID(), teamId);
+            MagicaManager.Team.comp2TeamIdMap.Add(cprocess.cloth.GetMagicaId(), teamId);
 
             return teamId;
         }
@@ -290,7 +290,7 @@ namespace MagicaCloth2
         {
             if (ani)
             {
-                int id = ani.GetInstanceID();
+                MagicaObjectId id = ani.GetMagicaId();
                 if (animatorVisibleDict.ContainsKey(id))
                     return animatorVisibleDict[id];
 
@@ -311,7 +311,7 @@ namespace MagicaCloth2
                 if (ren)
                 {
                     bool visible;
-                    int id = ren.GetInstanceID();
+                    MagicaObjectId id = ren.GetMagicaId();
                     if (rendererVisibleDict.ContainsKey(id))
                     {
                         visible = rendererVisibleDict[id];

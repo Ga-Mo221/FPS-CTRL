@@ -28,8 +28,11 @@ public class CharacterState
 
     public void StopSprint(ref PlayerStateFlags s, ConstraintManager _c_manager)
     {
+        // truoc day goi TurnOnHand MOI TICK khi dung yen (qua StopMovement)
+        // -> chi bat lai tay khi THAT SU vua thoi chay nhanh.
+        bool wasSprint = s.IsSprint;
         s.IsSprint = false;
-        _c_manager?.TurnOnHand(true);
+        if (wasSprint) _c_manager?.TurnOnHand(true);
     }
     
     //---------------------------------------------------

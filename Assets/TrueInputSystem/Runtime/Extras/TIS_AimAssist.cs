@@ -20,6 +20,13 @@ namespace GaMo.TrueInputSystem
     public class TISAimAssist
     {
         private AimAssistPlatform _currentPlatform = AimAssistPlatform.PC;
+
+        /// <summary>
+        /// Nguồn thiết bị đang dùng — TISInputBridge gán = ActiveDevice của bridge, để aim assist
+        /// và phần còn lại của TIS luôn thống nhất (trước đây có bộ dò thiết bị riêng, có thể lệch).
+        /// null → dùng _currentPlatform do UpdateActivePlatform() tự dò (tương thích ngược).
+        /// </summary>
+        public System.Func<TISActiveDevice> ActiveDeviceProvider { get; set; }
         // -------------------------------------------------------
         // API CHÍNH
         // -------------------------------------------------------
@@ -29,9 +36,16 @@ namespace GaMo.TrueInputSystem
         /// </summary>
         /// <param name="cameraTransform">Transform của camera</param>
         /// <param name="target">Vị trí mục tiêu trong World Space</param>
-        /// <param name="playerLookDelta">Góc xoay dự kiến của người chơi trong frame này (đơn vị: Độ)</param>
+        /// <param name="playerLookDelta">
+        /// Look delta của người chơi frame này. Lực hút cộng thêm có đơn vị ĐỘ (× Time.deltaTime);
+        /// nếu game dùng LookDelta theo đơn vị khác (vd. nhân thêm hệ số xoay), chỉnh AssistSpeed cho khớp.
+        /// </param>
         /// <param name="intensity">Mức độ hỗ trợ (0 = tắt, 1 = mạnh nhất)</param>
-        /// <returns>Tổng góc xoay Delta (Độ) cuối cùng để áp dụng vào Camera</returns>
+        /// <returns>playerLookDelta + lực hút hỗ trợ</returns>
+        /// <remarks>
+        /// Vector3.zero được coi là "không có mục tiêu" (giữ tương thích). Mục tiêu có thể nằm đúng
+        /// gốc toạ độ → dùng overload nhận Transform của TISInputBridge.
+        /// </remarks>
         public Vector2 AimAssistProcess(AimAssistSettings settings, Transform cameraTransform, Vector3 target, Vector2 playerLookDelta, float intensity = 0.3f)
         {
             if (!IsPlatformEnabled(settings.EnabledPlatforms))
@@ -89,7 +103,7 @@ namespace GaMo.TrueInputSystem
         {
             var gamepad = UnityEngine.InputSystem.Gamepad.current;
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            var mouse = UnityEngine.InputSystem.Mouse.current;
+            var mouse = TISPhysicalMouse.Current;   // click của virtual cursor (nút A) không được tính là PC
 
             bool gamepadHasInput = false;
             if (gamepad != null)
@@ -125,6 +139,18 @@ namespace GaMo.TrueInputSystem
         {
             if (enabledPlatforms == AimAssistPlatform.None) return false;
             if (enabledPlatforms == AimAssistPlatform.All)  return true;
+
+            if (ActiveDeviceProvider != null)
+            {
+                // Tay cầm Bluetooth trên mobile → tính là Gamepad (ActiveDevice của bridge đã xử lý)
+                var platform = ActiveDeviceProvider() switch
+                {
+                    TISActiveDevice.Gamepad => AimAssistPlatform.Gamepad,
+                    TISActiveDevice.Mobile  => AimAssistPlatform.Mobile,
+                    _                       => AimAssistPlatform.PC,
+                };
+                return (enabledPlatforms & platform) != 0;
+            }
 
             if (Application.isMobilePlatform)
                 return (enabledPlatforms & AimAssistPlatform.Mobile) != 0;

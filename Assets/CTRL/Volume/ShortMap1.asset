@@ -117,37 +117,6 @@ MonoBehaviour:
   renderPassEvent:
     m_OverrideState: 0
     m_Value: 550
---- !u!114 &-6972355706478526068
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4100329e4588497eb2079d472550f955, type: 3}
-  m_Name: AutoExposure
-  m_EditorClassIdentifier: Assembly-CSharp::Lepsima.Shaders.AutoExposure.AutoExposure
-  active: 0
-  framesPerCompute:
-    m_OverrideState: 1
-    m_Value: 5
-  brightnessLimit:
-    m_OverrideState: 1
-    m_Value: 15
-  whitePoint:
-    m_OverrideState: 1
-    m_Value: 3
-  exposureRange:
-    m_OverrideState: 1
-    m_Value: {x: -0.01, y: 0.5}
-  increaseSpeed:
-    m_OverrideState: 1
-    m_Value: 0.5
-  decreaseSpeed:
-    m_OverrideState: 1
-    m_Value: 0.5
 --- !u!114 &-6748075417418602536
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -353,7 +322,6 @@ MonoBehaviour:
   - {fileID: 7555591592273667449}
   - {fileID: -6977831708046953731}
   - {fileID: 3270728118929891531}
-  - {fileID: -6972355706478526068}
 --- !u!114 &355240199230093598
 MonoBehaviour:
   m_ObjectHideFlags: 3

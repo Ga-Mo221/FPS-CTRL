@@ -57,7 +57,7 @@ namespace MagicaCloth2
         /// レンダー情報へのハンドル
         /// （レンダラーのセットアップデータ）
         /// </summary>
-        internal List<int> renderHandleList = new List<int>();
+        internal List<MagicaObjectId> renderHandleList = new List<MagicaObjectId>();
 
         /// <summary>
         /// BoneClothのセットアップデータ
@@ -69,7 +69,7 @@ namespace MagicaCloth2
         /// </summary>
         public class RenderMeshInfo
         {
-            public int renderHandle;
+            public MagicaObjectId renderHandle;
             public VirtualMeshContainer renderMeshContainer;
             public DataChunk mappingChunk;
             //public DataChunk renderMeshPositionAndNormalChunk;
@@ -187,12 +187,12 @@ namespace MagicaCloth2
         /// <summary>
         /// 現在アンカーとして設定されているTransformのインスタンスID
         /// </summary>
-        internal int anchorTransformId = 0;
+        internal MagicaObjectId anchorTransformId = MagicaObjectId.Invalid;
 
         /// <summary>
         /// 現在距離カリングの参照として設定されているオブジェクトのインスタンスID
         /// </summary>
-        internal int distanceReferenceObjectId = 0;
+        internal MagicaObjectId distanceReferenceObjectId = MagicaObjectId.Invalid;
 
         /// <summary>
         /// コンポーネントの登録TransformIndex
@@ -341,7 +341,7 @@ namespace MagicaCloth2
                 renderMeshInfoList = null;
 
                 // レンダーデータの利用終了
-                foreach (int renderHandle in renderHandleList)
+                foreach (MagicaObjectId renderHandle in renderHandleList)
                 {
                     MagicaManager.Render?.RemoveRenderer(renderHandle);
                 }
@@ -366,7 +366,7 @@ namespace MagicaCloth2
 
                 // 作業バッファ破棄
                 SyncTopCloth = null;
-                int compId = cloth.GetInstanceID();
+                MagicaObjectId compId = cloth.GetMagicaId();
                 MagicaManager.Team?.comp2SuspendCounterMap.Remove(compId);
                 MagicaManager.Team?.comp2TeamIdMap.Remove(compId);
                 MagicaManager.Team?.comp2SyncPartnerCompMap.Remove(compId);
@@ -385,7 +385,7 @@ namespace MagicaCloth2
         {
             //suspendCounter++;
             var tm = MagicaManager.Team;
-            int compId = cloth.GetInstanceID();
+            MagicaObjectId compId = cloth.GetMagicaId();
             if (tm.comp2SuspendCounterMap.TryGetValue(compId, out int cnt))
             {
                 cnt++;
@@ -400,12 +400,11 @@ namespace MagicaCloth2
         {
             //suspendCounter--;
             var tm = MagicaManager.Team;
-            int compId = cloth.GetInstanceID();
+            MagicaObjectId compId = cloth.GetMagicaId();
             if (tm.comp2SuspendCounterMap.TryGetValue(compId, out int cnt))
             {
                 cnt--;
                 if (cnt > 0)
-                    //tm.comp2SuspendCounterMap.Add(compId, cnt);
                     tm.comp2SuspendCounterMap[compId] = cnt;
                 else
                     tm.comp2SuspendCounterMap.Remove(compId);
@@ -416,7 +415,7 @@ namespace MagicaCloth2
         {
             //return suspendCounter;
             var tm = MagicaManager.Team;
-            int compId = cloth.GetInstanceID();
+            MagicaObjectId compId = cloth.GetMagicaId();
             if (tm.comp2SuspendCounterMap.TryGetValue(compId, out int cnt))
                 return cnt;
             else
@@ -451,7 +450,7 @@ namespace MagicaCloth2
                 transformSet.Remove(null);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             cloth.SerializeData.ReplaceTransform(replaceDict);
             cloth.serializeData2.ReplaceTransform(replaceDict);

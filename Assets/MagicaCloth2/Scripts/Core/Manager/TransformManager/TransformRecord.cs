@@ -12,7 +12,7 @@ namespace MagicaCloth2
     public class TransformRecord : IValid, ITransform
     {
         public Transform transform;
-        public int id;
+        public MagicaObjectId id;
         public Vector3 localPosition;
         public Quaternion localRotation;
         public Vector3 position;
@@ -20,14 +20,14 @@ namespace MagicaCloth2
         public Vector3 scale; // lossy scale
         public Matrix4x4 localToWorldMatrix;
         public Matrix4x4 worldToLocalMatrix;
-        public int pid;
+        public MagicaObjectId pid;
 
         public TransformRecord(Transform t, bool read)
         {
             if (t)
             {
                 transform = t;
-                id = t.GetInstanceID();
+                id = t.GetMagicaId();
 
                 if (read)
                 {
@@ -41,7 +41,7 @@ namespace MagicaCloth2
                 }
 
                 if (t.parent)
-                    pid = t.parent.GetInstanceID();
+                    pid = t.parent.GetMagicaId();
             }
         }
 
@@ -52,7 +52,7 @@ namespace MagicaCloth2
 
         public bool IsValid()
         {
-            return id != 0;
+            return id.IsValid();
         }
 
         public void GetUsedTransform(HashSet<Transform> transformSet)
@@ -60,18 +60,18 @@ namespace MagicaCloth2
             transformSet.Add(transform);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             if (replaceDict.ContainsKey(id))
             {
                 var t = replaceDict[id];
                 transform = t;
-                id = transform.GetInstanceID();
+                id = transform.GetMagicaId();
             }
             if (replaceDict.ContainsKey(pid))
             {
                 var t = replaceDict[pid];
-                pid = t.GetInstanceID();
+                pid = t.GetMagicaId();
             }
         }
     }

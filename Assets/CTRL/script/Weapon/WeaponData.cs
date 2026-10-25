@@ -29,6 +29,9 @@ public class WeaponData : ScriptableObject
 
     [TabGroup("Weapon Data", "Info")] 
     [SerializeField] private GameObject _dropItemPrefab;
+    [Tooltip("Xoay them cho model xem truoc o Trang bi (truc cua model rieng tung sung khac nhau).\n" +
+             "Vd M24 (Dusk): 0,0,-90 de ong ngam nam tren.")]
+    [SerializeField] private Vector3 _previewEuler = Vector3.zero;
     
     //========================== ATTACK/ALL ====================================
     
@@ -177,8 +180,9 @@ public class WeaponData : ScriptableObject
     public bool HasRecoilData => _recoilData != null;
     
     public GameObject DropItemPrefab => _dropItemPrefab;
+    public Vector3 PreviewEuler => _previewEuler;
     
-    public Sprite Icon => _icon;
+    public Sprite Icon => (_runtimeIcon != null ? _runtimeIcon : _icon);
     public string ID => _iD;
     public int Index => _index;
     public string WeaponName => _name;
@@ -224,4 +228,50 @@ public class WeaponData : ScriptableObject
     
     public AudioClip Switch_ModelClip => _switch_model_clip;
     public float Volume_Switch_Model => _volume_switch_model;
+
+    // Port tu EclipseStrike: remote runtime override (icon/image/url).
+    private Sprite _runtimeIcon;
+    private Sprite _runtimeImage;
+    public string IconUrl { get; private set; }
+    public string ImageUrl { get; private set; }
+    public Sprite ModelImage => (_runtimeImage != null ? _runtimeImage : (_runtimeIcon != null ? _runtimeIcon : _icon));
+    public void SetRuntimeIcon(Sprite s) { if (s != null) _runtimeIcon = s; }
+    public void SetRuntimeImage(Sprite s) { if (s != null) _runtimeImage = s; }
+    public void ApplyRuntimeOverride(WeaponSpecEntry e)
+    {
+        if (e == null) return;
+        if (e.damage > 0)        _damage        = e.damage;
+        if (e.rightDamage > 0)   _rightDamage   = e.rightDamage;
+        if (e.fireDelay > 0f)    _fireDelay     = e.fireDelay;
+        if (e.range > 0f)        _range         = e.range;
+        if (e.defaultBullet > 0) _defaultBullet = (byte)Mathf.Clamp(e.defaultBullet, 0, 255);
+        if (e.maxBullet > 0)     _maxBullet     = (byte)Mathf.Clamp(e.maxBullet, 0, 255);
+        if (e.pelletCount > 0)   _pelletCount   = e.pelletCount;
+        if (e.spreadAngle >= 0)  _spreadAngle   = e.spreadAngle;
+        IconUrl  = e.iconUrl;
+        ImageUrl = e.imageUrl;
+    }
+}
+
+//  Them tu EclipseStrike: remote weapon spec (WeaponSpecService dung).
+[System.Serializable]
+public class WeaponSpecEntry
+{
+    public string name;          // khop WeaponData.WeaponName (GameManager.GetWeaponData dung .Contains)
+    public int damage;           // 0 = giu mac dinh
+    public int rightDamage;      // damage chuot phai / headshot skill
+    public float fireDelay;      // giay giua 2 phat
+    public float range;          // tam ban (raycast)
+    public int defaultBullet;    // dan trong bang
+    public int maxBullet;        // dan du tru
+    public int pelletCount;      // so vien / phat (shotgun)
+    public int spreadAngle = -1; // do toe (>=0 moi override, cho phep 0)
+    public string iconUrl;       // URL icon (host tren CDN, sheet chi giu URL)
+    public string imageUrl;      // URL anh sung
+}
+
+[System.Serializable]
+public class WeaponSpecTable
+{
+    public System.Collections.Generic.List<WeaponSpecEntry> weapons = new System.Collections.Generic.List<WeaponSpecEntry>();
 }

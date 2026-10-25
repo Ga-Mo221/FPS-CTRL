@@ -304,11 +304,10 @@ namespace MagicaCloth2
                                 ushort data = k == 0 ? dataArryaV[dstart + j] : dataArryaH[dstart + j];
                                 var tpos = proxyMesh.localPositions[data];
                                 float dist = math.distance(pos, tpos);
-                                if (dist < 1e-06f)
-                                    continue;
 
+                                // ゼロ距離も認める(v2.17.0)
                                 dataList.Add(data);
-                                distanceList.Add(k == 0 ? dist : -dist); // マイナスはhorizontalタイプ
+                                distanceList.Add(dist < 1e-08f ? 0.0f : (k == 0 ? dist : -dist)); // マイナスはhorizontalタイプ
                                 cnt++;
                             }
                         }
@@ -406,7 +405,7 @@ namespace MagicaCloth2
             int d_start = dc.startIndex;
 
             // 復元を基本姿勢で行うかアニメーション後の姿勢で行うかの判定
-            float blendRatio = tdata.animationPoseRatio;
+            float animeRatio = tdata.animationPoseRatio;
 
             // スケール倍率
             float scl = tdata.InitScale * tdata.scaleRatio;
@@ -479,33 +478,44 @@ namespace MagicaCloth2
                         float t_friction = frictionArray[tpindex];
                         var t_attr = attributes[tvindex];
 
-                        // 重量
-                        // BoneSpringでは固定点の重量加算を行わない
-                        float t_invMass = MathUtility.CalcInverseMass(t_friction, t_depth, t_attr.IsDontMove(), fixMass);
-
-                        // 復元する長さ
-                        // !Distance制約は初期化時に保存した距離を見るようにしないと駄目
-                        // フラグにより初期値かアニメーション後の姿勢かを切り替える
-                        float restLength = math.lerp(math.abs(restDist) * scl, math.distance(basePos, t_basePos), blendRatio);
-
                         var v = t_nextPos - nextPos;
 
-                        // 現在の長さ
-                        float distance = math.length(v);
+                        // ゼロ距離対応(v2.17.0)
+                        if(restDist == 0.0f)
+                        {
+                            // ゼロ距離は単に中点で結合させる
+                            // AnimationPoseRatioも無関係
+                            addPos = v * 0.5f;
+                            addCnt++;
+                        }
+                        else
+                        {
+                            // 重量
+                            // BoneSpringでは固定点の重量加算を行わない
+                            float t_invMass = MathUtility.CalcInverseMass(t_friction, t_depth, t_attr.IsDontMove(), fixMass);
 
-                        // 距離がほぼ０ならば処理をスキップする（エラーの回避）
-                        if (distance < Define.System.Epsilon)
-                            continue;
+                            // 復元する長さ
+                            // !Distance制約は初期化時に保存した距離を見るようにしないと駄目
+                            // フラグにより初期値かアニメーション後の姿勢かを切り替える
+                            float restLength = math.lerp(math.abs(restDist) * scl, math.distance(basePos, t_basePos), animeRatio);
 
-                        // 伸縮
-                        float3 n = math.normalize(v);
-                        float3 corr = (distance - restLength) * finalStiffness * n / (invMass + t_invMass);
-                        float3 corr0 = invMass * corr;
-                        //float3 corr1 = -t_invMass * corr; // 相手側(使用しない)
+                            // 現在の長さ
+                            float distance = math.length(v);
 
-                        // すべて加算する
-                        addPos += corr0;
-                        addCnt++;
+                            // 距離がほぼ０ならば処理をスキップする（エラーの回避）
+                            if (distance < Define.System.Epsilon)
+                                continue;
+
+                            // 伸縮
+                            float3 n = math.normalize(v);
+                            float3 corr = (distance - restLength) * finalStiffness * n / (invMass + t_invMass);
+                            float3 corr0 = invMass * corr;
+                            //float3 corr1 = -t_invMass * corr; // 相手側(使用しない)
+
+                            // すべて加算する
+                            addPos += corr0;
+                            addCnt++;
+                        }
                     }
 
                     // 最終位置

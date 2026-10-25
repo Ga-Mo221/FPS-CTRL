@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace GaMo.BlenderEditorTools
 {
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(SimpleBoneRenderer))]
     [InitializeOnLoad]
     public class SimpleBoneRendererEditor : Editor
@@ -289,7 +290,8 @@ namespace GaMo.BlenderEditorTools
         /// </summary>
         private void DrawAxisButtons()
         {
-            int current = boneAxisProp.enumValueIndex;
+            // Multi-edit: các object khác trục nhau => không nút nào sáng (-1), bấm nút nào sẽ ghi cho tất cả
+            int current = boneAxisProp.hasMultipleDifferentValues ? -1 : boneAxisProp.enumValueIndex;
             int selected = current;
 
             using (new EditorGUILayout.HorizontalScope())
@@ -340,7 +342,12 @@ namespace GaMo.BlenderEditorTools
 
             if (GUILayout.Button(Content.LoadBones, "Button", GUILayout.Height(20)))
             {
-                boneRenderer.PopulateChildren();
+                // Multi-edit: áp cho tất cả object đang chọn
+                foreach (var tg in targets)
+                {
+                    var br = tg as SimpleBoneRenderer;
+                    if (br != null) br.PopulateChildren();
+                }
                 MarkRenderersDirty();
             }
 

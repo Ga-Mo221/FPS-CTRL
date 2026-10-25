@@ -25,7 +25,48 @@ public class UICrosshair : MonoBehaviour
     [FoldoutGroup("Hit")]
     [SerializeField] private Image _hit_horizontalDivider_R;
     
+    [FoldoutGroup("Spread")]
+    [Tooltip("Khoảng giãn (px) cộng thêm vào gap mỗi phát bắn.")]
+    [SerializeField] private float _spreadPerShot = 6f;
+    [FoldoutGroup("Spread")]
+    [Tooltip("Khoảng giãn tối đa (px).")]
+    [SerializeField] private float _maxSpread = 30f;
+    [FoldoutGroup("Spread")]
+    [Tooltip("Tốc độ co lại (px/giây) sau khi ngừng bắn.")]
+    [SerializeField] private float _recoverSpeed = 80f;
+    [FoldoutGroup("Spread")]
+    [Tooltip("Chờ (giây) sau phát cuối rồi mới bắt đầu co lại.")]
+    [SerializeField] private float _recoverDelay = 0.08f;
+
     private Coroutine _hitCoroutine;
+
+    private float _baseGap;
+    private float _spread;
+    private float _lastFireTime;
+
+    private void Awake()
+    {
+        // Gap gốc = vị trí đặt sẵn trong prefab (cho tới khi SetGap() được gọi).
+        _baseGap = _verticalDivider_U.rectTransform.localPosition.y;
+    }
+
+    private void Update()
+    {
+        if (_spread <= 0f) return;
+        if (Time.unscaledTime - _lastFireTime < _recoverDelay) return;
+
+        _spread = Mathf.MoveTowards(_spread, 0f, _recoverSpeed * Time.unscaledDeltaTime);
+        ApplyGap();
+    }
+
+    /// <summary>Gọi mỗi phát bắn của local player: tâm giãn ra rồi tự co lại.</summary>
+    [Button]
+    public void Fire(float multiplier = 1f)
+    {
+        _spread = Mathf.Min(_maxSpread, _spread + _spreadPerShot * multiplier);
+        _lastFireTime = Time.unscaledTime;
+        ApplyGap();
+    }
 
     [Button]
     public void HideCenter(bool hide) => _background.gameObject.SetActive(hide);
@@ -57,6 +98,14 @@ public class UICrosshair : MonoBehaviour
     [Button]
     public void SetGap(float gap)
     {
+        _baseGap = gap;
+        ApplyGap();
+    }
+
+    private void ApplyGap()
+    {
+        float gap = _baseGap + _spread;
+
         _verticalDivider_U.rectTransform.SetLocalPositionAndRotation(
             new Vector3(0, gap, 0), Quaternion.identity);
         
@@ -83,6 +132,12 @@ public class UICrosshair : MonoBehaviour
     [Button]
     public void SetADS(bool ads)
     {
+        // Tắt tâm (ngắm/sniper) → reset độ giãn để lúc hiện lại không bị "nở" sẵn.
+        if (!ads && _spread > 0f)
+        {
+            _spread = 0f;
+            ApplyGap();
+        }
         _background.transform.parent.gameObject.SetActive(ads);
     }
 

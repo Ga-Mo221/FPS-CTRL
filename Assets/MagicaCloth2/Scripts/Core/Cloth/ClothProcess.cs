@@ -170,8 +170,8 @@ namespace MagicaCloth2
                             // 初期化データの参照
                             RenderSetupSerializeData initSetupData = useInitData ? sdata2.initData.clothSetupDataList[i] : null;
 
-                            int handle = AddRenderer(ren, setup, uniquePreBuildSetupData, initSetupData);
-                            if (handle == 0)
+                            MagicaObjectId handle = AddRenderer(ren, setup, uniquePreBuildSetupData, initSetupData);
+                            if (handle.IsValid() == false)
                             {
                                 result.SetError(Define.Result.ClothInit_FailedAddRenderer);
                                 throw new OperationCanceledException();
@@ -221,7 +221,7 @@ namespace MagicaCloth2
                 if (syncPartnerCloth)
                 {
                     // partner
-                    MagicaManager.Team.comp2SyncPartnerCompMap.Add(cloth.GetInstanceID(), syncPartnerCloth.GetInstanceID());
+                    MagicaManager.Team.comp2SyncPartnerCompMap.Add(cloth.GetMagicaId(), syncPartnerCloth.GetMagicaId());
 
                     // top
                     // デッドロック対策
@@ -237,7 +237,7 @@ namespace MagicaCloth2
                     }
                     Debug.Assert(c);
                     SyncTopCloth = c;
-                    MagicaManager.Team.comp2SyncTopCompMap.Add(cloth.GetInstanceID(), SyncTopCloth.GetInstanceID());
+                    MagicaManager.Team.comp2SyncTopCompMap.Add(cloth.GetMagicaId(), SyncTopCloth.GetMagicaId());
                 }
 
                 result.SetSuccess();
@@ -275,7 +275,7 @@ namespace MagicaCloth2
         /// </summary>
         /// <param name="ren"></param>
         /// <returns>レンダー情報ハンドル</returns>
-        int AddRenderer(
+        MagicaObjectId AddRenderer(
             Renderer ren,
             RenderSetupData referenceSetupData,
             RenderSetupData.UniqueSerializationData referenceUniqueSetupData,
@@ -283,16 +283,16 @@ namespace MagicaCloth2
             )
         {
             if (ren == null)
-                return 0;
+                return MagicaObjectId.Invalid;
             if (renderHandleList == null)
-                return 0;
+                return MagicaObjectId.Invalid;
 
-            int handle = ren.GetInstanceID();
+            MagicaObjectId handle = ren.GetMagicaId();
             if (renderHandleList.Contains(handle) == false)
             {
                 // レンダラーの利用開始
                 handle = MagicaManager.Render.AddRenderer(ren, referenceSetupData, referenceUniqueSetupData, referenceInitSetupData);
-                if (handle != 0)
+                if (handle.IsValid())
                 {
                     lock (lockObject)
                     {
@@ -365,12 +365,12 @@ namespace MagicaCloth2
                 SetState(State_Enable, now);
 
                 // チーム
-                MagicaManager.Team.SetEnable(TeamId, now);
+                MagicaManager.Team.SetEnable(this, TeamId, now);
 
                 // レンダラー
                 if (renderHandleList != null)
                 {
-                    foreach (int renderHandle in renderHandleList)
+                    foreach (MagicaObjectId renderHandle in renderHandleList)
                     {
                         if (now)
                             MagicaManager.Render.StartUse(this, renderHandle);
@@ -514,7 +514,7 @@ namespace MagicaCloth2
                             result.SetError(Define.Result.CreateCloth_VertexAttributeListIsNull);
                             throw new MagicaClothProcessingException();
                         }
-                        int renderHandle = renderHandleList[i];
+                        MagicaObjectId renderHandle = renderHandleList[i];
                         var renderData = MagicaManager.Render.GetRendererData(renderHandle);
                         if (renderData.setupData.vertexCount != vertexAttributeArray.Length)
                         {
@@ -550,15 +550,15 @@ namespace MagicaCloth2
                 SelectionData selectionData = (usePaintMap || useManualVertexAttribute) ? new SelectionData() : sdata2.selectionData.Clone();
 
                 // BoneCloth/BoneSpringでシリアライズ２にTransformと属性辞書がある場合はIDと属性の辞書に変換（スレッドではアクセスできないため）
-                Dictionary<int, VertexAttribute> boneAttributeDict = null;
+                Dictionary<MagicaObjectId, VertexAttribute> boneAttributeDict = null;
                 if (sdata2.boneAttributeDict.Count > 0)
                 {
-                    boneAttributeDict = new Dictionary<int, VertexAttribute>(sdata2.boneAttributeDict.Count);
+                    boneAttributeDict = new Dictionary<MagicaObjectId, VertexAttribute>(sdata2.boneAttributeDict.Count);
                     foreach (var kv in sdata2.boneAttributeDict)
                     {
                         if (kv.Key)
                         {
-                            boneAttributeDict.Add(kv.Key.GetInstanceID(), kv.Value);
+                            boneAttributeDict.Add(kv.Key.GetMagicaId(), kv.Value);
                         }
                     }
                 }
@@ -575,7 +575,7 @@ namespace MagicaCloth2
                         ct.ThrowIfCancellationRequested();
                         proxyMesh = new VirtualMesh("Proxy");
                         proxyMesh.result.SetProcess();
-                        List<int> copyRenderHandleList = null;
+                        List<MagicaObjectId> copyRenderHandleList = null;
                         if (clothType == ClothType.MeshCloth)
                         {
                             // MeshClothではクロストランスフォームを追加しておく
@@ -583,7 +583,7 @@ namespace MagicaCloth2
 
                             lock (lockObject)
                             {
-                                copyRenderHandleList = new List<int>(renderHandleList);
+                                copyRenderHandleList = new List<MagicaObjectId>(renderHandleList);
                             }
                         }
 
@@ -606,7 +606,7 @@ namespace MagicaCloth2
                             {
                                 ct.ThrowIfCancellationRequested();
 
-                                int renderHandle = copyRenderHandleList[i];
+                                MagicaObjectId renderHandle = copyRenderHandleList[i];
 
                                 // レンダーメッシュ作成
                                 var renderData = MagicaManager.Render.GetRendererData(renderHandle);
@@ -719,7 +719,7 @@ namespace MagicaCloth2
                                     selectionData.Fill(VertexAttribute.Move);
 
                                     // 次にルートのみ固定
-                                    foreach (int id in boneClothSetupData.rootTransformIdList)
+                                    foreach (MagicaObjectId id in boneClothSetupData.rootTransformIdList)
                                     {
                                         int rootIndex = boneClothSetupData.GetTransformIndexFromId(id);
                                         selectionData.attributes[rootIndex] = VertexAttribute.Fixed;
@@ -1476,7 +1476,7 @@ namespace MagicaCloth2
                             renderMeshContainerList[i] = null;
 
                             // レンダーハンドル
-                            int renderHandle = renderHandleList[i];
+                            MagicaObjectId renderHandle = renderHandleList[i];
                             var renderData = MagicaManager.Render.GetRendererData(renderHandle);
 
                             // MappingMesh登録

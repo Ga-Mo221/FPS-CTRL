@@ -93,7 +93,7 @@ namespace MagicaCloth2
             uniquePreBuildData.GetUsedTransform(transformSet);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
             uniquePreBuildData.ReplaceTransform(replaceDict);
         }

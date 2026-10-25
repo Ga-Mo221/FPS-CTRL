@@ -24,7 +24,7 @@ namespace Game.UI
         {
             if (_killerLabel != null)
             {
-                _killerLabel.text = killer;
+                _killerLabel.text = NInGameMessagesHandler.NoParse(killer); // [NET-OPT] chong chen rich-text qua ten
                 _killerLabel.color = killerIsLocal ? _localPlayerColor : _defaultKillerColor;
             }
             
@@ -33,10 +33,9 @@ namespace Game.UI
             if (gamemanager != null)
             {
                 icon = gamemanager.GetWeaponIcon(weaponname);
-                Debug.Log(icon + " " + weaponname);
             }
             if (_weaponIcon != null && icon != null) _weaponIcon.sprite = icon;
-            if (_victimLabel != null) _victimLabel.text = victim;
+            if (_victimLabel != null) _victimLabel.text = NInGameMessagesHandler.NoParse(victim);
         }
     }
 }
