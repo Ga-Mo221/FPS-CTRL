@@ -63,6 +63,7 @@ namespace Game.UI
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // [Aemy 2026-10-27] Expand: khung 1920x1080 luon nam tron trong man hinh (21:9, 16:10...)
             gameObject.AddComponent<GraphicRaycaster>();
 
             var dim = NewImage(transform, "Dim", new Color(0.02f, 0.03f, 0.05f, 0.84f));
@@ -216,14 +217,21 @@ namespace Game.UI
             if (_stage == null || !_prefabById.TryGetValue(id, out prefab) || prefab == null)
             { if (_preview3d) _preview3d.enabled = false; return false; }
 
-            var anim = prefab.GetComponentInChildren<Animator>(true);
-            GameObject modelSrc = anim != null ? anim.gameObject
-                : (prefab.transform.childCount > 0 ? prefab.transform.GetChild(0).gameObject : null);
+            // [Aemy 2026-10-27] Uu tien FBX goc + controller POSE rieng (CharacterPreviewCatalog), an Flash/Frag.
+            var entry = CharacterPreviewCatalog.Find(id);
+            GameObject modelSrc = entry != null ? entry.model : null;
+            if (modelSrc == null)
+            {
+                var anim = prefab.GetComponentInChildren<Animator>(true);
+                modelSrc = anim != null ? anim.gameObject
+                    : (prefab.transform.childCount > 0 ? prefab.transform.GetChild(0).gameObject : null);
+            }
             if (modelSrc == null) { if (_preview3d) _preview3d.enabled = false; return false; }
 
             _modelInstance = Instantiate(modelSrc, _stage);
             _modelInstance.transform.localPosition = Vector3.zero;
             _modelInstance.transform.localRotation = Quaternion.Euler(0f, _spin, 0f);
+            if (entry != null) CharacterPreviewCatalog.Prepare(_modelInstance, entry);
             SetLayer(_modelInstance, 0);
             FrameModel();
 

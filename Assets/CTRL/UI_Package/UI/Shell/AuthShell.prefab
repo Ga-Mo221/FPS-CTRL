@@ -9025,7 +9025,7 @@ MonoBehaviour:
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1920, y: 1080}
-  m_ScreenMatchMode: 0
+  m_ScreenMatchMode: 1
   m_MatchWidthOrHeight: 1
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
@@ -9068,6 +9068,7 @@ MonoBehaviour:
   _registerController: {fileID: 7466615327630518544}
   _forgotController: {fileID: 2775614656301600302}
   _default: 0
+  _menuScene: MenuShell
 --- !u!114 &5082462342424349246
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9086,6 +9087,10 @@ MonoBehaviour:
   _forgot: {fileID: 2775614656301600302}
   _useMock: 0
   _notice: {fileID: 3669497394727647898}
+  _menuScene: MenuShell
+  _errorNoticeSeconds: 5
+  _requireVerifiedEmail: 1
+  _resendCooldownSeconds: 120
 --- !u!1 &7220352673881369966
 GameObject:
   m_ObjectHideFlags: 0

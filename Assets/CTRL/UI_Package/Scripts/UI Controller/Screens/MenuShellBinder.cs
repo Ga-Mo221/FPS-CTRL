@@ -637,6 +637,9 @@ namespace Game.UI
                 if (!serverFull && !roomFull && retriesLeft > 0 && this != null) { StartCoroutine(RetryJoinCustom(code, retriesLeft - 1)); return; }
                 Game.UI.CustomRoomSession.Clear();
                 if (serverFull) { AbortMatchEntry(why); if (_customRoom != null) _customRoom.SetStatus(NetworkRunnerHandler.DescribeFailure(why)); return; }
+                // [Aemy 2026-10-27] Dang o man ghep tran (vao phong cua to doi) ma het luot thu -> dong man + bao loi.
+                // Truoc day chi ghi trang thai o o phong tuy chinh (dang an) -> nguoi choi ket o man ghep tran mai.
+                if (_matchmakingScreen != null && _matchmakingScreen.gameObject.activeSelf) { AbortMatchEntry(why); return; }
                 if (_customRoom != null)
                     _customRoom.SetStatus(roomFull ? "Phòng " + code + " đã đầy."
                                                    : "Không tìm thấy phòng " + code + ". Kiểm tra mã hoặc chờ chủ phòng tạo phòng.");
@@ -833,6 +836,7 @@ namespace Game.UI
                     if (isLeader) ho.HandOffCustom(code, mode, true, (ok, why) => { if (!ok) { Debug.LogWarning("[Party] Tao phong tuy chinh loi: " + why); AbortMatchEntry(why); } });
                     else _partyHandoffCo = StartCoroutine(RetryJoinCustom(code, 6));
                 });
+                if (_matchmakingScreen != null) _matchmakingScreen.SetCancelVisible(isLeader); // [Aemy 2026-10-27] thanh vien bam HUY khong lam gi -> an nhu nhanh thuong
                 return;
             }
             StartLobbyHold(() =>

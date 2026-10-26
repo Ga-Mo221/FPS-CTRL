@@ -69,19 +69,41 @@ namespace Game.UI
                 scaler.referencePixelsPerUnit = srcScaler.referencePixelsPerUnit;
             }
 
+            // [Aemy 2026-10-27] Lop CHAN click: phu ca man, nam duoi man ghep tran. Truoc day moi Graphic tat raycast
+            // -> click xuyen xuong panel chon balo (tu mo khi vao tran) phia sau -> bam duoc balo trong luc cho.
+            host.AddComponent<GraphicRaycaster>();
+            var blocker = new GameObject("Blocker", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            blocker.transform.SetParent(host.transform, false);
+            Stretch(blocker.transform as RectTransform);
+            var blockImg = blocker.GetComponent<Image>();
+            blockImg.color = new Color(0f, 0f, 0f, 0f);
+            blockImg.raycastTarget = true;
+
             var clone = Object.Instantiate(_source.gameObject, host.transform, false);
             clone.name = "Matchmaking (phong cho)";
-            var rt = clone.transform as RectTransform;
-            if (rt != null) { rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero; }
+            Stretch(clone.transform as RectTransform);
+            // [Aemy 2026-10-27] Nen (BG) trong scene dat CO DINH 1920x1080 giua man -> man rong hon 16:9 (21:9, 32:9...)
+            // bi ho 2 ben, nhin nhu "co lai" khi sang map (o menu con nen MenuShell phia sau che). Ep keo gian full man;
+            // Pic ben trong dung AspectRatioFitter EnvelopeParent nen van phu kin + giu ti le anh.
+            var bg = clone.transform.Find("BG") as RectTransform;
+            if (bg != null) Stretch(bg);
             clone.SetActive(true);
             var view = clone.GetComponent<MatchmakingController>();
             view.StopTimer();
             view.SetCancelVisible(false);
-            // Chi la man hinh xem: khong chan click / khong cho dieu huong tay cam vao.
+            // Chi la man hinh xem: khong cho dieu huong tay cam / click vao chinh man nay (Blocker o duoi lo viec chan).
             foreach (var g in clone.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
+            foreach (var sel in clone.GetComponentsInChildren<Selectable>(true)) sel.interactable = false;
 
             _runner = host.AddComponent<Runner>();
-            _runner.Init(view, _menuScene);
+            _runner.Init(view, _menuScene, blocker);
+        }
+
+        private static void Stretch(RectTransform rt)
+        {
+            if (rt == null) return;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
         }
 
         /// <summary>Vao tran that bai / huy: bo man phong cho.</summary>
@@ -110,14 +132,50 @@ namespace Game.UI
             private float _startedAt, _nextRoster;
             private bool _leftMenu;
             private bool _mapApplied;
+            private GameObject _blocker;
+            private float _nextLock;
+            // [Aemy 2026-10-27] Panel chon balo bi khoa trong luc cho (CanvasGroup.interactable = false) -> tra lai khi het phong cho.
+            private readonly List<CanvasGroup> _locked = new List<CanvasGroup>();
+            private readonly List<bool> _lockedWas = new List<bool>();
 
-            public void Init(MatchmakingController view, string menuScene)
+            public void Init(MatchmakingController view, string menuScene, GameObject blocker)
             {
-                _view = view; _menuScene = menuScene; _startedAt = Time.unscaledTime;
+                _view = view; _menuScene = menuScene; _blocker = blocker; _startedAt = Time.unscaledTime;
                 NetworkRunnerHandler.StartGameFailed += OnStartGameFailed;
             }
 
-            private void OnDestroy() { NetworkRunnerHandler.StartGameFailed -= OnStartGameFailed; }
+            private void OnDestroy()
+            {
+                NetworkRunnerHandler.StartGameFailed -= OnStartGameFailed;
+                UnlockLoadout();
+            }
+
+            // Khoa moi panel chon balo dang co (ca panel dang an: HUD tu bat lai khi OnUILoadout).
+            // Chuot: Blocker da chan. Tay cam / Enter: Button khong interactable -> Submit khong goi onClick.
+            private void LockLoadout()
+            {
+                if (Time.unscaledTime < _nextLock) return;
+                _nextLock = Time.unscaledTime + 0.5f;
+                foreach (var lo in Object.FindObjectsByType<SelectLoadoutController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (lo == null) continue;
+                    var cg = lo.GetComponent<CanvasGroup>();
+                    if (cg == null) cg = lo.gameObject.AddComponent<CanvasGroup>();
+                    if (_locked.Contains(cg)) continue;
+                    _locked.Add(cg); _lockedWas.Add(cg.interactable);
+                    cg.interactable = false;
+                    // dang focus 1 nut balo (tay cam) -> bo focus de khong con vien chon
+                    var es = UnityEngine.EventSystems.EventSystem.current;
+                    if (es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.transform.IsChildOf(lo.transform))
+                        es.SetSelectedGameObject(null);
+                }
+            }
+
+            private void UnlockLoadout()
+            {
+                for (int i = 0; i < _locked.Count; i++) if (_locked[i] != null) _locked[i].interactable = _lockedWas[i];
+                _locked.Clear(); _lockedWas.Clear();
+            }
             private void OnStartGameFailed(Fusion.ShutdownReason reason) { Release(); }
 
             private void Update()
@@ -127,6 +185,7 @@ namespace Game.UI
                 bool inMenu = !string.IsNullOrEmpty(_menuScene) && active == _menuScene;
                 if (!inMenu) _leftMenu = true;
                 else if (_leftMenu || Time.unscaledTime - _startedAt > MaxWaitForMatchSeconds) { Release(); return; }
+                if (!inMenu) LockLoadout(); // da sang map: panel balo tu mo -> khoa trong luc phong cho
 
                 var gs = NetworkGameState.Instance;
                 if (gs == null || gs.Object == null || !gs.Object.IsValid)
@@ -138,9 +197,10 @@ namespace Game.UI
                 }
                 if (!gs.InLobby || gs.GameStarted || gs.IsMatchOver()) { Release(); return; }
 
-                // Mo Pause trong luc cho -> tam an de thay Pause.
+                // Mo Pause trong luc cho -> tam an de thay Pause (an ca lop chan click de bam duoc Pause).
                 bool pause = GameManager.Instance != null && GameManager.Instance.OnUIOption();
                 if (_view.gameObject.activeSelf == pause) _view.gameObject.SetActive(!pause);
+                if (_blocker != null && _blocker.activeSelf == pause) _blocker.SetActive(!pause);
                 if (pause) return;
                 _view.StopTimer(); // OnEnable cua man ghep tran tu bat dong ho dem len -> tat (dong ho dang an)
 

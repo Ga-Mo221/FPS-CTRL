@@ -39,6 +39,10 @@ namespace Game.UI
         private Coroutine _pollCo, _inviteCo;
         private bool _handedOff;
         private string _lastHandledMatch; private bool _restoreArmed; // [PARTY-FIX #5]
+        // [Aemy 2026-10-27] Vua nhan loi moi vao nhom: MatchId dang co tren nhom luc minh vao la tran CU (bat dau truoc khi
+        // minh vao) -> KHONG duoc theo vao. Truoc day lan poll dau tien thay MatchId cu -> tu dong vao phong da dong
+        // (GameNotFound) -> ket o man ghep tran.
+        private bool _skipMatchOnJoin;
         private float _partyStartRealtime; // [PARTY-HB] moc khoi dong -> grace tranh da nham khi ve menu
         // [PARTY-HB-FIX 2026-10-01] Theo doi Seen thay doi theo DONG HO LOCAL cua leader (mien nhiem lech gio cross-device).
         private readonly System.Collections.Generic.Dictionary<string, long> _seenVal = new System.Collections.Generic.Dictionary<string, long>();
@@ -170,7 +174,7 @@ namespace Game.UI
             Debug.Log("[Party-DIAG] ACCEPT: xoa invite + join code=" + code);
             svc.ClearInvite(null, null); // [PARTY-FIX] xoa NGAY -> khong spam popup du join loi
             svc.JoinParty(code,
-                () => { Code = code; IsLeader = false; SelfReady = false; _handedOff = false; LeaderSettings = null; PlayerPrefs.SetString(PartyKey(), code); PartyHeartbeat.Begin(code, false, false); StartPolling(); Debug.Log("[Party-DIAG] ACCEPT: JOIN ok (da vao party)"); },
+                () => { Code = code; IsLeader = false; SelfReady = false; _handedOff = false; _skipMatchOnJoin = true; LeaderSettings = null; PlayerPrefs.SetString(PartyKey(), code); PartyHeartbeat.Begin(code, false, false); StartPolling(); Debug.Log("[Party-DIAG] ACCEPT: JOIN ok (da vao party)"); },
                 e => { Debug.LogWarning("[Party-DIAG] ACCEPT: JOIN LOI: " + (e != null ? e.ErrorMessage : "?")); });
         }
 
@@ -212,7 +216,7 @@ namespace Game.UI
             Code = null; IsLeader = false; State = null; SelfReady = false; LeaderSettings = null;
             _seenVal.Clear(); _seenAt.Clear(); _avatarShown.Clear(); _slotMember.Clear();
             PartyHeartbeat.End(); // [Aemy 2026-10-22] ngung heartbeat xuyen scene
-            _handedOff = false; _lastHandledMatch = null; _restoreArmed = false; _lastPublished = null;
+            _handedOff = false; _lastHandledMatch = null; _restoreArmed = false; _lastPublished = null; _skipMatchOnJoin = false;
             PlayerPrefs.DeleteKey(PartyKey()); PlayerPrefs.Save();
             if (_pollCo != null) { StopCoroutine(_pollCo); _pollCo = null; }
             if (_party != null) for (int i = 1; i < _party.SlotCount; i++) { _party.SetEmpty(i); _party.ResetMemberAvatar(i); }
@@ -310,7 +314,7 @@ namespace Game.UI
                         }
                         bool wasLeader = IsLeader;
                         if (!_restoreArmed && st != null && !string.IsNullOrEmpty(st.LeaderId)) IsLeader = st.LeaderId == meNow; // nhan chuyen truong nhom
-                        if (IsLeader && !wasLeader) { SelfReady = true; if (_pendingSettings != null) { _lastPublished = null; PublishSettings(_pendingSettings); } }
+                        if (IsLeader && !wasLeader) { SelfReady = true; ClearInheritedMatch(st); if (_pendingSettings != null) { _lastPublished = null; PublishSettings(_pendingSettings); } }
                         State = st;
                         // [PARTY-FIX #5] Khoi phuc IsLeader/SelfReady + xoa MatchId cu (khong vao lai tran).
                         if (_restoreArmed && st != null)
@@ -332,6 +336,13 @@ namespace Game.UI
                             PartyHeartbeat.Begin(Code, SelfReady, IsLeader);
                             if (carried) SetReady(SelfReady); // ghi lai ngay -> o party cua moi nguoi khop voi nut
                             if (IsLeader && !string.IsNullOrEmpty(st.MatchId)) { var s2 = BackendBootstrap.PartyService; if (s2 != null) s2.SetMatchId(Code, "", null, LogErr); }
+                        }
+                        // [Aemy 2026-10-27] Lan poll dau sau khi nhan loi moi: coi MatchId hien co la da xu ly (tran cu, khong theo vao).
+                        if (_skipMatchOnJoin && st != null)
+                        {
+                            _skipMatchOnJoin = false;
+                            _lastHandledMatch = st.MatchId;
+                            if (!string.IsNullOrEmpty(st.MatchId)) Debug.Log("[Party-DIAG] JOIN: bo qua tran cu cua nhom: " + st.MatchId);
                         }
                         // Thanh vien: ap cai dat cua truong nhom.
                         if (!IsLeader && st != null && !string.IsNullOrEmpty(st.SettingsJson))
@@ -415,7 +426,22 @@ namespace Game.UI
             _seenVal.Remove(leader); _seenAt.Remove(leader);
             st.LeaderId = me; st.Members.RemoveAll(m => m != null && m.PlayFabId == leader);
             IsLeader = true; SelfReady = true;
+            ClearInheritedMatch(st);
             if (_pendingSettings != null) { _lastPublished = null; PublishSettings(_pendingSettings); }
+        }
+
+        /// <summary>
+        /// [Aemy 2026-10-27] Vua NHAN truong nhom (truong nhom cu thoat game / bi don / giao lai): MatchId con tren nhom la
+        /// tran cua truong nhom CU, khong phai minh bat dau -> xoa tren server. Truoc day MatchId cu nam lai mai -> ai
+        /// duoc moi vao nhom sau do deu bi keo vao phong da dong. Tran do minh tu bat dau (_lastStartedMatch) thi giu.
+        /// </summary>
+        private void ClearInheritedMatch(PartyState st)
+        {
+            if (st == null || string.IsNullOrEmpty(st.MatchId) || st.MatchId == _lastStartedMatch) return;
+            var svc = BackendBootstrap.PartyService; if (svc == null || !InParty) return;
+            Debug.Log("[Party] Nhan truong nhom: xoa tran cu cua truong nhom truoc: " + st.MatchId);
+            _ignoreMatch = st.MatchId; _lastHandledMatch = st.MatchId;
+            svc.SetMatchId(Code, "", null, LogErr);
         }
 
         private IEnumerator InvitePoll()

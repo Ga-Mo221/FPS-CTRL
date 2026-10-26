@@ -17,7 +17,7 @@ public class NetworkGameState : NetworkBehaviour
 
     [Header("Kill Target Settings")]
     [Tooltip("Solo: 1 player đạt đủ số kill này thì kết thúc trận. Team: Red hoặc Blue đạt đủ thì kết thúc.")]
-    [Networked] private int _killTarget { get; set; } = 100;
+    [Networked] private int _killTarget { get; set; } = 20; // [Aemy 2026-10-27] gia tri du phong; that su lay tu GameManager.KillTarget (NSpawner)
     public int KillTarget => _killTarget;
 
     // Truoc day RoundElapsed/TotalElapsed la [Networked] float

@@ -63,7 +63,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
             {
                 var state = obj.GetComponent<NetworkGameState>();
 
-                int killTarget = 10;
+                int killTarget = 20; // [Aemy 2026-10-27] mac dinh TDM/FFA (truoc 10)
 
                 if (GameManager.Instance != null)
                     killTarget = GameManager.Instance.KillTarget;

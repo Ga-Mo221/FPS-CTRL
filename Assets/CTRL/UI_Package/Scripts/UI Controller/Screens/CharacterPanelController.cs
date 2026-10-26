@@ -231,13 +231,21 @@ namespace Game.UI
             if (_descLabel != null) _descLabel.text = string.IsNullOrEmpty(c.desc) ? "" : c.desc;
             if (changed && _preview != null)
             {
-                NPlayer pf; GameObject src = null;
-                if (_prefabById.TryGetValue(c.id, out pf) && pf != null)
+                // [Aemy 2026-10-27] Uu tien FBX goc + controller POSE rieng (CharacterPreviewCatalog), an Flash/Frag.
+                // Truoc day lay child _FBX cua prefab mang -> Animator gameplay + constraint khong chay -> sai tu the.
+                var entry = CharacterPreviewCatalog.Find(c.id);
+                if (entry != null)
+                    _preview.Show(entry.model, false, Vector3.zero, go => CharacterPreviewCatalog.Prepare(go, entry));
+                else
                 {
-                    var anim = pf.GetComponentInChildren<Animator>(true);
-                    src = anim != null ? anim.gameObject : (pf.transform.childCount > 0 ? pf.transform.GetChild(0).gameObject : null);
+                    NPlayer pf; GameObject src = null;
+                    if (_prefabById.TryGetValue(c.id, out pf) && pf != null)
+                    {
+                        var anim = pf.GetComponentInChildren<Animator>(true);
+                        src = anim != null ? anim.gameObject : (pf.transform.childCount > 0 ? pf.transform.GetChild(0).gameObject : null);
+                    }
+                    _preview.Show(src, false);
                 }
-                _preview.Show(src, false);
             }
             for (int k = 0; k < _items.Count; k++)
             {

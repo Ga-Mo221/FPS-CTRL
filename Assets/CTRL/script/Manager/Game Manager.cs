@@ -35,7 +35,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float _startGameDuration = 10f;
 
     [TabGroup("GameManager", "Player Settings")]
-    [SerializeField] private int _killTarget = 10;
+    [SerializeField] private int _killTarget = 20; // [Aemy 2026-10-27] moc ha guc mac dinh TDM + FFA (truoc 10)
     
     [TabGroup("GameManager", "Player Settings")]
     [Tooltip("Exp nhận được khi kill đủ 100% máu đối thủ")]

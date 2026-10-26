@@ -40,6 +40,7 @@ namespace Game.UI
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // [Aemy 2026-10-27] Expand: khung 1920x1080 luon nam tron trong man hinh (21:9, 16:10...)
             gameObject.AddComponent<GraphicRaycaster>();
             GaMo.TrueInputSystem.TISGamepadUIButton.ExternalSuppress++; _suppressed = true; // chan input menu phia sau
             var es0 = UnityEngine.EventSystems.EventSystem.current;

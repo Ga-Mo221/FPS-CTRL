@@ -52,7 +52,7 @@ namespace Game.UI
             var canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 32000;
             var scaler = root.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 0.5f;
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 0.5f; scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // [Aemy 2026-10-27] Expand: khung 1920x1080 luon nam tron trong man hinh (21:9, 16:10...)
             var menu = root.AddComponent<UIContextMenu>();
             s_open = menu;
 

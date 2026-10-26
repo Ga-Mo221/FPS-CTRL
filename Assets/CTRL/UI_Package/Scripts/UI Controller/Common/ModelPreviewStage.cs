@@ -103,7 +103,11 @@ namespace Game.UI
         public bool Show(GameObject source, bool bakeStatic) { return Show(source, bakeStatic, Vector3.zero); }
 
         /// <summary>[Aemy 2026-10-19] Nhu tren + xoay them rieng cho model nay (truc local cua model, sau _baseEuler).</summary>
-        public bool Show(GameObject source, bool bakeStatic, Vector3 extraEuler)
+        public bool Show(GameObject source, bool bakeStatic, Vector3 extraEuler) { return Show(source, bakeStatic, extraEuler, null); }
+
+        /// <summary>[Aemy 2026-10-27] Nhu tren + <paramref name="prepare"/> chay tren ban sao (truoc khi canh khung):
+        /// vd gan controller POSE / an mesh thua cho model nhan vat (CharacterPreviewCatalog.Prepare).</summary>
+        public bool Show(GameObject source, bool bakeStatic, Vector3 extraEuler, System.Action<GameObject> prepare)
         {
             EnsureStage();
             Clear();
@@ -114,6 +118,7 @@ namespace Game.UI
             _model.transform.SetParent(_pivot, false);
             _model.transform.localPosition = Vector3.zero;
             _model.transform.localRotation = Quaternion.Euler(_baseEuler) * Quaternion.Euler(extraEuler);
+            if (prepare != null) prepare(_model);
             SetLayerRecursive(_model, 0);
             _yaw = 0f; _zoom = 1f; _pivot.localRotation = Quaternion.identity;
             Frame();

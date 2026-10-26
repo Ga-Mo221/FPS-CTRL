@@ -227,76 +227,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56bf9cad89179134b9b83c95945c575d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.UI.SelectLoadoutController
-  _columns:
-  - tealCard: {fileID: 7599885602336275789}
-    grayCard: {fileID: 1992578955405763837}
-    badge: {fileID: 4928123068656226406}
-    confirm: {fileID: 6782376872636146704}
-    chon: {fileID: 8681743595102659320}
-    selectArea: {fileID: 5093565252366958734}
-    chonButton: {fileID: 1319996632600513537}
-    confirmButton: {fileID: 7292849217028184327}
-    weaponBgs:
-    - {fileID: 4026942581271168134}
-    - {fileID: 2873805506363269231}
-    weapons:
-    - nameLabel: {fileID: 3421460440154359156}
-      typeLabel: {fileID: 527689740306086876}
-    - nameLabel: {fileID: 5729955830362845968}
-      typeLabel: {fileID: 5499301012556230705}
-    utilities:
-    - nameLabel: {fileID: 591892753218504646}
-      icon: {fileID: 4199529472456161626}
-    - nameLabel: {fileID: 7821971315508748973}
-      icon: {fileID: 7069882745058148295}
-    titleLabel: {fileID: 6186525219245727407}
-  - tealCard: {fileID: 8971974005249820658}
-    grayCard: {fileID: 9205306799540016231}
-    badge: {fileID: 3811482500355292236}
-    confirm: {fileID: 637806871596654765}
-    chon: {fileID: 7966027992848021855}
-    selectArea: {fileID: 6914431567427359624}
-    chonButton: {fileID: 7206286595443222597}
-    confirmButton: {fileID: 3147565656822018572}
-    weaponBgs:
-    - {fileID: 2200966650717723909}
-    - {fileID: 7380866661798957541}
-    weapons:
-    - nameLabel: {fileID: 5453953535943329889}
-      typeLabel: {fileID: 9195527341731040737}
-    - nameLabel: {fileID: 1922946078916058324}
-      typeLabel: {fileID: 7117194176187984807}
-    utilities:
-    - nameLabel: {fileID: 4972580224573522541}
-      icon: {fileID: 8745827820996893691}
-    - nameLabel: {fileID: 3437863391974646250}
-      icon: {fileID: 340712101988732144}
-    titleLabel: {fileID: 5679219948643738345}
-  - tealCard: {fileID: 4993134401965181932}
-    grayCard: {fileID: 6801250753613902696}
-    badge: {fileID: 6440995792919892874}
-    confirm: {fileID: 4007900286940392459}
-    chon: {fileID: 413704985059758599}
-    selectArea: {fileID: 8315815965224367554}
-    chonButton: {fileID: 1459783670659350087}
-    confirmButton: {fileID: 8723930235872885414}
-    weaponBgs:
-    - {fileID: 8737382681015057416}
-    - {fileID: 1127451308918652952}
-    weapons:
-    - nameLabel: {fileID: 8839686251877173118}
-      typeLabel: {fileID: 5292853506261394017}
-    - nameLabel: {fileID: 7692323099103547413}
-      typeLabel: {fileID: 7504038894164838491}
-    utilities:
-    - nameLabel: {fileID: 3644478671879831688}
-      icon: {fileID: 1879378826373134052}
-    - nameLabel: {fileID: 4154593753624823739}
-      icon: {fileID: 7010944390027104179}
-    titleLabel: {fileID: 3156043910648513944}
-  _defaultSelected: -1
-  _weaponNormalSprite: {fileID: 21300000, guid: 225d3bf1d4490c44996479c2e3188aa5, type: 3}
-  _weaponSelectedSprite: {fileID: 21300000, guid: b7afd404b6c5c4b4ea5571a5a1110871, type: 3}
+  _balo1: {fileID: 0}
+  _balo2: {fileID: 0}
+  _balo3: {fileID: 0}
 --- !u!1 &174751915748498161
 GameObject:
   m_ObjectHideFlags: 0
@@ -640,10 +573,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 6754762452180190306}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1918, y: 1078}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6036254359932339506
 CanvasRenderer:
@@ -4591,10 +4524,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 6754762452180190306}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1918, y: 1078}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4420371301889287420
 CanvasRenderer:
