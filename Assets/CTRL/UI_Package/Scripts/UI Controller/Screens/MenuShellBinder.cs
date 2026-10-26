@@ -178,6 +178,9 @@ namespace Game.UI
             GameManager.ApplyCursor(true);
             RefreshProfile();
             if (_matchmakingScreen != null) MatchLobbyOverlay.SetSource(_matchmakingScreen); // [Aemy 2026-10-24] mau cho phong cho trong tran
+            // [Aemy 2026-10-27] Ten / mo ta / anh tung map theo scene -> phong cho trong tran hien DUNG map dang choi
+            // (vao phong bang ma: map do chu phong chon, khac map minh dang chon o menu).
+            if (_maps != null) foreach (var m in _maps) if (!m.random && !string.IsNullOrEmpty(m.sceneName)) MatchLobbyOverlay.RegisterMap(m.sceneName, m.displayName, m.description, m.background);
             RefreshCoins();
             RefreshWeapons();
             RefreshStats(); // [Aemy 2026-09-29 #2]
@@ -393,7 +396,7 @@ namespace Game.UI
                     return null; // ten hien thi cu -> dung fallback
                 };
 
-                System.Func<LoadoutConfig, BaloData, BaloData> _buildBalo = (cfg, fb) =>
+                System.Func<LoadoutConfig, BaloData, int, BaloData> _buildBalo = (cfg, fb, slot) =>
                 {
                     string w0 = (cfg != null && cfg.Weapons != null && cfg.Weapons.Length > 0 && !string.IsNullOrEmpty(cfg.Weapons[0])) ? cfg.Weapons[0] : fb.Weapon_One;
                     string w1 = (cfg != null && cfg.Weapons != null && cfg.Weapons.Length > 1 && !string.IsNullOrEmpty(cfg.Weapons[1])) ? cfg.Weapons[1] : fb.Weapon_Two;
@@ -404,7 +407,8 @@ namespace Game.UI
                     string u0 = _normUtil(u0raw); if (string.IsNullOrEmpty(u0)) u0 = fb.Grenade_Q;
                     string u1 = _normUtil(u1raw); if (string.IsNullOrEmpty(u1)) u1 = fb.Grenade_E;
                     // [Aemy 2026-10-10] Skin dang trang bi -> spawn theo ID skin (vd Umbra -> M4_DR). Spawn qua mang nen ai cung thay.
-                    w0 = Game.Skins.WeaponSkinService.Resolve(w0); w1 = Game.Skins.WeaponSkinService.Resolve(w1);
+                    // [Aemy 2026-10-26] Skin theo TUNG balo (truoc day dung chung -> balo 2 doi skin thi balo 1 doi theo).
+                    w0 = Game.Skins.WeaponSkinService.Resolve(slot, w0); w1 = Game.Skins.WeaponSkinService.Resolve(slot, w1);
                     // Ten khong con prefab trong GameManager (du lieu cu, skin bi go...) -> truoc day spawn slot rong
                     // (khong co vu khi). Nay coi nhu bo trong -> dung bo mac dinh.
                     if (_gmi.GetWeapon(w0) == null) w0 = fb.Weapon_One;
@@ -412,10 +416,10 @@ namespace Game.UI
                     return new BaloData(w0, w1, u0, u1);
                 };
 
-                BaloData _b1 = _buildBalo(arr.Length > 0 ? arr[0] : null, _def);   // ALPHA
+                BaloData _b1 = _buildBalo(arr.Length > 0 ? arr[0] : null, _def, 0);   // ALPHA
                 BaloData[] _others = new BaloData[2];
-                _others[0] = _buildBalo(arr.Length > 1 ? arr[1] : null, _def);    // BRAVO
-                _others[1] = _buildBalo(arr.Length > 2 ? arr[2] : null, _def);    // CHARLIE
+                _others[0] = _buildBalo(arr.Length > 1 ? arr[1] : null, _def, 1);    // BRAVO
+                _others[1] = _buildBalo(arr.Length > 2 ? arr[2] : null, _def, 2);    // CHARLIE
 
                 string _selChar = UnityEngine.PlayerPrefs.GetString(CharacterSelectController.PrefKey, _sd.CharacterName); if (string.IsNullOrEmpty(_selChar)) _selChar = _sd.CharacterName; // [Aemy 2026-10-05] nhan vat da chon
                 _gmi.SetSetupData(new GamePlaySetupData(_selChar, _b1, _others[0], _others[1]));
@@ -595,6 +599,7 @@ namespace Game.UI
             GUIUtility.systemCopyBuffer = code;
             _customRoom.SetStatus("Đang tạo phòng " + code + "… (mã đã sao chép)");
             if (_play != null) _play.SetStartInteractable(false);
+            PrepareCustomLobbyScreen(rule); // [Aemy 2026-10-27]
             ho.HandOffCustom(code, rule, true, (ok, why) =>
             {
                 if (ok) return;
@@ -623,6 +628,7 @@ namespace Game.UI
             if (ho == null) return;
             Game.UI.CustomRoomSession.Begin(code, 0, false);
             if (_customRoom != null) _customRoom.SetStatus("Đang vào phòng " + code + "…");
+            PrepareCustomLobbyScreen(Game.UI.CustomRoomSession.RuleOf(code)); // [Aemy 2026-10-27]
             ho.HandOffCustom(code, Game.UI.CustomRoomSession.RuleOf(code), false, (ok, why) =>
             {
                 if (ok) return;
@@ -1284,11 +1290,32 @@ namespace Game.UI
             if (_matchmakingScreen == null) { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOffSolo(mode); return; }
             bool team = mode == MatchMode.TDM;
             OpenLobbyScreen(team, "VÀO TRẬN");
+            FillLobbyRoster(new List<LobbyMember> { LocalLobbyMember() }, team);
+            StartLobbyHold(() => { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOffSolo(mode); }, _matchFoundHoldSeconds);
+        }
+
+        // [Aemy 2026-10-27] Chinh minh (ten + avatar ho so) cho roster man ghep tran.
+        private static LobbyMember LocalLobbyMember()
+        {
             var me = new LobbyMember { IsLocal = true, TeamId = "", Name = "Player", AvatarUrl = "" };
             var prof = ProfileCache.Cached;
             if (prof != null) { if (!string.IsNullOrEmpty(prof.DisplayName)) me.Name = prof.DisplayName; if (!string.IsNullOrEmpty(prof.AvatarUrl)) me.AvatarUrl = prof.AvatarUrl; }
-            FillLobbyRoster(new List<LobbyMember> { me }, team);
-            StartLobbyHold(() => { if (BackendBootstrap.MatchHandoff != null) BackendBootstrap.MatchHandoff.HandOffSolo(mode); }, _matchFoundHoldSeconds);
+            return me;
+        }
+
+        /// <summary>
+        /// [Aemy 2026-10-27] Phong tuy chinh (tao phong / vao bang ma) di thang vao tran, khong qua man ghep tran,
+        /// nhung MatchLobbyOverlay van chup man nay lam phong cho -> truoc day chup ca du lieu MAU cua prefab
+        /// (Operator_01, R4V3N, Sable...). Do che do + chinh minh truoc; vao map roi roster tu cap nhat theo NPlayer.
+        /// Khong bat man nay o menu (giu nguyen luong tao phong cu).
+        /// </summary>
+        private void PrepareCustomLobbyScreen(MatchMode rule)
+        {
+            if (_matchmakingScreen == null) return;
+            bool team = rule == MatchMode.TDM;
+            _matchmakingScreen.StopTimer();
+            _matchmakingScreen.SetMode(team ? "TEAM DEATHMATCH" : "FREE FOR ALL");
+            FillLobbyRoster(new List<LobbyMember> { LocalLobbyMember() }, team);
         }
 
         private void HandOffNow(MatchFoundResult match, MatchMode mode)

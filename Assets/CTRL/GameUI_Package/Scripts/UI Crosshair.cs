@@ -44,10 +44,31 @@ public class UICrosshair : MonoBehaviour
     private float _spread;
     private float _lastFireTime;
 
+    // [Aemy 2026-10-26] Ve tam theo Cai dat (tay, mau, khoang cach). Truoc day _baseGap chi lay 1 lan o Awake
+    // tu vi tri mac dinh trong prefab -> ban 1 phat la tay bi dat ve "mac dinh + gian", co lai cung ve mac dinh,
+    // lech khoi setting cho toi khi bat/tat ngam (Basic bat lai -> CrosshairController ve lai).
+    private Game.UI.CrosshairController _settings;
+
+    // Goc gian = khoang cach theo setting (neu co CrosshairController), khong thi gap trong prefab / SetGap().
+    private float BaseGap => _settings != null && _settings.HasApplied ? _settings.ArmOffset : _baseGap;
+
     private void Awake()
     {
         // Gap gốc = vị trí đặt sẵn trong prefab (cho tới khi SetGap() được gọi).
         _baseGap = _verticalDivider_U.rectTransform.localPosition.y;
+        _settings = _background.transform.parent.GetComponent<Game.UI.CrosshairController>();
+        if (_settings != null) _settings.Applied += OnSettingsApplied;
+    }
+
+    private void OnDestroy()
+    {
+        if (_settings != null) _settings.Applied -= OnSettingsApplied;
+    }
+
+    // Doi setting giua luc tam dang gian -> giu do gian tren goc moi.
+    private void OnSettingsApplied()
+    {
+        if (_spread > 0f) ApplyGap();
     }
 
     private void Update()
@@ -104,7 +125,7 @@ public class UICrosshair : MonoBehaviour
 
     private void ApplyGap()
     {
-        float gap = _baseGap + _spread;
+        float gap = BaseGap + _spread;
 
         _verticalDivider_U.rectTransform.SetLocalPositionAndRotation(
             new Vector3(0, gap, 0), Quaternion.identity);

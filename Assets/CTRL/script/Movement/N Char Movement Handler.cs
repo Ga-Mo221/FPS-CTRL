@@ -782,6 +782,15 @@ public class NCharMovementHandler : NetworkBehaviour
     #endregion
 
     
+    // [Aemy 2026-10-26] Tay trai IK = ham cua StateFl (tat khi chay nhanh / truot), khong phai su kien.
+    // Moi truong hop doi state (ke ca RequestRespawn reset StateFl, rollback/resim cua Fusion) deu tu dung.
+    public override void Render()
+    {
+        if (_constraintManager == null) return;
+        var s = StateFl;
+        _constraintManager.SetLeftHandIK(!(s.IsSprint || s.IsSlide));
+    }
+
 #region Dead Status
     public void RequestRespawn(bool newRound = false)
     {

@@ -146,6 +146,55 @@ namespace GaMo.BlenderEditorTools
             InitIKChain();
         }
 
+        // [Aemy 2026-10-26] Gia tri dich cua cac transition dang chay.
+        private float _influenceGoal = -1f;
+        private string _switchTargetId;
+        private string _switchPoleTargetId;
+
+        protected override void OnDisable()
+        {
+            // Coroutine tu dung khi GameObject bi tat -> ikInfluence / weight ket o giua (vd 0.4) mai mai.
+            // Chot ve gia tri dich truoc khi tat.
+            FinishTransitions();
+            base.OnDisable();
+        }
+
+        private void FinishTransitions()
+        {
+            if (_influenceCoroutine != null)
+            {
+                StopCoroutine(_influenceCoroutine);
+                _influenceCoroutine = null;
+                if (_influenceGoal >= 0f) ikInfluence = _influenceGoal;
+            }
+            if (_switchTargetCoroutine != null)
+            {
+                StopCoroutine(_switchTargetCoroutine);
+                _switchTargetCoroutine = null;
+                SnapTargetWeights(_switchTargetId);
+            }
+            if (_switchPoleTargetCoroutine != null)
+            {
+                StopCoroutine(_switchPoleTargetCoroutine);
+                _switchPoleTargetCoroutine = null;
+                SnapPoleWeights(_switchPoleTargetId);
+            }
+        }
+
+        private void SnapTargetWeights(string id)
+        {
+            if (string.IsNullOrEmpty(id) || !targets.Exists(t => t.id == id)) return;
+            for (int i = 0; i < targets.Count; i++)
+                targets[i].weight = targets[i].id == id ? 1f : 0f;
+        }
+
+        private void SnapPoleWeights(string id)
+        {
+            if (string.IsNullOrEmpty(id) || !poleTargets.Exists(p => p.id == id)) return;
+            for (int i = 0; i < poleTargets.Count; i++)
+                poleTargets[i].weight = poleTargets[i].id == id ? 1f : 0f;
+        }
+
         // ══════════════════════════════ PUBLIC API — TARGET ══════════════════════════════
 
         public bool AddTarget(string id, Transform targetTransform, float initialWeight = 0f)
@@ -184,13 +233,16 @@ namespace GaMo.BlenderEditorTools
                 if (targets[i].id == id)
                 {
                     // Dừng coroutine chuyển Target đang chạy, tránh nó duyệt list đã bị thu nhỏ / lệch index
-                    if (_switchTargetCoroutine != null)
+                    bool wasSwitching = _switchTargetCoroutine != null;
+                    if (wasSwitching)
                     {
                         StopCoroutine(_switchTargetCoroutine);
                         _switchTargetCoroutine = null;
                     }
 
                     targets.RemoveAt(i);
+                    // [Aemy 2026-10-26] Chot weight ve dich thay vi de ket nua chung.
+                    if (wasSwitching) SnapTargetWeights(_switchTargetId);
                     ConstraintScheduler.MarkDirty();
                     return true;
                 }
@@ -237,6 +289,8 @@ namespace GaMo.BlenderEditorTools
 
             if (_influenceCoroutine != null)
                 StopCoroutine(_influenceCoroutine);
+            _influenceGoal = 1f;
+            if (!isActiveAndEnabled) { ikInfluence = 1f; _influenceCoroutine = null; return; } // khong chay coroutine duoc
             _influenceCoroutine = StartCoroutine(InfluenceRoutine(1f, duration));
         }
 
@@ -256,6 +310,8 @@ namespace GaMo.BlenderEditorTools
 
             if (_influenceCoroutine != null)
                 StopCoroutine(_influenceCoroutine);
+            _influenceGoal = 0f;
+            if (!isActiveAndEnabled) { ikInfluence = 0f; _influenceCoroutine = null; return; } // khong chay coroutine duoc
             _influenceCoroutine = StartCoroutine(InfluenceRoutine(0f, duration));
         }
 
@@ -303,6 +359,8 @@ namespace GaMo.BlenderEditorTools
 
             if (_switchTargetCoroutine != null)
                 StopCoroutine(_switchTargetCoroutine);
+            _switchTargetId = targetId;
+            if (!isActiveAndEnabled) { _switchTargetCoroutine = null; SnapTargetWeights(targetId); return; }
             _switchTargetCoroutine = StartCoroutine(SwitchTargetRoutine(targetId, duration));
         }
 
@@ -378,13 +436,16 @@ namespace GaMo.BlenderEditorTools
                 if (poleTargets[i].id == id)
                 {
                     // Dừng coroutine chuyển Pole Target đang chạy, tránh nó duyệt list đã bị thu nhỏ / lệch index
-                    if (_switchPoleTargetCoroutine != null)
+                    bool wasSwitching = _switchPoleTargetCoroutine != null;
+                    if (wasSwitching)
                     {
                         StopCoroutine(_switchPoleTargetCoroutine);
                         _switchPoleTargetCoroutine = null;
                     }
 
                     poleTargets.RemoveAt(i);
+                    // [Aemy 2026-10-26] Chot weight ve dich thay vi de ket nua chung.
+                    if (wasSwitching) SnapPoleWeights(_switchPoleTargetId);
                     ConstraintScheduler.MarkDirty();
                     return true;
                 }
@@ -438,6 +499,8 @@ namespace GaMo.BlenderEditorTools
 
             if (_switchPoleTargetCoroutine != null)
                 StopCoroutine(_switchPoleTargetCoroutine);
+            _switchPoleTargetId = poleTargetId;
+            if (!isActiveAndEnabled) { _switchPoleTargetCoroutine = null; SnapPoleWeights(poleTargetId); return; }
             _switchPoleTargetCoroutine = StartCoroutine(SwitchPoleTargetRoutine(poleTargetId, duration));
         }
 

@@ -20,8 +20,9 @@ public class NetworkRunnerHandler : MonoBehaviour
 
     private void Awake()
     {
-        if (GameManager.Instance.NetworkRunnerHandler != null) Destroy(gameObject);
-        else GameManager.Instance.NetworkRunnerHandler = this;
+        // [Aemy 2026-10-27] Ban trung: huy roi DUNG (truoc day thieu return -> ban sap huy van chay tiep phan duoi).
+        if (GameManager.Instance.NetworkRunnerHandler != null) { Destroy(gameObject); return; }
+        GameManager.Instance.NetworkRunnerHandler = this;
         
         NetworkRunner networkRunnerInScene = FindAnyObjectByType<NetworkRunner>(FindObjectsInactive.Include);
         
@@ -34,7 +35,8 @@ public class NetworkRunnerHandler : MonoBehaviour
     // Scene menu: KHONG auto-start NetworkRunner (vao tran qua FusionMatchHandoff.CreateGame).
     private static bool IsMenuScene(string n)
     {
-        return n == "MainMenu_Test" || n == "Login_Register" || n == "Loading" || n == "MenuShell";
+        // [Aemy 2026-10-27] + "Boot" (man tieu de): Core Systems sinh tu Boot -> khong duoc tu mo tran "TestRoom".
+        return n == "MainMenu_Test" || n == "Boot" || n == "Login_Register" || n == "Loading" || n == "MenuShell";
     }
 
     private void Start()

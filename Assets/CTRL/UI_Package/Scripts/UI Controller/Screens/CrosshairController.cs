@@ -42,6 +42,13 @@ namespace Game.UI
         private Outline[] _outlines;
         private bool _cached;
 
+        // [Aemy 2026-10-26] Khoang cach (px) tu tam toi giua moi tay theo setting hien tai.
+        // UICrosshair (gian tam khi ban) lay day lam goc thay vi vi tri mac dinh trong prefab.
+        public bool HasApplied { get; private set; }
+        public float ArmOffset { get; private set; }
+        /// <summary>Ban sau moi lan ve lai theo setting (de lop khac cong them hieu ung len tren).</summary>
+        public event System.Action Applied;
+
         private void Awake() { CacheParts(); }
 
         private void OnEnable()
@@ -99,6 +106,8 @@ namespace Game.UI
             SetRect(_left,   new Vector2(len, th), new Vector2(-off, 0));
             SetRect(_right,  new Vector2(len, th), new Vector2( off, 0));
             SetRect(_center, new Vector2(th, th),  Vector2.zero);
+            ArmOffset = off;
+            HasApplied = true;
 
             Color col = Color.white;
             if (_palette != null && _palette.Length > 0)
@@ -108,6 +117,7 @@ namespace Game.UI
 
             if (_center != null) _center.gameObject.SetActive(d.CrosshairCenterDot);
             if (_outlines != null) foreach (var ol in _outlines) if (ol != null) ol.enabled = d.CrosshairOutline;
+            Applied?.Invoke();
         }
 
         private void SetRect(RectTransform rt, Vector2 size, Vector2 pos)

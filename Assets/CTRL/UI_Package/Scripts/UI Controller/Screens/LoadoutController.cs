@@ -55,6 +55,8 @@ namespace Game.UI
         public event Action<int> FocusedWeaponChanged;
         public event Action<IReadOnlyList<int>> WeaponsApplied;   // ApplyWeapons (doi slot / tai du lieu) - khong phai nguoi choi bam
         public int FocusedWeapon { get; private set; } = -1;
+        /// <summary>[Aemy 2026-10-26] Balo (tab ALPHA/BRAVO/CHARLIE) dang chon: 0..2. Skin luu rieng theo balo.</summary>
+        public int CurrentSlot { get; private set; }
 
         /// <summary>Dat sung dang xem (goi tu khung model). Ban FocusedWeaponChanged ke ca khi trung index (lam moi the chi so).</summary>
         public void FocusWeapon(int index)
@@ -129,7 +131,7 @@ namespace Game.UI
 
         private void OnLoadoutTabChanged(IReadOnlyList<UISelectable> sel)
         {
-            if (sel.Count > 0) LoadoutSlotChanged?.Invoke(sel[0].Index);
+            if (sel.Count > 0) { CurrentSlot = sel[0].Index; LoadoutSlotChanged?.Invoke(sel[0].Index); }
         }
 
         private void OnWeaponChanged(IReadOnlyList<UISelectable> sel)
@@ -263,6 +265,7 @@ namespace Game.UI
         public void SelectSlotTab(int index)
         {
             if (_loadoutTabGroup != null) _loadoutTabGroup.SelectByIndex(index, false);
+            CurrentSlot = index;
         }
 
         /// <summary>Ap lua chon sung (theo index), xoa lua chon cu. KHONG ban su kien.</summary>

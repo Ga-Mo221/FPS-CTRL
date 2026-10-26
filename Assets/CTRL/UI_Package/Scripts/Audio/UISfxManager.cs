@@ -20,6 +20,20 @@ namespace Game.Audio
         private AudioSource _sfx, _music;
         private float _lastPlay = -1f, _lastClick = -1f, _scanTimer;
         private Coroutine _fade;
+        private static bool _held; // [Aemy 2026-10-27] tam giu nhac (vd man canh bao truoc man tieu de)
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() { _held = false; }
+
+        /// <summary>
+        /// [Aemy 2026-10-27] Giu nhac nen im (hold = true) du scene co trong musicScenes; tha ra -> cap nhat lai theo scene.
+        /// Boot: im trong luc hien canh bao, nhac menu bat dau dung luc man tieu de hien.
+        /// </summary>
+        public static void HoldMusic(bool hold)
+        {
+            _held = hold;
+            if (_instance != null) _instance.UpdateMusic(SceneManager.GetActiveScene().name);
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -105,7 +119,7 @@ namespace Game.Audio
         private void UpdateMusic(string sceneName)
         {
             if (_lib == null || _lib.menuMusic == null) return;
-            bool want = _lib.musicScenes.Contains(sceneName);
+            bool want = !_held && _lib.musicScenes.Contains(sceneName);
             if (_fade != null) StopCoroutine(_fade);
             if (want)
             {

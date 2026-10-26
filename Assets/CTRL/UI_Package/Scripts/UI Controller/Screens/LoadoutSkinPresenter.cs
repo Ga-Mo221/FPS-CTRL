@@ -54,10 +54,20 @@ namespace Game.UI
             if (_skinNameLabel != null) { _skinLabelDefault = _skinNameLabel.color; _skinLabelColorSaved = true; }
         }
 
+        // [Aemy 2026-10-26] Skin trang bi rieng tung balo.
+        private int Slot { get { return _loadout != null ? _loadout.CurrentSlot : 0; } }
+
+        // Doi balo -> doc lai skin cua sung dang xem theo balo moi.
+        private void OnSlotChanged(int slot)
+        {
+            if (_loadout != null && _loadout.FocusedWeapon >= 0) ShowWeapon(_loadout.FocusedWeapon);
+        }
+
         private void OnEnable()
         {
             if (_loadout != null)
             {
+                _loadout.LoadoutSlotChanged += OnSlotChanged;
                 _loadout.WeaponSelectionChanged += OnWeaponSelection;
                 _loadout.WeaponsApplied += OnWeaponsApplied;          // [Aemy 2026-10-11] doi slot ALPHA/BRAVO/CHARLIE, tai du lieu
                 _loadout.FocusedWeaponChanged += ShowWeapon;           // model + chi so cung 1 nguon
@@ -104,6 +114,7 @@ namespace Game.UI
         {
             if (_loadout != null)
             {
+                _loadout.LoadoutSlotChanged -= OnSlotChanged;
                 _loadout.WeaponSelectionChanged -= OnWeaponSelection;
                 _loadout.WeaponsApplied -= OnWeaponsApplied;
                 _loadout.FocusedWeaponChanged -= ShowWeapon;
@@ -165,7 +176,7 @@ namespace Game.UI
             _baseId = _loadout.GetWeaponName(index) ?? "";
             _options.Clear(); _options.Add(_baseId);
             if (_catalog != null) foreach (var s in _catalog.SkinsFor(_baseId)) _options.Add(s.skinWeaponId);
-            string eq = WeaponSkinService.GetEquipped(_baseId);
+            string eq = WeaponSkinService.GetEquipped(Slot, _baseId);
             _option = Mathf.Max(0, _options.IndexOf(eq));
             Render();
         }
@@ -175,7 +186,7 @@ namespace Game.UI
             if (_options.Count <= 1) return;
             _option = (_option + dir + _options.Count) % _options.Count;
             // da so huu -> trang bi luon
-            if (IsOwned(_option)) WeaponSkinService.Equip(_baseId, _option == 0 ? "" : _options[_option]);
+            if (IsOwned(_option)) WeaponSkinService.Equip(Slot, _baseId, _option == 0 ? "" : _options[_option]);
             Render();
         }
 
@@ -192,7 +203,7 @@ namespace Game.UI
             string id = _options[Mathf.Clamp(_option, 0, _options.Count - 1)];
             var skin = _option > 0 && _catalog != null ? _catalog.FindBySkinId(id) : null;
             bool owned = IsOwned(_option);
-            bool equipped = string.Equals(WeaponSkinService.GetEquipped(_baseId), _option == 0 ? "" : id, System.StringComparison.OrdinalIgnoreCase);
+            bool equipped = string.Equals(WeaponSkinService.GetEquipped(Slot, _baseId), _option == 0 ? "" : id, System.StringComparison.OrdinalIgnoreCase);
 
             if (_weaponNameLabel) _weaponNameLabel.text = _baseId.ToUpperInvariant();
             if (_skinNameLabel)

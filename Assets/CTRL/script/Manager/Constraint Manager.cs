@@ -112,7 +112,7 @@ public class ConstraintManager : MonoBehaviour
     public void TurnOffHand(bool Left = false, float duration = 0.25f)
     {
         if (Left)
-            _IK_hand_left?.TurnOff(duration);
+            SetLeftHandIK(false, duration);
         else
             _IK_hand_right?.TurnOff(duration);
     }
@@ -120,9 +120,26 @@ public class ConstraintManager : MonoBehaviour
     public void TurnOnHand(bool Left = false, float duration = 0.25f)
     {
         if (Left)
-            _IK_hand_left?.TurnOn(duration);
+            SetLeftHandIK(true, duration);
         else
-            _IK_hand_right.TurnOn(duration);
+            _IK_hand_right?.TurnOn(duration);
+    }
+
+    // [Aemy 2026-10-26] Muc tieu hien tai cua tay trai IK (null = chua dat lan nao).
+    private bool? _leftHandOn;
+
+    /// <summary>
+    /// Dat tay trai IK theo TRANG THAI (bat/tat), goi moi frame duoc: chi chay TurnOn/TurnOff khi muc tieu doi.
+    /// Truoc day tay trai bat/tat theo SU KIEN (StartSprint/StopSprint/StartSlide/StopSlide) trong FixedUpdateNetwork:
+    /// RequestRespawn() reset StateFl = new PlayerStateFlags() ma khong ai goi TurnOnHand -> chet khi dang
+    /// chay nhanh / truot thi hoi sinh xong tay trai van tat (ikInfluence = 0), tay roi khoi sung.
+    /// </summary>
+    public void SetLeftHandIK(bool on, float duration = 0.25f)
+    {
+        if (_IK_hand_left == null || _leftHandOn == on) return;
+        _leftHandOn = on;
+        if (on) _IK_hand_left.TurnOn(duration);
+        else _IK_hand_left.TurnOff(duration);
     }
     
     

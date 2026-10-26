@@ -24,9 +24,20 @@ namespace Game.UI
         private static string _menuScene;
         private static Runner _runner;
 
+        // [Aemy 2026-10-27] Thong tin map theo ten scene (menu dang ky) -> vao map roi hien DUNG map dang choi.
+        private struct MapView { public string Name, Description; public Sprite Background; }
+        private static readonly Dictionary<string, MapView> _maps = new Dictionary<string, MapView>(System.StringComparer.OrdinalIgnoreCase);
+
         // Editor tat domain reload -> reset moi lan Play.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { _source = null; _menuScene = null; _runner = null; }
+        private static void ResetStatics() { _source = null; _menuScene = null; _runner = null; _maps.Clear(); }
+
+        /// <summary>Menu dang ky ten / mo ta / anh cua map ung voi scene.</summary>
+        public static void RegisterMap(string sceneName, string displayName, string description, Sprite background)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return;
+            _maps[sceneName] = new MapView { Name = displayName, Description = description, Background = background };
+        }
 
         /// <summary>MenuShellBinder goi khi vao menu: man ghep tran dung lam mau.</summary>
         public static void SetSource(MatchmakingController source)
@@ -98,6 +109,7 @@ namespace Game.UI
             private string _menuScene;
             private float _startedAt, _nextRoster;
             private bool _leftMenu;
+            private bool _mapApplied;
 
             public void Init(MatchmakingController view, string menuScene)
             {
@@ -135,6 +147,14 @@ namespace Game.UI
                 // [2026-10-24] Nyx: khong hien bo dem / tieu de, chi che do + ten map + nguoi trong phong.
                 bool team = gs.Mode == GamePlayMode.Team;
                 _view.SetMode(team ? "TEAM DEATHMATCH" : "FREE FOR ALL");
+
+                // [Aemy 2026-10-27] Map that dang choi (vao bang ma: map cua chu phong, khong phai map minh chon o menu).
+                if (!_mapApplied)
+                {
+                    _mapApplied = true;
+                    MapView mv;
+                    if (_maps.TryGetValue(active, out mv)) _view.SetMap(mv.Name, mv.Description, mv.Background);
+                }
 
                 if (Time.unscaledTime >= _nextRoster)
                 {

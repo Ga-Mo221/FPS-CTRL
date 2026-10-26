@@ -8,7 +8,9 @@ using PlayFab.ClientModels;
 namespace Game.Skins
 {
     /// <summary>
-    /// Luu "sung goc -> skin dang trang bi" (vd Umbra -> M4_DR).
+    /// Luu "balo + sung goc -> skin dang trang bi" (vd balo 1: Umbra -> M4_GOLD, balo 2: Umbra -> M4_DR).
+    /// [Aemy 2026-10-26] Truoc day chi theo sung goc -> balo 2 doi skin M4 thi balo 1 doi theo.
+    ///   Khoa luu: "slot|sungGoc" (slot 0..2 = ALPHA/BRAVO/CHARLIE). Du lieu cu (chi "sungGoc") tu chep cho ca 3 balo.
     /// - Cache: PlayerPrefs "EquippedSkins" (doc ngay ca khi offline).
     /// - Dong bo: PlayFab User Data "EquippedSkins" (JSON) -> doi may van giu skin.
     /// - Vao tran: MenuShellBinder goi Resolve(id) khi dung BaloData -> sung spawn qua mang theo ID skin
@@ -22,6 +24,11 @@ namespace Game.Skins
         private static Dictionary<string, string> _equipped;
         public static event Action Changed;
 
+        /// <summary>So balo (ALPHA / BRAVO / CHARLIE).</summary>
+        public const int SlotCount = 3;
+
+        private static string SlotKey(int slot, string baseWeaponId) { return Mathf.Clamp(slot, 0, SlotCount - 1) + "|" + baseWeaponId; }
+
         private static Dictionary<string, string> Map
         {
             get
@@ -31,24 +38,25 @@ namespace Game.Skins
             }
         }
 
-        /// <summary>Skin dang trang bi cho sung goc ("" = ban goc).</summary>
-        public static string GetEquipped(string baseWeaponId)
+        /// <summary>Skin dang trang bi cho sung goc o balo slot ("" = ban goc).</summary>
+        public static string GetEquipped(int slot, string baseWeaponId)
         {
-            string v; return !string.IsNullOrEmpty(baseWeaponId) && Map.TryGetValue(baseWeaponId, out v) ? v : "";
+            string v; return !string.IsNullOrEmpty(baseWeaponId) && Map.TryGetValue(SlotKey(slot, baseWeaponId), out v) ? v : "";
         }
 
-        /// <summary>ID dung de spawn: skin dang trang bi neu co, nguoc lai ID goc.</summary>
-        public static string Resolve(string baseWeaponId)
+        /// <summary>ID dung de spawn cho balo slot: skin dang trang bi neu co, nguoc lai ID goc.</summary>
+        public static string Resolve(int slot, string baseWeaponId)
         {
-            var s = GetEquipped(baseWeaponId);
+            var s = GetEquipped(slot, baseWeaponId);
             return string.IsNullOrEmpty(s) ? baseWeaponId : s;
         }
 
-        /// <summary>Trang bi skin (skinWeaponId rong = ve ban goc). Luu cache + PlayFab.</summary>
-        public static void Equip(string baseWeaponId, string skinWeaponId)
+        /// <summary>Trang bi skin cho sung goc o RIENG balo slot (skinWeaponId rong = ve ban goc). Luu cache + PlayFab.</summary>
+        public static void Equip(int slot, string baseWeaponId, string skinWeaponId)
         {
             if (string.IsNullOrEmpty(baseWeaponId)) return;
-            if (string.IsNullOrEmpty(skinWeaponId)) Map.Remove(baseWeaponId); else Map[baseWeaponId] = skinWeaponId;
+            string key = SlotKey(slot, baseWeaponId);
+            if (string.IsNullOrEmpty(skinWeaponId)) Map.Remove(key); else Map[key] = skinWeaponId;
             string json = Serialize(Map);
             PlayerPrefs.SetString(PrefKey, json); PlayerPrefs.Save();
             if (PlayFabClientAPI.IsClientLoggedIn())
@@ -88,17 +96,30 @@ namespace Game.Skins
             if (Changed != null) Changed();
         }
 
-        // JSON phang {"Umbra":"M4_DR",...} — tu viet de khong phu thuoc thu vien.
+        // JSON phang {"0|Umbra":"M4_GOLD","1|Umbra":"M4_DR",...} — tu viet de khong phu thuoc thu vien.
         private static Dictionary<string, string> Parse(string json)
         {
             var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(json)) return d;
+            var legacy = new List<KeyValuePair<string, string>>();
             try
             {
                 var obj = PlayFab.Json.PlayFabSimpleJson.DeserializeObject<Dictionary<string, string>>(json);
-                if (obj != null) foreach (var kv in obj) if (!string.IsNullOrEmpty(kv.Key) && !string.IsNullOrEmpty(kv.Value)) d[kv.Key] = kv.Value;
+                if (obj != null)
+                    foreach (var kv in obj)
+                    {
+                        if (string.IsNullOrEmpty(kv.Key) || string.IsNullOrEmpty(kv.Value)) continue;
+                        if (kv.Key.IndexOf('|') < 0) legacy.Add(kv); else d[kv.Key] = kv.Value;
+                    }
             }
             catch (Exception ex) { Debug.LogWarning("[WeaponSkinService] JSON skin hong: " + ex.Message); }
+            // Du lieu cu (truoc khi tach theo balo): "Umbra" -> ap cho ca 3 balo (khong ghi de neu balo da co rieng).
+            foreach (var kv in legacy)
+                for (int s = 0; s < SlotCount; s++)
+                {
+                    string k = SlotKey(s, kv.Key);
+                    if (!d.ContainsKey(k)) d[k] = kv.Value;
+                }
             return d;
         }
 

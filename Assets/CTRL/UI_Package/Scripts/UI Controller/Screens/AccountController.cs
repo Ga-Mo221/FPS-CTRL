@@ -111,12 +111,28 @@ namespace Game.UI
             {
                 email = (email ?? "").Trim();
                 if (!email.Contains("@") || !email.Contains(".")) { Info("Email không hợp lệ", "Vui lòng nhập đúng định dạng email."); return; }
-                var svc = BackendBootstrap.AccountRecoveryService;
-                if (svc == null) { Info("Lỗi", "Backend chưa sẵn sàng."); return; }
-                svc.SendEmailVerification(email,
-                    () => { if (_emailValue != null) _emailValue.text = email; Info("Đã gửi xác thực", "Email liên hệ đã cập nhật. Kiểm tra hộp thư để xác thực."); },
-                    e => Info("Đổi email thất bại", e != null ? e.ErrorMessage : "Lỗi không rõ."));
-            }, "Nhập email liên hệ mới (sẽ gửi mail xác thực)", "email@example.com");
+                // [Aemy 2026-10-27] Nhap lai lan 2: go nham -> link xac thuc gui toi dia chi sai -> lan dang nhap sau bi chan
+                // (RequireVerifiedEmail) ma khong vao duoc de sua -> ket tai khoan (chi admin sua tay trong Game Manager).
+                ModalDialog.Instance.Prompt("NHẬP LẠI EMAIL", "", again =>
+                {
+                    again = (again ?? "").Trim();
+                    if (!string.Equals(email, again, StringComparison.OrdinalIgnoreCase))
+                    { Info("Email không khớp", "Hai lần nhập không giống nhau. Vui lòng thử lại."); return; }
+                    SubmitContactEmail(email);
+                }, "Nhập lại email mới để chắc chắn không gõ nhầm.", "email@example.com");
+            // [Aemy 2026-10-27] Noi ro: chi doi email NHAN THU tu may chu (contact email), email dang nhap giu nguyen
+            // (PlayFab khong cho doi email dang nhap qua API). Email moi phai xac thuc truoc lan dang nhap sau.
+            }, "Email liên hệ chỉ dùng để nhận thư từ máy chủ, email đăng nhập giữ nguyên. Bạn cần mở link xác thực gửi tới email mới trước lần đăng nhập sau.", "email@example.com");
+        }
+
+        // Dat email lien he moi -> PlayFab gui link xac thuc toi email do.
+        private void SubmitContactEmail(string email)
+        {
+            var svc = BackendBootstrap.AccountRecoveryService;
+            if (svc == null) { Info("Lỗi", "Backend chưa sẵn sàng."); return; }
+            svc.SendEmailVerification(email,
+                () => { if (_emailValue != null) _emailValue.text = email; Info("Đã gửi xác thực", "Đã gửi link xác thực tới email mới. Hãy mở link trước lần đăng nhập sau. Email đăng nhập không thay đổi."); },
+                e => Info("Đổi email thất bại", e != null ? e.ErrorMessage : "Lỗi không rõ."));
         }
 
         private void OnLinkGoogle() { LinkGoogleFlow(false); }
