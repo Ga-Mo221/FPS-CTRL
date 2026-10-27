@@ -155,7 +155,7 @@ namespace MagicaCloth2
                 });
             }
 
-            public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+            public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
             {
                 if (transformList != null)
                 {
@@ -164,8 +164,8 @@ namespace MagicaCloth2
                         var t = transformList[i];
                         if (t)
                         {
-                            int id = t.GetInstanceID();
-                            if (id != 0 && replaceDict.ContainsKey(id))
+                            MagicaObjectId id = t.GetMagicaId();
+                            if (id.IsValid() && replaceDict.ContainsKey(id))
                             {
                                 transformList[i] = replaceDict[id];
                             }

@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eclipse Strike — FPS đối kháng</title>
+  <meta name="description" content="Eclipse Strike — game bắn súng góc nhìn thứ nhất đối kháng nhiều người chơi. Đấu đội, đấu đơn, voice chat trong trận. Đã có trên PC, bản mobile sắp ra mắt.">
+  <meta name="theme-color" content="#070b0c">
+  <meta property="og:title" content="Eclipse Strike — FPS đối kháng">
+  <meta property="og:description" content="Đấu đội 5v5, đấu đơn, voice chat trong trận. Đã có trên PC, bản mobile sắp ra mắt.">
+  <meta property="og:image" content="assets/hero-meridian.jpg">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="topbar" id="top">
+    <a class="brand" href="#top" aria-label="Eclipse Strike — về đầu trang">
+      <span class="brand__mark" aria-hidden="true"></span>ECLIPSE STRIKE
+    </a>
+    <nav class="nav" id="nav" aria-label="Điều hướng chính">
+      <a href="#trailer">Trailer</a>
+      <a href="#tinh-nang">Tính năng</a>
+      <a href="#che-do">Chế độ</a>
+      <a href="#dac-vu">Đặc vụ</a>
+      <a href="#vu-khi">Vũ khí</a>
+      <a href="#ban-do">Bản đồ</a>
+      <a href="#cong-cu">Công cụ</a>
+      <a href="#doi-ngu">Đội ngũ</a>
+    </nav>
+    <a class="btn btn--primary btn--sm topbar__cta" href="#tai-game">Tải game</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Mở menu" aria-expanded="false" aria-controls="nav">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <!-- Tab "TẢI GAME" dính cạnh trái (giống tab đỏ của trang tham khảo) -->
+  <a class="side-tab" href="#tai-game" aria-label="Tải game">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0l-4.5-4.5M12 14l4.5-4.5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"/></svg>
+    <span>TẢI GAME</span>
+  </a>
+
+  <main>
+    <!-- ===== HERO ===== -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="hero__grain" aria-hidden="true"></div>
+      <img class="hero__op hero__op--left" src="assets/op-ghost.png" alt="" aria-hidden="true">
+      <img class="hero__op hero__op--right" src="assets/op-anhteo.png" alt="" aria-hidden="true">
+
+      <div class="hero__content">
+        <p class="kicker"><span class="dot"></span>FPS ĐỐI KHÁNG · PC · MOBILE SẮP RA MẮT</p>
+        <h1 class="hero__title" id="hero-title">ECLIPSE<br>STRIKE</h1>
+        <ul class="hero__tags">
+          <li>Đấu đội 5v5</li>
+          <li>Đấu đơn FFA</li>
+          <li>Voice chat trong trận</li>
+        </ul>
+        <div class="hero__actions">
+          <a class="btn btn--primary btn--lg" href="#tai-game">Chơi ngay</a>
+          <a class="btn btn--ghost btn--lg" href="#trailer">Xem trailer</a>
+        </div>
+      </div>
+
+      <div class="hero__hud" aria-hidden="true">
+        <span>MAP · MERIDIAN</span>
+        <span class="hero__hud-line"></span>
+        <span>TICK 64HZ · PHOTON FUSION</span>
+      </div>
+      <a class="scroll-cue" href="#trailer" aria-label="Cuộn xuống">
+        <span></span>
+      </a>
+    </section>
+
+    <!-- ===== TRAILER =====
+         Đổi video: thay ID trong data-yt (phần sau youtu.be/) — ảnh bìa tự lấy theo ID. -->
+    <section class="section trailer" id="trailer" aria-labelledby="trailer-title">
+      <div class="container">
+        <div class="trailer__head reveal">
+          <p class="kicker"><span class="dot"></span>OFFICIAL TRAILER</p>
+          <h2 class="section__title" id="trailer-title">XEM <em>TRAILER</em></h2>
+        </div>
+        <div class="trailer__frame reveal" data-yt="CAWOY1sdqH0">
+          <button class="trailer__play" type="button" aria-label="Phát trailer Eclipse Strike">
+            <img src="https://i.ytimg.com/vi/CAWOY1sdqH0/maxresdefault.jpg" alt="Trailer Eclipse Strike" loading="lazy">
+            <span class="trailer__btn" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+            </span>
+          </button>
+        </div>
+        <p class="trailer__note"><a href="https://youtu.be/CAWOY1sdqH0" target="_blank" rel="noopener">Xem trên YouTube ↗</a></p>
+      </div>
+    </section>
+
+    <!-- ===== TÍNH NĂNG ===== -->
+    <section class="section features" id="tinh-nang" aria-labelledby="features-title">
+      <div class="hud-frame" aria-hidden="true"></div>
+      <div class="container features__grid">
+        <div class="features__text reveal">
+          <p class="section__index">01 <span>/ 07</span></p>
+          <h2 class="section__title" id="features-title">KỸ NĂNG LÊN TIẾNG<br><em>ĐẤU SÚNG CÔNG BẰNG</em></h2>
+          <p class="lead">Mỗi trận thắng thua bằng tâm ngắm, phối hợp đồng đội và quyết định trong tích tắc.</p>
+          <ul class="feature-list">
+            <li>
+              <span class="feature-list__ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 12h4l2-6 4 12 2-6h4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+              </span>
+              <div><strong>Mạng Photon Fusion 64 tick</strong><span>Dự đoán phía client, đồng bộ trạng thái nhanh, có đo mất gói ngay trên HUD.</span></div>
+            </li>
+            <li>
+              <span class="feature-list__ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+              </span>
+              <div><strong>Voice chat trong trận</strong><span>Đấu đội chỉ nghe đồng đội; đấu đơn nghe theo khoảng cách 3D. Giữ T để nói.</span></div>
+            </li>
+            <li>
+              <span class="feature-list__ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+              </span>
+              <div><strong>Ghép trận nhanh</strong><span>Ưu tiên vào trận đang chờ người, phòng tùy chỉnh bằng mã 6 ký tự cho nhóm bạn.</span></div>
+            </li>
+            <li>
+              <span class="feature-list__ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h2m-1-1v2M15 11h.01M17 13h.01" stroke="currentColor" stroke-width="2"/></svg>
+              </span>
+              <div><strong>Chuột phím và tay cầm</strong><span>Hỗ trợ tay cầm có gyro trên PC. Bản mobile điều khiển cảm ứng sắp ra mắt.</span></div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="slider reveal" data-slider aria-roledescription="carousel" aria-label="Ảnh trong game">
+          <div class="slider__frame">
+            <figure class="slide is-active">
+              <img src="assets/shot-menu.jpg" alt="Sảnh chính: chọn chế độ, bản đồ, thống kê và tổ đội" loading="lazy">
+              <figcaption><b>SẢNH CHÍNH</b> Chọn chế độ, bản đồ, mời tổ đội</figcaption>
+            </figure>
+            <figure class="slide">
+              <img src="assets/shot-loadout.jpg" alt="Màn trang bị: cấu hình vũ khí và lựu đạn" loading="lazy">
+              <figcaption><b>TRANG BỊ</b> Ba bộ loadout Alpha · Bravo · Charlie</figcaption>
+            </figure>
+            <figure class="slide">
+              <img src="assets/shot-operators.jpg" alt="Màn chọn đặc vụ" loading="lazy">
+              <figcaption><b>ĐẶC VỤ</b> Xoay, phóng to và chọn nhân vật</figcaption>
+            </figure>
+            <figure class="slide">
+              <img src="assets/shot-shop.jpg" alt="Cửa hàng skin vũ khí" loading="lazy">
+              <figcaption><b>CỬA HÀNG</b> Skin Rare · Epic · Legendary</figcaption>
+            </figure>
+            <span class="corner corner--tl" aria-hidden="true"></span>
+            <span class="corner corner--br" aria-hidden="true"></span>
+          </div>
+          <div class="slider__bar">
+            <span class="slider__count"><b data-current>01</b> / <span data-total>04</span></span>
+            <div class="slider__dots" role="tablist" aria-label="Chọn ảnh"></div>
+            <div class="slider__arrows">
+              <button class="arrow" data-prev aria-label="Ảnh trước"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+              <button class="arrow" data-next aria-label="Ảnh sau"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="ticker" aria-hidden="true">ECLIPSE STRIKE · TEAM DEATHMATCH · FREE FOR ALL · CUSTOM ROOM · ECLIPSE STRIKE · TEAM DEATHMATCH · FREE FOR ALL · CUSTOM ROOM ·</p>
+    </section>
+
+    <!-- ===== CHẾ ĐỘ ===== -->
+    <section class="section modes" id="che-do" aria-labelledby="modes-title">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__index">02 <span>/ 07</span></p>
+          <h2 class="section__title" id="modes-title">CHẾ ĐỘ CHƠI</h2>
+        </div>
+        <div class="modes__grid">
+          <article class="mode-card reveal">
+            <span class="mode-card__tag">TDM</span>
+            <h3>Team Deathmatch</h3>
+            <p>Hai đội Xanh – Đỏ. Đội nào chạm mốc hạ gục trước hoặc dẫn điểm khi hết giờ sẽ thắng. Voice chỉ trong đội.</p>
+            <ul><li>2 đội</li><li>Mục tiêu hạ gục</li><li>Hồi sinh liên tục</li></ul>
+          </article>
+          <article class="mode-card mode-card--hot reveal">
+            <span class="mode-card__tag">FFA</span>
+            <h3>Free For All</h3>
+            <p>Ai cũng là đối thủ. Leo bảng hạ gục, chuỗi DOMINATING → RAMPAGE → UNSTOPPABLE. Voice nghe theo khoảng cách.</p>
+            <ul><li>Mỗi người một mình</li><li>Chuỗi hạ gục</li><li>Voice 3D</li></ul>
+          </article>
+          <article class="mode-card reveal">
+            <span class="mode-card__tag">CUSTOM</span>
+            <h3>Phòng tùy chỉnh</h3>
+            <p>Tạo phòng riêng, gửi mã 6 ký tự cho bạn bè. Tự chọn luật, bản đồ, thời gian trận và mốc hạ gục.</p>
+            <ul><li>Mã phòng riêng</li><li>Tùy chỉnh luật</li><li>Chơi cùng tổ đội</li></ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ĐẶC VỤ ===== -->
+    <section class="section operators" id="dac-vu" aria-labelledby="ops-title">
+      <div class="operators__bg" aria-hidden="true"></div>
+      <div class="container operators__grid" data-operators>
+        <div class="operators__head reveal">
+          <p class="section__index">03 <span>/ 07</span></p>
+          <h2 class="section__title" id="ops-title">ĐẶC VỤ<br><em>MỖI NGƯỜI MỘT CHẤT</em></h2>
+        </div>
+
+        <div class="op-list" role="tablist" aria-label="Chọn đặc vụ">
+          <button class="op-thumb is-active" role="tab" aria-selected="true" data-op="anhteo">
+            <img src="assets/op-anhteo.png" alt=""><span>ANH TÈO</span>
+          </button>
+          <button class="op-thumb" role="tab" aria-selected="false" data-op="ghost">
+            <img src="assets/op-ghost.png" alt=""><span>GHOST</span>
+          </button>
+          <button class="op-thumb" role="tab" aria-selected="false" data-op="olivia">
+            <img src="assets/op-olivia.png" alt=""><span>OLIVIA</span>
+          </button>
+        </div>
+
+        <div class="op-stage" aria-live="polite">
+          <div class="op-stage__ring" aria-hidden="true"></div>
+          <img class="op-stage__img" src="assets/op-anhteo.png" alt="Đặc vụ Anh Tèo" data-op-img>
+        </div>
+
+        <div class="op-info">
+          <p class="op-info__role" data-op-role>XẠ THỦ KIÊN CƯỜNG</p>
+          <h3 class="op-info__name" data-op-name>ANH TÈO</h3>
+          <p class="op-info__desc" data-op-desc>Mũ tai bèo, khăn rằn và đôi dép quen thuộc. Ngoài trận thì vui tính, vào trận thì kiên nhẫn giữ góc — chờ đúng khoảnh khắc để hạ gục chỉ bằng một phát Dusk.</p>
+          <ul class="op-info__traits" data-op-traits>
+            <li><b>Phong cách</b><span>Giữ góc, bắn tỉa</span></li>
+            <li><b>Hợp với</b><span>Dusk · Vesper</span></li>
+            <li><b>Mẹo</b><span>Dùng AN-M8 Smoke để đổi vị trí an toàn</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VŨ KHÍ ===== -->
+    <section class="section weapons" id="vu-khi" aria-labelledby="weapons-title">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__index">04 <span>/ 07</span></p>
+          <h2 class="section__title" id="weapons-title">KHO VŨ KHÍ</h2>
+          <p class="lead">Mỗi khẩu súng một nhịp bắn riêng. Mở khóa thêm vũ khí và skin trong cửa hàng.</p>
+        </div>
+
+        <div class="weapons__grid">
+          <article class="weapon reveal">
+            <img src="assets/wpn-umbra.png" alt="Súng trường Umbra" loading="lazy">
+            <div class="weapon__meta"><span class="weapon__type">RIFLE</span><h3>Umbra</h3></div>
+            <div class="stat"><span>Sát thương</span><i style="--v:.30"></i><b>33</b></div>
+          </article>
+          <article class="weapon reveal">
+            <img src="assets/wpn-dusk.png" alt="Súng bắn tỉa Dusk" loading="lazy">
+            <div class="weapon__meta"><span class="weapon__type">SNIPER</span><h3>Dusk</h3></div>
+            <div class="stat"><span>Sát thương</span><i style="--v:1"></i><b>110</b></div>
+          </article>
+          <article class="weapon reveal">
+            <img src="assets/wpn-comet.png" alt="Shotgun Comet" loading="lazy">
+            <div class="weapon__meta"><span class="weapon__type">SHOTGUN</span><h3>Comet</h3></div>
+            <div class="stat"><span>Sát thương / viên</span><i style="--v:.14"></i><b>15</b></div>
+          </article>
+          <article class="weapon reveal">
+            <img src="assets/wpn-vesper.png" alt="Súng lục Vesper" loading="lazy">
+            <div class="weapon__meta"><span class="weapon__type">PISTOL</span><h3>Vesper</h3></div>
+            <div class="stat"><span>Sát thương</span><i style="--v:.32"></i><b>35</b></div>
+          </article>
+          <article class="weapon reveal">
+            <img src="assets/wpn-knife.png" alt="Dao Knife" loading="lazy">
+            <div class="weapon__meta"><span class="weapon__type">MELEE</span><h3>Knife</h3></div>
+            <div class="stat"><span>Sát thương</span><i style="--v:.55"></i><b>60</b></div>
+          </article>
+        </div>
+
+        <div class="utilities reveal">
+          <p class="utilities__title">LỰU ĐẠN</p>
+          <div class="utility"><img src="assets/ic-frag.png" alt=""><div><b>M67 FRAG</b><span>Nổ sát thương diện rộng</span></div></div>
+          <div class="utility"><img src="assets/ic-flash.png" alt=""><div><b>M84 FLASH</b><span>Làm choáng, lóa mắt đối thủ</span></div></div>
+          <div class="utility"><img src="assets/ic-smoke.png" alt=""><div><b>AN-M8 SMOKE</b><span>Tạo màn khói che tầm nhìn</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== BẢN ĐỒ ===== -->
+    <section class="section maps" id="ban-do" aria-labelledby="maps-title">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__index">05 <span>/ 07</span></p>
+          <h2 class="section__title" id="maps-title">BẢN ĐỒ</h2>
+        </div>
+        <div class="maps__grid">
+          <article class="map-card reveal">
+            <img src="assets/map-meridian.jpg" alt="Bản đồ Meridian: bãi container giữa rừng" loading="lazy">
+            <div class="map-card__info"><h3>MERIDIAN</h3><p>Bãi container chật hẹp — hẻm ngắn, góc khuất, đấu tay đôi tầm gần.</p></div>
+          </article>
+          <article class="map-card reveal">
+            <img src="assets/map-outpost.jpg" alt="Bản đồ Outpost: tiền đồn trong rừng" loading="lazy">
+            <div class="map-card__info"><h3>OUTPOST</h3><p>Tiền đồn giữa rừng — nhiều tầng cao, tầm nhìn xa cho tay bắn tỉa.</p></div>
+          </article>
+          <article class="map-card map-card--soon reveal">
+            <div class="map-card__info"><h3>COMING SOON</h3><p>Bản đồ mới đang được xây dựng.</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ===== CÔNG CỤ ===== -->
+    <section class="section tools" id="cong-cu" aria-labelledby="tools-title">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__index">06 <span>/ 07</span></p>
+          <h2 class="section__title" id="tools-title">CÔNG CỤ<br><em>TỰ PHÁT TRIỂN</em></h2>
+          <p class="lead">Hai bộ công cụ Unity do <b>Gà Mờ (GaMo Tools)</b> xây dựng và dùng xuyên suốt Eclipse Strike.</p>
+        </div>
+        <div class="tools__grid">
+          <article class="tool reveal">
+            <header class="tool__head">
+              <span class="tool__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 10.5v4M5.5 12.5h4" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="11.5" r="1.1" fill="currentColor"/><circle cx="18" cy="13.8" r="1.1" fill="currentColor"/></svg>
+              </span>
+              <div>
+                <h3>True Input System</h3>
+                <p class="tool__ver">v1.0.7 · Input đa nền tảng</p>
+              </div>
+            </header>
+            <p>Một API duy nhất cho bàn phím – chuột, tay cầm và màn hình cảm ứng. Toàn bộ điều khiển, menu và cài đặt phím trong game chạy trên hệ thống này.</p>
+            <ul class="tool__features">
+              <li>Joystick ảo &amp; nút bấm trên màn hình</li>
+              <li>Nút kỹ năng định hướng kiểu MOBA</li>
+              <li>Điều hướng UI bằng tay cầm</li>
+              <li>Hỗ trợ ngắm (Aim Assist)</li>
+              <li>Đổi phím (Key Rebinding)</li>
+              <li>Con quay hồi chuyển (gyro) tay cầm</li>
+            </ul>
+          </article>
+          <article class="tool reveal">
+            <header class="tool__head">
+              <span class="tool__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="5" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.4 16.5l4.2-5M13.6 8.8l3.8-2.6" stroke="currentColor" stroke-width="1.8"/></svg>
+              </span>
+              <div>
+                <h3>Blender-Style Workflow</h3>
+                <p class="tool__ver">Constraint &amp; rigging cho Unity</p>
+              </div>
+            </header>
+            <p>Mang hệ thống constraint quen thuộc của Blender vào Unity: tay nhân vật bám súng, camera, ngắm bắn và vật lý phụ kiện đều được giải bằng bộ constraint này.</p>
+            <ul class="tool__features">
+              <li>Transform · IK · Damped Track · Damped Track Chain</li>
+              <li>Constraint Scheduler: đồ thị phụ thuộc, sắp xếp thứ tự, phát hiện vòng lặp</li>
+              <li>Dynamic Bone chạy Job System cho tóc, dây, vải</li>
+              <li>Sự kiện animation theo thời gian (Motion Time Event)</li>
+              <li>Thao tác Editor theo phong cách Blender</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ĐỘI NGŨ ===== -->
+    <section class="section team" id="doi-ngu" aria-labelledby="team-title">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__index">07 <span>/ 07</span></p>
+          <h2 class="section__title" id="team-title">ĐỘI NGŨ<br><em>PHÁT TRIỂN</em></h2>
+        </div>
+        <div class="team__grid">
+          <article class="member reveal">
+            <span class="member__avatar" aria-hidden="true">H</span>
+            <div class="member__body">
+              <h3>Nguyễn Văn Hậu</h3>
+              <p class="member__role">Gameplay · Mạng · Đồ họa · Animation</p>
+              <ul class="member__tags">
+                <li>Gameplay</li>
+                <li>Photon Fusion</li>
+                <li>Đồ họa 3D</li>
+                <li>Diễn hoạt animation</li>
+              </ul>
+            </div>
+          </article>
+          <article class="member reveal">
+            <span class="member__avatar" aria-hidden="true">K</span>
+            <div class="member__body">
+              <h3>Văn Đình Nam Khánh</h3>
+              <p class="member__role">Giao diện · Backend</p>
+              <ul class="member__tags">
+                <li>UI / UX</li>
+                <li>PlayFab</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TẢI GAME ===== -->
+    <section class="download" id="tai-game" aria-labelledby="dl-title">
+      <div class="download__bg" aria-hidden="true"></div>
+      <div class="container download__inner reveal">
+        <img class="download__headshot" src="assets/ic-headshot.png" alt="" aria-hidden="true">
+        <h2 class="download__title" id="dl-title">SẴN SÀNG<br>VÀO TRẬN?</h2>
+        <p class="lead">Tải miễn phí cho Windows. Đăng ký tài khoản ngay trong game.</p>
+        <div class="download__actions">
+          <!-- ================================================================
+               LINK TẢI CHO WINDOWS — sửa href bên dưới thành link file build
+               (vd: https://github.com/<tên>/<repo>/releases/latest).
+               ================================================================ -->
+          <a class="btn btn--primary btn--lg" id="download-windows" href="https://github.com/Ga-Mo221/FPS-CTRL/releases" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1.2V11H3zM12 3.7L21 2.5V11h-9zM3 12h8v7.2L3 18zM12 12h9v8.5l-9-1.2z" fill="currentColor"/></svg>
+            Tải cho Windows
+          </a>
+          <!-- Bản Android chưa phát hành: nút bị khóa. Khi phát hành, đổi <span> thành <a href="link-apk"> và bỏ class btn--disabled. -->
+          <span class="btn btn--ghost btn--lg btn--disabled" id="download-android" role="link" aria-disabled="true" title="Bản Android sắp ra mắt">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10v8a1 1 0 01-1 1h-1v3h-2v-3h-2v3H9v-3H8a1 1 0 01-1-1zM4 9h2v6H4zm14 0h2v6h-2zM8.5 4l-1-1.5M15.5 4l1-1.5M7 8a5 5 0 0110 0z" fill="currentColor"/></svg>
+            Android
+            <em class="soon-badge">Sắp ra mắt</em>
+          </span>
+        </div>
+        <p class="notice" role="note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6m0 3.5v.5" stroke="currentColor" stroke-width="2.2"/></svg>
+          Bản mobile (Android) chưa phát hành — đang được hoàn thiện điều khiển cảm ứng và tối ưu hiệu năng. Theo dõi trang này để nhận thông tin sớm nhất.
+        </p>
+        <dl class="specs">
+          <div><dt>PC</dt><dd>Windows 10/11 64-bit · DirectX 11</dd></div>
+          <div><dt>ANDROID · SẮP RA MẮT</dt><dd>Android 7.1+ · ARM64 · Vulkan / OpenGL ES 3</dd></div>
+          <div><dt>KẾT NỐI</dt><dd>Cần Internet · Máy chủ khu vực Châu Á</dd></div>
+        </dl>
+      </div>
+    </section>
+  </main>
+
+  <!-- Thanh tải game dính dưới đáy, hiện sau khi cuộn qua hero -->
+  <div class="dock" id="dock" aria-hidden="true">
+    <span class="dock__badge">PC · WINDOWS</span>
+    <span class="dock__text">TẢI NGAY GAME BẮN SÚNG <em>ECLIPSE STRIKE</em></span>
+    <a class="btn btn--primary btn--sm" href="#tai-game" tabindex="-1">Tải game</a>
+  </div>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <a class="brand" href="#top"><span class="brand__mark" aria-hidden="true"></span>ECLIPSE STRIKE</a>
+      <nav class="footer__links" aria-label="Liên kết cuối trang">
+        <a href="#tinh-nang">Tính năng</a>
+        <a href="#dac-vu">Đặc vụ</a>
+        <a href="#vu-khi">Vũ khí</a>
+        <a href="#doi-ngu">Đội ngũ</a>
+        <a href="https://github.com/Ga-Mo221/FPS-CTRL" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <p class="footer__note">UNITY · PHOTON FUSION · PLAYFAB</p>
+      <p class="footer__copy">© 2026 Eclipse Strike.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

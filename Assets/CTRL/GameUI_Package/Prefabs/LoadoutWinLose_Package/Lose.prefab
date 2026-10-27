@@ -3126,7 +3126,7 @@ MonoBehaviour:
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1920, y: 1080}
-  m_ScreenMatchMode: 0
+  m_ScreenMatchMode: 1
   m_MatchWidthOrHeight: 1
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
@@ -3168,7 +3168,24 @@ MonoBehaviour:
   _loseScoreLabel: {fileID: 2179230776792294724}
   _victoryText: "CHI\u1EBEN TH\u1EAENG"
   _defeatText: "TH\u1EA4T B\u1EA0I"
+  _overlay: {fileID: 0}
+  _colorOverlay: {fileID: 0}
+  _drawText: "H\xD2A"
+  _winAccent: {r: 0.31, g: 0.839, b: 0.788, a: 1}
+  _loseAccent: {r: 0.86, g: 0.3, b: 0.27, a: 1}
+  _drawAccent: {r: 0.8, g: 0.82, b: 0.85, a: 1}
+  _winOverlayColor: {r: 0.12, g: 0.592, b: 0.528, a: 1}
+  _winGradientTop: {r: 0.098, g: 0.196, b: 0.196, a: 0.545}
+  _loseOverlayColor: {r: 0.592, g: 0.12, b: 0.12, a: 1}
+  _loseGradientTop: {r: 0.196, g: 0.098, b: 0.098, a: 0.545}
+  _drawOverlayColor: {r: 0.4, g: 0.42, b: 0.44, a: 1}
+  _drawGradientTop: {r: 0.18, g: 0.18, b: 0.185, a: 0.545}
+  _gradientBottom: {r: 0, g: 0, b: 0, a: 0}
+  _tintOverlayGraphic: 1
+  _blueTeamColor: {r: 0.31, g: 0.839, b: 0.788, a: 1}
+  _redTeamColor: {r: 0.92, g: 0.3, b: 0.27, a: 1}
   _mvpNameLabel: {fileID: 2839204177642524487}
+  _mvpAvatar: {fileID: 0}
   _expLabel: {fileID: 8310319136805244418}
   _creditLabel: {fileID: 6173373199097028269}
   _levelLabel: {fileID: 5718774365266004352}
@@ -3177,9 +3194,12 @@ MonoBehaviour:
   _levelProgressBar: {fileID: 2195213618367370256}
   _killsLabel: {fileID: 8380355457766179153}
   _deathsLabel: {fileID: 3268600155984101262}
+  _assistsLabel: {fileID: 0}
   _kdLabel: {fileID: 5854041680092843746}
   _streakLabel: {fileID: 5057853855724261222}
-  _playAgainButton: {fileID: 7538150721713830528}
+  _playAgainButton: {fileID: 0}
+  _myScoreColor: {r: 0.31, g: 0.839, b: 0.788, a: 1}
+  _enemyScoreColor: {r: 1, g: 0.416, b: 0.239, a: 1}
 --- !u!1 &4478217966611060816
 GameObject:
   m_ObjectHideFlags: 0
@@ -5043,10 +5063,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1349456357550713988}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1920, y: 1080}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4126273927507496797
 CanvasRenderer:

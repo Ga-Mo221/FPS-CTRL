@@ -16,10 +16,19 @@ namespace MagicaCloth2
 
         static DrawIconInHierarchy()
         {
+#if UNITY_6000_4_OR_NEWER
+            EditorApplication.hierarchyWindowItemByEntityIdOnGUI += DrawIcon;
+#else
             EditorApplication.hierarchyWindowItemOnGUI += DrawIcon;
+#endif
         }
 
+        //static void DrawIcon(int instanceId, Rect rect)
+#if UNITY_6000_4_OR_NEWER
+        static void DrawIcon(EntityId instanceId, Rect rect)
+#else
         static void DrawIcon(int instanceId, Rect rect)
+#endif
         {
             rect.width = iconSize;
 #if UNITY_6000_3_OR_NEWER

@@ -5,13 +5,43 @@ using UnityEngine;
 
 public class NHPHandler : NetworkBehaviour
 {
-    [Networked, OnChangedRender(nameof(OnHPChanged))]
-    public int HP { get; private set; }
+    //HP (ushort) + DeadCount (byte) + IsDead (byte) gop vao 1 word.
+    // 1 callback chung roi tach lai: HP doi -> OnHPChanged, IsDead doi -> OnStateChanged (hanh vi nhu cu).
+    [Networked, OnChangedRender(nameof(OnHPStateChanged))]
+    private uint _hpState { get; set; }
 
-    [Networked, OnChangedRender(nameof(OnStateChanged))]
-    public bool IsDead { get; private set; }
+    public int HP
+    {
+        get { return (int)(_hpState & 0xFFFF); }
+        private set { _hpState = (_hpState & 0xFFFF0000u) | (uint)Mathf.Clamp(value, 0, 65535); }
+    }
 
-    [Networked] public int DeadCount { get; private set; } = 0;
+    public int DeadCount
+    {
+        get { return (int)((_hpState >> 16) & 0xFF); }
+        private set { _hpState = (_hpState & 0xFF00FFFFu) | ((uint)Mathf.Clamp(value, 0, 255) << 16); }
+    }
+
+    public bool IsDead
+    {
+        get { return (_hpState >> 24) != 0; }
+        private set { _hpState = (_hpState & 0x00FFFFFFu) | (value ? 0x01000000u : 0u); }
+    }
+
+    private int _cbLastHP;
+    private bool _cbLastDead;
+    void OnHPStateChanged()
+    {
+        int hp = HP; bool dead = IsDead;
+        if (hp != _cbLastHP) { _cbLastHP = hp; OnHPChanged(); }
+        if (dead != _cbLastDead) { _cbLastDead = dead; OnStateChanged(); }
+    }
+
+    // Thay RPC_ApplyHitDamage (moi vien trung + 2 string):
+    // nan nhan tu suy rung camera/am thanh tu chenh lech HP. Trauma luong tu hoa x100 vao 1 byte,
+    // chi dirty khi muc trauma doi (dan thuong luon 0.2 -> gan nhu khong bao gio dirty).
+    [Networked] private byte _hitTraumaQ { get; set; }
+    private int _lastHP = int.MinValue;
 
     [Networked] private TickTimer _revivePhase1Timer { get; set; }
     [Networked] private TickTimer _revivePhase2Timer { get; set; }
@@ -71,6 +101,9 @@ public class NHPHandler : NetworkBehaviour
         _nPlayer               = _componentManager.NPlayer;
         _dissolvingController  = _componentManager.DissolvingController;
         _weaponManager         = _componentManager.WeaponManager;
+        _lastHP                = HP;
+        _cbLastHP              = HP;
+        _cbLastDead            = IsDead;
     }
 
     private void Start()
@@ -156,7 +189,7 @@ public class NHPHandler : NetworkBehaviour
     /// Xử lý nhận damage.
     /// Trả về true nếu đây là phát kill VÀ killer không phải chính mình (Object.Id != id).
     /// </summary>
-    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName, string weaponName, NetworkId id, float Trauma = 0.2f)
+    public bool OnTakeDamage(int damage, string damageCausedByPlayerNickName, string weaponName, NetworkId id, float Trauma = 0.2f, bool headshot = false)
     {
         if (_movementHandler != null && !_movementHandler.CanTakeDamage) return false;
         if (IsDead) return false;
@@ -172,15 +205,15 @@ public class NHPHandler : NetworkBehaviour
         OnDamageDealt?.Invoke(id, actualDamage);
 
         if (Object.HasStateAuthority)
-            RPC_ApplyHitDamage(Trauma, damageCausedByPlayerNickName, weaponName);
+            _hitTraumaQ = (byte)Mathf.Clamp(Mathf.RoundToInt(Trauma * 100f), 0, 255);
 
         if (HP <= 0)
         {
             _lastKillerId = id;
-            _inGameMessagesHandler.SendInGameRPCKill(
-                damageCausedByPlayerNickName, weaponName,
-                _nPlayer != null ? _nPlayer.Nickname.ToString() : "Player Test");
+            // gui NetworkId + chi so vu khi thay vi 3 chuoi
+            _inGameMessagesHandler.SendInGameRPCKill(id, damageCausedByPlayerNickName, weaponName, headshot);
             IsDead = true;
+            DeadCount++; // tang o simulation tren host, khong con o callback render
             StartServerRevive(GameManager.Instance.RespawnTime);
             if (Object.Id == id) return false;
             return true;
@@ -188,23 +221,22 @@ public class NHPHandler : NetworkBehaviour
         return false;
     }
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
-    private void RPC_ApplyHitDamage(float trauma, string killer, string weaponName)
-    {
-        if (_componentManager != null)
-        {
-            _componentManager.CameraShake.AddTrauma(trauma);
-            _componentManager.GameHudController().SetDeadStatus(killer, weaponName);
-        }
-
-        if (_componentManager != null && _data != null)
-            AudioManager.Instance.PlayClip(_componentManager.Audio_Body, _data.HitDamageClips, _data.Volume_HitDamage);
-    }
-
     void OnHPChanged()
     {
+        int prev = _lastHP;
+        _lastHP = HP;
         if (!Object.HasInputAuthority) return;
         _gameHudController?.SetHP(HP);
+
+        // HP giam = vua trung don (regen/hoi sinh lam HP tang nen bi bo qua).
+        // Ten ke giet + vu khi cho man hinh chet: chuyen sang RPC_KillGame (NInGameMessagesHandler).
+        int dmg = prev == int.MinValue ? 0 : prev - HP;
+        if (dmg <= 0 || _componentManager == null) return;
+        float trauma = _hitTraumaQ / 100f;
+        if (trauma > 0f && _componentManager.CameraShake != null)
+            _componentManager.CameraShake.AddTrauma(trauma);
+        if (_data != null && AudioManager.Instance != null && _data.HitDamageClips != null && _data.HitDamageClips.Length > 0)
+            AudioManager.Instance.PlayClip(_componentManager.Audio_Body, _data.HitDamageClips, _data.Volume_HitDamage);
     }
 
     void OnStateChanged()
@@ -221,7 +253,8 @@ public class NHPHandler : NetworkBehaviour
             if (_nPlayer != null && _componentManager != null && !_nPlayer.IsLocalPlayer)
                 _componentManager.UIPlayerNickName.gameObject.SetActive(false);
 
-            DeadCount++;
+            // DeadCount++ da chuyen vao OnTakeDamage (host). Ghi bien networked
+            // trong OnChangedRender (chay o Render tren MOI may) la sai.
 
             // Thông báo cho các attacker biết target đã chết
             OnDied?.Invoke(_lastKillerId);
@@ -255,6 +288,7 @@ public class NHPHandler : NetworkBehaviour
     {
         if (Object.HasStateAuthority)
             NewState();
+        _lastHP = HP;
 
         if (_gameHudController != null)
         {

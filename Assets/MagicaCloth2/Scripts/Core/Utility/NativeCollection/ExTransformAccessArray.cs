@@ -31,17 +31,17 @@ namespace MagicaCloth2
         /// <summary>
         /// 使用インデックス辞書
         /// </summary>
-        Dictionary<int, int> useIndexDict;
+        Dictionary<int, MagicaObjectId> useIndexDict;
 
         /// <summary>
         /// トランスフォームインデックス辞書
         /// </summary>
-        Dictionary<int, int> indexDict;
+        Dictionary<MagicaObjectId, int> indexDict;
 
         /// <summary>
         /// トランスフォーム参照カウンタ辞書
         /// </summary>
-        Dictionary<int, int> referenceDict;
+        Dictionary<MagicaObjectId, int> referenceDict;
 
         //=========================================================================================
         public ExTransformAccessArray(int capacity, int desiredJobCount = -1)
@@ -50,9 +50,9 @@ namespace MagicaCloth2
             nativeLength = transformArray.length;
 
             emptyStack = new Queue<int>(capacity);
-            useIndexDict = new Dictionary<int, int>(capacity);
-            indexDict = new Dictionary<int, int>(capacity);
-            referenceDict = new Dictionary<int, int>(capacity);
+            useIndexDict = new Dictionary<int, MagicaObjectId>(capacity);
+            indexDict = new Dictionary<MagicaObjectId, int>(capacity);
+            referenceDict = new Dictionary<MagicaObjectId, int>(capacity);
         }
 
         public void Dispose()
@@ -84,7 +84,7 @@ namespace MagicaCloth2
         {
             int index = 0;
 
-            int id = element.GetInstanceID();
+            MagicaObjectId id = element.GetMagicaId();
 
             if (referenceDict.ContainsKey(id))
             {
@@ -122,7 +122,7 @@ namespace MagicaCloth2
         {
             if (useIndexDict.ContainsKey(index))
             {
-                int id = useIndexDict[index];
+                MagicaObjectId id = useIndexDict[index];
                 int cnt = referenceDict[id] - 1;
                 if (cnt > 0)
                 {
@@ -150,7 +150,7 @@ namespace MagicaCloth2
         {
             if (element == null)
                 return false;
-            return indexDict.ContainsKey(element.GetInstanceID());
+            return indexDict.ContainsKey(element.GetMagicaId());
         }
 
         /// <summary>
@@ -187,7 +187,7 @@ namespace MagicaCloth2
         {
             if (element == null)
                 return -1;
-            int id = element.GetInstanceID();
+            MagicaObjectId id = element.GetMagicaId();
             if (indexDict.ContainsKey(id))
                 return indexDict[id];
             else

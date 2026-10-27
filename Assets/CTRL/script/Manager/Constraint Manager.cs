@@ -3,6 +3,8 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using GaMo.BlenderEditorTools;
 
+// Chạy SAU TransformConstraint (100) và IKConstraint (200): xem LateUpdate().
+[DefaultExecutionOrder(300)]
 public class ConstraintManager : MonoBehaviour
 {
     [TabGroup("Constraint Manager", "List Constraints")]
@@ -34,6 +36,22 @@ public class ConstraintManager : MonoBehaviour
     [SerializeField] private IKConstraint _IK_hand_left;
     [TabGroup("Constraint Manager", "IK")]
     [SerializeField] private IKConstraint _IK_hand_right;
+
+    private void Awake()
+    {
+        // Xương lựu đạn trên người copy pose xương lựu đạn của rig VŨ KHÍ. Rig vũ khí bám camera qua
+        // chuỗi TransformConstraint (Camera Root → Camera Shake → ADS Pivot), recoil, sway, collision...
+        // cùng execution order 100 → Unity không đảm bảo thứ tự, lựu đạn có thể copy pose frame TRƯỚC
+        // → khi xoay màn hình quả bom bị giật, không bám tay. Tự evaluate ở LateUpdate (order 300).
+        foreach (var grenade in _list_Bone_Grenade)
+            if (grenade != null) grenade.ExternallyDriven = true;
+    }
+
+    private void LateUpdate()
+    {
+        foreach (var grenade in _list_Bone_Grenade)
+            if (grenade != null) grenade.Evaluate();
+    }
 
     public void AddNewWeapon(WeaponController ctrl, string ID, float weight = 0)
     {
@@ -94,7 +112,7 @@ public class ConstraintManager : MonoBehaviour
     public void TurnOffHand(bool Left = false, float duration = 0.25f)
     {
         if (Left)
-            _IK_hand_left?.TurnOff(duration);
+            SetLeftHandIK(false, duration);
         else
             _IK_hand_right?.TurnOff(duration);
     }
@@ -102,9 +120,26 @@ public class ConstraintManager : MonoBehaviour
     public void TurnOnHand(bool Left = false, float duration = 0.25f)
     {
         if (Left)
-            _IK_hand_left?.TurnOn(duration);
+            SetLeftHandIK(true, duration);
         else
-            _IK_hand_right.TurnOn(duration);
+            _IK_hand_right?.TurnOn(duration);
+    }
+
+    // [Aemy 2026-10-26] Muc tieu hien tai cua tay trai IK (null = chua dat lan nao).
+    private bool? _leftHandOn;
+
+    /// <summary>
+    /// Dat tay trai IK theo TRANG THAI (bat/tat), goi moi frame duoc: chi chay TurnOn/TurnOff khi muc tieu doi.
+    /// Truoc day tay trai bat/tat theo SU KIEN (StartSprint/StopSprint/StartSlide/StopSlide) trong FixedUpdateNetwork:
+    /// RequestRespawn() reset StateFl = new PlayerStateFlags() ma khong ai goi TurnOnHand -> chet khi dang
+    /// chay nhanh / truot thi hoi sinh xong tay trai van tat (ikInfluence = 0), tay roi khoi sung.
+    /// </summary>
+    public void SetLeftHandIK(bool on, float duration = 0.25f)
+    {
+        if (_IK_hand_left == null || _leftHandOn == on) return;
+        _leftHandOn = on;
+        if (on) _IK_hand_left.TurnOn(duration);
+        else _IK_hand_left.TurnOff(duration);
     }
     
     

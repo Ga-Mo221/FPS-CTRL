@@ -320,7 +320,10 @@ namespace MagicaCloth2
 
                     EditorGUILayout.Space();
                     if (sync == false)
+                    {
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("serializeData.updateMode"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("serializeData.disableMode"));
+                    }
                     else
                     {
                         // 同期中は操作不可
@@ -329,6 +332,11 @@ namespace MagicaCloth2
                             using (new EditorGUILayout.HorizontalScope())
                             {
                                 EditorGUILayout.LabelField("Update Mode");
+                                EditorGUILayout.LabelField("(Synchronizing)");
+                            }
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                EditorGUILayout.LabelField("Disable Mode");
                                 EditorGUILayout.LabelField("(Synchronizing)");
                             }
                         }

@@ -41,6 +41,9 @@ namespace Game.UI
         [FoldoutGroup("Base/Base/UI Drag Item")] 
         [SerializeField] private GameObject _dragItemImage;
 
+        [FoldoutGroup("Base/Base/Pause Panel")]
+        [SerializeField] private GameObject _pausePanel;   // panel Pause (ESC bat/tat)
+
         private void Update()
         {
             if (GameManager.Instance.OnUILoadout())
@@ -92,6 +95,8 @@ namespace Game.UI
             => _crosshair?.SetADS(visible);
         
         public void CrosshairHit() => _crosshair?.Hit();
+
+        public void CrosshairFire(float multiplier = 1f) => _crosshair?.Fire(multiplier);
         
         // ============================ UI HP ======================================
 
@@ -147,6 +152,9 @@ namespace Game.UI
         }
         
         public void SetLoadoutVisible(bool visible) => _loadout?.gameObject.SetActive(visible);
+
+        // Bat/tat panel Pause (goi tu LocalInputController khi nhan ESC).
+        public void SetPauseVisible(bool visible) { if (_pausePanel != null) _pausePanel.SetActive(visible); }
         
         // ============================ ALL ======================================
         

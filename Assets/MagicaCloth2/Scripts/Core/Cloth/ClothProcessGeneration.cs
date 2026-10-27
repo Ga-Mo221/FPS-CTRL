@@ -106,7 +106,7 @@ namespace MagicaCloth2
             {
                 if (rt)
                 {
-                    int index = setupData.GetTransformIndexFromId(rt.GetInstanceID());
+                    int index = setupData.GetTransformIndexFromId(rt.GetMagicaId());
                     selectionData.attributes[index] = VertexAttribute.Fixed;
                 }
             }

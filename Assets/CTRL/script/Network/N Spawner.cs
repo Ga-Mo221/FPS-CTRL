@@ -63,12 +63,13 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
             {
                 var state = obj.GetComponent<NetworkGameState>();
 
-                int killTarget = 10;
+                int killTarget = 20; // [Aemy 2026-10-27] mac dinh TDM/FFA (truoc 10)
 
                 if (GameManager.Instance != null)
                     killTarget = GameManager.Instance.KillTarget;
                 
                 state.SetKillTarget(killTarget);
+                if (GameManager.Instance != null) state.SetRoundMinutes(GameManager.Instance.RoundMinutes); // phong tuy chinh
             });
         }
         else if (_networkGameState == null && NetworkGameState.Instance != null)
@@ -301,8 +302,12 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log($"<color=orange>[Spawner]</color> RecalculateTeamCounts: Blue={BlueCount}, Red={RedCount}");
     }
     
+    // Phat danh sach phong cho QuickJoin (vao tran dang dien ra) o MenuShell.
+    public static event System.Action<List<SessionInfo>> SessionListUpdated;
+
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
     {
+        if (SessionListUpdated != null) SessionListUpdated(sessionList);
         if (_uiSessionListHandler == null) return;
 
         if (sessionList.Count == 0)
@@ -380,7 +385,7 @@ public class NSpawner : MonoBehaviour, INetworkRunnerCallbacks
     
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
-    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
+    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) => NetLossMonitor.Instance?.NoteInputMissing(player);
     public void OnConnectedToServer(NetworkRunner runner) { Debug.Log("<color=orange>[Spawner]</color> Connected to Server", this); }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { Debug.Log($"<color=orange>[Spawner]</color> Disconnected: {reason}", this); }
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { Debug.LogError($"<color=orange>[Spawner]</color> Connect Failed: {reason}", this); }

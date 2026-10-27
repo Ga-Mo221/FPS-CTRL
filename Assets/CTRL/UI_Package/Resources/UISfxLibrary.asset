@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39d20e0ad62b5474aaf4b3b702093cad, type: 3}
+  m_Name: UISfxLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Audio.UISfxLibrary
+  uiGroup: {fileID: -2384632815297269265, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
+  musicGroup: {fileID: 5828626976313851839, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
+  sounds:
+  - type: 1
+    clip: {fileID: 8300000, guid: 836006aab5e11e74fa9c9b8ff046cd5b, type: 3}
+    volume: 0.22
+    pitchJitter: 0.05
+  - type: 2
+    clip: {fileID: 8300000, guid: 13cd647875be52c4981b340ad3567a0d, type: 3}
+    volume: 0.65
+    pitchJitter: 0.03
+  - type: 3
+    clip: {fileID: 8300000, guid: c115b120602cd724aac82f769feaa0b1, type: 3}
+    volume: 0.55
+    pitchJitter: 0
+  - type: 4
+    clip: {fileID: 8300000, guid: 5f080390065b0e549bcc1f7952f6b480, type: 3}
+    volume: 0.5
+    pitchJitter: 0
+  - type: 5
+    clip: {fileID: 8300000, guid: 5f080390065b0e549bcc1f7952f6b480, type: 3}
+    volume: 0.6
+    pitchJitter: 0.02
+  - type: 6
+    clip: {fileID: 8300000, guid: 97ed5c7c390c27b4fbe8bd3c71416c3a, type: 3}
+    volume: 0.55
+    pitchJitter: 0.02
+  clickRules:
+  - keyword: "H\u1EE7y"
+    type: 4
+  - keyword: Cancel
+    type: 4
+  - keyword: Back
+    type: 4
+  - keyword: "Quay l\u1EA1i"
+    type: 4
+  - keyword: "QUAY L\u1EA0I"
+    type: 4
+  - keyword: "Tho\xE1t"
+    type: 4
+  - keyword: Close
+    type: 4
+  - keyword: Exit
+    type: 4
+  - keyword: Leave
+    type: 4
+  - keyword: "R\u1EDDi"
+    type: 4
+  - keyword: "B\u1EAFt \u0111\u1EA7u"
+    type: 3
+  - keyword: Login
+    type: 3
+  - keyword: "\u0110\u0103ng nh\u1EADp"
+    type: 3
+  - keyword: "\u0110\u0103ng k\xFD"
+    type: 3
+  - keyword: Register
+    type: 3
+  - keyword: Reset
+    type: 3
+  - keyword: "L\u01AFU"
+    type: 3
+  - keyword: Save
+    type: 3
+  - keyword: "CH\u1ECCN"
+    type: 3
+  - keyword: Confirm
+    type: 3
+  - keyword: Start
+    type: 3
+  - keyword: Ready
+    type: 3
+  - keyword: "S\u1EB5n s\xE0ng"
+    type: 3
+  - keyword: Accept
+    type: 3
+  - keyword: "Ch\u1EA5p nh\u1EADn"
+    type: 3
+  - keyword: Buy
+    type: 3
+  - keyword: Mua
+    type: 3
+  - keyword: "Slot v\u0169 kh\xED"
+    type: 6
+  - keyword: SkinPrev
+    type: 6
+  - keyword: SkinNext
+    type: 6
+  - keyword: Utility
+    type: 6
+  - keyword: "L\u1EF1u \u0111\u1EA1n"
+    type: 6
+  tabParents:
+  - TopBar
+  minInterval: 0.04
+  menuMusic: {fileID: 8300000, guid: a60ac8ca062d7a141b74693cba07f6cf, type: 3}
+  musicVolume: 0.5
+  musicScenes:
+  - Boot
+  - Login_Register
+  - Loading
+  - MenuShell
+  musicFadeIn: 2
+  musicFadeOut: 1.2

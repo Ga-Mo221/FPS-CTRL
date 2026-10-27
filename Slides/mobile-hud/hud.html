@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Eclipse Strike — Mobile HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Mockup HUD mobile cho slide. Mở hud.html = bản sạch (1600x720, màn 20:9);
+     hud.html?annot = bản có số chú thích + bảng giải thích (1920x1080). */
+  :root {
+    --teal: #4fd6c9; --teal-deep: #0f3b38; --gold: #f2c14e; --red: #ff4d5a; --blue: #4aa8ff;
+    --ink: #e9f1f0; --muted: #8d9c9b; --glass: rgba(8, 16, 17, .46); --rim: rgba(233, 241, 240, .42);
+    --display: "Chakra Petch", system-ui, sans-serif; --body: "Barlow", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #050909; color: var(--ink); font-family: var(--body); }
+  body { width: 1600px; height: 720px; overflow: hidden; }
+  body.annot { width: 1920px; height: 1080px; background: radial-gradient(1200px 600px at 50% 0%, #0f2423, #050909 70%); }
+
+  /* ---------- Màn hình ---------- */
+  .screen { position: relative; width: 1600px; height: 720px; overflow: hidden; background: #0b1213; }
+  /* Ảnh chụp từ camera nhân vật trong trận (Meridian, cầm Umbra) */
+  .screen__bg { position: absolute; inset: 0; background: url("fps-bg.jpg") center / cover; }
+  .screen__bg::after { content: ""; position: absolute; inset: 0; background:
+    linear-gradient(180deg, rgba(0,0,0,.35), transparent 18%, transparent 78%, rgba(0,0,0,.35)),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.35) 100%); }
+
+  .abs { position: absolute; }
+  .btn {
+    position: absolute; display: grid; place-items: center; border-radius: 50%;
+    background: var(--glass); border: 2px solid var(--rim); color: var(--ink);
+    backdrop-filter: blur(3px); box-shadow: inset 0 0 18px rgba(255,255,255,.05);
+    transform: translate(-50%, -50%);
+  }
+  .btn svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn img { width: 58%; height: 58%; object-fit: contain; }
+  .btn small { position: absolute; bottom: -20px; font: 600 12px/1 var(--display); letter-spacing: .12em; color: rgba(233,241,240,.85); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+  .btn--fire { background: rgba(79, 214, 201, .2); border-color: var(--teal); color: var(--teal); box-shadow: 0 0 24px rgba(79,214,201,.25), inset 0 0 24px rgba(79,214,201,.18); }
+  .btn--fire svg { stroke-width: 2; }
+  .btn--active { border-color: var(--teal); color: var(--teal); }
+  .count { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--teal); color: #041312; font: 700 13px/22px var(--display); text-align: center; }
+  .mode { font: 700 15px/1 var(--display); letter-spacing: .08em; }
+
+  /* Joystick */
+  .stick { left: 220px; top: 540px; width: 230px; height: 230px; transform: translate(-50%, -50%); border-radius: 50%;
+    border: 2px solid var(--rim); background: radial-gradient(circle, rgba(8,16,17,.15), rgba(8,16,17,.45)); }
+  .stick::before { content: ""; position: absolute; inset: 18px; border-radius: 50%; border: 1px dashed rgba(233,241,240,.18); }
+  .stick__knob { position: absolute; left: 50%; top: 50%; width: 96px; height: 96px; transform: translate(-38%, -72%); border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(233,241,240,.55), rgba(233,241,240,.18)); border: 2px solid rgba(233,241,240,.7); }
+  .sprint { left: 220px; top: 345px; transform: translate(-50%, -50%); width: 64px; height: 84px; border-radius: 32px;
+    border: 2px solid var(--rim); background: var(--glass); display: grid; place-items: center; }
+  .sprint svg { width: 30px; height: 30px; fill: none; stroke: var(--gold); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .sprint small { position: absolute; bottom: -20px; font: 600 12px/1 var(--display); letter-spacing: .12em; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+
+  /* Thanh trên */
+  .score { left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: stretch; font-family: var(--display); }
+  .score > div { display: grid; place-items: center; }
+  .score__team { width: 76px; height: 48px; font: 700 28px/1 var(--display); clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+  .score__team--blue { background: rgba(74,168,255,.85); }
+  .score__team--red { background: rgba(255,77,90,.85); }
+  .score__mid { width: 128px; background: rgba(5,9,9,.72); gap: 2px; padding: 5px 0; }
+  .score__time { font: 700 22px/1 var(--display); letter-spacing: .06em; }
+  .score__mode { font: 600 10px/1 var(--display); letter-spacing: .2em; color: var(--muted); }
+  .score__goal { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); font: 600 11px/1 var(--display); letter-spacing: .18em; color: rgba(233,241,240,.75); white-space: nowrap; text-shadow: 0 1px 3px #000; }
+
+  .net { left: 24px; top: 20px; font: 600 13px/1.5 var(--display); letter-spacing: .08em; color: rgba(233,241,240,.85); text-shadow: 0 1px 3px #000; }
+  .net b { color: var(--teal); font-weight: 700; }
+  .top-right { right: 18px; top: 16px; display: flex; gap: 12px; }
+  .top-right .btn { position: relative; transform: none; width: 52px; height: 52px; }
+  .top-right .btn--mic { border-color: var(--teal); color: var(--teal); }
+
+  .feed { right: 22px; top: 92px; display: grid; gap: 6px; justify-items: end; }
+  .feed__row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: rgba(5,9,9,.62); font: 600 14px/1 var(--display); letter-spacing: .04em; }
+  .feed__row img { height: 18px; }
+  .feed__row .hs { height: 16px; }
+  .b { color: var(--blue); } .r { color: var(--red); }
+
+  /* Tâm ngắm */
+  .cross { left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+  .cross i { position: absolute; background: var(--teal); box-shadow: 0 0 2px #000; }
+  .cross i:nth-child(1) { left: 21px; top: 0; width: 2px; height: 13px; }
+  .cross i:nth-child(2) { left: 21px; bottom: 0; width: 2px; height: 13px; }
+  .cross i:nth-child(3) { top: 21px; left: 0; width: 13px; height: 2px; }
+  .cross i:nth-child(4) { top: 21px; right: 0; width: 13px; height: 2px; }
+  .cross i:nth-child(5) { left: 20px; top: 20px; width: 4px; height: 4px; border-radius: 50%; }
+
+  /* Nhặt súng (ngữ cảnh) */
+  .pickup { left: 50%; top: 452px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px;
+    background: rgba(5,9,9,.7); border: 1px solid rgba(79,214,201,.5); }
+  .pickup .key { width: 40px; height: 40px; display: grid; place-items: center; background: var(--teal); color: #041312; border-radius: 50%; }
+  .pickup .key svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .pickup img { height: 30px; }
+  .pickup span { font: 700 15px/1 var(--display); letter-spacing: .12em; }
+  .pickup em { font-style: normal; color: var(--gold); }
+
+  /* Máu + vũ khí */
+  .hp { left: 50%; top: 574px; width: 360px; transform: translateX(-50%); }
+  .hp__lbl { display: flex; justify-content: space-between; font: 700 14px/1 var(--display); letter-spacing: .12em; margin-bottom: 6px; text-shadow: 0 1px 3px #000; }
+  .hp__lbl b { font-size: 22px; letter-spacing: .02em; }
+  .hp__bar { height: 8px; background: rgba(5,9,9,.6); border: 1px solid rgba(233,241,240,.3); }
+  .hp__bar i { display: block; width: 78%; height: 100%; background: linear-gradient(90deg, var(--teal-deep), var(--teal)); }
+
+  .slots { left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; }
+  .slot { position: relative; width: 168px; height: 74px; padding: 8px 10px; background: rgba(5,9,9,.72); border: 1.5px solid rgba(233,241,240,.25);
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+  .slot--on { border-color: var(--teal); background: linear-gradient(180deg, rgba(79,214,201,.2), rgba(5,9,9,.6)); }
+  .slot img { position: absolute; right: 14px; top: 8px; height: 38px; max-width: 110px; object-fit: contain; }
+  .slot__n { font: 700 12px/1 var(--display); color: var(--muted); }
+  .slot--on .slot__n { color: var(--teal); }
+  .slot__ammo { position: absolute; left: 14px; bottom: 8px; font: 700 20px/1 var(--display); }
+  .slot__ammo span { font-size: 13px; color: var(--muted); }
+  .slot__name { position: absolute; right: 16px; bottom: 9px; font: 600 11px/1 var(--display); letter-spacing: .16em; color: rgba(233,241,240,.8); }
+  .slots .btn { position: relative; transform: none; width: 52px; height: 52px; margin-bottom: 11px; }
+
+  /* ---------- Bản chú thích ---------- */
+  .stage { display: none; }
+  .annot .stage { display: block; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .annot .phone { position: absolute; left: 50%; top: 136px; transform: translateX(-50%); padding: 18px; border-radius: 46px;
+    background: linear-gradient(145deg, #2a3335, #0d1213); box-shadow: 0 40px 90px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,255,255,.08); }
+  .annot .phone__clip { width: 1408px; height: 634px; border-radius: 30px; overflow: hidden; position: relative; }
+  .annot .screen { transform: scale(.88); transform-origin: 0 0; }
+  .annot .phone__cam { position: absolute; left: 6px; top: 50%; width: 9px; height: 9px; margin-top: -4px; border-radius: 50%; background: #05090a; box-shadow: inset 0 0 0 2px #1d2628; }
+  .tag { display: none; }
+  .annot .tag { display: grid; place-items: center; position: absolute; z-index: 5; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--gold); color: #1b1300; font: 700 14px/1 var(--display); box-shadow: 0 0 0 3px rgba(0,0,0,.55); transform: translate(-50%, -50%); }
+  .title { position: absolute; left: 64px; top: 34px; }
+  .title p { margin: 0 0 6px; font: 600 15px/1 var(--display); letter-spacing: .3em; color: var(--teal); }
+  .title h1 { margin: 0; font: 700 44px/1 var(--display); letter-spacing: .02em; }
+  .title h1 em { font-style: normal; color: var(--teal); }
+  .brand { position: absolute; right: 64px; top: 44px; text-align: right; font: 700 20px/1 var(--display); letter-spacing: .12em; }
+  .brand small { display: block; margin-top: 6px; font: 600 12px/1 var(--display); letter-spacing: .2em; color: var(--muted); }
+  .legend { position: absolute; left: 64px; right: 64px; top: 846px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 26px; }
+  .legend h3 { grid-column: span 1; margin: 0 0 4px; font: 700 13px/1 var(--display); letter-spacing: .24em; color: var(--teal); }
+  .legend ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+  .legend li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; font-size: 15px; line-height: 1.3; }
+  .legend li b { font-family: var(--display); font-weight: 700; letter-spacing: .02em; }
+  .legend li span { color: var(--muted); }
+  .legend li i { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: #1b1300; font: 700 12px/1 var(--display); font-style: normal; margin-top: 1px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-fire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-ads" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></symbol>
+    <symbol id="i-jump" viewBox="0 0 24 24"><path d="M6 13l6-6 6 6M6 19l6-6 6 6"/></symbol>
+    <symbol id="i-crouch" viewBox="0 0 24 24"><circle cx="9" cy="5" r="2.2"/><path d="M9 8l-1 6h6l2 5M8 14l-3 5M10 10l5 1"/><path d="M3 21h18"/></symbol>
+    <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 12a8 8 0 01-14.3 4.9M4 12A8 8 0 0118.3 7.1"/><path d="M18.5 3v4.2h-4.2M5.5 21v-4.2h4.2"/></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5L12 14l4.5-4.5M4 17v3h16v-3"/></symbol>
+    <symbol id="i-pick" viewBox="0 0 24 24"><path d="M12 20V9M7.5 13.5L12 9l4.5 4.5M4 6V3h16v3"/></symbol>
+    <symbol id="i-sprint" viewBox="0 0 24 24"><path d="M6 12l6-6 6 6M6 19l6-6 6 6"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="i-board" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M9 4v16"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l1 12H5z"/><path d="M9 8V6a3 3 0 016 0v2M9 13h6"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+  <div class="title"><p>ECLIPSE STRIKE · ĐIỀU KHIỂN CẢM ỨNG</p><h1>GIAO DIỆN <em>MOBILE</em></h1></div>
+  <div class="brand">ANDROID<small>SẮP RA MẮT · TRUE INPUT SYSTEM</small></div>
+  <div class="phone"><div class="phone__cam"></div><div class="phone__clip" id="clip"></div></div>
+  <div class="legend">
+    <div><h3>DI CHUYỂN</h3><ul>
+      <li><i>1</i><div><b>Joystick</b> <span>— đi lại (Move)</span></div></li>
+      <li><i>2</i><div><b>Chạy nước rút</b> <span>— đẩy cần lên trên để khóa chạy (Run)</span></div></li>
+      <li><i>3</i><div><b>Nhảy</b> <span>(Jump)</span></div></li>
+      <li><i>4</i><div><b>Ngồi / Trượt</b> <span>— đang chạy thì trượt (Crouch)</span></div></li>
+    </ul></div>
+    <div><h3>CHIẾN ĐẤU</h3><ul>
+      <li><i>5</i><div><b>Bắn</b> <span>— vuốt nút để xoay camera khi bắn (Attack)</span></div></li>
+      <li><i>6</i><div><b>Bắn tay trái</b> <span>(Attack)</span></div></li>
+      <li><i>7</i><div><b>Ngắm (ADS)</b> <span>— bật gyro khi ngắm</span></div></li>
+      <li><i>8</i><div><b>Nạp đạn</b> <span>(Reload)</span> · <i style="display:inline-grid;width:18px;height:18px;font-size:10px;vertical-align:-3px">9</i> <b>Đổi chế độ bắn</b> <span>(Mode)</span></div></li>
+    </ul></div>
+    <div><h3>VŨ KHÍ &amp; LỰU ĐẠN</h3><ul>
+      <li><i>10</i><div><b>Lựu đạn 1 / 2</b> <span>— Frag · Flash · Smoke theo balo (Q / E)</span></div></li>
+      <li><i>11</i><div><b>Ô vũ khí 1 · 2</b> <span>— chạm để cầm (Weapon1 / Weapon2)</span></div></li>
+      <li><i>12</i><div><b>Đổi vũ khí</b> <span>(Switch)</span> · <b>Vứt súng</b> <span>(Drop)</span></div></li>
+      <li><i>13</i><div><b>Nhặt súng</b> <span>— hiện khi đứng gần súng rơi (Drag)</span></div></li>
+    </ul></div>
+    <div><h3>HỆ THỐNG</h3><ul>
+      <li><i>14</i><div><b>Mic</b> <span>— giữ để nói (Voice)</span></div></li>
+      <li><i>15</i><div><b>Balo</b> <span>— đổi bộ trang bị (B)</span> · <b>Chat</b> <span>(Enter)</span></div></li>
+      <li><i>16</i><div><b>Bảng điểm</b> <span>(Tab)</span> · <b>Tạm dừng</b> <span>(ESC)</span></div></li>
+      <li><i>17</i><div><b>Ping · mất gói · FPS</b> <span>— đo ngay trên HUD</span></div></li>
+    </ul></div>
+  </div>
+</div>
+
+<div class="screen" id="screen">
+  <div class="screen__bg"></div>
+
+  <div class="abs net"><b>PING 42ms</b> · LOSS 0.3% · 60 FPS</div>
+  <span class="tag" style="left:30px;top:60px">17</span>
+
+  <div class="abs score">
+    <div class="score__team score__team--blue">7</div>
+    <div class="score__mid"><span class="score__time">04:32</span><span class="score__mode">ĐẤU ĐỘI</span></div>
+    <div class="score__team score__team--red">5</div>
+    <div class="score__goal">MỤC TIÊU 30 HẠ GỤC</div>
+  </div>
+
+  <div class="abs top-right">
+    <div class="btn btn--mic"><svg><use href="#i-mic"/></svg></div>
+    <div class="btn"><svg><use href="#i-chat"/></svg></div>
+    <div class="btn"><svg><use href="#i-bag"/></svg></div>
+    <div class="btn"><svg><use href="#i-board"/></svg></div>
+    <div class="btn"><svg><use href="#i-pause"/></svg></div>
+  </div>
+  <span class="tag" style="left:1268px;top:20px">14</span>
+  <span class="tag" style="left:1398px;top:20px">15</span>
+  <span class="tag" style="left:1488px;top:20px">16</span>
+
+  <div class="abs feed">
+    <div class="feed__row"><span class="b">AnhTeo</span><img src="../../docs/assets/wpn-dusk.png" alt=""><img class="hs" src="../../docs/assets/ic-headshot.png" alt=""><span class="r">Ghost_07</span></div>
+    <div class="feed__row"><span class="r">Olivia</span><img src="../../docs/assets/wpn-umbra.png" alt=""><span class="b">Gà Mờ</span></div>
+  </div>
+
+  <div class="abs cross"><i></i><i></i><i></i><i></i><i></i></div>
+
+  <div class="abs pickup">
+    <span class="key"><svg><use href="#i-pick"/></svg></span>
+    <img src="../../docs/assets/wpn-dusk.png" alt="">
+    <span>NHẶT <em>DUSK</em></span>
+  </div>
+  <span class="tag" style="left:676px;top:452px">13</span>
+
+  <!-- Trái -->
+  <div class="abs sprint"><svg><use href="#i-sprint"/></svg><small>CHẠY</small></div>
+  <span class="tag" style="left:262px;top:305px">2</span>
+  <div class="abs stick"><div class="stick__knob"></div></div>
+  <span class="tag" style="left:120px;top:440px">1</span>
+  <div class="btn btn--fire" style="left:96px;top:250px;width:86px;height:86px"><svg><use href="#i-fire"/></svg></div>
+  <span class="tag" style="left:60px;top:210px">6</span>
+
+  <div class="abs hp"><div class="hp__lbl"><span>HP</span><b>78</b></div><div class="hp__bar"><i></i></div></div>
+
+  <!-- Giữa dưới -->
+  <div class="abs slots">
+    <div class="btn"><svg><use href="#i-drop"/></svg></div>
+    <div class="slot slot--on"><span class="slot__n">1</span><img src="../../docs/assets/wpn-umbra.png" alt=""><span class="slot__ammo">24<span> / 90</span></span><span class="slot__name">UMBRA</span></div>
+    <div class="slot"><span class="slot__n">2</span><img src="../../docs/assets/wpn-vesper.png" alt=""><span class="slot__ammo">12<span> / 36</span></span><span class="slot__name">VESPER</span></div>
+    <div class="btn"><svg><use href="#i-switch"/></svg></div>
+  </div>
+  <span class="tag" style="left:678px;top:628px">11</span>
+  <span class="tag" style="left:566px;top:640px">12</span>
+  <span class="tag" style="left:1038px;top:640px">12</span>
+
+  <!-- Phải -->
+  <div class="btn" style="left:1176px;top:372px;width:70px;height:70px"><img src="../../docs/assets/ic-frag.png" alt=""><span class="count">2</span><small>FRAG</small></div>
+  <div class="btn" style="left:1176px;top:478px;width:70px;height:70px"><img src="../../docs/assets/ic-flash.png" alt=""><span class="count">1</span><small>FLASH</small></div>
+  <span class="tag" style="left:1134px;top:332px">10</span>
+
+  <div class="btn" style="left:1300px;top:300px;width:76px;height:76px"><svg><use href="#i-reload"/></svg><small>NẠP ĐẠN</small></div>
+  <span class="tag" style="left:1262px;top:262px">8</span>
+  <div class="btn" style="left:1432px;top:258px;width:58px;height:58px"><span class="mode">AUTO</span></div>
+  <span class="tag" style="left:1466px;top:226px">9</span>
+
+  <div class="btn" style="left:1296px;top:452px;width:92px;height:92px"><svg><use href="#i-ads"/></svg><small>NGẮM</small></div>
+  <span class="tag" style="left:1252px;top:410px">7</span>
+
+  <div class="btn btn--fire" style="left:1430px;top:566px;width:168px;height:168px"><svg><use href="#i-fire"/></svg></div>
+  <span class="tag" style="left:1362px;top:494px">5</span>
+
+  <div class="btn" style="left:1540px;top:380px;width:86px;height:86px"><svg><use href="#i-jump"/></svg><small>NHẢY</small></div>
+  <span class="tag" style="left:1506px;top:340px">3</span>
+  <div class="btn" style="left:1286px;top:640px;width:74px;height:74px"><svg><use href="#i-crouch"/></svg><small>NGỒI</small></div>
+  <span class="tag" style="left:1254px;top:604px">4</span>
+</div>
+
+<script>
+  // ?annot: đưa màn hình vào khung điện thoại và hiện số chú thích
+  if (location.search.indexOf("annot") >= 0) {
+    document.body.classList.add("annot");
+    document.getElementById("clip").appendChild(document.getElementById("screen"));
+  }
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ namespace GaMo.TrueInputSystem
     using UnityEditor;
     using UnityEngine;
 
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISGamepadVirtualCursor))]
     [InitializeOnLoad]
     public class TISGamepadVirtualCursorEditor : UnityEditor.Editor

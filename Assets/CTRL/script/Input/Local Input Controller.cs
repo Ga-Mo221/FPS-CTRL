@@ -36,15 +36,41 @@ public class LocalInputController : MonoBehaviour
 
         OnDragItem();
 
+        OnDropWeapon();
+
         OpenLoadOut();
+    }
+
+    // Vứt súng đang cầm (G / D-pad phải). Host tự kiểm tra luật (không vứt dao, không vứt món cuối...).
+    private void OnDropWeapon()
+    {
+        if (!_input.GetSkillAction("Drop", TISButtonReadMode.PressDown)) return;
+        var gm = GameManager.Instance;
+        if (gm != null && (gm.OnUIChatBox() || gm.OnUIOption())) return; // đang gõ chat / mở menu
+        if (_weaponManager != null)
+            _weaponManager.Rpc_RequestDrop();
     }
     
     private void OnUI()
     {
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.SetOnUIOptions(!GameManager.Instance.OnUIOption());
+            // [2026-10-27] Man ghep tran / phong cho con phu man hinh -> khong mo Pause.
+            if (MatchLobbyOverlay.IsShowing) return;
+            var gm = GameManager.Instance;
+            if (gm != null)
+            {
+                // Vao tran bang chon Balo tu mo -> SetOnUIOptions(true) bi tu choi khi loadout dang mo
+                // => ESC/Start khong mo duoc Pause. Dang mo bang Balo thi dong no (giu balo dang chon) roi mo Pause.
+                if (gm.OnUILoadout() && !gm.OnUIOption())
+                {
+                    if (_gameHudController != null) _gameHudController.SetLoadoutVisible(false);
+                    gm.SetOnuiLoadout(false);
+                }
+                gm.SetOnUIOptions(!gm.OnUIOption());
+                // hien/an panel Pause theo co
+                if (_gameHudController != null) _gameHudController.SetPauseVisible(gm.OnUIOption());
+            }
             //Debug.Log($"[CharacterInputHandler] OnUI: {GameManager.Instance.OnUI}");
         }
     }
@@ -73,18 +99,27 @@ public class LocalInputController : MonoBehaviour
         }
     }
 
+    // [2026-10-23] Dang mo Pause / chat thi KHONG xu ly. Tay cam: Drag = D-pad len = phim dieu huong menu
+    // -> truoc day bam len trong Pause la nhat sung phia sau.
+    private static bool MenuOpen()
+    {
+        var gm = GameManager.Instance;
+        return gm != null && (gm.OnUIOption() || gm.OnUIChatBox());
+    }
+
     private void OnDragItem()
     {
+        if (MenuOpen()) return;
         if (_input.GetSkillAction("Drag", TISButtonReadMode.PressDown))
         {
             var gm = GameManager.Instance;
             if (gm != null && gm.GetCanDragItem())
             {
                 var item = gm.GetDropItemWeapon;
-                if (item != null)
+                if (item != null && item.Object != null && item.Object.IsValid)
                 {
-                    _weaponManager.Rpc_RequestChangeWeapon(item.WeaponName.ToString(), item.CurrentBullet, item.MaxBullet);
-                    item.Despawn();
+                    // Chi gui id item; host tu kiem tra + lay loai sung / so dan tu item.
+                    _weaponManager.Rpc_RequestPickup(item.Object.Id);
                 }
             }
         }
@@ -92,6 +127,11 @@ public class LocalInputController : MonoBehaviour
 
     private void OpenLoadOut()
     {
+        // [2026-10-23] Tay cam: "B" (Balo) = D-pad LEN = cung la phim dieu huong trong Pause.
+        // Truoc day moi lan bam len trong Pause: SetOnuiLoadout(true) xoa co Pause (_onUIOption = false)
+        // trong khi panel Pause van hien; neu khong mo duoc balo -> SetOnuiLoadout(false) -> OnUI() = false
+        // -> nhan vat nhan input (di chuyen / ban / nhay) du Pause dang mo.
+        if (MenuOpen()) return;
         if (_input.GetSkillAction("B", TISButtonReadMode.PressUp))
         {
             var gm = GameManager.Instance;

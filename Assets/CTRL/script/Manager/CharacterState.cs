@@ -23,13 +23,14 @@ public class CharacterState
     {
         s.IsSprint = true;
         StopRun(ref s);
-        _c_manager?.TurnOffHand(true);
+        // [Aemy 2026-10-26] Khong goi TurnOffHand o day nua: tay trai IK do NCharMovementHandler.Render()
+        // suy ra tu StateFl (IsSprint/IsSlide) moi frame -> khong ket tay khi state bi reset ngoai luong (respawn).
     }
 
     public void StopSprint(ref PlayerStateFlags s, ConstraintManager _c_manager)
     {
+        // [Aemy 2026-10-26] Tay trai IK bat lai tu Render() khi IsSprint = false (xem StartSprint).
         s.IsSprint = false;
-        _c_manager?.TurnOnHand(true);
     }
     
     //---------------------------------------------------
@@ -112,13 +113,13 @@ public class CharacterState
         
         s.IsSlide = true;
         StopMovement(ref s, _c_manager);
-        _c_manager.TurnOffHand(true);
+        // [Aemy 2026-10-26] Tat tay trai IK: Render() lo (IsSlide = true).
     }
 
     public void StopSlide(ref PlayerStateFlags s, ConstraintManager _c_manager)
     {
         s.IsSlide = false;
-        _c_manager.TurnOnHand(true);
+        // [Aemy 2026-10-26] Bat lai tay trai IK: Render() lo (IsSlide = false).
         //AudioManager.Instance.Stop(_sound);
     }
 

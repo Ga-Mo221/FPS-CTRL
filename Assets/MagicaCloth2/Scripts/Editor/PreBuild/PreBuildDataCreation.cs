@@ -335,7 +335,7 @@ namespace MagicaCloth2
                             selectionData.Fill(VertexAttribute.Move);
 
                             // 次にルートのみ固定
-                            foreach (int id in boneClothSetupData.rootTransformIdList)
+                            foreach (MagicaObjectId id in boneClothSetupData.rootTransformIdList)
                             {
                                 int rootIndex = boneClothSetupData.GetTransformIndexFromId(id);
                                 selectionData.attributes[rootIndex] = VertexAttribute.Fixed;

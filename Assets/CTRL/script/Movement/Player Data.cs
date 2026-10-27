@@ -199,7 +199,19 @@ public class PlayerData : ScriptableObject
     [SerializeField] private float _volume_Flashbang = 1f;
     [FoldoutGroup("sound/Source/Flashbang")]
     [SerializeField] private AudioClip[] _flashbangClips;
-    
+
+    [FoldoutGroup("sound/Source/Drop Weapon")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_DropWeapon = 1f;
+    [FoldoutGroup("sound/Source/Drop Weapon")]
+    [SerializeField] private AudioClip[] _dropWeaponClips;
+
+    [FoldoutGroup("sound/Source/Pickup Weapon")]
+    [Range(0.05f, 2f)]
+    [SerializeField] private float _volume_PickupWeapon = 1f;
+    [FoldoutGroup("sound/Source/Pickup Weapon")]
+    [SerializeField] private AudioClip[] _pickupWeaponClips;
+
     // ═════════════════════════════════════════════
     //  PUBLIC PROPERTIES
     // ═════════════════════════════════════════════
@@ -251,6 +263,10 @@ public class PlayerData : ScriptableObject
     public AudioClip[] HitDamageClips => _hitDamageClips;
     public  float Volume_Flashbang => _volume_Flashbang;
     public AudioClip[] FlashbangClips => _flashbangClips;
+    public  float Volume_DropWeapon => _volume_DropWeapon;
+    public AudioClip[] DropWeaponClips => _dropWeaponClips;
+    public  float Volume_PickupWeapon => _volume_PickupWeapon;
+    public AudioClip[] PickupWeaponClips => _pickupWeaponClips;
 
 
     // ═════════════════════════════════════════════

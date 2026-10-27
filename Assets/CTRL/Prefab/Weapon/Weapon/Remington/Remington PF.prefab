@@ -104,7 +104,7 @@ AudioSource:
   m_GameObject: {fileID: 3044607290773036454}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -264,7 +264,7 @@ AudioSource:
   m_GameObject: {fileID: 5594512412028964234}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -546,8 +546,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
   _type: 2
   _OwnerCharacter: {fileID: 0}
-  _CurrentBulletvalue: 0
-  _CurrentMaxBullet: 0
   _data: {fileID: 11400000, guid: be2d83d86c6010d4b82dc4384dfac7d4, type: 2}
   _anim: {fileID: 8471306544956858997}
   _ads_Pivot: {fileID: 7179366415510540538}
@@ -785,6 +783,10 @@ MonoBehaviour:
   jointFontSize: 15
   show: 0
   boneAxis: 1
+  invertAxis: 0
+  lockTailInPlayMode: 1
+  _connectedParents: []
+  _connectedChildrenSerialized: []
   pingInHierarchy: 0
 --- !u!1 &9022837025299501747
 GameObject:
@@ -832,6 +834,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaMo.BlenderEditorTools.TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4987756359767762373}
   hasExternalPoseDriver: 0

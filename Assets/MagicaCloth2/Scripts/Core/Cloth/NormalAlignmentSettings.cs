@@ -83,7 +83,7 @@ namespace MagicaCloth2
             hash += (int)alignmentMode * 105;
             if (adjustmentTransform)
             {
-                hash += adjustmentTransform.GetInstanceID();
+                hash += adjustmentTransform.GetMagicaId().GetHashCode();
                 hash += adjustmentTransform.position.GetHashCode();
             }
 
@@ -96,11 +96,11 @@ namespace MagicaCloth2
                 transformSet.Add(adjustmentTransform);
         }
 
-        public void ReplaceTransform(Dictionary<int, Transform> replaceDict)
+        public void ReplaceTransform(Dictionary<MagicaObjectId, Transform> replaceDict)
         {
-            if (adjustmentTransform && replaceDict.ContainsKey(adjustmentTransform.GetInstanceID()))
+            if (adjustmentTransform && replaceDict.ContainsKey(adjustmentTransform.GetMagicaId()))
             {
-                adjustmentTransform = replaceDict[adjustmentTransform.GetInstanceID()];
+                adjustmentTransform = replaceDict[adjustmentTransform.GetMagicaId()];
             }
         }
     }

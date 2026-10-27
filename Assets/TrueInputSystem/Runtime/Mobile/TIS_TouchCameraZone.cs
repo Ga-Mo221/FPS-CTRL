@@ -1,9 +1,28 @@
+// ============================================================
+//  TrueInputSystem — TIS_TouchCameraZone.cs
+//
+//  Xoay camera (1 ngón) + pinch zoom (2 ngón) trên mobile.
+//
+//  MỖI NGÓN MỘT CHỦ (uGUI pointer ownership):
+//    - Zone KHÔNG tự đọc mọi ngón trên màn hình nữa (bỏ EnhancedTouch).
+//    - Ngón chỉ thuộc về zone khi EventSystem giao cho nó lúc chạm xuống:
+//        · TISFullscreenTouchReceiver: chạm vùng nền bên phải → AddPointer()
+//        · TISMobileSkillButton (On Touch Camera = ON): bấm nút vừa kéo ngắm → AddPointer()
+//    - Nút skill / joystick nằm trên → EventSystem giao ngón cho chúng trước,
+//      zone không bao giờ "giành" ngón của nút. Kéo ngón đi đâu cũng vẫn là của zone
+//      cho tới khi nhấc tay (không còn kiểm tra vùng mỗi frame).
+//
+//  ĐỘ TRỄ: uGUI chỉ dùng để XÁC ĐỊNH CHỦ. Vị trí ngón được đọc TRỰC TIẾP từ
+//  Touchscreen / Pointer mỗi frame (ExecutionOrder -90, trước Update của game)
+//  → không trễ 1 frame như khi chờ OnDrag của EventSystem.
+// ============================================================
+
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.EnhancedTouch;
-using Touch      = UnityEngine.InputSystem.EnhancedTouch.Touch;
-using TouchPhase = UnityEngine.InputSystem.TouchPhase;
+using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.UI;
 
 namespace GaMo.TrueInputSystem
 {
@@ -20,13 +39,22 @@ namespace GaMo.TrueInputSystem
         [SerializeField] private TISVirtualJoystick _joystick;
 
         [Header("Zone Settings")]
+        [Tooltip("Mép trái vùng camera (tỉ lệ chiều ngang). TISFullscreenTouchReceiver dùng\n" +
+                 "giá trị chia vùng của joystick để quyết định ngón nào giao cho camera.")]
         [SerializeField] private float _zoneStartRatio = 0f;
-        
+
         [SerializeField] private float _zoneEndRatio = 1f;
 
         [Header("Sensitivity")]
         [SerializeField] private Vector2 _sensitivityOverride = Vector2.zero;
         [SerializeField] private bool    _invertY = false;
+
+        [Tooltip("Chuẩn hoá theo chiều cao màn hình: kéo cùng một quãng (tính theo % màn hình)\n" +
+                 "→ xoay cùng một góc trên mọi độ phân giải. Độ nhạy giữ nguyên trên màn 1080p.")]
+        [SerializeField] private bool  _normalizeByScreenHeight = true;
+
+        [Tooltip("Chiều cao tham chiếu khi chuẩn hoá (pixel).")]
+        [SerializeField] private float _referenceScreenHeight = 1080f;
 
         [Header("Smoothing")]
         [Range(1f, 60f)]
@@ -36,8 +64,7 @@ namespace GaMo.TrueInputSystem
         [SerializeField] private float _inertiaDecay = 10f;
 
         [Header("Pinch Zoom")]
-        [Tooltip("Bật pinch-to-zoom trên mobile.\n" +
-                 "Chỉ nhận khi CẢ 2 ngón ở trong camera zone (nửa phải).")]
+        [Tooltip("Bật pinch-to-zoom trên mobile (2 ngón cùng thuộc camera zone).")]
         [SerializeField] private bool  _enablePinchZoom = true;
 
         [Tooltip("Tốc độ zoom khi pinch. Giá trị khuyến nghị: 0.005 – 0.02.")]
@@ -50,25 +77,67 @@ namespace GaMo.TrueInputSystem
         [SerializeField] private float _pinchDeadzone = 5f;
 
         [Header("Debug")]
+        // Chi doc trong #if UNITY_EDITOR || DEVELOPMENT_BUILD -> ban release bao CS0414. Giu field (cung layout serialize).
+#pragma warning disable CS0414
         [SerializeField] private bool _debugDrawZone = false;
+#pragma warning restore CS0414
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  OWNED POINTERS
+        // ══════════════════════════════════════════════════════════════════════
+
+        /// <summary>Số ngón tối đa zone theo dõi cùng lúc.</summary>
+        public const int MaxPointers = 5;
+
+        private struct OwnedPointer
+        {
+            public int           pointerId;   // uGUI pointerId — khoá để nhận PointerUp
+            public int           touchId;     // Touchscreen touchId (touch) — đọc vị trí trực tiếp
+            public Touchscreen   touchscreen; // null nếu là chuột / bút
+            public Pointer       pointer;     // chuột / bút (Editor simulate mobile)
+            public Vector2       position;    // vị trí frame hiện tại
+            public Vector2       prevPosition;// vị trí frame trước (lúc vừa chạm = điểm chạm)
+            public Vector2       eventPosition;// vị trí mới nhất từ OnDrag (khi không đọc trực tiếp được thiết bị)
+        }
+
+        private readonly OwnedPointer[] _pointers = new OwnedPointer[MaxPointers];
+        private int _pointerCount;
+
+        /// <summary>Số ngón đang thuộc camera zone.</summary>
+        public int PointerCount => _pointerCount;
+
+        /// <summary>Đọc ngón thứ <paramref name="index"/> (0 = ngón chạm sớm nhất, dùng để xoay).</summary>
+        public bool TryGetPointer(int index, out int pointerId, out Vector2 position, out Vector2 prevPosition)
+        {
+            if (index < 0 || index >= _pointerCount)
+            {
+                pointerId = -1; position = prevPosition = Vector2.zero;
+                return false;
+            }
+            var p = _pointers[index];
+            pointerId    = p.pointerId;
+            position     = p.position;
+            prevPosition = p.prevPosition;
+            return true;
+        }
+
+        /// <summary>Instance đang bật gần nhất — dùng cho TISMobileSkillButton (On Touch Camera).</summary>
+        public static TISTouchCameraZone Current { get; private set; }
 
         // ══════════════════════════════════════════════════════════════════════
         //  RUNTIME STATE — CAMERA DRAG
         // ══════════════════════════════════════════════════════════════════════
 
-        private int     _activeTouchId = -1;
-        private Vector2 _lastTouchPos;
+        private int     _rotatingPointerId = -1;
         private Vector2 _smoothedDelta;
         private bool    _hasInertia;
 
-        // Fields dùng bởi TIS_TouchCameraZoneEditorBridge (Editor DLL) qua Reflection
-        //private bool    _mouseActive  = false;
-        private Vector2 _lastMousePos = Vector2.zero;
-
         public Vector2 RawDelta      { get; private set; }
         public Vector2 SmoothedDelta { get; private set; }
-        public int     ActiveTouchId => _activeTouchId;
-        
+
+        /// <summary>uGUI pointerId của ngón đang xoay camera (-1 = không có).</summary>
+        public int     ActiveTouchId => _rotatingPointerId;
+
         public float ZoneStartRatio => _zoneStartRatio;
         public float ZoneEndRatio   => _zoneEndRatio;
 
@@ -77,33 +146,26 @@ namespace GaMo.TrueInputSystem
         // ══════════════════════════════════════════════════════════════════════
 
         private bool  _isPinching;
-        private bool  _trackingTwoFingers;   // đang có 2 ngón trong zone, chưa xác định pinch hay pan
+        private bool  _trackingTwoFingers;
+        private int   _pinchIdA = -1, _pinchIdB = -1;
         private float _lastPinchDistance;
 
         /// <summary>Đang trong trạng thái pinch.</summary>
         public bool  IsPinching     => _isPinching;
 
-        /// <summary>
-        /// Pinch delta frame hiện tại (pixel).
-        /// Dương = 2 ngón dãn ra = zoom in.
-        /// Âm   = 2 ngón thu vào = zoom out.
-        /// </summary>
+        /// <summary>Pinch delta frame hiện tại. Dương = dãn ra = zoom in.</summary>
         public float PinchZoomDelta { get; private set; }
 
         // ══════════════════════════════════════════════════════════════════════
         //  LIFECYCLE
         // ══════════════════════════════════════════════════════════════════════
 
-        private void OnEnable()
-        {
-            // Đảm bảo EnhancedTouch được enable ngay khi component bật
-            if (Application.isMobilePlatform || Application.isEditor)
-                UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
-        }
+        private void OnEnable()  => Current = this;
 
         private void OnDisable()
         {
-            EnhancedTouchSupport.Disable();
+            if (Current == this) Current = null;
+            _pointerCount = 0;
             ResetState();
         }
 
@@ -111,227 +173,228 @@ namespace GaMo.TrueInputSystem
         {
             if (_inputBridge == null)
                 _inputBridge = TISInputBridge.Instance;
-
-            if (!Application.isMobilePlatform && !Application.isEditor)
-            {
-                enabled = false;
-                return;
-            }
-            // FIX M3: EnhancedTouchSupport.Enable() đã được gọi trong OnEnable().
-            // Không cần gọi lại ở đây — gọi trùng chỉ increment reference count
-            // và cần Disable() thêm 1 lần tương ứng.
             SyncProfileSettings();
         }
 
-
-        // Delegate để Editor inject HandleMouseFallback mà không cần #if UNITY_EDITOR trong DLL
-        public static Action<TISTouchCameraZone> EditorUpdateOverride = null;
-
         private void Update()
         {
-            if (Application.isEditor && EditorUpdateOverride != null)
-            {
-                EditorUpdateOverride(this);
-                if (!_inputBridge.SimulateMobileInEditor())
-                    return;
-            }
-            ProcessEnhancedTouches();
+            RefreshPointerPositions();
+            ProcessPinch();
+            ProcessRotation();
+            ProcessEditorScrollZoom();
         }
 
         // ══════════════════════════════════════════════════════════════════════
-        //  CORE TOUCH PROCESSING
+        //  OWNERSHIP API — gọi từ TISFullscreenTouchReceiver / TISMobileSkillButton
         // ══════════════════════════════════════════════════════════════════════
 
-        private void ProcessEnhancedTouches()
+        /// <summary>
+        /// Giao ngón <paramref name="e"/> cho camera zone (gọi trong OnPointerDown).
+        /// Trả về false nếu zone đang tắt hoặc đã đủ <see cref="MaxPointers"/>.
+        /// </summary>
+        public bool AddPointer(PointerEventData e)
         {
-            var activeTouches  = Touch.activeTouches;
-            int joystickFinger = _joystick != null ? _joystick.ActiveTouchId : -1;
+            if (!isActiveAndEnabled || e == null) return false;
+            if (IndexOf(e.pointerId) >= 0) return true;
+            if (_pointerCount >= MaxPointers) return false;
 
-            // ── Thu thập ngón trong camera zone ──────────────
-            // Loại trừ ngón joystick ngay từ đầu.
-            //
-            // HIGH FIX H11: Pinch detection wrong finger pair.
-            // BUG CŨ: camFinger0 được assign theo ORDER trong activeTouches — không nhất thiết
-            // là ngón đang rotate (_activeTouchId). Nếu ngón mới thêm vào (camFinger1) có
-            // touchId nhỏ hơn _activeTouchId, nó sẽ thành camFinger0 → distance calc dùng sai
-            // pair → pinch jump ngay lần đầu → zoom giật mạnh.
-            //
-            // FIX: _activeTouchId (ngón đang rotate) LUÔN là camFinger0.
-            // Ngón mới thêm vào sẽ là camFinger1 bất kể thứ tự trong activeTouches.
-            int   camFinger0 = _activeTouchId; // ưu tiên ngón đang rotate
-            int   camFinger1 = -1;
-            float camPos0X = 0f, camPos0Y = 0f;
-            float camPos1X = 0f, camPos1Y = 0f;
-            int   camCount = 0;
-            bool  foundActive = false; // dùng lại bên dưới cho rotation check
-
-            // Pass 1: nếu _activeTouchId hợp lệ, tìm vị trí của nó trước
-            if (_activeTouchId != -1)
+            var p = new OwnedPointer
             {
-                for (int i = 0; i < activeTouches.Count; i++)
+                pointerId = e.pointerId,
+                touchId   = -1,
+                position      = e.position,
+                eventPosition = e.position,
+            };
+
+            // InputSystemUIInputModule → biết chính xác thiết bị / touchId để đọc trực tiếp.
+            // StandaloneInputModule (legacy) → không có, dùng vị trí từ OnDrag (MovePointer).
+            if (e is ExtendedPointerEventData ext)
+            {
+                if (ext.device is Touchscreen ts)
                 {
-                    var t = activeTouches[i];
-                    if (t.touchId != _activeTouchId) continue;
-                    float normX = t.screenPosition.x / Screen.width;
-                    if (normX >= _zoneStartRatio && normX <= _zoneEndRatio
-                        && t.touchId != joystickFinger)
-                    {
-                        camPos0X = t.screenPosition.x;
-                        camPos0Y = t.screenPosition.y;
-                        camCount = 1;
-                    }
-                    break;
+                    p.touchscreen = ts;
+                    p.touchId     = ext.touchId;
+                }
+                else if (ext.device is Pointer ptr)
+                {
+                    p.pointer = ptr;
                 }
             }
 
-            // Pass 2: thu thập tất cả ngón khác trong zone làm camFinger1 (và fallback camFinger0)
-            for (int i = 0; i < activeTouches.Count && camCount < 2; i++)
+            p.prevPosition = p.position;
+            _pointers[_pointerCount++] = p;
+            return true;
+        }
+
+        /// <summary>Cập nhật vị trí từ OnDrag — chỉ dùng khi không đọc trực tiếp được thiết bị.</summary>
+        public void MovePointer(int pointerId, Vector2 screenPos)
+        {
+            int i = IndexOf(pointerId);
+            if (i < 0) return;
+            // Chỉ lưu lại — RefreshPointerPositions() áp vào đầu frame sau
+            // (ghi thẳng vào position sẽ làm prevPosition == position → delta = 0)
+            _pointers[i].eventPosition = screenPos;
+        }
+
+        /// <summary>Trả ngón về (gọi trong OnPointerUp).</summary>
+        public void RemovePointer(int pointerId)
+        {
+            int i = IndexOf(pointerId);
+            if (i < 0) return;
+
+            // Giữ thứ tự chạm (ngón sớm nhất luôn ở index 0)
+            for (int k = i; k < _pointerCount - 1; k++)
+                _pointers[k] = _pointers[k + 1];
+            _pointerCount--;
+        }
+
+        /// <summary><c>true</c> nếu ngón này đang thuộc camera zone.</summary>
+        public bool OwnsPointer(int pointerId) => IndexOf(pointerId) >= 0;
+
+        private int IndexOf(int pointerId)
+        {
+            for (int i = 0; i < _pointerCount; i++)
+                if (_pointers[i].pointerId == pointerId) return i;
+            return -1;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  CORE — ĐỌC VỊ TRÍ TRỰC TIẾP
+        // ══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Đầu mỗi frame: vị trí cũ → prevPosition, đọc vị trí mới trực tiếp từ thiết bị.
+        /// Ngón vừa thêm (EventSystem, frame trước) có prevPosition = điểm chạm → delta
+        /// frame đầu là quãng đã kéo thật kể từ lúc chạm, không giật.
+        /// GestureDetector (-85) đọc cùng cặp position / prevPosition sau camera (-90).
+        /// </summary>
+        private void RefreshPointerPositions()
+        {
+            for (int i = _pointerCount - 1; i >= 0; i--)
             {
-                var touch = activeTouches[i];
-                if (touch.touchId == joystickFinger) continue;
-                if (TISMobileButtonRegistry.IsEnhancedTouchConsumed(touch.touchId))
-                {
-                    continue;
-                }
-                
-                if (touch.touchId == _activeTouchId) continue; // đã xử lý ở Pass 1
+                ref var p = ref _pointers[i];
+                p.prevPosition = p.position;
 
-                float normX = touch.screenPosition.x / Screen.width;
-                if (normX < _zoneStartRatio || normX > _zoneEndRatio) continue;
-
-                if (camCount == 0)
+                bool stillDown = true;
+                if (p.touchscreen != null)
+                    stillDown = TryReadTouch(p.touchscreen, p.touchId, ref p.position);
+                else if (p.pointer != null)
                 {
-                    // Không có _activeTouchId trong zone → dùng ngón đầu tiên tìm thấy
-                    camFinger0 = touch.touchId;
-                    camPos0X   = touch.screenPosition.x;
-                    camPos0Y   = touch.screenPosition.y;
-                    camCount   = 1;
+                    if (!p.pointer.added) stillDown = false;
+                    else p.position = p.pointer.position.ReadValue();
                 }
                 else
                 {
-                    // camFinger0 đã có → đây là ngón thứ 2 cho pinch
-                    camFinger1 = touch.touchId;
-                    camPos1X   = touch.screenPosition.x;
-                    camPos1Y   = touch.screenPosition.y;
-                    camCount   = 2;
+                    // EventSystem legacy (không có ExtendedPointerEventData) → vị trí từ OnDrag
+                    p.position = p.eventPosition;
                 }
+
+                // An toàn: ngón đã nhấc mà PointerUp chưa tới (app mất focus, canvas tắt...) → bỏ
+                if (!stillDown) { RemovePointer(p.pointerId); continue; }
+            }
+        }
+
+        private static bool TryReadTouch(Touchscreen ts, int touchId, ref Vector2 position)
+        {
+            if (!ts.added) return false;
+            var touches = ts.touches;
+            for (int i = 0; i < touches.Count; i++)
+            {
+                TouchControl t = touches[i];
+                if (t.touchId.ReadValue() != touchId) continue;
+                if (!t.press.isPressed) return false;
+                position = t.position.ReadValue();
+                return true;
+            }
+            return false;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  CORE — PINCH
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void ProcessPinch()
+        {
+            if (!_enablePinchZoom || _pointerCount < 2)
+            {
+                EndPinch();
+                return;
             }
 
-            // ── PINCH: cả 2 ngón trong camera zone ───────────
-            // Xoay và zoom hoạt động độc lập — có thể dùng đồng thời.
-            if (_enablePinchZoom && camCount >= 2)
+            var a = _pointers[0];
+            var b = _pointers[1];
+            float currentDist = Vector2.Distance(a.position, b.position);
+
+            // Cặp ngón đổi (một ngón nhấc, ngón khác thay) → snapshot lại, không zoom giật
+            if (!_trackingTwoFingers || a.pointerId != _pinchIdA || b.pointerId != _pinchIdB)
             {
-                // FIX #8: Tính khoảng cách bằng dx/dy thủ công — không alloc Vector2.
-                float _dx         = camPos1X - camPos0X;
-                float _dy         = camPos1Y - camPos0Y;
-                float currentDist = Mathf.Sqrt(_dx * _dx + _dy * _dy);
+                _trackingTwoFingers = true;
+                _pinchIdA           = a.pointerId;
+                _pinchIdB           = b.pointerId;
+                _lastPinchDistance  = currentDist;
+                PinchZoomDelta      = 0f;
+                return;
+            }
 
-                if (!_trackingTwoFingers)
-                {
-                    // Lần đầu có 2 ngón trong zone — chỉ snapshot distance.
-                    // KHÔNG set _isPinching = true tại đây để GestureDetector vẫn
-                    // có thể nhận pan trong cùng frame.
-                    _trackingTwoFingers = true;
-                    _lastPinchDistance  = currentDist;
-                    PinchZoomDelta      = 0f;
-                }
-                else
-                {
-                    float delta = currentDist - _lastPinchDistance;
-
-                    if (Mathf.Abs(delta) > _pinchDeadzone)
-                    {
-                        // Khoảng cách thay đổi đủ lớn → đây là pinch zoom thật sự.
-                        // Chỉ lúc này mới set _isPinching = true để chặn pan.
-                        _lastPinchDistance = currentDist;
-                        float zoomDelta    = delta * _pinchZoomSpeed;
-                        PinchZoomDelta     = zoomDelta;
-                        _isPinching        = true;
-                        _inputBridge?.OverrideZoomInput(zoomDelta);
-                    }
-                    else
-                    {
-                        // Khoảng cách gần như không đổi → 2 ngón pan cùng hướng,
-                        // KHÔNG coi là pinch → GestureDetector được phép xử lý pan.
-                        _isPinching    = false;
-                        PinchZoomDelta = 0f;
-                        _inputBridge?.ClearZoomOverride();
-                    }
-                }
-                // KHÔNG return — tiếp tục xử lý rotation bên dưới.
+            float delta = currentDist - _lastPinchDistance;
+            if (Mathf.Abs(delta) > _pinchDeadzone)
+            {
+                // Khoảng cách đổi đủ lớn → pinch thật (chặn two-finger pan)
+                _lastPinchDistance = currentDist;
+                float zoomDelta    = delta * _pinchZoomSpeed;
+                PinchZoomDelta     = zoomDelta;
+                _isPinching        = true;
+                _inputBridge?.OverrideZoomInput(zoomDelta);
             }
             else
             {
-                // Kết thúc pinch / không còn 2 ngón
-                if (_trackingTwoFingers)
-                {
-                    _trackingTwoFingers = false;
-                    _isPinching         = false;
-                    PinchZoomDelta      = 0f;
-                    _inputBridge?.ClearZoomOverride();
-                }
+                // 2 ngón đi cùng hướng → không phải pinch, để GestureDetector nhận pan
+                _isPinching    = false;
+                PinchZoomDelta = 0f;
+                _inputBridge?.ClearZoomOverride();
             }
+        }
 
-            // ── CAMERA ROTATION: 1 ngón trong zone ───────────
-            if (activeTouches.Count == 0)
+        private void EndPinch()
+        {
+            if (!_trackingTwoFingers) return;
+            _trackingTwoFingers = false;
+            _isPinching         = false;
+            _pinchIdA = _pinchIdB = -1;
+            PinchZoomDelta      = 0f;
+            _inputBridge?.ClearZoomOverride();
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  CORE — ROTATION (ngón chạm sớm nhất)
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void ProcessRotation()
+        {
+            if (_pointerCount == 0)
             {
-                if (_activeTouchId != -1)
+                if (_rotatingPointerId != -1)
                 {
-                    _hasInertia    = _smoothedDelta.sqrMagnitude > 0.001f;
-                    _activeTouchId = -1;
+                    _hasInertia        = _smoothedDelta.sqrMagnitude > 0.001f;
+                    _rotatingPointerId = -1;
                 }
                 HandleInertia();
                 return;
             }
 
-            // foundActive đã khai báo ở phần thu thập ngón (HIGH FIX H11)
-            foundActive = false;
-
-            for (int i = 0; i < activeTouches.Count; i++)
+            var p = _pointers[0];
+            if (p.pointerId != _rotatingPointerId)
             {
-                var touch = activeTouches[i];
-                if (touch.touchId == joystickFinger) continue;
-                if (TISMobileButtonRegistry.IsEnhancedTouchConsumed(touch.touchId))
-                {
-                    continue;
-                }
-
-                float normX = touch.screenPosition.x / Screen.width;
-                if (normX < _zoneStartRatio || normX > _zoneEndRatio) continue;
-
-                if (touch.phase == TouchPhase.Began && _activeTouchId == -1)
-                {
-                    _activeTouchId = touch.touchId;
-                    _lastTouchPos  = touch.screenPosition;
-                    _smoothedDelta = Vector2.zero;
-                    _hasInertia    = false;
-                }
-
-                if (touch.touchId == _activeTouchId)
-                {
-                    if (touch.phase == TouchPhase.Moved)
-                    {
-                        Vector2 delta = touch.screenPosition - _lastTouchPos;
-                        _lastTouchPos = touch.screenPosition;
-                        ApplyDelta(delta);
-                        foundActive = true;
-                    }
-                    else if (touch.phase == TouchPhase.Stationary)
-                    {
-                        ApplyDelta(Vector2.zero);
-                        foundActive = true;
-                    }
-                    else if (touch.phase == TouchPhase.Ended ||
-                             touch.phase == TouchPhase.Canceled)
-                    {
-                        _hasInertia    = _smoothedDelta.sqrMagnitude > 0.001f;
-                        _activeTouchId = -1;
-                    }
-                }
+                // Ngón xoay mới (chạm mới, hoặc ngón cũ nhấc → ngón kế tiếp thay) → không giật
+                _rotatingPointerId = p.pointerId;
+                _smoothedDelta     = Vector2.zero;
+                _hasInertia        = false;
+                ApplyDelta(Vector2.zero);
             }
-
-            if (!foundActive && _activeTouchId == -1)
-                HandleInertia();
+            else
+            {
+                ApplyDelta(p.position - p.prevPosition);
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -340,6 +403,9 @@ namespace GaMo.TrueInputSystem
 
         private void ApplyDelta(Vector2 rawPixelDelta)
         {
+            if (_normalizeByScreenHeight && Screen.height > 0)
+                rawPixelDelta *= _referenceScreenHeight / Screen.height;
+
             Vector2 sensitivity = GetSensitivity();
             Vector2 scaledDelta = new Vector2(
                 rawPixelDelta.x * sensitivity.x,
@@ -360,11 +426,12 @@ namespace GaMo.TrueInputSystem
         {
             if (!_hasInertia || _smoothedDelta.sqrMagnitude < 0.00001f)
             {
+                if (_smoothedDelta != Vector2.zero || RawDelta != Vector2.zero || _hasInertia)
+                    _inputBridge?.ClearLookOverride();
                 _smoothedDelta = Vector2.zero;
                 RawDelta       = Vector2.zero;
                 SmoothedDelta  = Vector2.zero;
                 _hasInertia    = false;
-                _inputBridge?.ClearLookOverride();
                 return;
             }
 
@@ -377,17 +444,40 @@ namespace GaMo.TrueInputSystem
 
         private void ResetState()
         {
-            _activeTouchId = -1;
-            _lastTouchPos  = Vector2.zero;
-            _smoothedDelta = Vector2.zero;
-            RawDelta       = Vector2.zero;
-            SmoothedDelta  = Vector2.zero;
-            _hasInertia    = false;
+            _rotatingPointerId  = -1;
+            _smoothedDelta      = Vector2.zero;
+            RawDelta            = Vector2.zero;
+            SmoothedDelta       = Vector2.zero;
+            _hasInertia         = false;
             _isPinching         = false;
             _trackingTwoFingers = false;
+            _pinchIdA = _pinchIdB = -1;
             PinchZoomDelta      = 0f;
             _inputBridge?.ClearLookOverride();
             _inputBridge?.ClearZoomOverride();
+        }
+
+        // ── Editor: lăn chuột = zoom (thay pinch khi Simulate Mobile In Editor) ──
+
+        private void ProcessEditorScrollZoom()
+        {
+            if (!Application.isEditor || !_enablePinchZoom || _pointerCount >= 2) return;
+
+            var mouse = TISPhysicalMouse.Current;
+            if (mouse == null) return;
+
+            float scroll = mouse.scroll.y.ReadValue();
+            if (Mathf.Abs(scroll) > 0.1f)
+            {
+                float zoomDelta = scroll * _pinchZoomSpeed * 0.5f;
+                PinchZoomDelta  = zoomDelta;
+                _inputBridge?.OverrideZoomInput(zoomDelta);
+            }
+            else if (PinchZoomDelta != 0f && !_trackingTwoFingers)
+            {
+                PinchZoomDelta = 0f;
+                _inputBridge?.ClearZoomOverride();
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -419,12 +509,6 @@ namespace GaMo.TrueInputSystem
             _joystick    = joystick;
         }
 
-        // Được gọi bởi TIS_TouchCameraZoneEditorBridge qua Reflection
-        private void OverrideZoomViaAccessor(float zoomDelta)
-            => _inputBridge?.OverrideZoomInput(zoomDelta);
-
-        // P2 FIX #12: Public setters thay thế reflection từ TISMobileInputSetup.DatField().
-        // Rename field → không còn silent fail.
         public void SetZoneStartRatio(float ratio)   => _zoneStartRatio  = ratio;
         public void SetSmoothSpeed(float speed)      => _smoothSpeed     = speed;
         public void SetInertiaDecay(float decay)     => _inertiaDecay    = decay;
@@ -434,42 +518,37 @@ namespace GaMo.TrueInputSystem
 
         public void SyncProfileSettings()
         {
-            // var mobile = _inputBridge?.TISMobileSettings;
-            // if (mobile != null)
-            //     _zoneStartRatio = 1f - mobile.cameraZoneWidthRatio;
-
             var cam = _inputBridge?.TISCameraSettings;
             if (cam != null)
                 _invertY = cam.invertY;
         }
 
         // ══════════════════════════════════════════════════════════════════════
-        //  DEBUG GIZMOS (Editor only)
+        //  DEBUG (Editor / Development Build — không có OnGUI trong bản release)
         // ══════════════════════════════════════════════════════════════════════
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private GUIStyle _debugLabelStyle;
 
         private void OnGUI()
         {
             if (!_debugDrawZone) return;
-            if (!Application.isEditor) return;
 
             float opacity = _inputBridge?.TISMobileSettings?.cameraZoneDebugOpacity ?? 0.15f;
-            if (opacity <= 0f) return;
+            if (opacity <= 0f) opacity = 0.15f;
 
-            float xStart = Screen.width  * _zoneStartRatio;
-            float xEnd   = Screen.width  * _zoneEndRatio;
-            float height = Screen.height;
+            float xStart = Screen.width * _zoneStartRatio;
+            float xEnd   = Screen.width * _zoneEndRatio;
+            var   rect   = new Rect(xStart, 0f, xEnd - xStart, Screen.height);
 
-            var rect = new Rect(xStart, 0f, xEnd - xStart, height);
             var originalColor = GUI.color;
-
-            // Màu xanh = idle, đỏ nhạt = đang pinch
             GUI.color = _isPinching
                 ? new Color(1f, 0.3f, 0.3f, opacity)
                 : new Color(0.1f, 0.8f, 0.3f, opacity);
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = originalColor;
 
-            var labelStyle = new GUIStyle(GUI.skin.label)
+            _debugLabelStyle ??= new GUIStyle(GUI.skin.label)
             {
                 normal    = { textColor = Color.white },
                 fontSize  = 14,
@@ -478,11 +557,12 @@ namespace GaMo.TrueInputSystem
 
             string status = _isPinching
                 ? $"PINCH  Δ={PinchZoomDelta:F3}"
-                : _activeTouchId >= 0
-                    ? $"Camera Zone  [finger {_activeTouchId}]\nΔ={SmoothedDelta:F2}"
+                : _rotatingPointerId != -1
+                    ? $"Camera Zone  [{_pointerCount} finger]\nΔ={SmoothedDelta:F2}"
                     : "Camera Zone  [idle]";
 
-            GUI.Label(new Rect(xStart, 10f, xEnd - xStart, 50f), status, labelStyle);
+            GUI.Label(new Rect(xStart, 10f, xEnd - xStart, 50f), status, _debugLabelStyle);
         }
+#endif
     }
 }

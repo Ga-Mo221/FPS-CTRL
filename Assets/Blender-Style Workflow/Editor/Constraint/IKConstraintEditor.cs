@@ -4,6 +4,7 @@ using UnityEditor;
 
 namespace GaMo.BlenderEditorTools
 {
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(IKConstraint))]
     [InitializeOnLoad]
     public class IKConstraintEditor : Editor
@@ -42,6 +43,7 @@ namespace GaMo.BlenderEditorTools
         private GUIContent _gcIterations;
         private GUIContent _gcDelta;
         private GUIContent _gcDrawGizmos;
+        private GUIContent _gcResetBones;
         private GUIContent _gcTargetGizmoSize;
         private GUIContent _gcTargetGizmoHeight;
         private GUIContent _gcTargetGizmoColor;
@@ -130,8 +132,28 @@ namespace GaMo.BlenderEditorTools
                 "void InitIKChain()",
                 "Khởi tạo lại và đo đạc thông số chuỗi xương (độ dài từng bone, resize poleAngleOffsets...). Tự gọi ở OnEnable/OnValidate."),
             new ApiEntry("Core",
+                "void SavePose()",
+                "Lưu local position/rotation/scale của bones trong chain + tất cả Target + Pole Target (loại trùng; serialize theo scene/prefab, còn nguyên sau khi restart Unity). Ghi đè pose đã lưu trước đó. Editor tự gọi khi bấm Preview In Editor từ INACTIVE sang ACTIVE."),
+            new ApiEntry("Core",
+                "bool ResetToSavedPose()",
+                "Trả bones, Target và Pole Target về pose đã lưu bởi SavePose. Trả về false nếu chưa có pose nào được lưu. Ở Edit Mode có hỗ trợ Undo. Nút Reset trong Inspector gọi hàm này."),
+            new ApiEntry("Core",
                 "void ApplyIK()",
-                "Thực thi toàn bộ logic giải IK trong 1 frame: blend target theo weight, FABRIK, Pole Target, rồi Apply rotation/position lên bones. Tự gọi ở LateUpdate."),
+                "Thực thi toàn bộ logic giải IK trong 1 frame: blend target theo weight, FABRIK, Pole Target, rồi Apply rotation/position lên bones. ConstraintScheduler gọi qua Solve() mỗi LateUpdate."),
+
+            // ── SCHEDULER (ConstraintBehaviour) ─────────────────────────────────────
+            new ApiEntry("Scheduler",
+                "void Solve()",
+                "Tính và áp constraint cho frame hiện tại. ConstraintScheduler tự gọi mỗi LateUpdate theo thứ tự phụ thuộc — không còn LateUpdate riêng."),
+            new ApiEntry("Scheduler",
+                "int ExecutionOrder { get; set; }",
+                "Thứ tự do bạn chỉ định (nhỏ chạy trước). Chỉ quyết định giữa các constraint không phụ thuộc nhau; đổi lúc runtime sẽ tự sắp xếp lại."),
+            new ApiEntry("Scheduler",
+                "bool ExternallyDriven { get; set; }",
+                "true = scheduler bỏ qua constraint này, script khác tự gọi Solve() đúng thời điểm."),
+            new ApiEntry("Scheduler",
+                "static void MarkSchedulerDirty()",
+                "Báo scheduler sắp xếp lại (VD sau khi sửa trực tiếp list targets/bones bằng code hoặc reparent target). AddTarget/RemoveTarget đã tự gọi."),
         };
 
         private string apiSearchFilter = "";
@@ -178,6 +200,9 @@ namespace GaMo.BlenderEditorTools
             _gcIterations = new GUIContent("Max Iterations", iterationsProp.tooltip);
             _gcDelta = new GUIContent("Tolerance Delta (m)", deltaProp.tooltip);
             _gcDrawGizmos = new GUIContent("Draw Gizmos", drawGizmosProp.tooltip);
+            _gcResetBones = new GUIContent("Reset",
+                "Trả các bone trong chain, Target và Pole Target về pose đã lưu lúc bấm INACTIVE → ACTIVE. " +
+                "Chỉ dùng được khi đang INACTIVE ở Edit Mode. Pose được lưu theo scene/prefab nên còn sau khi restart Unity.");
             _gcTargetGizmoSize = new GUIContent("Kích Thước Đáy", targetGizmoSizeProp.tooltip);
             _gcTargetGizmoHeight = new GUIContent("Chiều Dài (Chiều Cao)", targetGizmoHeightProp.tooltip);
             _gcTargetGizmoColor = new GUIContent("Màu Sắc", targetGizmoColorProp.tooltip);
@@ -196,7 +221,14 @@ namespace GaMo.BlenderEditorTools
         {
             if (target == null) return;
 
-            IKConstraint script = (IKConstraint)target;
+            // Unity gọi OnSceneGUI riêng cho từng object đang chọn (target = object đó),
+            // nên KHÔNG dùng targets ở đây.
+            if (target is IKConstraint ik)
+                DrawScenePickHandles(ik);
+        }
+
+        private void DrawScenePickHandles(IKConstraint script)
+        {
             if (!script.drawGizmos) return;
 
             if (invisibleCapFunction == null) invisibleCapFunction = InvisibleButtonCap;
@@ -311,6 +343,7 @@ namespace GaMo.BlenderEditorTools
             IKConstraint script = (IKConstraint)target;
 
             EditorGUILayout.Space(3);
+            ConstraintOrderGUI.Draw(serializedObject, script);
             currentTab = DrawWrappedToolbar(currentTab, tabTitles);
             EditorGUILayout.Space(10);
 
@@ -332,15 +365,58 @@ namespace GaMo.BlenderEditorTools
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Preview In Editor", GUILayout.Width(EditorGUIUtility.labelWidth));
-            previewProp.boolValue = GUILayout.Toggle(
-                previewProp.boolValue,
-                previewProp.boolValue ? "ACTIVE" : "INACTIVE",
+
+            bool wasActive = previewProp.boolValue;
+            bool nowActive = GUILayout.Toggle(
+                wasActive,
+                wasActive ? "ACTIVE" : "INACTIVE",
                 "Button",
                 GUILayout.ExpandWidth(true),
                 GUILayout.Height(20)
             );
+            // Chỉ ghi khi người dùng thật sự bấm: ghi vô điều kiện sẽ đè giá trị của object đầu
+            // lên TẤT CẢ object khi chúng đang khác nhau (multi-edit).
+            if (nowActive != wasActive) previewProp.boolValue = nowActive;
+
+            // Reset: chỉ dùng được khi INACTIVE, ở Edit Mode, và có ít nhất 1 object đã có pose được lưu
+            bool anySavedPose = false;
+            foreach (var tg in targets)
+            {
+                var ik = tg as IKConstraint;
+                if (ik != null && ik.HasSavedPose) { anySavedPose = true; break; }
+            }
+
+            bool resetClicked = false;
+            using (new EditorGUI.DisabledScope(nowActive || Application.isPlaying || !anySavedPose))
+            {
+                resetClicked = GUILayout.Button(_gcResetBones, GUILayout.Width(60), GUILayout.Height(20));
+            }
+
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
+
+            // INACTIVE → ACTIVE: lưu pose hiện tại của bones + Target + Pole Target (trước khi IK preview chỉnh sửa).
+            // Apply property trước để không bị Update() sau đó ghi đè giá trị preview vừa đổi.
+            if (!wasActive && nowActive && !Application.isPlaying)
+            {
+                serializedObject.ApplyModifiedProperties();
+                foreach (var tg in targets)
+                {
+                    var ik = tg as IKConstraint;
+                    if (ik != null) ik.SavePose();
+                }
+                serializedObject.Update();
+            }
+
+            if (resetClicked)
+            {
+                foreach (var tg in targets)
+                {
+                    var ik = tg as IKConstraint;
+                    if (ik != null && ik.HasSavedPose) ik.ResetToSavedPose();
+                }
+                SceneView.RepaintAll();
+            }
 
             EditorGUILayout.Space(6);
 
@@ -367,7 +443,8 @@ namespace GaMo.BlenderEditorTools
             EditorGUILayout.EndVertical();
 
             // ── RUNTIME DEBUG TOOLS ──────────────────────────────────────────────────
-            if (Application.isPlaying || script.preview)
+            // Chỉ hiện khi chọn 1 object: các nút Switch dựa trên danh sách targets của riêng từng object
+            if (targets.Length == 1 && (Application.isPlaying || script.preview))
             {
                 EditorGUILayout.Space(15);
                 EditorGUILayout.LabelField("Runtime Debug Tools", EditorStyles.boldLabel);
@@ -510,6 +587,9 @@ namespace GaMo.BlenderEditorTools
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.PropertyField(drawGizmosProp, _gcDrawGizmos);
             EditorGUILayout.EndVertical();
+
+            // Tắt Draw Gizmos → ẩn toàn bộ thông số bên dưới
+            if (!drawGizmosProp.boolValue) return;
 
             EditorGUILayout.Space(6);
 

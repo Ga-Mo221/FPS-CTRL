@@ -135,7 +135,7 @@ namespace MagicaCloth2
         public override int GetMagicaHashCode()
         {
             int hash = SerializeData.GetHashCode() + serializeData2.GetHashCode();
-            hash += isActiveAndEnabled ? GetInstanceID() : 0; // component active.
+            hash += isActiveAndEnabled ? this.GetMagicaId().GetHashCode() : 0; // component active.
             return hash;
         }
     }

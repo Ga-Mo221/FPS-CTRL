@@ -105,12 +105,12 @@ namespace GaMo.TrueInputSystem.Editor
             GUILayout.FlexibleSpace();
             GUILayout.EndScrollView();
 
-            // Thanh dưới: Thêm / Xoá
+            // Thanh dưới: Thêm (xoá nhóm qua menu chuột phải)
             var footerRect = EditorGUILayout.GetControlRect(false, 34f);
             EditorGUI.DrawRect(footerRect, C_BgDeep);
 
             var addRect = new Rect(footerRect.x + 6f, footerRect.y + 5f,
-                footerRect.width - 36f, 24f);
+                footerRect.width - 12f, 24f);
             EditorGUI.DrawRect(addRect, C_BgCard);
             DrawBorder(addRect, C_Green * 0.5f, 1f);
             if (GUI.Button(addRect, "＋  Thêm Nhóm",
@@ -124,23 +124,6 @@ namespace GaMo.TrueInputSystem.Editor
                 AddNewMap();
             RegisterTooltip(addRect, "Thêm Action Map mới.\nVí dụ: Nhóm xe cộ, nhóm UI, nhóm chiến đấu...");
 
-            var removeRect = new Rect(footerRect.xMax - 28f, footerRect.y + 5f, 22f, 24f);
-            EditorGUI.DrawRect(removeRect, C_BgCard);
-            DrawBorder(removeRect, C_Red * 0.4f, 1f);
-            if (GUI.Button(removeRect, "－",
-                new GUIStyle(EditorStyles.miniLabel)
-                {
-                    normal    = { textColor = C_Red },
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize  = 13,
-                }))
-            {
-                if (_selectedMapIndex < maps.Count)
-                    RemoveMap(_selectedMapIndex);
-            }
-            RegisterTooltip(removeRect, "Xoá nhóm đang chọn (yêu cầu xác nhận nếu có hành động bên trong).");
-
             GUILayout.EndVertical();
         }
 
@@ -149,37 +132,9 @@ namespace GaMo.TrueInputSystem.Editor
         private void DrawMapItem(TISActionMapData map, int index, bool selected)
         {
             // Chế độ đổi tên
-            if (_isRenaming && _renamingIndex == index)
+            if (_isRenaming && !_renamingAction && _renamingIndex == index)
             {
-                var renameRect = EditorGUILayout.GetControlRect(false, 30f);
-                EditorGUI.DrawRect(renameRect, C_BgCard);
-                DrawBorder(renameRect, C_Accent * 0.6f, 1f);
-
-                GUILayout.BeginHorizontal();
-                GUI.SetNextControlName("RenameField");
-                _renameBuffer = GUI.TextField(
-                    new Rect(renameRect.x + 4f, renameRect.y + 5f, renameRect.width - 50f, 20f),
-                    _renameBuffer,
-                    new GUIStyle(EditorStyles.textField)
-                    { normal = { textColor = C_TextPrimary } });
-
-                if (GUI.Button(new Rect(renameRect.xMax - 44f, renameRect.y + 5f, 20f, 20f), "✔",
-                    new GUIStyle(EditorStyles.miniButton) { normal = { textColor = C_Green } }))
-                    CommitRename();
-
-                if (GUI.Button(new Rect(renameRect.xMax - 22f, renameRect.y + 5f, 20f, 20f), "✕",
-                    new GUIStyle(EditorStyles.miniButton) { normal = { textColor = C_Red } }))
-                    CancelRename();
-
-                GUILayout.EndHorizontal();
-
-                if (Event.current.type == EventType.Layout)
-                    EditorGUI.FocusTextInControl("RenameField");
-                if (Event.current.type == EventType.KeyDown)
-                {
-                    if (Event.current.keyCode == KeyCode.Return)  { CommitRename(); Event.current.Use(); }
-                    if (Event.current.keyCode == KeyCode.Escape)  { CancelRename(); Event.current.Use(); }
-                }
+                DrawRenameRow(30f);
                 return;
             }
 
@@ -237,21 +192,18 @@ namespace GaMo.TrueInputSystem.Editor
             RegisterTooltip(rect, mapTooltip);
 
             // Sự kiện click / double-click / chuột phải
-            if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
+            // (kiểm tra double-click trong cùng nhánh — click đơn đã Use() event nên nhánh riêng không bao giờ chạy)
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 0 &&
+                rect.Contains(Event.current.mousePosition))
             {
                 if (_selectedMapIndex != index) _selectedActionIndex = -1;
                 _selectedMapIndex = index;
-                _isRenaming       = false;
+                CancelRename();
                 GUI.FocusControl(null);
+                if (Event.current.clickCount == 2)
+                    BeginRename(index);
                 Event.current.Use();
                 Repaint();
-            }
-            if (Event.current.type == EventType.MouseDown &&
-                Event.current.clickCount == 2 &&
-                rect.Contains(Event.current.mousePosition))
-            {
-                BeginRename(index);
-                Event.current.Use();
             }
             if (Event.current.type == EventType.ContextClick &&
                 rect.Contains(Event.current.mousePosition))
@@ -411,6 +363,13 @@ namespace GaMo.TrueInputSystem.Editor
 
         private void DrawActionListItem(TISInputActionDefinition def, int index, TISActionMapData ownerMap)
         {
+            // Chế độ đổi tên
+            if (_isRenaming && _renamingAction && _renamingIndex == index)
+            {
+                DrawRenameRow(32f);
+                return;
+            }
+
             bool selected = index == _selectedActionIndex;
             var rect = EditorGUILayout.GetControlRect(false, 32f);
             bool hover = rect.Contains(Event.current.mousePosition);
@@ -472,12 +431,16 @@ namespace GaMo.TrueInputSystem.Editor
             string actionTooltip = BuildActionTooltip(def);
             RegisterTooltip(rect, actionTooltip);
 
-            // Click để chọn
-            if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
+            // Click để chọn · double-click để đổi tên
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 0 &&
+                rect.Contains(Event.current.mousePosition))
             {
                 _selectedActionIndex = index;
                 _rightPanelTab = 0;
+                CancelRename();
                 GUI.FocusControl(null);
+                if (Event.current.clickCount == 2)
+                    BeginRenameAction(index);
                 Event.current.Use();
                 Repaint();
             }
@@ -488,6 +451,74 @@ namespace GaMo.TrueInputSystem.Editor
                 _selectedActionIndex = index;
                 ShowActionOptions(def, index, ownerMap);
                 Event.current.Use();
+            }
+        }
+
+        // ── Ô đổi tên (dùng chung cho nhóm & hành động) ─────
+
+        private void DrawRenameRow(float height)
+        {
+            var renameRect = EditorGUILayout.GetControlRect(false, height);
+            EditorGUI.DrawRect(renameRect, C_BgCard);
+            DrawBorder(renameRect, C_Accent * 0.6f, 1f);
+
+            // Enter = xác nhận · Esc = huỷ (bắt trước TextField để chắc chắn nhận được phím)
+            if (Event.current.type == EventType.KeyDown)
+            {
+                if (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter)
+                { CommitRename(); Event.current.Use(); }
+                else if (Event.current.keyCode == KeyCode.Escape)
+                { CancelRename(); Event.current.Use(); }
+            }
+
+            var fieldRect = new Rect(renameRect.x + 4f, renameRect.y + (height - 20f) * 0.5f,
+                                     renameRect.width - 8f, 20f);
+            // Lưu rect theo toạ độ màn hình để OnGUI kiểm tra click ra ngoài (ô nằm trong ScrollView)
+            if (Event.current.type == EventType.Repaint)
+                _renameFieldScreenRect = GUIUtility.GUIToScreenRect(fieldRect);
+
+            GUI.SetNextControlName("RenameField");
+            _renameBuffer = GUI.TextField(fieldRect, _renameBuffer,
+                new GUIStyle(EditorStyles.textField)
+                { normal = { textColor = C_TextPrimary } });
+
+            if (Event.current.type == EventType.Layout)
+                EditorGUI.FocusTextInControl("RenameField");
+        }
+
+        /// <summary>
+        /// Gọi đầu OnGUI: click trái ra ngoài ô đổi tên → xác nhận,
+        /// click phải ở bất kỳ đâu → huỷ (và chặn menu chuột phải của lần click đó).
+        /// </summary>
+        private void HandleRenameOutsideClick()
+        {
+            var ev = Event.current;
+
+            if (ev.type == EventType.ContextClick && _suppressNextContextClick)
+            {
+                _suppressNextContextClick = false;
+                ev.Use();
+                return;
+            }
+
+            if (ev.type != EventType.MouseDown) return;
+            _suppressNextContextClick = false;   // phòng khi ContextClick không tới → không chặn nhầm lần sau
+            if (!_isRenaming) return;
+
+            if (ev.button == 1)
+            {
+                CancelRename();
+                _suppressNextContextClick = true;
+                ev.Use();
+                Repaint();
+            }
+            else if (ev.button == 0 &&
+                     !_renameFieldScreenRect.Contains(GUIUtility.GUIToScreenPoint(ev.mousePosition)))
+            {
+                // Không Use() → click vẫn đi tiếp tới phần tử bên dưới (chọn dòng, bấm nút…)
+                CommitRename();
+                GUI.FocusControl(null);
+                Repaint();
             }
         }
 
@@ -820,6 +851,11 @@ namespace GaMo.TrueInputSystem.Editor
                         MarkDirty(); }, "Binding Gamepad…",
                     "Nút trên tay cầm.\nVí dụ: <Gamepad>/buttonSouth (A/Cross), <Gamepad>/leftStick");
 
+                // Left / Right Stick: cộng thêm gyro / touchpad vào giá trị của cần
+                A_MotionMixRow(def);
+                // Path <TISMotion>/... khi gyro / touchpad đang tắt → báo lỗi
+                A_MotionBindingError(def);
+
                 // ← THÊM DÒNG NÀY
                 A_BindingRow("Modifier", def.bindingGamepadModifier, TISBindingPathOptions.GamepadModifier().ToArray(), C_Purple,
                     v => { SafeRecord("Đổi Gamepad Modifier"); def.bindingGamepadModifier = v; MarkDirty(); }, "Modifier…",
@@ -851,50 +887,7 @@ namespace GaMo.TrueInputSystem.Editor
             }
 
             GUILayout.Space(8);
-
-            // ── Thao tác nhanh ────────────────────────────────
-            A_Group("Thao Tác", "Sắp xếp, nhân đôi hoặc xoá hành động này.");
-            GUILayout.Space(4);
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(8);
-
-            void QuickBtn(string label, Color col, Action onClick, string tip)
-            {
-                var r = GUILayoutUtility.GetRect(
-                    new GUIContent(label), GUIStyle.none,
-                    GUILayout.Height(24f), GUILayout.ExpandWidth(true));
-                EditorGUI.DrawRect(r, C_BgCard);
-                DrawBorder(r, col * 0.4f, 1f);
-                GUI.Label(r, label,
-                    new GUIStyle(EditorStyles.miniLabel)
-                    {
-                        normal    = { textColor = col },
-                        alignment = TextAnchor.MiddleCenter,
-                        fontStyle = FontStyle.Bold,
-                        fontSize  = 10,
-                    });
-                if (GUI.Button(r, GUIContent.none, GUIStyle.none))
-                    onClick?.Invoke();
-                RegisterTooltip(r, tip);
-            }
-
-            var currentMap = _workingProfile.actionMaps[_selectedMapIndex];
-            QuickBtn("↑ Lên",     C_TextSecond, () => MoveAction(currentMap, _selectedActionIndex, -1),
-                "Dịch hành động này lên trên trong danh sách.");
-            GUILayout.Space(3);
-            QuickBtn("↓ Xuống",   C_TextSecond, () => MoveAction(currentMap, _selectedActionIndex, +1),
-                "Dịch hành động này xuống dưới trong danh sách.");
-            GUILayout.Space(3);
-            QuickBtn("Nhân đôi", C_Accent,   () => DuplicateAction(currentMap, _selectedActionIndex),
-                "Tạo bản sao của hành động này.");
-            GUILayout.Space(3);
-            QuickBtn("✕ Xoá",    C_Red,        () => { RemoveAction(currentMap, _selectedActionIndex); _selectedActionIndex = Mathf.Max(0, _selectedActionIndex - 1); },
-                "Xoá hành động này khỏi nhóm.");
-
-            GUILayout.Space(8);
-            GUILayout.EndHorizontal();
-            GUILayout.Space(6);
+            // Sắp xếp / nhân đôi / xoá: dùng menu chuột phải trong danh sách hành động
         }
 
         // ── Widget A_ (panel cài đặt action) ─────────────────
@@ -921,6 +914,119 @@ namespace GaMo.TrueInputSystem.Editor
         /// Group header cho binding section, hiển thị trạng thái ON/OFF của platform.
         /// Khi platform bị tắt: nền xám, sọc nhấn mờ, chip "OFF" màu cam.
         /// </summary>
+        /// <summary>
+        /// Hàng "+ Gyro" / "+ Touchpad" — chỉ hiện khi Gamepad binding là Left / Right Stick.
+        /// Bật → action = cần + gyro + touchpad (TISStickMotionComposite), độ nhạy ở Motion Settings.
+        /// </summary>
+        private void A_MotionMixRow(TISInputActionDefinition def)
+        {
+            string path = def.bindingGamepad ?? "";
+            bool isStick = path.EndsWith("/leftStick",  System.StringComparison.OrdinalIgnoreCase)
+                        || path.EndsWith("/rightStick", System.StringComparison.OrdinalIgnoreCase);
+            if (!isStick)
+            {
+                // Đổi sang path khác → bỏ cờ cũ để profile không giữ cấu hình vô nghĩa
+                if (def.gamepadMixGyro || def.gamepadMixTouchpad)
+                {
+                    SafeRecord("Bỏ Gyro / Touchpad mix");
+                    def.gamepadMixGyro = def.gamepadMixTouchpad = false;
+                    MarkDirty();
+                }
+                return;
+            }
+
+            var ms = _workingProfile.motionSettings;
+            bool gyroOn  = ms.enableGyro;
+            bool touchOn = ms.enableTouchpad;
+
+            // Tính năng đang tắt trong Gamepad Settings › Motion → không hiện ô bật / tắt.
+            // Action còn giữ cờ cũ (profile cũ, hoặc vừa tắt tính năng) → báo lỗi + nút sửa nhanh.
+            if (def.gamepadMixGyro && !gyroOn)
+                A_MotionDisabledError("Action đang cộng Gyro nhưng Gyro đã tắt trong Gamepad Settings › Motion.",
+                    () => ms.enableGyro = true, () => def.gamepadMixGyro = false);
+            if (def.gamepadMixTouchpad && !touchOn)
+                A_MotionDisabledError("Action đang cộng Touchpad nhưng Touchpad đã tắt trong Gamepad Settings › Motion.",
+                    () => ms.enableTouchpad = true, () => def.gamepadMixTouchpad = false);
+
+            if (!gyroOn && !touchOn) return;
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(8);
+            GUILayout.Label(new GUIContent("Cộng thêm",
+                    "Cộng gyro / touchpad tay cầm vào giá trị của cần analog.\n" +
+                    "Ví dụ Look = Right Stick + Gyro + Touchpad.\n" +
+                    "Độ nhạy: Cài Đặt Nền Tảng › Gamepad › Motion."),
+                new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = C_TextSecond } },
+                GUILayout.Width(70));
+
+            bool g  = def.gamepadMixGyro;
+            bool tp = def.gamepadMixTouchpad;
+            if (gyroOn && touchOn)
+            {
+                g  = GUILayout.Toggle(g,  " + Gyro",     EditorStyles.miniButtonLeft,  GUILayout.Width(80));
+                tp = GUILayout.Toggle(tp, " + Touchpad", EditorStyles.miniButtonRight, GUILayout.Width(90));
+            }
+            else if (gyroOn)
+                g  = GUILayout.Toggle(g,  " + Gyro",     EditorStyles.miniButton, GUILayout.Width(80));
+            else
+                tp = GUILayout.Toggle(tp, " + Touchpad", EditorStyles.miniButton, GUILayout.Width(90));
+
+            if (g != def.gamepadMixGyro || tp != def.gamepadMixTouchpad)
+            {
+                SafeRecord("Đổi Gyro / Touchpad mix");
+                def.gamepadMixGyro     = g;
+                def.gamepadMixTouchpad = tp;
+                MarkDirty();
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(2);
+        }
+
+        /// <summary>Binding Gamepad là &lt;TISMotion&gt;/... trong khi gyro / touchpad đang tắt → báo lỗi.</summary>
+        private void A_MotionBindingError(TISInputActionDefinition def)
+        {
+            string path = def.bindingGamepad ?? "";
+            if (!TISMotionPaths.IsMotionPath(path)) return;
+
+            var ms = _workingProfile.motionSettings;
+            if (TISMotionPaths.IsGyroPath(path))
+            {
+                if (!ms.enableGyro)
+                    A_MotionDisabledError($"Binding {path} cần Gyro, nhưng Gyro đang tắt trong Gamepad Settings › Motion — action sẽ không nhận giá trị.",
+                        () => ms.enableGyro = true, () => def.bindingGamepad = "");
+            }
+            else if (!ms.enableTouchpad)
+            {
+                A_MotionDisabledError($"Binding {path} cần Touchpad, nhưng Touchpad đang tắt trong Gamepad Settings › Motion — action sẽ không nhận giá trị.",
+                    () => ms.enableTouchpad = true, () => def.bindingGamepad = "");
+            }
+        }
+
+        private void A_MotionDisabledError(string message, System.Action enableFeature, System.Action removeBinding)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(8);
+            EditorGUILayout.HelpBox(message, MessageType.Error);
+            GUILayout.BeginVertical(GUILayout.Width(92));
+            GUILayout.Space(4);
+            if (GUILayout.Button("Bật tính năng", EditorStyles.miniButton))
+            {
+                SafeRecord("Bật Gyro / Touchpad");
+                enableFeature();
+                MarkDirty();
+            }
+            if (GUILayout.Button("Gỡ khỏi action", EditorStyles.miniButton))
+            {
+                SafeRecord("Gỡ binding Gyro / Touchpad");
+                removeBinding();
+                MarkDirty();
+            }
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(2);
+        }
+
         private void A_PlatformGroupHeader(string title, bool platformEnabled,
             Color accentCol, string tooltipOn, string tooltipOff)
         {
@@ -1227,6 +1333,7 @@ namespace GaMo.TrueInputSystem.Editor
                 menu.AddSeparator("");
             }
 
+            menu.AddItem(new GUIContent("Đổi tên"),       false, () => BeginRenameAction(ci));
             menu.AddItem(new GUIContent("Dịch lên ↑"),   false, () => MoveAction(cm, ci, -1));
             menu.AddItem(new GUIContent("Dịch xuống ↓"),  false, () => MoveAction(cm, ci, +1));
             menu.AddItem(new GUIContent("Nhân đôi"),      false, () => DuplicateAction(cm, ci));

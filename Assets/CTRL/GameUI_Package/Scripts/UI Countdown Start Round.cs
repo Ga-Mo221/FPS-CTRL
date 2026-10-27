@@ -68,13 +68,15 @@ public class UICountdownStartRound : MonoBehaviour
             // round time
             _gameHud.SetTimer(state.RoundElapsed);
             
-            // rank
+            // rank + kill cua CHINH MINH (FFA). [Aemy 2026-10-26] truoc day lay KillLeaderboard[0]
+            // = nguoi dang dan dau -> o kill canh dong ho hien kill cao nhat thay vi kill cua minh.
             if (gamemanager != null)
-                _gameHud.SetRank(state.GetLeaderboardRank(gamemanager.GetPlayerID()));
-            
-            // set kill solo
-            if (state.KillLeaderboard.Count > 0)
-                _gameHud.SetKills(state.KillLeaderboard[0].Kills);
+            {
+                var myId = gamemanager.GetPlayerID();
+                _gameHud.SetRank(state.GetLeaderboardRank(myId));
+                KillInfo mine;
+                _gameHud.SetKills(state.TryGetKillInfo(myId, out mine) ? mine.Kills : 0);
+            }
             
             _gameHud.SetTeam1("Alpha", state.BlueKill);
             

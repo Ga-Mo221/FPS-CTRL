@@ -10,14 +10,70 @@ public class NetworkGameState : NetworkBehaviour
     [SerializeField] private int _totalRounds = 1;
     public int TotalRounds => _totalRounds;
     [SerializeField] private float _roundDurationMinutes = 10f;
+    // Thoi gian tran chu phong chon (phong tuy chinh). Networked -> host moi (migration) van dung dung gia tri.
+    [Networked] private float _roundMinutesOverride { get; set; }
+    private float RoundMinutes => _roundMinutesOverride > 0f ? _roundMinutesOverride : _roundDurationMinutes;
+    public void SetRoundMinutes(float minutes) { if (minutes > 0f) _roundMinutesOverride = minutes; }
 
     [Header("Kill Target Settings")]
     [Tooltip("Solo: 1 player đạt đủ số kill này thì kết thúc trận. Team: Red hoặc Blue đạt đủ thì kết thúc.")]
-    [Networked] private int _killTarget { get; set; } = 100;
+    [Networked] private int _killTarget { get; set; } = 20; // [Aemy 2026-10-27] gia tri du phong; that su lay tu GameManager.KillTarget (NSpawner)
     public int KillTarget => _killTarget;
 
-    [Networked] public float RoundElapsed { get; private set; } // giây còn lại trong hiệp (remaining)
-    [Networked] public float TotalElapsed { get; private set; } // tổng giây đã chơi cả trận
+    // Truoc day RoundElapsed/TotalElapsed la [Networked] float
+    // += DeltaTime MOI TICK -> 2 word dirty x moi client x moi tick. Nay chi sync 2 tick moc (doi 1-2 lan/tran),
+    // moi may tu tinh tu Runner.Tick + _roundTimer (da networked).
+    // che do choi cua ca tran, sync 1 lan (truoc day nam trong moi NPlayer).
+    [Networked] public GamePlayMode Mode { get; private set; }
+
+    /// <summary>[MM-BACKFILL] Con it hon so giay nay trong hiep thi khong nhan nguoi vao giua tran nua.</summary>
+    public const float LATE_JOIN_MIN_SECONDS = 60f;
+    private string _rosterPublished; // [Aemy 2026-10-22] roster da ghi len SessionInfo (chi ghi lai khi doi)
+
+    // ── [Aemy 2026-10-24] PHONG CHO truoc dem nguoc ──────────────────────────
+    // Vao map ngay khi ghep duoc tran; trong luc InLobby phong van mo (nguoi dang tim tran vao them duoc),
+    // MatchLobbyOverlay phu man ghep tran + dem nguoc. Het gio (hoac phong day) -> StartCountdown() nhu cu
+    // => dem nguoc 5..1 + voice three/two/one/fight + nhac nen giu nguyen (chung chi bat dau khi _countdownTimer chay).
+    [Header("Phong cho (Aemy 2026-10-24)")]
+    [Tooltip("Giay cho nguoi khac vao truoc khi dem nguoc bat dau tran. 0 = tat phong cho.")]
+    [SerializeField] private float _lobbySeconds = 15f;
+    [Networked] private TickTimer _lobbyTimer { get; set; }
+    [Networked] public NetworkBool InLobby { get; private set; }
+
+    /// <summary>Giay con lai cua phong cho (null = khong o phong cho).</summary>
+    public float? GetLobbyRemaining()
+    {
+        if (Object == null || !Object.IsValid || !InLobby) return null;
+        return _lobbyTimer.RemainingTime(Runner);
+    }
+
+    [Networked] public int StartTick { get; private set; } // tick bat dau tran (gan trong Spawned khi khong phai resume)
+    [Networked] public int EndTick   { get; private set; } // tick khi IsMatchOver lan dau (0 = chua ket thuc)
+
+    /// <summary>Giay CON LAI trong hiep (ten giu nguyen de khong vo UI cu). Dong bang khi tran ket thuc.</summary>
+    public float RoundElapsed
+    {
+        get
+        {
+            if (Runner == null || Object == null || !Object.IsValid) return 0f;
+            if (!GameStarted) return CurrentRound > 1 ? RoundMinutes * 60f : 0f;
+            int? target = _roundTimer.TargetTick;
+            if (!target.HasValue) return 0f;
+            int now = EndTick > 0 ? EndTick : Runner.Tick.Raw;
+            return Mathf.Max(0f, (target.Value - now) * Runner.DeltaTime);
+        }
+    }
+
+    /// <summary>Tong giay da choi ca tran.</summary>
+    public float TotalElapsed
+    {
+        get
+        {
+            if (Runner == null || Object == null || !Object.IsValid || StartTick <= 0) return 0f;
+            int now = EndTick > 0 ? EndTick : Runner.Tick.Raw;
+            return Mathf.Max(0f, (now - StartTick) * Runner.DeltaTime);
+        }
+    }
 
     // ── Networked State ──────────────────────────────────────────────────────
     [Networked] private TickTimer _countdownTimer { get; set; }
@@ -32,6 +88,12 @@ public class NetworkGameState : NetworkBehaviour
     // ── Kill Stats (networked) ────────────────────────────────────────────────
     [Networked] public int RedKill  { get; private set; }
     [Networked] public int BlueKill { get; private set; }
+    // Con <=1 nguoi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
+    [Networked] public NetworkBool EndedByForfeit { get; private set; }
+    [Networked] public int ForfeitWinnerTeam { get; private set; }
+    [Networked] public NetworkId ForfeitWinnerId { get; private set; }
+    private bool _hadTwoPlayers;
+    private bool _hadBothTeams; // che do Team: tung co ca 2 doi
     //[Networked] public int AllKill  { get; private set; }
 
     [Header("Kill Stats Settings")]
@@ -71,28 +133,52 @@ public class NetworkGameState : NetworkBehaviour
 
         if (!HasStateAuthority) return;
 
-        // Nếu TotalElapsed > 0 nghĩa là resume từ snapshot → không reset
-        if (TotalElapsed > 0)
+        // Nếu CurrentRound > 0 nghĩa là resume từ snapshot → không reset
+        // [NET-OPT] doi tu "TotalElapsed > 0" vi TotalElapsed gio la thuoc tinh tinh tu tick.
+        if (CurrentRound > 0)
         {
             Debug.Log("<color=orange>[NetworkGameState]</color> Resumed from host migration");
             return;
         }
 
         CurrentRound         = 1;
+        if (GameManager.Instance != null) Mode = GameManager.Instance.GetGamePlayMode();
+        StartTick            = Runner.Tick.Raw;
+        EndTick              = 0;
         GameStarted          = false;
         RoundEnded           = false;
         _redKillAccumulated  = 0;
         _blueKillAccumulated = 0;
         _playerKillSnapshot.Clear();
-        StartCountdown();
+        EndedByForfeit = false;
+        ForfeitWinnerTeam = -1;
+        _hadTwoPlayers = false;
+        _hadBothTeams = false;
+        // [Aemy 2026-10-24] Phong cho truoc, het phong cho moi dem nguoc (xem FixedUpdateNetwork).
+        if (_lobbySeconds > 0f)
+        {
+            InLobby = true;
+            _lobbyTimer = TickTimer.CreateFromSeconds(Runner, _lobbySeconds);
+        }
+        else StartCountdown();
     }
 
     public override void FixedUpdateNetwork()
     {
         if (!HasStateAuthority) return;
 
-        if (!IsMatchOver())
-            TotalElapsed += Runner.DeltaTime;
+        if (EndTick == 0 && IsMatchOver())
+            EndTick = Runner.Tick.Raw;
+
+        // Cho nguoi moi vao tran dang dien ra (QuickJoin o MenuShell) khi con du thoi gian;
+        // dong phong khi tran da ket thuc hoac con < LATE_JOIN_MIN_SECONDS. Kiem tra ~2 lan/giay.
+        if (Runner.IsServer && Runner.Tick.Raw % 32 == 0 && Runner.SessionInfo != null && Runner.SessionInfo.IsValid)
+        {
+            bool joinable = !IsMatchOver() && (!GameStarted || RoundElapsed > LATE_JOIN_MIN_SECONDS);
+            if (Runner.SessionInfo.IsOpen != joinable) Runner.SessionInfo.IsOpen = joinable;
+            // [Aemy 2026-10-22] Ghi ten + doi nguoi dang trong phong -> nguoi vao sau thay du roster o man ghep tran.
+            SessionRoster.Publish(Runner, ref _rosterPublished, !GameStarted); // [2026-10-24] + co "chua bat dau tran"
+        }
 
         // ── Cập nhật Kill stats (chỉ host, đồng bộ xuống mọi client) ───────────
         _killUpdateTimer += Runner.DeltaTime;
@@ -109,22 +195,73 @@ public class NetworkGameState : NetworkBehaviour
             }
         }
 
+        // Con <=1 nguoi choi (sau khi tung co >=2) -> ket thuc, nguoi/doi con lai thang.
+        if (GameStarted && !MatchEndedByKillTarget)
+        {
+            int active = 0; PlayerRef lastRef = default;
+            int blue = 0, red = 0;
+            foreach (var pr in Runner.ActivePlayers)
+            {
+                active++; lastRef = pr;
+                if (Runner.TryGetPlayerObject(pr, out var po) && po != null)
+                {
+                    var tp = po.GetComponent<NPlayer>();
+                    if (tp != null) { if (tp.NetworkedTeam == PlayerTeam.Blue) blue++; else if (tp.NetworkedTeam == PlayerTeam.Red) red++; }
+                }
+            }
+            if (active >= 2) _hadTwoPlayers = true;
+            if (blue > 0 && red > 0) _hadBothTeams = true;
+
+            // Team: 1 doi khong con ai (doi kia van con nguoi) -> doi con lai thang.
+            bool isTeam = GameManager.Instance != null && GameManager.Instance.GetGamePlayMode() == GamePlayMode.Team;
+            if (isTeam && _hadBothTeams && active >= 1 && (blue == 0 || red == 0))
+            {
+                ForfeitWinnerTeam = blue > 0 ? (int)PlayerTeam.Blue : (int)PlayerTeam.Red;
+                EndedByForfeit = true;
+                MatchEndedByKillTarget = true;
+                RoundEnded = true;
+                CurrentRound = _totalRounds + 1;
+            }
+            else if (_hadTwoPlayers && active <= 1)
+            {
+                if (active == 1 && Runner.TryGetPlayerObject(lastRef, out var lastObj) && lastObj != null)
+                {
+                    var np = lastObj.GetComponent<NPlayer>();
+                    if (np != null) { ForfeitWinnerTeam = (int)np.NetworkedTeam; ForfeitWinnerId = np.Object.Id; }
+                }
+                EndedByForfeit = true;
+                MatchEndedByKillTarget = true;
+                RoundEnded = true;
+                CurrentRound = _totalRounds + 1;
+            }
+        }
+
         if (!GameStarted)
         {
+            if (InLobby)
+            {
+                // [Aemy 2026-10-24] Het gio cho / phong da day -> bat dau dem nguoc nhu truoc.
+                var si = Runner.SessionInfo;
+                bool full = si != null && si.IsValid && si.MaxPlayers > 0 && si.PlayerCount >= si.MaxPlayers;
+                if (_lobbyTimer.Expired(Runner) || full)
+                {
+                    InLobby = false;
+                    StartTick = Runner.Tick.Raw; // tinh thoi gian tran tu luc het phong cho
+                    StartCountdown();
+                }
+                return;
+            }
             if (_countdownTimer.Expired(Runner))
             {
                 GameStarted  = true;
                 RoundEnded   = false;
-                RoundElapsed = _roundDurationMinutes * 60;
-                _roundTimer  = TickTimer.CreateFromSeconds(Runner, _roundDurationMinutes * 60f);
+                _roundTimer  = TickTimer.CreateFromSeconds(Runner, RoundMinutes * 60f);
             }
             return;
         }
 
         if (!RoundEnded)
         {
-            RoundElapsed -= Runner.DeltaTime;
-
             if (_roundTimer.Expired(Runner))
             {
                 RoundEnded = true;
@@ -134,7 +271,6 @@ public class NetworkGameState : NetworkBehaviour
                     CurrentRound++;
                     GameStarted  = false;
                     RoundEnded   = false;
-                    RoundElapsed = _roundDurationMinutes * 60;
                     StartCountdown();
                     RespawnAllPlayers();
                 }
@@ -212,7 +348,7 @@ public class NetworkGameState : NetworkBehaviour
             int deathcount = player.GetDeathCount();
             int assist = player.Assist;
             int totalEXP = player.TotalExp;
-            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.Nickname.ToString(), team, player._kill, deathcount,  assist, totalEXP);
+            _killLookup[player.Object.Id] = new KillInfo(player.Object.Id, player.nPlayer.NicknameText, team, player._kill, deathcount,  assist, totalEXP, player.nPlayer.AvatarUrlText);
         }
 
         // ── Build leaderboard đã sort giảm dần theo kill ────────────────────────

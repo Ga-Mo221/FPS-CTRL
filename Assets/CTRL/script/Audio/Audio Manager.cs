@@ -25,6 +25,7 @@ public class AudioManager : MonoBehaviour
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clip == null) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clip == null) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
         if (stop) Stop(source);
         source.spatialBlend = 1f;
         source.volume = volume;
@@ -40,6 +41,7 @@ public class AudioManager : MonoBehaviour
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clip == null) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clip == null) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
         if (stop) Stop(source);
         source.spatialBlend = 1f;
         source.volume = volume;
@@ -49,12 +51,28 @@ public class AudioManager : MonoBehaviour
         source.PlayOneShot(clip);
     }
 
+    /// <summary>Phat 2D (khong theo vi tri), pitch giu nguyen - dung cho announcer / am thanh giao dien gameplay.</summary>
+    public void PlayClip2D(AudioSource source, AudioClip clip, float volume, bool stop = true)
+    {
+        if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
+        if (clip == null) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
+        if (source == null || clip == null) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
+        if (source.enabled == false) return;
+        if (stop) Stop(source);
+        source.spatialBlend = 0f;
+        source.volume = volume;
+        source.pitch = 1f;
+        source.PlayOneShot(clip);
+    }
+
     public void PlayClip(AudioSource source, AudioClip[] clips, float volume, float pitch, bool stop = true, float minDistance = 1, float maxDistance = 10)
     {
         if (source.enabled == false) return;
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips.Length == 0) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
         if (stop) Stop(source);
         int index = Random.Range(0, clips.Length);
         source.spatialBlend = 1f;
@@ -71,6 +89,7 @@ public class AudioManager : MonoBehaviour
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips.Length == 0) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
         if (stop) Stop(source);
         int index = Random.Range(0, clips.Length);
         source.spatialBlend = 1f;
@@ -95,6 +114,7 @@ public class AudioManager : MonoBehaviour
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips.Length == 0) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
         if (stop) Stop(source);
         if (startRandom > clips.Length) startRandom = clips.Length;
         if (endRandom > clips.Length) endRandom = clips.Length;
@@ -122,6 +142,7 @@ public class AudioManager : MonoBehaviour
         if (source == null) Debug.LogError("<color=red>[AudioManager]</color> source is null");
         if (clips == null || clips.Length == 0) Debug.LogError("<color=red>[AudioManager]</color> clips is null");
         if (source == null || clips == null || clips.Length == 0) return;
+        AudioRouting.EnsureEffects(source); // nguon chua co mixer group -> Effects (chiu am luong tong + SFX)
 
         if (stop) Stop(source);
 

@@ -110,6 +110,14 @@ namespace MagicaCloth2
         public ClothUpdateMode updateMode = ClothUpdateMode.AnimatorLinkage;
 
         /// <summary>
+        /// Set the disable mode.
+        /// Component inactive behavior.
+        /// [OK] Runtime changes.
+        /// [NG] Export/Import with Presets
+        /// </summary>
+        public ClothDisableMode disableMode = ClothDisableMode.Reset;
+
+        /// <summary>
         /// Blend ratio between initial pose and animation pose.
         /// [OK] Runtime changes.
         /// [NG] Export/Import with Presets

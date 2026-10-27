@@ -41,7 +41,7 @@ AudioSource:
   m_GameObject: {fileID: 327974843667804892}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -230,8 +230,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
   _type: 0
   _OwnerCharacter: {fileID: 0}
-  _CurrentBulletvalue: 0
-  _CurrentMaxBullet: 0
   _data: {fileID: 11400000, guid: 14b257ca8e5a0574c895afcd46230619, type: 2}
   _anim: {fileID: 97223929395780616}
   _ads_Pivot: {fileID: 88861942976322340}
@@ -469,6 +467,10 @@ MonoBehaviour:
   jointFontSize: 15
   show: 0
   boneAxis: 1
+  invertAxis: 0
+  lockTailInPlayMode: 1
+  _connectedParents: []
+  _connectedChildrenSerialized: []
   pingInHierarchy: 0
 --- !u!1 &1451672083002471397
 GameObject:
@@ -511,7 +513,7 @@ AudioSource:
   m_GameObject: {fileID: 1451672083002471397}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: -973724649278464913, guid: bfbc8b07bd216478eb5fca35a6fe51e2, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -863,6 +865,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b1f9ebd57bc9f41b3699c17d4dbf86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TransformConstraint
+  executionOrder: 0
   targets: []
   constraintObject: {fileID: 4917590710315638624}
   hasExternalPoseDriver: 0
@@ -1514,7 +1517,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -3292108182273510052, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -3072413905346568267, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2406,7 +2409,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -1790644676899180661, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3916370583819310063}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8248429493595076407}
   m_SourcePrefab: {fileID: 100100000, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
 --- !u!4 &52764646090047652 stripped
 Transform:
@@ -2416,6 +2422,11 @@ Transform:
 --- !u!95 &97223929395780616 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
+  m_PrefabInstance: {fileID: 5779240991815704985}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &172236310451524805 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -3292108182273510052, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
   m_PrefabInstance: {fileID: 5779240991815704985}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &192056167609222326 stripped
@@ -2618,6 +2629,27 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 792800253755798188, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
   m_PrefabInstance: {fileID: 5779240991815704985}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6697579277333830856 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}
+  m_PrefabInstance: {fileID: 5779240991815704985}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8248429493595076407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6697579277333830856}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecf26ee21b2a08549918a313c9559bd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DisplayObject
+  AutoDisable: 0
+  time: 2
+  Objects:
+  - {fileID: 172236310451524805}
 --- !u!4 &6864018257886908969 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1112979764708651952, guid: ca8e1e462f5fe48459cc83813042696a, type: 3}

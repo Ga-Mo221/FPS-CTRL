@@ -5,6 +5,7 @@ using UnityEditor;
 
 namespace GaMo.TrueInputSystem
 {
+    [CanEditMultipleObjects]
     [CustomEditor(typeof(TISMobileInputSetup))]
     [InitializeOnLoad]
     public class TISMobileInputSetupEditor : UnityEditor.Editor
@@ -169,7 +170,8 @@ namespace GaMo.TrueInputSystem
             }
 
             // SỬA TẠI ĐÂY: Gọi hàm DrawPreviewDebug nội bộ của file Editor, truyền setup vào
-            DrawPreviewDebug(setup);
+            // Preview vẽ theo 1 object: ẩn khi chọn nhiều object để khỏi hiểu nhầm
+            if (targets.Length == 1) DrawPreviewDebug(setup);
     
             EditorGUILayout.Space(4);
 
@@ -338,9 +340,10 @@ namespace GaMo.TrueInputSystem
             EditorGUILayout.PropertyField(_inputBridge, new GUIContent("Input Bridge", _inputBridge.tooltip));
             if (GUILayout.Button("Tự Tìm", GUILayout.Width(70)))
             {
-                Undo.RecordObject(setup, "Tim Bridge Tu Dong");
-                setup.TimBridgeTuDong();
-                EditorUtility.SetDirty(setup);
+                // Multi-edit: áp cho tất cả object đang chọn
+                Undo.RecordObjects(targets, "Tim Bridge Tu Dong");
+                ForEachSetup(mis => mis.TimBridgeTuDong());
+                foreach (var tg in targets) EditorUtility.SetDirty(tg);
             }
             EditorGUILayout.EndHorizontal();
 
@@ -378,7 +381,7 @@ namespace GaMo.TrueInputSystem
                 if (EditorGUI.EndChangeCheck())
                 {
                     serializedObject.ApplyModifiedProperties();
-                    setup._onSizeChanged();
+                    ForEachSetup(mis => mis._onSizeChanged());
                 }
 
                 // Progress bar preview — BG
@@ -419,12 +422,11 @@ namespace GaMo.TrueInputSystem
             SectionTitle("Joystick — Nâng Cao");
 
             EditorGUI.BeginChangeCheck();
-            _tuyChinhJoystickNangCao.boolValue = EditorGUILayout.ToggleLeft(
-                "Bật Tuỳ Chỉnh Nâng Cao", _tuyChinhJoystickNangCao.boolValue);
+            DrawToggleLeftProp(_tuyChinhJoystickNangCao, "Bật Tuỳ Chỉnh Nâng Cao");
             if (EditorGUI.EndChangeCheck())
             {
                 serializedObject.ApplyModifiedProperties();
-                setup._onJoystickAdvancedChanged();
+                ForEachSetup(mis => mis._onJoystickAdvancedChanged());
             }
 
             using (new EditorGUI.DisabledScope(!_tuyChinhJoystickNangCao.boolValue))
@@ -435,15 +437,14 @@ namespace GaMo.TrueInputSystem
                     new GUIContent("Vị Trí Joystick (Anchored)", "Toạ độ anchoredPosition của joystick so với canvas."));
                 EditorGUILayout.Slider(_joystickActiveOpacity,  0f, 1f,
                     new GUIContent("Active Opacity",  "Độ mờ khi đang chạm joystick."));
-                _dynamicJoystickOverride.boolValue = EditorGUILayout.ToggleLeft(
-                    "Dynamic Mode", _dynamicJoystickOverride.boolValue);
+                DrawToggleLeftProp(_dynamicJoystickOverride, "Dynamic Mode");
                 EditorGUILayout.Slider(_idleOpacityOverride, 0f, 1f,
                     new GUIContent("Idle Opacity", "Độ mờ khi không chạm joystick."));
 
                 if (EditorGUI.EndChangeCheck())
                 {
                     serializedObject.ApplyModifiedProperties();
-                    setup._onJoystickAdvancedChanged();
+                    ForEachSetup(mis => mis._onJoystickAdvancedChanged());
                 }
             }
 
@@ -467,14 +468,14 @@ namespace GaMo.TrueInputSystem
             EditorGUI.BeginChangeCheck();
 
             EditorGUILayout.BeginHorizontal();
-            _batJoystick.boolValue = EditorGUILayout.ToggleLeft("Virtual Joystick", _batJoystick.boolValue, GUILayout.Width(160));
-            _batCamera.boolValue   = EditorGUILayout.ToggleLeft("Camera Zone",      _batCamera.boolValue);
+            DrawToggleLeftProp(_batJoystick, "Virtual Joystick", GUILayout.Width(160));
+            DrawToggleLeftProp(_batCamera, "Camera Zone");
             EditorGUILayout.EndHorizontal();
 
             if (EditorGUI.EndChangeCheck())
             {
                 serializedObject.ApplyModifiedProperties();
-                setup._onToggleJoystickCamera();
+                ForEachSetup(mis => mis._onToggleJoystickCamera());
             }
 
             if (!_batJoystick.boolValue && !_batCamera.boolValue)
@@ -492,7 +493,7 @@ namespace GaMo.TrueInputSystem
                 if (EditorGUI.EndChangeCheck())
                 {
                     serializedObject.ApplyModifiedProperties();
-                    setup._onRatioChanged();
+                    ForEachSetup(mis => mis._onRatioChanged());
                 }
 
                 float ty = setup._tyLeJoystickHienThi;
@@ -523,11 +524,11 @@ namespace GaMo.TrueInputSystem
             SectionTitle("Xoay Camera (Pan)");
 
             EditorGUI.BeginChangeCheck();
-            _batXoayCamera.boolValue = EditorGUILayout.ToggleLeft("Bật Xoay Camera", _batXoayCamera.boolValue);
+            DrawToggleLeftProp(_batXoayCamera, "Bật Xoay Camera");
             if (EditorGUI.EndChangeCheck())
             {
                 serializedObject.ApplyModifiedProperties();
-                setup._onCameraChanged();
+                ForEachSetup(mis => mis._onCameraChanged());
             }
 
             using (new EditorGUI.DisabledScope(!_batXoayCamera.boolValue))
@@ -540,11 +541,11 @@ namespace GaMo.TrueInputSystem
             SectionTitle("Thu Phóng Pinch (Zoom)");
 
             EditorGUI.BeginChangeCheck();
-            _batZoom.boolValue = EditorGUILayout.ToggleLeft("Bật Zoom", _batZoom.boolValue);
+            DrawToggleLeftProp(_batZoom, "Bật Zoom");
             if (EditorGUI.EndChangeCheck())
             {
                 serializedObject.ApplyModifiedProperties();
-                setup._onCameraChanged();
+                ForEachSetup(mis => mis._onCameraChanged());
             }
 
             using (new EditorGUI.DisabledScope(!_batZoom.boolValue))
@@ -565,6 +566,11 @@ namespace GaMo.TrueInputSystem
         {
             SectionTitle("Công Cụ Lúc Chạy");
 
+            if (targets.Length > 1)
+                EditorGUILayout.HelpBox(
+                    "Đang chọn nhiều object: các nút áp cho tất cả object. Trạng thái chi tiết chỉ hiện khi chọn 1 object.",
+                    MessageType.None);
+
             if (!Application.isPlaying)
             {
                 EditorGUILayout.HelpBox("Các nút bên dưới chỉ hoạt động khi đang Play Mode.", MessageType.Info);
@@ -573,20 +579,20 @@ namespace GaMo.TrueInputSystem
             using (new EditorGUI.DisabledScope(!Application.isPlaying))
             {
                 EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Bật/Tắt Xoay Camera")) setup.BatTatXoayCamera();
-                if (GUILayout.Button("Bật/Tắt Zoom"))        setup.BatTatZoom();
+                if (GUILayout.Button("Bật/Tắt Xoay Camera")) ForEachSetup(mis => mis.BatTatXoayCamera());
+                if (GUILayout.Button("Bật/Tắt Zoom"))        ForEachSetup(mis => mis.BatTatZoom());
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Bật/Tắt Joystick"))    setup.BatTatJoystick();
-                if (GUILayout.Button("Bật/Tắt Camera Zone")) setup.BatTatCameraZone();
+                if (GUILayout.Button("Bật/Tắt Joystick"))    ForEachSetup(mis => mis.BatTatJoystick());
+                if (GUILayout.Button("Bật/Tắt Camera Zone")) ForEachSetup(mis => mis.BatTatCameraZone());
                 EditorGUILayout.EndHorizontal();
 
                 GUI.backgroundColor = new Color(0.35f, 0.75f, 0.35f);
-                if (GUILayout.Button("Đồng Bộ Tỉ Lệ Vùng")) setup.DongBoTyLe();
+                if (GUILayout.Button("Đồng Bộ Tỉ Lệ Vùng")) ForEachSetup(mis => mis.DongBoTyLe());
                 GUI.backgroundColor = Color.white;
 
-                if (Application.isPlaying)
+                if (Application.isPlaying && targets.Length == 1)
                 {
                     EditorGUILayout.Space(8);
                     SectionTitle("Trạng Thái Hiện Tại");
@@ -607,6 +613,27 @@ namespace GaMo.TrueInputSystem
         // ══════════════════════════════════════════════════════════════════════
         //  HELPERS
         // ══════════════════════════════════════════════════════════════════════
+
+        // Gọi 1 hàm/callback trên TẤT CẢ object đang chọn (multi-edit), không chỉ object đầu tiên.
+        private void ForEachSetup(System.Action<TISMobileInputSetup> act)
+        {
+            foreach (var tg in targets)
+            {
+                var mis = tg as TISMobileInputSetup;
+                if (mis != null) act(mis);
+            }
+        }
+
+        // Chỉ ghi vào property khi người dùng thật sự bấm, và hiện trạng thái Mixed khi các object khác nhau.
+        // Ghi vô điều kiện (prop.boolValue = ToggleLeft(...)) sẽ đè giá trị của object đầu lên tất cả object.
+        private static void DrawToggleLeftProp(SerializedProperty prop, string label, params GUILayoutOption[] options)
+        {
+            EditorGUI.showMixedValue = prop.hasMultipleDifferentValues;
+            EditorGUI.BeginChangeCheck();
+            bool v = EditorGUILayout.ToggleLeft(label, prop.boolValue, options);
+            if (EditorGUI.EndChangeCheck()) prop.boolValue = v;
+            EditorGUI.showMixedValue = false;
+        }
 
         private static void SectionTitle(string label)
         {
