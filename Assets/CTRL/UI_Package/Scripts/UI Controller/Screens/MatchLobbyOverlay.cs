@@ -24,6 +24,9 @@ namespace Game.UI
         private static string _menuScene;
         private static Runner _runner;
 
+        /// <summary>[2026-10-27] Man phong cho dang phu man hinh -> LocalInputController khong mo Pause (ESC / Start).</summary>
+        public static bool IsShowing => _runner != null;
+
         // [Aemy 2026-10-27] Thong tin map theo ten scene (menu dang ky) -> vao map roi hien DUNG map dang choi.
         private struct MapView { public string Name, Description; public Sprite Background; }
         private static readonly Dictionary<string, MapView> _maps = new Dictionary<string, MapView>(System.StringComparer.OrdinalIgnoreCase);
@@ -197,11 +200,15 @@ namespace Game.UI
                 }
                 if (!gs.InLobby || gs.GameStarted || gs.IsMatchOver()) { Release(); return; }
 
-                // Mo Pause trong luc cho -> tam an de thay Pause (an ca lop chan click de bam duoc Pause).
-                bool pause = GameManager.Instance != null && GameManager.Instance.OnUIOption();
-                if (_view.gameObject.activeSelf == pause) _view.gameObject.SetActive(!pause);
-                if (_blocker != null && _blocker.activeSelf == pause) _blocker.SetActive(!pause);
-                if (pause) return;
+                // [2026-10-27] Khong cho mo Pause trong luc cho (truoc day an man cho -> lo man tran phia sau).
+                // ESC da bi chan o LocalInputController; Pause lo dang mo (vd. mo truoc khi man cho hien) -> dong lai.
+                var gm = GameManager.Instance;
+                if (gm != null && gm.OnUIOption())
+                {
+                    gm.SetOnUIOptions(false);
+                    var hud = Object.FindFirstObjectByType<GameHudControllerBase>();
+                    if (hud != null) hud.SetPauseVisible(false);
+                }
                 _view.StopTimer(); // OnEnable cua man ghep tran tu bat dong ho dem len -> tat (dong ho dang an)
 
                 // [2026-10-24] Nyx: khong hien bo dem / tieu de, chi che do + ten map + nguoi trong phong.

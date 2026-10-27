@@ -55,6 +55,8 @@ public class LocalInputController : MonoBehaviour
     {
         if (_input.GetSkillAction("ESC", TISButtonReadMode.PressUp))
         {
+            // [2026-10-27] Man ghep tran / phong cho con phu man hinh -> khong mo Pause.
+            if (MatchLobbyOverlay.IsShowing) return;
             var gm = GameManager.Instance;
             if (gm != null)
             {
