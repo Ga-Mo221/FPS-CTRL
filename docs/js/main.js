@@ -56,6 +56,20 @@
     restart();
   });
 
+  // ---------- Trailer: thay ảnh bìa bằng iframe YouTube khi bấm phát ----------
+  document.querySelectorAll("[data-yt]").forEach(function (frame) {
+    var play = frame.querySelector(".trailer__play");
+    if (!play) return;
+    play.addEventListener("click", function () {
+      var iframe = document.createElement("iframe");
+      iframe.src = "https://www.youtube-nocookie.com/embed/" + frame.getAttribute("data-yt") + "?autoplay=1&rel=0";
+      iframe.title = "Trailer Eclipse Strike";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.allowFullscreen = true;
+      frame.replaceChild(iframe, play);
+    });
+  });
+
   // ---------- Đặc vụ ----------
   var OPERATORS = {
     ghost: {

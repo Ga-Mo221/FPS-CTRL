@@ -565,3 +565,35 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* ---------- Trailer (YouTube, chỉ tải iframe khi bấm phát) ---------- */
+.trailer { padding-bottom: clamp(40px, 6vw, 80px); background: linear-gradient(180deg, var(--bg), var(--bg-2)); }
+.trailer__head { text-align: center; margin-bottom: clamp(24px, 4vw, 40px); }
+.trailer__head .kicker { justify-content: center; }
+.trailer__frame {
+  position: relative; max-width: 1080px; margin: 0 auto; aspect-ratio: 16 / 9;
+  background: #000; border: 1px solid var(--line); overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 0 6px rgba(79, 214, 201, .04);
+}
+.trailer__frame::before, .trailer__frame::after {
+  content: ""; position: absolute; width: 28px; height: 28px; z-index: 2; pointer-events: none;
+  border: 2px solid var(--teal);
+}
+.trailer__frame::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+.trailer__frame::after { right: 10px; bottom: 10px; border-left: 0; border-top: 0; }
+.trailer__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.trailer__play { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; display: block; }
+.trailer__play img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.8); transition: filter .3s, transform .6s; }
+.trailer__play:hover img { filter: brightness(1); transform: scale(1.02); }
+.trailer__btn {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: clamp(64px, 9vw, 104px); aspect-ratio: 1; display: grid; place-items: center;
+  background: var(--teal); color: #041312;
+  clip-path: polygon(var(--slant) 0, 100% 0, calc(100% - var(--slant)) 100%, 0 100%);
+  transition: background-color .2s, transform .2s;
+}
+.trailer__btn svg { width: 42%; height: 42%; margin-left: 6%; }
+.trailer__play:hover .trailer__btn { background: #fff; transform: scale(1.06); }
+.trailer__note { text-align: center; margin: 16px 0 0; font: 600 13px/1 var(--font-display); letter-spacing: .14em; }
+.trailer__note a { color: var(--muted); transition: color .2s; }
+.trailer__note a:hover { color: var(--teal); }

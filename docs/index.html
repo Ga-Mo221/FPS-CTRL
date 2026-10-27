@@ -23,6 +23,7 @@
       <span class="brand__mark" aria-hidden="true"></span>ECLIPSE STRIKE
     </a>
     <nav class="nav" id="nav" aria-label="Điều hướng chính">
+      <a href="#trailer">Trailer</a>
       <a href="#tinh-nang">Tính năng</a>
       <a href="#che-do">Chế độ</a>
       <a href="#dac-vu">Đặc vụ</a>
@@ -61,7 +62,7 @@
         </ul>
         <div class="hero__actions">
           <a class="btn btn--primary btn--lg" href="#tai-game">Chơi ngay</a>
-          <a class="btn btn--ghost btn--lg" href="#dac-vu">Xem đặc vụ</a>
+          <a class="btn btn--ghost btn--lg" href="#trailer">Xem trailer</a>
         </div>
       </div>
 
@@ -70,9 +71,29 @@
         <span class="hero__hud-line"></span>
         <span>TICK 64HZ · PHOTON FUSION</span>
       </div>
-      <a class="scroll-cue" href="#tinh-nang" aria-label="Cuộn xuống">
+      <a class="scroll-cue" href="#trailer" aria-label="Cuộn xuống">
         <span></span>
       </a>
+    </section>
+
+    <!-- ===== TRAILER =====
+         Đổi video: thay ID trong data-yt (phần sau youtu.be/) — ảnh bìa tự lấy theo ID. -->
+    <section class="section trailer" id="trailer" aria-labelledby="trailer-title">
+      <div class="container">
+        <div class="trailer__head reveal">
+          <p class="kicker"><span class="dot"></span>OFFICIAL TRAILER</p>
+          <h2 class="section__title" id="trailer-title">XEM <em>TRAILER</em></h2>
+        </div>
+        <div class="trailer__frame reveal" data-yt="CAWOY1sdqH0">
+          <button class="trailer__play" type="button" aria-label="Phát trailer Eclipse Strike">
+            <img src="https://i.ytimg.com/vi/CAWOY1sdqH0/maxresdefault.jpg" alt="Trailer Eclipse Strike" loading="lazy">
+            <span class="trailer__btn" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+            </span>
+          </button>
+        </div>
+        <p class="trailer__note"><a href="https://youtu.be/CAWOY1sdqH0" target="_blank" rel="noopener">Xem trên YouTube ↗</a></p>
+      </div>
     </section>
 
     <!-- ===== TÍNH NĂNG ===== -->
